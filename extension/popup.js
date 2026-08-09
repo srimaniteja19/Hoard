@@ -156,93 +156,75 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const meta = detectUrlMeta(url);
     let domain = "web";
-    try {
-      domain = new URL(url).hostname.replace(/^www\./, "");
-    } catch {
-      domain = "web";
-    }
+    try { domain = new URL(url).hostname.replace(/^www\./, ""); } catch {}
 
     const firstTag = Array.from(activeTags)[0] || "saved";
-
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     const d = new Date();
-    const when = `${months[d.getMonth()]} ${d.getDate()}`;
 
-    // Shape matches hoard_bookmarks_v2 used by the web app
     const newBookmark = {
-      t: title,
-      ty: meta.ty,
-      src: domain,
-      url: url,
-      mins: meta.ty === "VID" ? 45 : meta.ty === "PPR" ? 40 : 15,
-      tag: firstTag,
-      coll: folderSelect.value || "unsorted",
+      t:      title,
+      ty:     meta.ty,
+      src:    domain,
+      url,
+      mins:   meta.ty === "VID" ? 45 : meta.ty === "PPR" ? 40 : 15,
+      tag:    firstTag,
+      coll:   folderSelect.value || "unsorted",
       unread: true,
-      ex: { Source: domain, Type: meta.name },
-      note: pageNoteInput.value.trim() || "Saved via HOARD Extension",
-      when,
+      ex:     { Source: domain, Type: meta.name },
+      note:   pageNoteInput.value.trim() || "Saved via HOARD Extension",
+      when:   `${months[d.getMonth()]} ${d.getDate()}`,
     };
 
     if (typeof chrome !== "undefined" && chrome.storage) {
-      // 1. Save to extension's local storage (for MY HOARD tab in popup)
+      // 1. Save to extension's local list (for MY HOARD popup tab)
       chrome.storage.local.get(["hoard_bookmarks"], (res) => {
         const list = res.hoard_bookmarks || [];
         list.unshift({ ...newBookmark, id: Date.now() });
         chrome.storage.local.set({ hoard_bookmarks: list });
       });
 
-      // 2. Try to inject directly into an open Hoard tab via background script
+      // 2. Try saving to DB via open Hoard tab (same-origin fetch → cookie auth)
       chrome.tabs.query({ url: `${DEFAULT_SERVER_URL}/*` }, (tabs) => {
         if (tabs && tabs.length > 0) {
-          // Hoard tab is open — inject directly into its localStorage
           chrome.scripting.executeScript({
             target: { tabId: tabs[0].id },
             world: "MAIN",
-            func: (bm, storageKey) => {
+            func: async (bm) => {
               try {
-                const raw = localStorage.getItem(storageKey);
-                const list = raw ? JSON.parse(raw) : [];
-                const maxId = list.reduce((acc, x) => Math.max(acc, x.id ?? -1), -1);
-                list.unshift({ ...bm, id: maxId + 1 });
-                localStorage.setItem(storageKey, JSON.stringify(list));
-                window.dispatchEvent(new StorageEvent("storage", {
-                  key: storageKey,
-                  newValue: JSON.stringify(list),
-                  storageArea: localStorage,
-                }));
+                const res = await fetch("/api/bookmarks", {
+                  method: "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(bm),
+                });
+                if (res.ok) window.postMessage({ type: "HOARD_BOOKMARKS_UPDATED" }, "*");
               } catch (e) {
-                console.error("[HOARD Popup] Inject failed:", e);
+                console.error("[HOARD Popup] fetch failed:", e);
               }
             },
-            args: [newBookmark, STORAGE_KEY],
+            args: [newBookmark],
           }, () => {
             showToast("✓ SAVED TO HOARD");
             chrome.runtime.sendMessage({ action: "bookmark_saved" });
           });
         } else {
-          // Hoard tab not open — queue for next load
+          // No Hoard tab open — queue for content script to sync on next load
           chrome.storage.local.get([PENDING_KEY], (res) => {
             const pending = res[PENDING_KEY] || [];
             pending.push(newBookmark);
             chrome.storage.local.set({ [PENDING_KEY]: pending }, () => {
-              showToast("✓ SAVED — will sync when Hoard opens");
+              showToast("✓ SAVED — syncs when Hoard opens");
               chrome.runtime.sendMessage({ action: "bookmark_saved" });
             });
           });
         }
       });
     } else {
-      // Dev fallback: write directly to localStorage
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        const list = raw ? JSON.parse(raw) : [];
-        const maxId = list.reduce((acc, x) => Math.max(acc, x.id ?? -1), -1);
-        list.unshift({ ...newBookmark, id: maxId + 1 });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-      } catch {}
       showToast("✓ SAVED TO HOARD");
     }
   });
+
 
   // Render Saved Items in "MY HOARD" Tab
   function renderHoardList(query = "", filter = "all") {

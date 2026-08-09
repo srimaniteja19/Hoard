@@ -1,31 +1,15 @@
 // HOARD Extension Background Service Worker (Manifest V3)
 
 const HOARD_ORIGIN = "https://hoard-ten.vercel.app";
-const STORAGE_KEY = "hoard_bookmarks_v2";
-const PENDING_KEY = "hoard_pending_sync";
+const PENDING_KEY  = "hoard_pending_sync";
 
-// Register Context Menus — always clear first to avoid duplicate ID errors
-// on service worker restarts (MV3 workers restart frequently)
+// ─── Context Menus ────────────────────────────────────────────────────────────
+
 function registerContextMenus() {
   chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({
-      id: "hoard-save-page",
-      title: "Save Page to HOARD (Alt+Shift+H)",
-      contexts: ["page"],
-    });
-
-    chrome.contextMenus.create({
-      id: "hoard-save-link",
-      title: "Save Link to HOARD",
-      contexts: ["link"],
-    });
-
-    chrome.contextMenus.create({
-      id: "hoard-save-selection",
-      title: "Save Highlight as Note to HOARD",
-      contexts: ["selection"],
-    });
-
+    chrome.contextMenus.create({ id: "hoard-save-page",      title: "Save Page to HOARD (Alt+Shift+H)", contexts: ["page"] });
+    chrome.contextMenus.create({ id: "hoard-save-link",      title: "Save Link to HOARD",               contexts: ["link"] });
+    chrome.contextMenus.create({ id: "hoard-save-selection", title: "Save Highlight as Note to HOARD",  contexts: ["selection"] });
     console.log("[HOARD Background] Context menus registered.");
   });
 }
@@ -33,115 +17,96 @@ function registerContextMenus() {
 chrome.runtime.onInstalled.addListener(registerContextMenus);
 chrome.runtime.onStartup.addListener(registerContextMenus);
 
-// Handle Context Menu Clicks
+// ─── Context Menu Clicks ──────────────────────────────────────────────────────
+
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  let targetUrl = tab?.url || "";
-  let targetTitle = tab?.title || "Captured Bookmark";
-  let noteText = "Saved from context menu";
+  let url   = tab?.url   || "";
+  let title = tab?.title || "Captured Bookmark";
+  let note  = "Saved from context menu";
 
   if (info.menuItemId === "hoard-save-link" && info.linkUrl) {
-    targetUrl = info.linkUrl;
-    targetTitle = `Shared Link: ${info.linkUrl.split('/').pop() || 'Link'}`;
+    url   = info.linkUrl;
+    title = `Shared Link: ${info.linkUrl.split("/").pop() || "Link"}`;
   } else if (info.menuItemId === "hoard-save-selection" && info.selectionText) {
-    noteText = `Highlight: "${info.selectionText}"`;
+    note  = `Highlight: "${info.selectionText}"`;
   }
 
-  saveBookmarkFromBackground(targetUrl, targetTitle, noteText);
+  saveBookmark(url, title, note);
 });
 
-// Handle Keyboard Commands
+// ─── Keyboard Commands ────────────────────────────────────────────────────────
+
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === "save-to-hoard") {
     try {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tabs && tabs[0]) {
-        saveBookmarkFromBackground(tabs[0].url, tabs[0].title, "Saved via keyboard shortcut");
-      }
+      if (tabs?.[0]) saveBookmark(tabs[0].url, tabs[0].title, "Saved via keyboard shortcut");
     } catch (err) {
       console.error("[HOARD Background] Keyboard command failed:", err);
     }
   }
 });
 
-// Handle messages from popup.js
+// ─── Messages from popup ──────────────────────────────────────────────────────
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "bookmark_saved") {
-    showBadgeConfirmation();
+    showBadge();
     sendResponse({ status: "success" });
   }
 });
 
-// Build a Bookmark object in the shape the web app expects
-function buildWebAppBookmark(url, title, note) {
-  if (!url || !url.startsWith("http")) return null;
+// ─── Build bookmark payload (UI shape) ───────────────────────────────────────
 
+function buildBookmark(url, title, note) {
+  if (!url?.startsWith("http")) return null;
   let domain = "web";
-  try {
-    domain = new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    domain = "web";
-  }
-
-  const isVideo = /youtube\.com|youtu\.be/.test(url);
-  const isRepo = /github\.com/.test(url);
-  const isPaper = /arxiv\.org/.test(url);
+  try { domain = new URL(url).hostname.replace(/^www\./, ""); } catch {}
+  const isVideo    = /youtube\.com|youtu\.be/.test(url);
+  const isRepo     = /github\.com/.test(url);
+  const isPaper    = /arxiv\.org/.test(url);
   const isPlaylist = /youtube\.com\/playlist/.test(url);
-
   const ty = isPlaylist ? "PLY" : isVideo ? "VID" : isRepo ? "GIT" : isPaper ? "PPR" : "ART";
-
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const d = new Date();
-  const when = `${months[d.getMonth()]} ${d.getDate()}`;
-
   return {
-    // id will be assigned when inserting into the array
-    t: title || "New Bookmark",
-    ty,
-    src: domain,
-    url,
+    t: title || "New Bookmark", ty, src: domain, url,
     mins: isVideo ? 45 : isPaper ? 40 : 15,
     tag: isRepo ? "craft" : isVideo ? "ai" : "systems",
-    coll: "unsorted",
-    unread: true,
+    coll: "unsorted", unread: true,
     ex: { Source: domain },
     note: note || "Saved via HOARD Extension",
-    when,
+    when: `${months[d.getMonth()]} ${d.getDate()}`,
   };
 }
 
-// Inject bookmark directly into the Hoard web app's localStorage
-// Returns true if successfully injected into an open tab
-async function injectIntoHoardTab(bookmark) {
+// ─── Save: inject fetch into open Hoard tab (same-origin → cookie auth) ──────
+
+async function saveIntoHoardTab(bm) {
   try {
     const tabs = await chrome.tabs.query({ url: `${HOARD_ORIGIN}/*` });
-    if (!tabs || tabs.length === 0) return false;
+    if (!tabs?.length) return false;
 
-    const tabId = tabs[0].id;
     await chrome.scripting.executeScript({
-      target: { tabId },
+      target: { tabId: tabs[0].id },
       world: "MAIN",
-      func: (bm, storageKey) => {
+      func: async (bookmark) => {
         try {
-          const raw = localStorage.getItem(storageKey);
-          const list = raw ? JSON.parse(raw) : [];
-          // Assign an id that won't collide
-          const maxId = list.reduce((acc, x) => Math.max(acc, x.id ?? -1), -1);
-          const created = { ...bm, id: maxId + 1 };
-          list.unshift(created);
-          localStorage.setItem(storageKey, JSON.stringify(list));
-          // Dispatch storage event so the web app re-reads without a refresh
-          window.dispatchEvent(new StorageEvent("storage", {
-            key: storageKey,
-            newValue: JSON.stringify(list),
-            storageArea: localStorage,
-          }));
-          return true;
+          const res = await fetch("/api/bookmarks", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(bookmark),
+          });
+          if (res.ok) {
+            // Tell the React app to re-fetch
+            window.postMessage({ type: "HOARD_BOOKMARKS_UPDATED" }, "*");
+          }
         } catch (e) {
-          console.error("[HOARD Inject] Failed to write to localStorage:", e);
-          return false;
+          console.error("[HOARD Inject] fetch failed:", e);
         }
       },
-      args: [bookmark, STORAGE_KEY],
+      args: [bm],
     });
     return true;
   } catch (err) {
@@ -150,45 +115,40 @@ async function injectIntoHoardTab(bookmark) {
   }
 }
 
-// Save bookmark: try to inject into open Hoard tab, fallback to pending queue
-async function saveBookmarkFromBackground(url, title, note) {
-  if (!url || !url.startsWith("http")) return;
+// ─── Main save flow ───────────────────────────────────────────────────────────
 
-  const bookmark = buildWebAppBookmark(url, title, note);
-  if (!bookmark) return;
+async function saveBookmark(url, title, note) {
+  const bm = buildBookmark(url, title, note);
+  if (!bm) return;
 
-  // Save to chrome.storage.local for "MY HOARD" tab in the extension popup
+  // Always save to extension's local list for popup "MY HOARD" tab
   chrome.storage.local.get(["hoard_bookmarks"], (res) => {
     const list = res.hoard_bookmarks || [];
-    list.unshift({ ...bookmark, id: Date.now() });
+    list.unshift({ ...bm, id: Date.now() });
     chrome.storage.local.set({ hoard_bookmarks: list });
   });
 
-  // Try injecting directly into an open Hoard tab
-  const injected = await injectIntoHoardTab(bookmark);
+  // Try to save directly to DB via the open Hoard tab
+  const injected = await saveIntoHoardTab(bm);
 
   if (!injected) {
-    // Hoard tab not open — queue for next time it loads
+    // Hoard tab not open — queue for content script to pick up on next load
     chrome.storage.local.get([PENDING_KEY], (res) => {
       const pending = res[PENDING_KEY] || [];
-      pending.push(bookmark);
+      pending.push(bm);
       chrome.storage.local.set({ [PENDING_KEY]: pending }, () => {
-        console.log("[HOARD Background] Queued bookmark for next Hoard load:", bookmark.t);
+        console.log("[HOARD Background] Queued for next Hoard load:", bm.t);
       });
     });
-  } else {
-    console.log("[HOARD Background] Injected bookmark into Hoard tab:", bookmark.t);
   }
 
-  showBadgeConfirmation();
+  showBadge();
 }
 
-// Badge notification confirmation
-function showBadgeConfirmation() {
+// ─── Badge ────────────────────────────────────────────────────────────────────
+
+function showBadge() {
   chrome.action.setBadgeText({ text: "✓" });
   chrome.action.setBadgeBackgroundColor({ color: "#FFE600" });
-
-  setTimeout(() => {
-    chrome.action.setBadgeText({ text: "" });
-  }, 2800);
+  setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2800);
 }
