@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import { Bookmark, Collection, KindType } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import { inColl } from "@/hooks/useBookmarks";
+import { UserMenu } from "@/components/UserMenu";
 
 interface SidebarProps {
   bookmarks: Bookmark[];
@@ -191,6 +192,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
       </div>
+      <UserMenu />
     </aside>
   );
 };
