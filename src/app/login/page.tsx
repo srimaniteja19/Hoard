@@ -21,11 +21,13 @@ export default function LoginPage() {
 
   // Common UI state
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [userAlreadyExistsError, setUserAlreadyExistsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setUserAlreadyExistsError(false);
 
     if (!signInEmail || !signInPassword) {
       setErrorMessage("Please enter both email and password.");
@@ -56,6 +58,7 @@ export default function LoginPage() {
   const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setUserAlreadyExistsError(false);
 
     if (!signUpName || !signUpEmail || !signUpPassword) {
       setErrorMessage("Please fill out all required fields.");
@@ -82,7 +85,14 @@ export default function LoginPage() {
       });
 
       if (res.error) {
-        setErrorMessage(res.error.message || "Failed to create account.");
+        const errorText = res.error.message || "Failed to create account.";
+        if (errorText.toLowerCase().includes("already exists")) {
+          setUserAlreadyExistsError(true);
+          setSignInEmail(signUpEmail);
+          setErrorMessage("An account with this email address already exists.");
+        } else {
+          setErrorMessage(errorText);
+        }
       } else {
         router.push("/");
       }
@@ -97,6 +107,8 @@ export default function LoginPage() {
   const handleOAuthSignIn = async (provider: "github" | "google") => {
     try {
       setIsLoading(true);
+      setErrorMessage(null);
+      setUserAlreadyExistsError(false);
       await signIn.social({
         provider,
         callbackURL: "/",
@@ -106,6 +118,13 @@ export default function LoginPage() {
       setErrorMessage(msg);
       setIsLoading(false);
     }
+  };
+
+  const switchToSignInWithEmail = () => {
+    setSignInEmail(signUpEmail);
+    setTab("signin");
+    setErrorMessage(null);
+    setUserAlreadyExistsError(false);
   };
 
   return (
@@ -172,6 +191,7 @@ export default function LoginPage() {
             onClick={() => {
               setTab("signin");
               setErrorMessage(null);
+              setUserAlreadyExistsError(false);
             }}
             style={{
               border: 0,
@@ -192,6 +212,7 @@ export default function LoginPage() {
             onClick={() => {
               setTab("signup");
               setErrorMessage(null);
+              setUserAlreadyExistsError(false);
             }}
             style={{
               border: 0,
@@ -215,14 +236,35 @@ export default function LoginPage() {
               border: "2px solid #000",
               background: "#FF007A",
               color: "#fff",
-              padding: "10px 12px",
+              padding: "12px",
               fontFamily: "var(--mono)",
               fontSize: "11.5px",
               fontWeight: 700,
               marginBottom: "16px",
             }}
           >
-            ⚠ {errorMessage}
+            <div style={{ marginBottom: userAlreadyExistsError ? "8px" : "0" }}>
+              ⚠ {errorMessage}
+            </div>
+            {userAlreadyExistsError && (
+              <button
+                type="button"
+                onClick={switchToSignInWithEmail}
+                style={{
+                  border: "2px solid #000",
+                  background: "#FFE600",
+                  color: "#000",
+                  padding: "6px 10px",
+                  fontFamily: "var(--mono)",
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  width: "100%",
+                }}
+              >
+                SWITCH TO SIGN IN TAB ↗
+              </button>
+            )}
           </div>
         )}
 
