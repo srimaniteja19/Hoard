@@ -3,6 +3,7 @@
 import React from "react";
 import { SortMode, ViewMode } from "@/types";
 import { ThemePicker } from "@/components/ThemePicker";
+import { Zap } from "lucide-react";
 
 interface HeaderBarProps {
   query: string;
@@ -15,6 +16,7 @@ interface HeaderBarProps {
   searchInputRef: React.RefObject<HTMLInputElement | null>;
   onToggleMobileSidebar?: () => void;
   onOpenCapture?: () => void;
+  onOpenFocusMode?: () => void;
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
@@ -28,6 +30,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   searchInputRef,
   onToggleMobileSidebar,
   onOpenCapture,
+  onOpenFocusMode,
 }) => {
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
@@ -55,15 +58,37 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           <b>HOARD</b>
         </div>
 
-        {onOpenCapture && (
-          <button
-            className="mobile-add-btn"
-            onClick={onOpenCapture}
-            aria-label="Save link"
-          >
-            + LINK
-          </button>
-        )}
+        <div style={{ display: "flex", gap: "6px" }}>
+          {onOpenFocusMode && (
+            <button
+              onClick={onOpenFocusMode}
+              style={{
+                background: "#FFE600",
+                border: "2px solid #000",
+                padding: "4px 8px",
+                fontWeight: 900,
+                fontSize: "11px",
+                fontFamily: "var(--mono)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "2px",
+              }}
+            >
+              <Zap size={12} /> FOCUS
+            </button>
+          )}
+
+          {onOpenCapture && (
+            <button
+              className="mobile-add-btn"
+              onClick={onOpenCapture}
+              aria-label="Save link"
+            >
+              + LINK
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="searchbox">
@@ -88,6 +113,28 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
       </div>
 
       <div className="bar-controls-row">
+        {onOpenFocusMode && (
+          <button
+            onClick={onOpenFocusMode}
+            style={{
+              background: "#FFE600",
+              color: "#000",
+              border: "2px solid #000",
+              boxShadow: "2px 2px 0 #000",
+              padding: "5px 12px",
+              fontWeight: 900,
+              fontFamily: "var(--mono)",
+              fontSize: "12px",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            <Zap size={14} fill="#000" /> START SESSION
+          </button>
+        )}
+
         <div className="grp view-grp">
           <button
             className={view === "masonry" ? "on" : ""}

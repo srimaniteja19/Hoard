@@ -13,7 +13,7 @@ import {
 } from "@/types";
 import { CTX } from "@/data/initialBookmarks";
 
-// ─── Query Parser (unchanged) ─────────────────────────────────────────────────
+// ─── Query Parser ─────────────────────────────────────────────────────────────
 
 export function parseQ(q: string): SearchFilter {
   const f: SearchFilter = { text: [], ty: null, under: null, tag: null, lang: null, unread: false };
@@ -79,6 +79,16 @@ async function apiFetch<T>(url: string, opts?: RequestInit): Promise<T> {
   return res.json();
 }
 
+// Helper to flatten collections for quick lookup by ID
+function flattenCollections(list: Collection[]): Collection[] {
+  let acc: Collection[] = [];
+  list.forEach((c) => {
+    acc.push(c);
+    if (c.kids) acc = acc.concat(flattenCollections(c.kids));
+  });
+  return acc;
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useBookmarks() {
@@ -99,8 +109,13 @@ export function useBookmarks() {
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [openId, setOpenId]       = useState<number | null>(null);
+  
+  // Modals state
   const [isCaptureOpen, setIsCaptureOpen]     = useState(false);
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
+  const [isFocusOpen, setIsFocusOpen]         = useState(false);
+  const [isDiffOpen, setIsDiffOpen]           = useState(false);
+  const [diffBookmark, setDiffBookmark]       = useState<Bookmark | null>(null);
 
   // ── Initial data load ────────────────────────────────────────────────────
 
@@ -126,8 +141,7 @@ export function useBookmarks() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // ── Live update from extension (MAIN-world executeScript → StorageEvent, 
-  //    or content script → postMessage). Re-fetch from DB on either signal. ──
+  // ── Live update listener ─────────────────────────────────────────────────
 
   useEffect(() => {
     const refresh = () => { loadData(); };
@@ -140,14 +154,62 @@ export function useBookmarks() {
     return () => window.removeEventListener("message", handleMessage);
   }, [loadData]);
 
-  // ── Filtered view ─────────────────────────────────────────────────────────
+  // ── Smart Collections lookup ─────────────────────────────────────────────
+
+  const flatColls = useMemo(() => flattenCollections(collections), [collections]);
+  const activeSmartColl = useMemo(() => {
+    if (coll === "all") return null;
+    return flatColls.find((c) => c.id === coll && Boolean(c.query)) || null;
+  }, [coll, flatColls]);
+
+  // ── Filtered view with Chapter Decomposition & Smart Collections ─────────
 
   const filteredBookmarks = useMemo(() => {
-    const f = parseQ(query);
+    // Combine explicit query string with active Smart Collection saved query (if any)
+    const effectiveQueryStr = activeSmartColl?.query
+      ? `${query} ${activeSmartColl.query}`.trim()
+      : query;
+
+    const f = parseQ(effectiveQueryStr);
     const okKinds = CTX[ctx];
 
-    const list = bookmarks.filter((x) => {
-      if (!inColl(x, coll, collections))   return false;
+    // Determine list of items to consider (parents + child chapters)
+    const itemsToEvaluate: Bookmark[] = [];
+    
+    // Group child chapters by parentId
+    const chaptersByParent = new Map<number, Bookmark[]>();
+    bookmarks.forEach((b) => {
+      if (b.parentId) {
+        const list = chaptersByParent.get(b.parentId) || [];
+        list.push(b);
+        chaptersByParent.set(b.parentId, list);
+      }
+    });
+
+    bookmarks.forEach((b) => {
+      // Top level items
+      if (!b.parentId) {
+        const kids = chaptersByParent.get(b.id) || [];
+        const fullItem = { ...b, chapters: kids };
+
+        if (time < 180 && b.mins > time) {
+          // Parent is too long for current time filter! Surface fits child chapters instead
+          kids.forEach((chap) => {
+            if (chap.mins <= time) {
+              itemsToEvaluate.push({
+                ...chap,
+                parentTitle: b.t,
+              });
+            }
+          });
+        } else {
+          itemsToEvaluate.push(fullItem);
+        }
+      }
+    });
+
+    const list = itemsToEvaluate.filter((x) => {
+      if (!activeSmartColl && !inColl(x, coll, collections)) return false;
       if (ty && x.ty !== ty)               return false;
       if (tag && x.tag !== tag)            return false;
       if (unreadOnly && !x.unread)         return false;
@@ -159,7 +221,7 @@ export function useBookmarks() {
       if (!okKinds.includes(x.ty))         return false;
       if (time < 180 && x.mins > time)     return false;
       if (f.text.length) {
-        const hay = (x.t + " " + x.src + " " + x.tag + " " + x.note + " " + Object.values(x.ex).join(" ")).toLowerCase();
+        const hay = (x.t + " " + x.src + " " + x.tag + " " + x.note + " " + (x.parentTitle || "") + " " + Object.values(x.ex).join(" ")).toLowerCase();
         if (!f.text.every((t) => hay.includes(t))) return false;
       }
       return true;
@@ -168,7 +230,7 @@ export function useBookmarks() {
     if (sort === "short") return [...list].sort((a, b) => a.mins - b.mins);
     if (sort === "az")    return [...list].sort((a, b) => a.t.localeCompare(b.t));
     return list;
-  }, [bookmarks, collections, query, coll, ty, tag, time, ctx, sort, unreadOnly]);
+  }, [bookmarks, collections, query, coll, ty, tag, time, ctx, sort, unreadOnly, activeSmartColl]);
 
   // ── Selection ─────────────────────────────────────────────────────────────
 
@@ -196,6 +258,43 @@ export function useBookmarks() {
       console.error("[addBookmark]", e);
     }
   }, []);
+
+  const addChapter = useCallback(
+    async (
+      parentId: number,
+      chapData: { t: string; mins: number; url: string; startTimeSec?: number }
+    ) => {
+      const parent = bookmarks.find((b) => b.id === parentId);
+      if (!parent) return;
+      const newBm: Omit<Bookmark, "id" | "when"> = {
+        t: chapData.t,
+        ty: parent.ty,
+        src: parent.src,
+        url: chapData.url,
+        mins: chapData.mins,
+        tag: parent.tag,
+        coll: parent.coll,
+        unread: true,
+        ex: parent.ex,
+        note: `Chapter of ${parent.t}`,
+        parentId: parent.id,
+        parentTitle: parent.t,
+        startTimeSec: chapData.startTimeSec || 0,
+      };
+
+      try {
+        const created = await apiFetch<Bookmark>("/api/bookmarks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newBm),
+        });
+        setBookmarks((prev) => [...prev, created]);
+      } catch (e) {
+        console.error("[addChapter]", e);
+      }
+    },
+    [bookmarks]
+  );
 
   const toggleReadStatus = useCallback(async (id: number) => {
     // Optimistic update
@@ -280,16 +379,75 @@ export function useBookmarks() {
     }
   }, [selectedIds]);
 
+  // ── Content Drift Check ───────────────────────────────────────────────────
+
+  const checkDrift = useCallback(async (bookmarkId: number) => {
+    try {
+      const res = await apiFetch<{
+        success: boolean;
+        driftStatus: "clean" | "changed" | "404_preserved";
+        driftPercent: number;
+        archivedText: string;
+      }>("/api/drift", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookmarkId }),
+      });
+
+      if (res.success) {
+        setBookmarks((prev) =>
+          prev.map((b) =>
+            b.id === bookmarkId
+              ? {
+                  ...b,
+                  driftStatus: res.driftStatus,
+                  driftPercent: res.driftPercent,
+                  archivedText: res.archivedText,
+                  lastFetchedAt: new Date().toISOString(),
+                }
+              : b
+          )
+        );
+      }
+    } catch (e) {
+      console.error("[checkDrift]", e);
+    }
+  }, []);
+
+  // ── Topic Clusters Merge ──────────────────────────────────────────────────
+
+  const mergeCluster = useCallback(async (bookmarkIds: number[], clusterTitle: string) => {
+    const clusterId = `cluster-${Date.now()}`;
+    setBookmarks((prev) =>
+      prev.map((b) =>
+        bookmarkIds.includes(b.id) ? { ...b, clusterId, clusterTitle } : b
+      )
+    );
+    try {
+      await Promise.all(
+        bookmarkIds.map((id) =>
+          apiFetch(`/api/bookmarks/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ clusterId, clusterTitle }),
+          })
+        )
+      );
+    } catch (e) {
+      console.error("[mergeCluster]", e);
+    }
+  }, []);
+
   // ── CRUD: Collections ─────────────────────────────────────────────────────
 
   const addCollection = useCallback(async ({
-    name, ic, c, parentId,
-  }: { name: string; ic: string; c: string; parentId?: string }) => {
+    name, ic, c, parentId, query: savedQuery,
+  }: { name: string; ic: string; c: string; parentId?: string; query?: string }) => {
     try {
       const created = await apiFetch<Collection>("/api/collections", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, ic, c, parentId }),
+        body: JSON.stringify({ name, ic, c, parentId, query: savedQuery }),
       });
 
       setCollections((prev) => {
@@ -336,12 +494,18 @@ export function useBookmarks() {
     openBookmark,
     isCaptureOpen,   setIsCaptureOpen,
     isNewFolderOpen, setIsNewFolderOpen,
+    isFocusOpen,     setIsFocusOpen,
+    isDiffOpen,      setIsDiffOpen,
+    diffBookmark,    setDiffBookmark,
     addBookmark,
+    addChapter,
     toggleReadStatus,
     updateNote,
     changeBookmarkCollection,
     bulkMarkRead,
     bulkDelete,
     addCollection,
+    checkDrift,
+    mergeCluster,
   };
 }

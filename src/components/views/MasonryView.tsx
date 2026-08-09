@@ -9,6 +9,7 @@ interface MasonryViewProps {
   selectedIds: Set<number>;
   onToggleSelect: (id: number, e: React.MouseEvent) => void;
   onOpen: (id: number) => void;
+  onOpenDiff?: (bookmark: Bookmark) => void;
 }
 
 export const MasonryView: React.FC<MasonryViewProps> = ({
@@ -16,6 +17,7 @@ export const MasonryView: React.FC<MasonryViewProps> = ({
   selectedIds,
   onToggleSelect,
   onOpen,
+  onOpenDiff,
 }) => {
   return (
     <div className="masonry">
@@ -29,6 +31,7 @@ export const MasonryView: React.FC<MasonryViewProps> = ({
             heightClass={heightClass}
             onToggleSelect={onToggleSelect}
             onOpen={onOpen}
+            onOpenDiff={onOpenDiff}
           />
         );
       })}

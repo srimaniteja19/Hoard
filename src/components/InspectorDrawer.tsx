@@ -1,36 +1,69 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Bookmark, Collection } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
+import { Plus, Lightbulb } from "lucide-react";
 
 interface InspectorDrawerProps {
   bookmark: Bookmark | null;
+  allBookmarks?: Bookmark[];
   collections: Collection[];
   onClose: () => void;
   onToggleRead: (id: number) => void;
   onUpdateNote: (id: number, note: string) => void;
   onChangeCollection: (id: number, targetCollId: string) => void;
+  onAddChapter?: (parentId: number, chap: { t: string; mins: number; url: string; startTimeSec?: number }) => Promise<void>;
+  onCheckDrift?: (id: number) => Promise<void>;
+  onOpenDiff?: (b: Bookmark) => void;
+  onSelectBookmark?: (id: number) => void;
 }
 
 export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
   bookmark,
+  allBookmarks = [],
   collections,
   onClose,
   onToggleRead,
   onUpdateNote,
   onChangeCollection,
+  onAddChapter,
+  onCheckDrift,
+  onOpenDiff,
+  onSelectBookmark,
 }) => {
   const [noteVal, setNoteVal] = useState("");
   const [permCopy, setPermCopy] = useState(true);
   const [notifyBreak, setNotifyBreak] = useState(false);
   const [pinned, setPinned] = useState(false);
 
+  // New chapter form state
+  const [showAddChap, setShowAddChap] = useState(false);
+  const [chapTitle, setChapTitle] = useState("");
+  const [chapMins, setChapMins] = useState(10);
+  const [chapSec, setChapSec] = useState(0);
+
   useEffect(() => {
     if (bookmark) {
       setNoteVal(bookmark.note || "");
+      setShowAddChap(false);
     }
   }, [bookmark]);
+
+  // "From Your Archive" recommendations algorithm (nearest-neighbor on tag / keywords)
+  const archivedRecommendations = useMemo(() => {
+    if (!bookmark || !allBookmarks.length) return [];
+    return allBookmarks
+      .filter((b) => b.id !== bookmark.id && !b.parentId)
+      .filter((b) => b.tag === bookmark.tag || b.ty === bookmark.ty)
+      .slice(0, 3);
+  }, [bookmark, allBookmarks]);
+
+  // Child chapters of this bookmark
+  const childChapters = useMemo(() => {
+    if (!bookmark || !allBookmarks.length) return [];
+    return allBookmarks.filter((b) => b.parentId === bookmark.id);
+  }, [bookmark, allBookmarks]);
 
   if (!bookmark) {
     return (
@@ -44,7 +77,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
     );
   }
 
-  const typeMeta = TYPES[bookmark.ty];
+  const typeMeta = TYPES[bookmark.ty] || { name: bookmark.ty, c: "#00F0FF", fg: "#000", verb: "READ" };
 
   const flattenCollections = (list: Collection[], depth = 0): { id: string; name: string }[] => {
     let res: { id: string; name: string }[] = [];
@@ -70,6 +103,25 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
     const val = e.target.value;
     setNoteVal(val);
     onUpdateNote(bookmark.id, val);
+  };
+
+  const handleCreateChapter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chapTitle.trim() || !onAddChapter) return;
+    const timeParam = chapSec > 0 ? `?t=${chapSec}` : "";
+    const chapUrl = bookmark.url.includes("?")
+      ? `${bookmark.url}&t=${chapSec}`
+      : `${bookmark.url}${timeParam}`;
+
+    await onAddChapter(bookmark.id, {
+      t: chapTitle.trim(),
+      mins: chapMins,
+      url: chapUrl,
+      startTimeSec: chapSec,
+    });
+
+    setChapTitle("");
+    setShowAddChap(false);
   };
 
   return (
@@ -105,7 +157,229 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
             </button>
           </div>
 
+          {/* 💡 FROM YOUR ARCHIVE Strip */}
+          {archivedRecommendations.length > 0 && (
+            <div
+              style={{
+                marginTop: "16px",
+                background: "#FFE60022",
+                border: "2px solid #000",
+                boxShadow: "3px 3px 0 #000",
+                padding: "12px",
+                fontFamily: "var(--mono)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 800, fontSize: "11px", marginBottom: "6px" }}>
+                <Lightbulb size={14} color="#000" /> FROM YOUR ARCHIVE:
+              </div>
+              <div style={{ fontSize: "11px", color: "#555", marginBottom: "8px" }}>
+                You previously saved these items about #{bookmark.tag}:
+              </div>
+              <div style={{ display: "grid", gap: "6px" }}>
+                {archivedRecommendations.map((rec) => (
+                  <div
+                    key={rec.id}
+                    onClick={() => onSelectBookmark && onSelectBookmark(rec.id)}
+                    style={{
+                      background: "#FFF",
+                      border: "1px solid #000",
+                      padding: "6px 8px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: "80%" }}>
+                      {rec.t}
+                    </span>
+                    <span style={{ fontSize: "9px", opacity: 0.7 }}>{rec.when}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* CHAPTERS & SECTIONS BREAKDOWN */}
           <div className="fld" style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="flbl">CHAPTERS & SECTIONS</span>
+              {onAddChapter && (
+                <button
+                  onClick={() => setShowAddChap(!showAddChap)}
+                  style={{
+                    background: "#B6FF3C",
+                    border: "1px solid #000",
+                    padding: "2px 6px",
+                    fontSize: "10px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2px",
+                  }}
+                >
+                  <Plus size={12} /> ADD CHAPTER
+                </button>
+              )}
+            </div>
+
+            {/* Child chapters list */}
+            {childChapters.length > 0 ? (
+              <div style={{ display: "grid", gap: "6px", marginTop: "8px" }}>
+                {childChapters.map((chap) => (
+                  <div
+                    key={chap.id}
+                    style={{
+                      border: "1.5px solid #000",
+                      background: chap.unread ? "#FFF" : "#F0F0F0",
+                      padding: "8px 10px",
+                      fontSize: "11px",
+                      fontFamily: "var(--mono)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 800 }}>⚡ {chap.t}</div>
+                      <div style={{ fontSize: "10px", color: "#666" }}>{chap.mins} min chapter</div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <button
+                        onClick={() => window.open(chap.url, "_blank")}
+                        style={{
+                          background: "#00F0FF",
+                          border: "1px solid #000",
+                          padding: "2px 6px",
+                          fontSize: "9px",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                        }}
+                      >
+                        DEEP LINK ↗
+                      </button>
+                      <button
+                        onClick={() => onToggleRead(chap.id)}
+                        style={{
+                          background: chap.unread ? "#FF007A" : "#B6FF3C",
+                          color: chap.unread ? "#fff" : "#000",
+                          border: "1px solid #000",
+                          padding: "2px 6px",
+                          fontSize: "9px",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {chap.unread ? "DONE" : "READ"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: "11px", color: "#777", fontStyle: "italic", marginTop: "6px" }}>
+                No chapters added yet. Decompose long videos or papers into checkable sub-items.
+              </div>
+            )}
+
+            {/* Add Chapter Form */}
+            {showAddChap && (
+              <form onSubmit={handleCreateChapter} style={{ marginTop: "10px", background: "#FFFDF8", border: "2px solid #000", padding: "10px" }}>
+                <input
+                  type="text"
+                  placeholder="Chapter title (e.g. Chapter 3: Self-Attention)"
+                  value={chapTitle}
+                  onChange={(e) => setChapTitle(e.target.value)}
+                  style={{ width: "100%", padding: "6px", fontSize: "11px", fontFamily: "var(--mono)", border: "1.5px solid #000", marginBottom: "8px" }}
+                  required
+                />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
+                  <div>
+                    <label style={{ fontSize: "9px", fontWeight: 800 }}>ESTIMATED MINS</label>
+                    <input
+                      type="number"
+                      value={chapMins}
+                      onChange={(e) => setChapMins(Number(e.target.value))}
+                      style={{ width: "100%", padding: "4px", fontSize: "11px", fontFamily: "var(--mono)", border: "1.5px solid #000" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "9px", fontWeight: 800 }}>START SEC (OPTIONAL)</label>
+                    <input
+                      type="number"
+                      value={chapSec}
+                      onChange={(e) => setChapSec(Number(e.target.value))}
+                      placeholder="e.g. 1420 for ?t=1420"
+                      style={{ width: "100%", padding: "4px", fontSize: "11px", fontFamily: "var(--mono)", border: "1.5px solid #000" }}
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  style={{ background: "#B6FF3C", border: "2px solid #000", padding: "4px 12px", fontWeight: 800, fontSize: "11px", cursor: "pointer", width: "100%" }}
+                >
+                  SAVE CHAPTER ITEM
+                </button>
+              </form>
+            )}
+          </div>
+
+          {/* CONTENT DRIFT & LINK ROT SECTION */}
+          <div className="fld">
+            <span className="flbl">CONTENT DRIFT & LINK ROT</span>
+            <div style={{ background: "#FFF", border: "2px solid #000", padding: "12px", fontFamily: "var(--mono)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <span style={{ fontSize: "11px", fontWeight: 800 }}>
+                  STATUS: {bookmark.driftStatus === "changed" ? "⚡ DRIFT DETECTED" : bookmark.driftStatus === "404_preserved" ? "🛡️ 404 PRESERVED" : "CLEAN"}
+                </span>
+                {bookmark.driftPercent ? (
+                  <span style={{ fontSize: "10px", fontWeight: 800, background: "#FFE600", padding: "1px 5px", border: "1px solid #000" }}>
+                    {bookmark.driftPercent}% CHANGE
+                  </span>
+                ) : null}
+              </div>
+
+              <div style={{ display: "flex", gap: "8px" }}>
+                {onCheckDrift && (
+                  <button
+                    onClick={() => onCheckDrift(bookmark.id)}
+                    style={{
+                      background: "#FFE600",
+                      border: "1.5px solid #000",
+                      padding: "4px 10px",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    CHECK FOR DRIFT
+                  </button>
+                )}
+
+                {onOpenDiff && (
+                  <button
+                    onClick={() => onOpenDiff(bookmark)}
+                    style={{
+                      background: "#00F0FF",
+                      border: "1.5px solid #000",
+                      padding: "4px 10px",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    VIEW ARCHIVED TEXT / DIFF
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="fld">
             <span className="flbl">MY NOTE</span>
             <textarea
               className="notebox"
@@ -128,7 +402,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                   {typeMeta.verb} {formatMins(bookmark.mins)}
                 </dd>
               </div>
-              {Object.entries(bookmark.ex).map(([k, v]) => (
+              {Object.entries(bookmark.ex || {}).map(([k, v]) => (
                 <div className="kv" key={k}>
                   <dt>{k.toUpperCase()}</dt>
                   <dd>{v}</dd>

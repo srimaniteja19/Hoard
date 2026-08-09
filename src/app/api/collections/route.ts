@@ -36,7 +36,7 @@ async function seedDefaults(userId: string) {
 function buildTree(rows: (typeof collections.$inferSelect)[]): Collection[] {
   const map = new Map<string, Collection>();
   rows.forEach((r) =>
-    map.set(r.id, { id: r.id, name: r.name, ic: r.icon, c: r.color, kids: [] })
+    map.set(r.id, { id: r.id, name: r.name, ic: r.icon, c: r.color, query: r.query || null, kids: [] })
   );
 
   const roots: Collection[] = [];
@@ -78,7 +78,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const userId = await requireUserId();
-    const { name, ic, c, parentId } = await req.json();
+    const { name, ic, c, parentId, query } = await req.json();
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const baseId = slug || `folder-${Date.now()}`;
@@ -91,13 +91,14 @@ export async function POST(req: Request) {
       id,
       userId,
       name,
-      icon: ic || "📁",
+      icon: ic || (query ? "⚡" : "📁"),
       color: c || "#00F0FF",
       parentId: parentId && parentId !== "root" ? parentId : null,
+      query: query || null,
     });
 
     return NextResponse.json(
-      { id, name, ic: ic || "📁", c: c || "#00F0FF", kids: [] },
+      { id, name, ic: ic || (query ? "⚡" : "📁"), c: c || "#00F0FF", query: query || null, kids: [] },
       { status: 201 }
     );
   } catch (e) {

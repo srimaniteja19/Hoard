@@ -11,10 +11,13 @@ import { InspectorDrawer } from "@/components/InspectorDrawer";
 import { CaptureModal } from "@/components/CaptureModal";
 import { NewFolderModal } from "@/components/NewFolderModal";
 import { ImportModal } from "@/components/ImportModal";
+import { FocusModeModal } from "@/components/FocusModeModal";
+import { DiffViewerModal } from "@/components/DiffViewerModal";
 import { MasonryView } from "@/components/views/MasonryView";
 import { GridView } from "@/components/views/GridView";
 import { ListView } from "@/components/views/ListView";
 import { HeadlinesView } from "@/components/views/HeadlinesView";
+import { Bookmark } from "@/types";
 
 export default function Home() {
   const {
@@ -49,13 +52,21 @@ export default function Home() {
     setIsCaptureOpen,
     isNewFolderOpen,
     setIsNewFolderOpen,
+    isFocusOpen,
+    setIsFocusOpen,
+    isDiffOpen,
+    setIsDiffOpen,
+    diffBookmark,
+    setDiffBookmark,
     addBookmark,
+    addChapter,
     toggleReadStatus,
     updateNote,
     changeBookmarkCollection,
     bulkMarkRead,
     bulkDelete,
     addCollection,
+    checkDrift,
   } = useBookmarks();
 
   const [captureUrl, setCaptureUrl] = useState("");
@@ -69,6 +80,14 @@ export default function Home() {
       setIsCaptureOpen(true);
     },
     [setIsCaptureOpen]
+  );
+
+  const handleOpenDiffModal = React.useCallback(
+    (bm: Bookmark) => {
+      setDiffBookmark(bm);
+      setIsDiffOpen(true);
+    },
+    [setDiffBookmark, setIsDiffOpen]
   );
 
   // Web Share Target & Query Parameter Listener
@@ -106,6 +125,8 @@ export default function Home() {
         setIsNewFolderOpen(false);
         setIsImportOpen(false);
         setIsMobileSidebarOpen(false);
+        setIsFocusOpen(false);
+        setIsDiffOpen(false);
         setOpenId(null);
       }
       if (e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
@@ -116,7 +137,7 @@ export default function Home() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setIsCaptureOpen, setIsNewFolderOpen, setOpenId]);
+  }, [setIsCaptureOpen, setIsNewFolderOpen, setOpenId, setIsFocusOpen, setIsDiffOpen]);
 
   if (!isLoaded) {
     return (
@@ -156,6 +177,7 @@ export default function Home() {
         }}
         onOpenNewFolder={() => setIsNewFolderOpen(true)}
         onOpenImport={() => setIsImportOpen(true)}
+        onOpenFocusMode={() => setIsFocusOpen(true)}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
@@ -176,6 +198,7 @@ export default function Home() {
             setCaptureUrl("");
             setIsCaptureOpen(true);
           }}
+          onOpenFocusMode={() => setIsFocusOpen(true)}
         />
 
         <CrumbBar
@@ -219,6 +242,7 @@ export default function Home() {
               selectedIds={selectedIds}
               onToggleSelect={(id) => toggleSelect(id)}
               onOpen={(id) => setOpenId(id)}
+              onOpenDiff={handleOpenDiffModal}
             />
           ) : view === "grid" ? (
             <GridView
@@ -226,6 +250,7 @@ export default function Home() {
               selectedIds={selectedIds}
               onToggleSelect={(id) => toggleSelect(id)}
               onOpen={(id) => setOpenId(id)}
+              onOpenDiff={handleOpenDiffModal}
             />
           ) : view === "list" ? (
             <ListView
@@ -256,11 +281,16 @@ export default function Home() {
         {/* Slide-over Inspector Drawer */}
         <InspectorDrawer
           bookmark={openBookmark}
+          allBookmarks={bookmarks}
           collections={collections}
           onClose={() => setOpenId(null)}
           onToggleRead={toggleReadStatus}
           onUpdateNote={updateNote}
           onChangeCollection={changeBookmarkCollection}
+          onAddChapter={addChapter}
+          onCheckDrift={checkDrift}
+          onOpenDiff={handleOpenDiffModal}
+          onSelectBookmark={(id) => setOpenId(id)}
         />
       </main>
 
@@ -275,7 +305,7 @@ export default function Home() {
         onSelectExisting={(id) => setOpenId(id)}
       />
 
-      {/* Create New Folder Modal */}
+      {/* Create New Folder / Smart Collection Modal */}
       <NewFolderModal
         isOpen={isNewFolderOpen}
         collections={collections}
@@ -288,6 +318,22 @@ export default function Home() {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         onImportComplete={() => window.location.reload()}
+      />
+
+      {/* ⚡ Session Queue + Focus Mode Modal */}
+      <FocusModeModal
+        isOpen={isFocusOpen}
+        onClose={() => setIsFocusOpen(false)}
+        bookmarks={bookmarks}
+        onToggleRead={toggleReadStatus}
+      />
+
+      {/* ⚡ Content Drift & Preserved Copy Reader Modal */}
+      <DiffViewerModal
+        isOpen={isDiffOpen}
+        onClose={() => setIsDiffOpen(false)}
+        bookmark={diffBookmark}
+        onRecheckDrift={checkDrift}
       />
     </div>
   );

@@ -7,6 +7,7 @@ import { inColl } from "@/hooks/useBookmarks";
 import { UserMenu } from "@/components/UserMenu";
 import { usePWA } from "@/components/PWAProvider";
 import Link from "next/link";
+import { Zap } from "lucide-react";
 
 interface SidebarProps {
   bookmarks: Bookmark[];
@@ -22,6 +23,7 @@ interface SidebarProps {
   onOpenCapture: () => void;
   onOpenNewFolder: () => void;
   onOpenImport: () => void;
+  onOpenFocusMode?: () => void;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
@@ -40,6 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenCapture,
   onOpenNewFolder,
   onOpenImport,
+  onOpenFocusMode,
   isMobileOpen = false,
   onCloseMobile,
 }) => {
@@ -116,13 +119,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={`ci ${depth > 0 ? "child" : ""} ${coll === c.id ? "on" : ""}`}
           style={{ paddingLeft: depth > 0 ? `${14 + depth * 14}px` : undefined }}
           onClick={() => handleSelectCollection(c.id)}
+          title={c.query ? `Smart Collection Query: ${c.query}` : undefined}
         >
           <span className="ic" style={{ background: c.c }}>
-            {c.ic}
+            {c.query ? "⚡" : c.ic}
           </span>
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
             {c.name}
           </span>
+          {c.query && <span style={{ fontSize: "9px", opacity: 0.6, marginRight: "4px" }}>LIVE</span>}
           <span className="n">{cnt(c.id)}</span>
         </div>
         {c.kids && renderCollectionTree(c.kids, depth + 1)}
@@ -154,6 +159,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           )}
         </div>
+
+        {/* ⚡ Start Focus Session Button */}
+        {onOpenFocusMode && (
+          <button
+            onClick={() => {
+              onOpenFocusMode();
+              if (onCloseMobile) onCloseMobile();
+            }}
+            style={{
+              width: "100%",
+              background: "#FFE600",
+              color: "#000",
+              border: "3px solid #000",
+              boxShadow: "3px 3px 0 #000",
+              padding: "10px",
+              fontWeight: 900,
+              fontFamily: "var(--mono)",
+              fontSize: "13px",
+              cursor: "pointer",
+              marginBottom: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+            }}
+          >
+            <Zap size={16} fill="#000" /> START FOCUS SESSION
+          </button>
+        )}
 
         <button
           className="addbtn"

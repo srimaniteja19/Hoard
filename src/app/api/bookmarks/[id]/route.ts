@@ -24,8 +24,19 @@ export async function PATCH(req: Request, { params }: Params) {
     if (typeof body.note      === "string")  updates.note         = body.note;
     if (typeof body.coll      === "string")  updates.collectionId = body.coll;
     if (typeof body.title     === "string")  updates.title        = body.title;
+    if (typeof body.t         === "string")  updates.title        = body.t;
     if (typeof body.tag       === "string")  updates.tag          = body.tag;
     if (typeof body.ty        === "string")  updates.type         = body.ty as KindType;
+    if (typeof body.mins      === "number")  updates.mins         = body.mins;
+
+    if (body.parentId !== undefined)     updates.parentId     = body.parentId;
+    if (body.startTimeSec !== undefined) updates.startTimeSec = body.startTimeSec;
+    if (body.chapterIndex !== undefined) updates.chapterIndex = body.chapterIndex;
+    if (body.archivedText !== undefined) updates.archivedText = body.archivedText;
+    if (body.driftStatus !== undefined)  updates.driftStatus  = body.driftStatus;
+    if (body.driftPercent !== undefined) updates.driftPercent = body.driftPercent;
+    if (body.clusterId !== undefined)    updates.clusterId    = body.clusterId;
+    if (body.clusterTitle !== undefined) updates.clusterTitle = body.clusterTitle;
 
     await db
       .update(bookmarks)

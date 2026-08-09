@@ -12,6 +12,7 @@ interface NewFolderModalProps {
     ic: string;
     c: string;
     parentId?: string;
+    query?: string;
   }) => void;
 }
 
@@ -36,6 +37,8 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
   const [ic, setIc] = useState("📁");
   const [c, setC] = useState("#00F0FF");
   const [parentId, setParentId] = useState("root");
+  const [isSmart, setIsSmart] = useState(false);
+  const [queryText, setQueryText] = useState("");
 
   if (!isOpen) return null;
 
@@ -45,15 +48,18 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
 
     onAddCollection({
       name: name.trim(),
-      ic,
+      ic: isSmart ? "⚡" : ic,
       c,
       parentId: parentId === "root" ? undefined : parentId,
+      query: isSmart && queryText.trim() ? queryText.trim() : undefined,
     });
 
     setName("");
     setIc("📁");
     setC("#00F0FF");
     setParentId("root");
+    setIsSmart(false);
+    setQueryText("");
     onClose();
   };
 
@@ -80,23 +86,87 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
     >
       <div className="sheet">
         <header>
-          <b>CREATE NEW FOLDER</b>
+          <b>CREATE NEW COLLECTION</b>
           <button onClick={onClose}>✕</button>
         </header>
 
         <form onSubmit={handleSubmit} style={{ padding: "16px" }}>
+          {/* Smart Collection Toggle */}
+          <div
+            style={{
+              display: "flex",
+              border: "2px solid #000",
+              background: "#FFFDF8",
+              marginBottom: "14px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setIsSmart(false)}
+              style={{
+                flex: 1,
+                padding: "8px",
+                fontWeight: 800,
+                fontSize: "12px",
+                background: !isSmart ? "#00F0FF" : "transparent",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "var(--mono)",
+              }}
+            >
+              📁 STANDARD FOLDER
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsSmart(true);
+                setIc("⚡");
+              }}
+              style={{
+                flex: 1,
+                padding: "8px",
+                fontWeight: 800,
+                fontSize: "12px",
+                background: isSmart ? "#FFE600" : "transparent",
+                border: "none",
+                borderLeft: "2px solid #000",
+                cursor: "pointer",
+                fontFamily: "var(--mono)",
+              }}
+            >
+              ⚡ SMART COLLECTION (SAVED QUERY)
+            </button>
+          </div>
+
           <div className="fld">
-            <span className="flbl">FOLDER NAME</span>
+            <span className="flbl">NAME</span>
             <input
               className="urlin"
               style={{ border: "2px solid #000", marginTop: "4px" }}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Design Systems, Web3, Ideas..."
+              placeholder={isSmart ? "e.g. Unread TS Repos, ArXiv Papers..." : "e.g. Design Systems, Web3, Ideas..."}
               autoFocus
               autoComplete="off"
             />
           </div>
+
+          {/* Saved Query Field if Smart Collection */}
+          {isSmart && (
+            <div className="fld" style={{ marginTop: "14px" }}>
+              <span className="flbl">SAVED QUERY GRAMMAR</span>
+              <input
+                className="urlin"
+                style={{ border: "2px solid #000", marginTop: "4px", background: "#FFE60022" }}
+                value={queryText}
+                onChange={(e) => setQueryText(e.target.value)}
+                placeholder="e.g. is:repo lang:ts under:10m or #ai is:unread"
+              />
+              <div style={{ fontSize: "10px", color: "#555", marginTop: "4px", fontFamily: "var(--mono)" }}>
+                Supports `is:video`, `is:paper`, `is:repo`, `under:20m`, `lang:ts`, `#tag`, `is:unread`.
+              </div>
+            </div>
+          )}
 
           <div className="fld" style={{ marginTop: "14px" }}>
             <span className="flbl">ICON SYMBOL</span>
@@ -175,7 +245,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
               CANCEL
             </button>
             <button type="submit" className="prime">
-              CREATE FOLDER
+              {isSmart ? "CREATE SMART COLLECTION" : "CREATE FOLDER"}
             </button>
           </div>
         </form>

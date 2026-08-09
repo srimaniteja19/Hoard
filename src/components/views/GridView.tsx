@@ -9,6 +9,7 @@ interface GridViewProps {
   selectedIds: Set<number>;
   onToggleSelect: (id: number, e: React.MouseEvent) => void;
   onOpen: (id: number) => void;
+  onOpenDiff?: (bookmark: Bookmark) => void;
 }
 
 export const GridView: React.FC<GridViewProps> = ({
@@ -16,6 +17,7 @@ export const GridView: React.FC<GridViewProps> = ({
   selectedIds,
   onToggleSelect,
   onOpen,
+  onOpenDiff,
 }) => {
   return (
     <div className="grid">
@@ -27,6 +29,7 @@ export const GridView: React.FC<GridViewProps> = ({
           heightClass=""
           onToggleSelect={onToggleSelect}
           onOpen={onOpen}
+          onOpenDiff={onOpenDiff}
         />
       ))}
     </div>

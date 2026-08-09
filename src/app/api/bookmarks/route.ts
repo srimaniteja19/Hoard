@@ -7,7 +7,7 @@ import { Bookmark, KindType } from "@/types";
 
 // ─── Shape mapper ────────────────────────────────────────────────────────────
 
-function dbToUi(row: typeof bookmarks.$inferSelect): Bookmark {
+function dbToUi(row: typeof bookmarks.$inferSelect, titleMap?: Map<number, string>): Bookmark {
   const d = new Date(row.createdAt);
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return {
@@ -23,6 +23,16 @@ function dbToUi(row: typeof bookmarks.$inferSelect): Bookmark {
     unread: row.unread,
     ex:     (row.extra as Record<string, string>) || {},
     note:   row.note,
+    parentId: row.parentId,
+    parentTitle: row.parentId && titleMap ? titleMap.get(row.parentId) || null : null,
+    startTimeSec: row.startTimeSec,
+    chapterIndex: row.chapterIndex,
+    archivedText: row.archivedText,
+    lastFetchedAt: row.lastFetchedAt ? new Date(row.lastFetchedAt).toISOString() : null,
+    driftStatus: (row.driftStatus as unknown as Bookmark["driftStatus"]) || null,
+    driftPercent: row.driftPercent,
+    clusterId: row.clusterId,
+    clusterTitle: row.clusterTitle,
   };
 }
 
@@ -75,7 +85,10 @@ export async function GET() {
       .where(and(eq(bookmarks.userId, userId), isNull(bookmarks.deletedAt)))
       .orderBy(desc(bookmarks.createdAt));
 
-    return NextResponse.json(rows.map(dbToUi));
+    const titleMap = new Map<number, string>();
+    rows.forEach((r) => titleMap.set(r.id, r.title));
+
+    return NextResponse.json(rows.map((r) => dbToUi(r, titleMap)));
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     console.error("[GET /api/bookmarks]", e);
@@ -109,6 +122,14 @@ export async function POST(req: Request) {
         unread:       body.unread ?? true,
         note:         body.note   || "",
         extra:        body.ex     || {},
+        parentId:     body.parentId ?? null,
+        startTimeSec: body.startTimeSec ?? null,
+        chapterIndex: body.chapterIndex ?? null,
+        archivedText: body.archivedText ?? null,
+        driftStatus:  body.driftStatus ?? null,
+        driftPercent: body.driftPercent ?? null,
+        clusterId:    body.clusterId ?? null,
+        clusterTitle: body.clusterTitle ?? null,
       })
       .returning();
 

@@ -69,6 +69,7 @@ export const collections = pgTable("collections", {
   icon: text("icon").notNull().default("📁"),
   color: text("color").notNull().default("#00F0FF"),
   parentId: text("parent_id"),
+  query: text("query"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -92,6 +93,15 @@ export const bookmarks = pgTable(
     unread: boolean("unread").notNull().default(true),
     note: text("note").notNull().default(""),
     extra: jsonb("extra").$type<Record<string, string>>().notNull().default({}),
+    parentId: integer("parent_id"),
+    startTimeSec: integer("start_time_sec"),
+    chapterIndex: integer("chapter_index"),
+    archivedText: text("archived_text"),
+    lastFetchedAt: timestamp("last_fetched_at"),
+    driftStatus: text("drift_status"),
+    driftPercent: integer("drift_percent"),
+    clusterId: text("cluster_id"),
+    clusterTitle: text("cluster_title"),
     deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -100,6 +110,8 @@ export const bookmarks = pgTable(
     uniqueIndex("user_url_idx").on(table.userId, table.url),
     index("user_created_idx").on(table.userId, table.createdAt, table.id),
     index("user_unread_idx").on(table.userId, table.unread),
+    index("bookmark_parent_idx").on(table.parentId),
+    index("bookmark_cluster_idx").on(table.clusterId),
   ]
 );
 

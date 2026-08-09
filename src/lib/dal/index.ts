@@ -12,6 +12,9 @@ export async function fetchUserBookmarks(userId: string): Promise<Bookmark[]> {
       .from(bookmarksTable)
       .where(and(eq(bookmarksTable.userId, userId), isNull(bookmarksTable.deletedAt)));
 
+    const titleMap = new Map<number, string>();
+    rows.forEach((r) => titleMap.set(r.id, r.title));
+
     return rows.map((r) => {
       const d = new Date(r.createdAt);
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -30,6 +33,17 @@ export async function fetchUserBookmarks(userId: string): Promise<Bookmark[]> {
         unread: r.unread,
         ex: (r.extra as Record<string, string>) || {},
         note: r.note || "",
+
+        parentId: r.parentId,
+        parentTitle: r.parentId ? titleMap.get(r.parentId) || null : null,
+        startTimeSec: r.startTimeSec,
+        chapterIndex: r.chapterIndex,
+        archivedText: r.archivedText,
+        lastFetchedAt: r.lastFetchedAt ? new Date(r.lastFetchedAt).toISOString() : null,
+        driftStatus: (r.driftStatus as unknown as Bookmark["driftStatus"]) || null,
+        driftPercent: r.driftPercent,
+        clusterId: r.clusterId,
+        clusterTitle: r.clusterTitle,
       };
     });
   } catch (err) {
@@ -54,6 +68,7 @@ export async function fetchUserCollections(userId: string): Promise<Collection[]
         name: r.name,
         ic: r.icon,
         c: r.color,
+        query: r.query,
         kids: [],
       });
     });
@@ -92,6 +107,15 @@ export async function createBookmarkInDb(userId: string, bm: Omit<Bookmark, "id"
         unread: bm.unread,
         note: bm.note || "",
         extra: bm.ex || {},
+
+        parentId: bm.parentId ?? null,
+        startTimeSec: bm.startTimeSec ?? null,
+        chapterIndex: bm.chapterIndex ?? null,
+        archivedText: bm.archivedText ?? null,
+        driftStatus: bm.driftStatus ?? null,
+        driftPercent: bm.driftPercent ?? null,
+        clusterId: bm.clusterId ?? null,
+        clusterTitle: bm.clusterTitle ?? null,
       })
       .returning();
 
