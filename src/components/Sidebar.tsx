@@ -179,6 +179,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             Broken links
             <span className="n">3</span>
           </div>
+          <div
+            className="ci"
+            onClick={() => window.open("/api/export", "_blank")}
+            style={{ marginTop: "12px", background: "#FFE600", borderColor: "#000" }}
+          >
+            <span className="ic" style={{ background: "#000", color: "#FFE600" }}>
+              ↓
+            </span>
+            EXPORT DATA
+          </div>
         </div>
       </div>
     </aside>
