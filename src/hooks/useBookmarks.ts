@@ -6,6 +6,7 @@ import { INITIAL_BOOKMARKS, CTX, COLLS } from "@/data/initialBookmarks";
 
 const BOOKMARKS_STORAGE_KEY = "hoard_bookmarks_v2";
 const COLLECTIONS_STORAGE_KEY = "hoard_collections_v2";
+const PENDING_BRIDGE_KEY = "hoard_pending_bridge"; // written by content script from chrome.storage
 
 export function parseQ(q: string): SearchFilter {
   const f: SearchFilter = {
@@ -128,6 +129,41 @@ export function useBookmarks() {
       setCollections(COLLS);
     }
     setIsLoaded(true);
+  }, []);
+
+  // Re-sync when the extension injects a bookmark into localStorage
+  // (extension fires a StorageEvent after writing hoard_bookmarks_v2)
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === BOOKMARKS_STORAGE_KEY && e.newValue) {
+        try {
+          setBookmarks(JSON.parse(e.newValue));
+        } catch {
+          // ignore malformed
+        }
+      }
+
+      // Content script bridges pending bookmarks via localStorage
+      if (e.key === PENDING_BRIDGE_KEY && e.newValue) {
+        try {
+          const pending: Omit<Bookmark, "id">[] = JSON.parse(e.newValue);
+          if (pending.length > 0) {
+            setBookmarks((prev) => {
+              const maxId = prev.reduce((acc, x) => Math.max(acc, x.id), -1);
+              const toAdd = pending.map((bm, i) => ({ ...bm, id: maxId + 1 + i }));
+              const merged = [...toAdd, ...prev];
+              localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(merged));
+              return merged;
+            });
+            localStorage.removeItem(PENDING_BRIDGE_KEY);
+          }
+        } catch {
+          // ignore
+        }
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
   // Save bookmarks to localStorage
