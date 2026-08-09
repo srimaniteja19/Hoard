@@ -7,54 +7,54 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div className="popup-container">
+  <div class="popup-container">
     <!-- Top Header -->
-    <header className="header">
-      <div className="brand">
-        <span className="logo-badge">HOARD</span>
-        <span className="version-badge">EXTENSION</span>
+    <header class="header">
+      <div class="brand">
+        <span class="logo-badge">HOARD</span>
+        <span class="version-badge">EXTENSION</span>
       </div>
-      <div className="status-indicator" id="syncStatus" title="Connected to Hoard">● LIVE</div>
+      <div class="status-indicator" id="syncStatus" title="Connected to Hoard">● LIVE</div>
     </header>
 
     <!-- Tab Switcher -->
-    <nav className="tab-nav">
-      <button className="tab-btn active" data-tab="save">SAVE TAB</button>
-      <button className="tab-btn" data-tab="hoard">MY HOARD</button>
-      <button className="tab-btn" data-tab="settings">SETTINGS</button>
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="save">SAVE TAB</button>
+      <button class="tab-btn" data-tab="hoard">MY HOARD</button>
+      <button class="tab-btn" data-tab="settings">SETTINGS</button>
     </nav>
 
     <!-- Notification Toast -->
-    <div className="toast" id="toast" style="display: none;">
+    <div class="toast" id="toast" style="display: none;">
       <span id="toastMsg">✓ SAVED TO HOARD</span>
     </div>
 
     <!-- TAB 1: SAVE TAB -->
-    <main className="tab-content active" id="tab-save">
-      <div className="form-group">
-        <label className="field-lbl">PAGE TITLE</label>
-        <input type="text" id="pageTitle" className="input-field" placeholder="Page title..." />
+    <main class="tab-content active" id="tab-save">
+      <div class="form-group">
+        <label class="field-lbl">PAGE TITLE</label>
+        <input type="text" id="pageTitle" class="input-field" placeholder="Page title..." />
       </div>
 
-      <div className="form-group">
-        <label className="field-lbl">URL LOCATION</label>
-        <input type="url" id="pageUrl" className="input-field" placeholder="https://..." />
+      <div class="form-group">
+        <label class="field-lbl">URL LOCATION</label>
+        <input type="url" id="pageUrl" class="input-field" placeholder="https://..." />
       </div>
 
       <!-- Detection Badge Block -->
-      <div className="detection-card" id="detectionCard">
-        <div className="detection-header">
-          <span className="type-tag" id="detectType">ART</span>
-          <span className="detect-title" id="detectTitle">Web Article</span>
+      <div class="detection-card" id="detectionCard">
+        <div class="detection-header">
+          <span class="type-tag" id="detectType">ART</span>
+          <span class="detect-title" id="detectTitle">Web Article</span>
         </div>
-        <div className="detect-details" id="detectDetails">
-          <span>Words: 2,400</span> · <span>Est. 12 min</span>
+        <div class="detect-details" id="detectDetails">
+          <span>Source: Web · Article</span>
         </div>
       </div>
 
-      <div className="form-group">
-        <label className="field-lbl">FOLDER / COLLECTION</label>
-        <select id="folderSelect" className="select-field">
+      <div class="form-group">
+        <label class="field-lbl">FOLDER / COLLECTION</label>
+        <select id="folderSelect" class="select-field">
           <option value="unsorted">📁 [ Unsorted ]</option>
           <option value="read">📚 [ Read queue ]</option>
           <option value="listen">🎧 [ Listen shelf ]</option>
@@ -64,71 +64,72 @@
         </select>
       </div>
 
-      <div className="form-group">
-        <label className="field-lbl">TAGS</label>
-        <div className="tag-picker" id="tagPicker">
-          <button type="button" className="tag-chip active" data-tag="ai">#ai</button>
-          <button type="button" className="tag-chip" data-tag="systems">#systems</button>
-          <button type="button" className="tag-chip" data-tag="craft">#craft</button>
-          <button type="button" className="tag-chip" data-tag="paper">#paper</button>
+      <div class="form-group">
+        <label class="field-lbl">TAGS</label>
+        <div class="tag-picker" id="tagPicker">
+          <button type="button" class="tag-chip active" data-tag="ai">#ai</button>
+          <button type="button" class="tag-chip" data-tag="systems">#systems</button>
+          <button type="button" class="tag-chip" data-tag="craft">#craft</button>
+          <button type="button" class="tag-chip" data-tag="paper">#paper</button>
         </div>
-        <input type="text" id="customTag" className="input-field-sm" placeholder="Add custom #tag and press Enter..." />
+        <input type="text" id="customTag" class="input-field-sm" placeholder="Add custom #tag and press Enter..." />
       </div>
 
-      <div className="form-group">
-        <label className="field-lbl">MY NOTE</label>
-        <textarea id="pageNote" className="textarea-field" placeholder="What's worth remembering about this link?"></textarea>
+      <div class="form-group">
+        <label class="field-lbl">MY NOTE</label>
+        <textarea id="pageNote" class="textarea-field" placeholder="What's worth remembering about this link?"></textarea>
       </div>
 
-      <button id="saveBtn" className="btn-primary">
-        SAVE TO HOARD <kbd>⌥⇧H</kbd>
+      <button id="saveBtn" class="btn-primary">
+        <span>SAVE TO HOARD</span>
+        <kbd>⌥⇧H</kbd>
       </button>
     </main>
 
     <!-- TAB 2: MY HOARD SEARCH -->
-    <main className="tab-content" id="tab-hoard" style="display: none;">
-      <div className="search-bar">
-        <input type="text" id="searchInHoard" className="input-field" placeholder="Search saved bookmarks..." />
+    <main class="tab-content" id="tab-hoard" style="display: none;">
+      <div class="search-bar">
+        <input type="text" id="searchInHoard" class="input-field" placeholder="Search saved bookmarks..." />
       </div>
 
-      <div className="filter-chips">
-        <button className="filter-chip active" data-filter="all">ALL</button>
-        <button className="filter-chip" data-filter="unread">UNREAD</button>
-        <button className="filter-chip" data-filter="VID">VIDEOS</button>
-        <button className="filter-chip" data-filter="GIT">REPOS</button>
-        <button className="filter-chip" data-filter="PPR">PAPERS</button>
+      <div class="filter-chips">
+        <button class="filter-chip active" data-filter="all">ALL</button>
+        <button class="filter-chip" data-filter="unread">UNREAD</button>
+        <button class="filter-chip" data-filter="VID">VIDEOS</button>
+        <button class="filter-chip" data-filter="GIT">REPOS</button>
+        <button class="filter-chip" data-filter="PPR">PAPERS</button>
       </div>
 
-      <div className="hoard-list" id="hoardList">
+      <div class="hoard-list" id="hoardList">
         <!-- Bookmark items injected via popup.js -->
       </div>
     </main>
 
     <!-- TAB 3: SETTINGS -->
-    <main className="tab-content" id="tab-settings" style="display: none;">
-      <div className="form-group">
-        <label className="field-lbl">HOARD APP SERVER URL</label>
-        <input type="text" id="serverUrl" className="input-field" value="http://localhost:3000" />
+    <main class="tab-content" id="tab-settings" style="display: none;">
+      <div class="form-group">
+        <label class="field-lbl">HOARD APP SERVER URL</label>
+        <input type="text" id="serverUrl" class="input-field" value="http://localhost:3000" />
       </div>
 
-      <div className="info-box">
+      <div class="info-box">
         <b>KEYBOARD SHORTCUTS</b>
-        <div className="shortcut-row">
+        <div class="shortcut-row">
           <span>Quick Save Tab</span>
           <kbd>Alt + Shift + H</kbd>
         </div>
-        <div className="shortcut-row">
+        <div class="shortcut-row">
           <span>Open Hoard Web App</span>
           <kbd>Alt + Shift + O</kbd>
         </div>
       </div>
 
-      <div className="info-box" style="margin-top: 10px;">
+      <div class="info-box" style="margin-top: 10px;">
         <b>RIGHT-CLICK CONTEXT MENU</b>
         <p style="margin: 4px 0 0; font-size: 11px; opacity: .8;">Right-click any link or selection on any webpage to save directly into HOARD.</p>
       </div>
 
-      <button id="openWebAppBtn" className="btn-secondary" style="margin-top: 14px;">
+      <button id="openWebAppBtn" class="btn-secondary" style="margin-top: 14px;">
         OPEN HOARD WEB APP ↗
       </button>
     </main>

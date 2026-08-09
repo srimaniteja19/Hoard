@@ -256,15 +256,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         el.innerHTML = `
           <div style="flex: 1; overflow: hidden;">
-            <div className="hoard-item-title" style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${item.t}</div>
-            <div className="hoard-item-meta">
+            <div class="hoard-item-title" style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${item.t}</div>
+            <div class="hoard-item-meta">
               <span style="background: ${meta.bg}; color: ${meta.fg}; padding: 1px 4px; border: 1px solid #000; font-weight: 800;">${item.ty}</span>
               <span style="margin-left: 4px;">${item.src}</span> · <span>#${item.tag}</span>
             </div>
           </div>
-          <div className="hoard-item-actions">
-            <button className="icon-btn copy-btn" title="Copy URL">📋</button>
-            <button className="icon-btn open-btn" title="Open Link">↗</button>
+          <div class="hoard-item-actions">
+            <button class="icon-btn copy-btn" title="Copy URL">📋</button>
+            <button class="icon-btn open-btn" title="Open Link">↗</button>
           </div>
         `;
 
