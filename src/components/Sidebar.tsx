@@ -19,6 +19,8 @@ interface SidebarProps {
   setUnreadOnly: (u: boolean) => void;
   onOpenCapture: () => void;
   onOpenNewFolder: () => void;
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -34,6 +36,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setUnreadOnly,
   onOpenCapture,
   onOpenNewFolder,
+  isMobileOpen = false,
+  onCloseMobile,
 }) => {
   const cnt = (cId: string) => bookmarks.filter((x) => inColl(x, cId, collections)).length;
 
@@ -59,16 +63,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return bookmarks.filter((x) => x.unread).length;
   }, [bookmarks]);
 
+  const handleSelectCollection = (cId: string) => {
+    setColl(cId);
+    setTy(null);
+    if (onCloseMobile) onCloseMobile();
+  };
+
+  const handleSelectType = (k: KindType) => {
+    setTy(ty === k ? null : k);
+    if (onCloseMobile) onCloseMobile();
+  };
+
+  const handleSelectTag = (t: string) => {
+    setTag(tag === t ? null : t);
+    if (onCloseMobile) onCloseMobile();
+  };
+
+  const handleSelectUnread = () => {
+    setUnreadOnly(!unreadOnly);
+    if (onCloseMobile) onCloseMobile();
+  };
+
   const renderCollectionTree = (list: Collection[], depth = 0) => {
     return list.map((c) => (
       <React.Fragment key={c.id}>
         <div
           className={`ci ${depth > 0 ? "child" : ""} ${coll === c.id ? "on" : ""}`}
           style={{ paddingLeft: depth > 0 ? `${14 + depth * 14}px` : undefined }}
-          onClick={() => {
-            setColl(c.id);
-            setTy(null);
-          }}
+          onClick={() => handleSelectCollection(c.id)}
         >
           <span className="ic" style={{ background: c.c }}>
             {c.ic}
@@ -84,115 +106,146 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside className="side">
-      <div className="logo">
-        <b>HOARD</b>
-        <span>{bookmarks.length}</span>
-      </div>
+    <>
+      {/* Mobile Drawer Backdrop */}
+      {isMobileOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={onCloseMobile}
+        />
+      )}
 
-      <button className="addbtn" onClick={onOpenCapture}>
-        SAVE A LINK <kbd>⌘N</kbd>
-      </button>
-
-      <div className="sidescroll">
-        <div className="slbl" style={{ justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
-            COLLECTIONS<i></i>
-          </div>
-          <button
-            onClick={onOpenNewFolder}
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: "9px",
-              fontWeight: 800,
-              border: "2px solid #000",
-              background: "#FFE600",
-              padding: "2px 6px",
-              cursor: "pointer",
-              marginLeft: "4px",
-            }}
-          >
-            + FOLDER
-          </button>
-        </div>
-        <div id="colls">{renderCollectionTree(collections)}</div>
-
-        <div className="slbl">
-          KIND<i></i>
-        </div>
-        <div id="kinds">
-          {(Object.keys(TYPES) as KindType[]).map((k) => {
-            const v = TYPES[k];
-            return (
-              <div
-                key={k}
-                className={`ci ${ty === k ? "on" : ""}`}
-                onClick={() => setTy(ty === k ? null : k)}
-              >
-                <span className="ic" style={{ background: v.c }}>
-                  {k[0]}
-                </span>
-                {v.name}
-                <span className="n">{typeCounts[k] || 0}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="slbl">
-          TAGS<i></i>
-        </div>
-        <div className="tagwrap" id="tags">
-          {tagCounts.map(([t, n]) => (
-            <span
-              key={t}
-              className={`tg ${tag === t ? "on" : ""}`}
-              onClick={() => setTag(tag === t ? null : t)}
+      <aside className={`side ${isMobileOpen ? "mobile-open" : ""}`}>
+        <div className="logo">
+          <b>HOARD</b>
+          <span>{bookmarks.length}</span>
+          {onCloseMobile && (
+            <button
+              className="mobile-side-close"
+              onClick={onCloseMobile}
+              aria-label="Close menu"
             >
-              #{t} {n}
-            </span>
-          ))}
+              ✕
+            </button>
+          )}
         </div>
 
-        <div className="slbl">
-          FILTERS<i></i>
+        <button
+          className="addbtn"
+          onClick={() => {
+            onOpenCapture();
+            if (onCloseMobile) onCloseMobile();
+          }}
+        >
+          SAVE A LINK <kbd>⌘N</kbd>
+        </button>
+
+        <div className="sidescroll">
+          <div className="slbl" style={{ justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
+              COLLECTIONS<i></i>
+            </div>
+            <button
+              onClick={() => {
+                onOpenNewFolder();
+                if (onCloseMobile) onCloseMobile();
+              }}
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "9px",
+                fontWeight: 800,
+                border: "2px solid #000",
+                background: "#FFE600",
+                padding: "2px 6px",
+                cursor: "pointer",
+                marginLeft: "4px",
+              }}
+            >
+              + FOLDER
+            </button>
+          </div>
+          <div id="colls">{renderCollectionTree(collections)}</div>
+
+          <div className="slbl">
+            KIND<i></i>
+          </div>
+          <div id="kinds">
+            {(Object.keys(TYPES) as KindType[]).map((k) => {
+              const v = TYPES[k];
+              return (
+                <div
+                  key={k}
+                  className={`ci ${ty === k ? "on" : ""}`}
+                  onClick={() => handleSelectType(k)}
+                >
+                  <span className="ic" style={{ background: v.c }}>
+                    {k[0]}
+                  </span>
+                  {v.name}
+                  <span className="n">{typeCounts[k] || 0}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="slbl">
+            TAGS<i></i>
+          </div>
+          <div className="tagwrap" id="tags">
+            {tagCounts.map(([t, n]) => (
+              <span
+                key={t}
+                className={`tg ${tag === t ? "on" : ""}`}
+                onClick={() => handleSelectTag(t)}
+              >
+                #{t} {n}
+              </span>
+            ))}
+          </div>
+
+          <div className="slbl">
+            FILTERS<i></i>
+          </div>
+          <div id="filters">
+            <div
+              className={`ci ${unreadOnly ? "on" : ""}`}
+              onClick={handleSelectUnread}
+            >
+              <span className="ic" style={{ background: "#FF007A" }}></span>
+              Unread only
+              <span className="n">{unreadCount}</span>
+            </div>
+            <div className="ci">
+              <span className="ic" style={{ background: "#fff" }}>
+                2
+              </span>
+              Duplicates
+              <span className="n">0</span>
+            </div>
+            <div className="ci">
+              <span className="ic" style={{ background: "#fff" }}>
+                ✕
+              </span>
+              Broken links
+              <span className="n">3</span>
+            </div>
+            <div
+              className="ci"
+              onClick={() => {
+                window.open("/api/export", "_blank");
+                if (onCloseMobile) onCloseMobile();
+              }}
+              style={{ marginTop: "12px", background: "#FFE600", borderColor: "#000" }}
+            >
+              <span className="ic" style={{ background: "#000", color: "#FFE600" }}>
+                ↓
+              </span>
+              EXPORT DATA
+            </div>
+          </div>
         </div>
-        <div id="filters">
-          <div
-            className={`ci ${unreadOnly ? "on" : ""}`}
-            onClick={() => setUnreadOnly(!unreadOnly)}
-          >
-            <span className="ic" style={{ background: "#FF007A" }}></span>
-            Unread only
-            <span className="n">{unreadCount}</span>
-          </div>
-          <div className="ci">
-            <span className="ic" style={{ background: "#fff" }}>
-              2
-            </span>
-            Duplicates
-            <span className="n">0</span>
-          </div>
-          <div className="ci">
-            <span className="ic" style={{ background: "#fff" }}>
-              ✕
-            </span>
-            Broken links
-            <span className="n">3</span>
-          </div>
-          <div
-            className="ci"
-            onClick={() => window.open("/api/export", "_blank")}
-            style={{ marginTop: "12px", background: "#FFE600", borderColor: "#000" }}
-          >
-            <span className="ic" style={{ background: "#000", color: "#FFE600" }}>
-              ↓
-            </span>
-            EXPORT DATA
-          </div>
-        </div>
-      </div>
-      <UserMenu />
-    </aside>
+        <UserMenu />
+      </aside>
+    </>
   );
 };

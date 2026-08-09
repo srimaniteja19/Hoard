@@ -12,6 +12,8 @@ interface HeaderBarProps {
   setSort: (s: SortMode) => void;
   onOpenCaptureWithUrl: (url: string) => void;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
+  onToggleMobileSidebar?: () => void;
+  onOpenCapture?: () => void;
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
@@ -23,6 +25,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   setSort,
   onOpenCaptureWithUrl,
   searchInputRef,
+  onToggleMobileSidebar,
+  onOpenCapture,
 }) => {
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
@@ -36,6 +40,31 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
   return (
     <div className="bar">
+      {/* Mobile Top Header Strip */}
+      <div className="mobile-header-strip">
+        <button
+          className="mobile-menu-btn"
+          onClick={onToggleMobileSidebar}
+          aria-label="Open navigation menu"
+        >
+          <span>☰</span> MENU
+        </button>
+
+        <div className="mobile-brand">
+          <b>HOARD</b>
+        </div>
+
+        {onOpenCapture && (
+          <button
+            className="mobile-add-btn"
+            onClick={onOpenCapture}
+            aria-label="Save link"
+          >
+            + LINK
+          </button>
+        )}
+      </div>
+
       <div className="searchbox">
         <svg
           width="16"
@@ -57,52 +86,54 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         />
       </div>
 
-      <div className="grp">
-        <button
-          className={view === "masonry" ? "on" : ""}
-          onClick={() => setView("masonry")}
-        >
-          MASONRY
-        </button>
-        <button
-          className={view === "grid" ? "on" : ""}
-          onClick={() => setView("grid")}
-        >
-          GRID
-        </button>
-        <button
-          className={view === "list" ? "on" : ""}
-          onClick={() => setView("list")}
-        >
-          LIST
-        </button>
-        <button
-          className={view === "heads" ? "on" : ""}
-          onClick={() => setView("heads")}
-        >
-          HEADLINES
-        </button>
-      </div>
+      <div className="bar-controls-row">
+        <div className="grp view-grp">
+          <button
+            className={view === "masonry" ? "on" : ""}
+            onClick={() => setView("masonry")}
+          >
+            MASONRY
+          </button>
+          <button
+            className={view === "grid" ? "on" : ""}
+            onClick={() => setView("grid")}
+          >
+            GRID
+          </button>
+          <button
+            className={view === "list" ? "on" : ""}
+            onClick={() => setView("list")}
+          >
+            LIST
+          </button>
+          <button
+            className={view === "heads" ? "on" : ""}
+            onClick={() => setView("heads")}
+          >
+            HEADLINES
+          </button>
+        </div>
 
-      <div className="grp">
-        <button
-          className={sort === "recent" ? "on" : ""}
-          onClick={() => setSort("recent")}
-        >
-          RECENT
-        </button>
-        <button
-          className={sort === "short" ? "on" : ""}
-          onClick={() => setSort("short")}
-        >
-          SHORTEST
-        </button>
-        <button
-          className={sort === "az" ? "on" : ""}
-          onClick={() => setSort("az")}
-        >
-          A–Z
-        </button>
+        <div className="grp sort-grp">
+          <button
+            className={sort === "recent" ? "on" : ""}
+            onClick={() => setSort("recent")}
+          >
+            RECENT
+          </button>
+          <button
+            className={sort === "short" ? "on" : ""}
+            onClick={() => setSort("short")}
+          >
+            SHORTEST
+          </button>
+          <button
+            className={sort === "az" ? "on" : ""}
+            onClick={() => setSort("az")}
+          >
+            A–Z
+          </button>
+        </div>
       </div>
     </div>
   );

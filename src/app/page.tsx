@@ -58,6 +58,7 @@ export default function Home() {
   } = useBookmarks();
 
   const [captureUrl, setCaptureUrl] = useState("");
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleOpenCaptureWithUrl = (url: string) => {
@@ -76,6 +77,7 @@ export default function Home() {
       if (e.key === "Escape") {
         setIsCaptureOpen(false);
         setIsNewFolderOpen(false);
+        setIsMobileSidebarOpen(false);
         setOpenId(null);
       }
       if (e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
@@ -125,6 +127,8 @@ export default function Home() {
           setIsCaptureOpen(true);
         }}
         onOpenNewFolder={() => setIsNewFolderOpen(true)}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Content Area */}
@@ -138,6 +142,11 @@ export default function Home() {
           setSort={setSort}
           onOpenCaptureWithUrl={handleOpenCaptureWithUrl}
           searchInputRef={searchInputRef}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+          onOpenCapture={() => {
+            setCaptureUrl("");
+            setIsCaptureOpen(true);
+          }}
         />
 
         <CrumbBar
