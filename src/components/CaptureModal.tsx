@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Bookmark, Collection, DetectionResult, KindType } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 
 interface CaptureModalProps {
   isOpen: boolean;
   collections: Collection[];
+  bookmarks?: Bookmark[];
   initialUrl?: string;
   onClose: () => void;
   onSave: (bm: Omit<Bookmark, "id" | "when">) => void;
+  onSelectExisting?: (id: number) => void;
 }
 
 export function detectUrlMeta(u: string): DetectionResult | null {
@@ -75,12 +77,25 @@ export function detectUrlMeta(u: string): DetectionResult | null {
   return null;
 }
 
+function normalizeUrl(u: string): string {
+  try {
+    const raw = u.trim().toLowerCase();
+    const withProto = raw.startsWith("http") ? raw : `https://${raw}`;
+    const parsed = new URL(withProto);
+    return (parsed.hostname + parsed.pathname).replace(/\/$/, "");
+  } catch {
+    return u.trim().toLowerCase();
+  }
+}
+
 export const CaptureModal: React.FC<CaptureModalProps> = ({
   isOpen,
   collections,
+  bookmarks = [],
   initialUrl = "",
   onClose,
   onSave,
+  onSelectExisting,
 }) => {
   const [url, setUrl] = useState(initialUrl);
   const [selectedColl, setSelectedColl] = useState("unsorted");
@@ -88,6 +103,13 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
   useEffect(() => {
     if (initialUrl) setUrl(initialUrl);
   }, [initialUrl]);
+
+  // Duplicate Check
+  const duplicateMatch = useMemo(() => {
+    if (!url.trim() || bookmarks.length === 0) return null;
+    const targetNorm = normalizeUrl(url);
+    return bookmarks.find((b) => normalizeUrl(b.url) === targetNorm) || null;
+  }, [url, bookmarks]);
 
   if (!isOpen) return null;
 
@@ -174,6 +196,48 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
           autoComplete="off"
         />
 
+        {/* Duplicate Warning Banner */}
+        {duplicateMatch && (
+          <div
+            style={{
+              border: "3px solid #000",
+              background: "#FFE600",
+              boxShadow: "3px 3px 0 #000",
+              padding: "10px 12px",
+              margin: "10px 0",
+              fontFamily: "var(--mono)",
+              fontSize: "11px",
+              fontWeight: 800,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>⚠️ DUPLICATE DETECTED: Saved on {duplicateMatch.when}</span>
+              {onSelectExisting && (
+                <button
+                  onClick={() => {
+                    onSelectExisting(duplicateMatch.id);
+                    onClose();
+                  }}
+                  style={{
+                    border: "2px solid #000",
+                    background: "#000",
+                    color: "#FFE600",
+                    padding: "3px 8px",
+                    fontSize: "10px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  OPEN EXISTING ↗
+                </button>
+              )}
+            </div>
+            <div style={{ marginTop: "4px", fontSize: "10px", opacity: 0.8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              Title: &quot;{duplicateMatch.t}&quot;
+            </div>
+          </div>
+        )}
+
         <div className="hints">
           {presets.map((p) => (
             <button key={p.label} onClick={() => setUrl(p.u)}>
@@ -185,7 +249,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
         <div className="detect">
           {!url.trim() ? (
             <div className="dnote">
-              Paste anything. What kind of thing it is decides which fields get captured — a repo needs stars and a language, a video needs a runtime, an app needs a platform. One shape for all of them loses all of that.
+              Paste anything. What kind of thing it is decides which fields get captured — a repo needs stars and a language, a video needs a runtime, an app needs a platform.
             </div>
           ) : !detection ? (
             <div className="dnote">Not a URL yet.</div>
@@ -247,7 +311,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
         <div className="sfoot">
           <button onClick={onClose}>CANCEL</button>
           <button className="prime" onClick={handleSave}>
-            SAVE
+            {duplicateMatch ? "SAVE ANYWAY" : "SAVE"}
           </button>
         </div>
       </div>

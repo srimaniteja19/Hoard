@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Bookmark, Collection, KindType } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import { inColl } from "@/hooks/useBookmarks";
 import { UserMenu } from "@/components/UserMenu";
 import { usePWA } from "@/components/PWAProvider";
+import Link from "next/link";
 
 interface SidebarProps {
   bookmarks: Bookmark[];
@@ -20,6 +21,7 @@ interface SidebarProps {
   setUnreadOnly: (u: boolean) => void;
   onOpenCapture: () => void;
   onOpenNewFolder: () => void;
+  onOpenImport: () => void;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
@@ -37,10 +39,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setUnreadOnly,
   onOpenCapture,
   onOpenNewFolder,
+  onOpenImport,
   isMobileOpen = false,
   onCloseMobile,
 }) => {
   const { isInstallable, promptInstall } = usePWA();
+  const [shareCopied, setShareCopied] = useState(false);
+
   const cnt = (cId: string) => bookmarks.filter((x) => inColl(x, cId, collections)).length;
 
   const typeCounts = useMemo(() => {
@@ -65,6 +70,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return bookmarks.filter((x) => x.unread).length;
   }, [bookmarks]);
 
+  const duplicateCount = useMemo(() => {
+    const seen = new Set<string>();
+    let dups = 0;
+    bookmarks.forEach((b) => {
+      const norm = b.url.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
+      if (seen.has(norm)) dups++;
+      else seen.add(norm);
+    });
+    return dups;
+  }, [bookmarks]);
+
   const handleSelectCollection = (cId: string) => {
     setColl(cId);
     setTy(null);
@@ -84,6 +100,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleSelectUnread = () => {
     setUnreadOnly(!unreadOnly);
     if (onCloseMobile) onCloseMobile();
+  };
+
+  const handleShareCurrentCollection = () => {
+    const shareUrl = `${window.location.origin}/share/${coll}`;
+    navigator.clipboard.writeText(shareUrl);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
   };
 
   const renderCollectionTree = (list: Collection[], depth = 0) => {
@@ -168,6 +191,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <div id="colls">{renderCollectionTree(collections)}</div>
 
+          {/* Share Collection Button if a specific collection is selected */}
+          {coll !== "all" && (
+            <button
+              onClick={handleShareCurrentCollection}
+              style={{
+                width: "100%",
+                fontFamily: "var(--mono)",
+                fontSize: "10px",
+                fontWeight: 800,
+                border: "2px solid #000",
+                background: shareCopied ? "#B6FF3C" : "#00F0FF",
+                padding: "5px 8px",
+                cursor: "pointer",
+                margin: "4px 0 10px 0",
+                boxShadow: "2px 2px 0 #000",
+              }}
+            >
+              {shareCopied ? "✓ SHARE LINK COPIED!" : "🔗 SHARE COLLECTION"}
+            </button>
+          )}
+
           <div className="slbl">
             KIND<i></i>
           </div>
@@ -206,7 +250,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           <div className="slbl">
-            FILTERS<i></i>
+            TOOLS & FILTERS<i></i>
           </div>
           <div id="filters">
             <div
@@ -217,20 +261,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
               Unread only
               <span className="n">{unreadCount}</span>
             </div>
+
             <div className="ci">
-              <span className="ic" style={{ background: "#fff" }}>
-                2
+              <span className="ic" style={{ background: "#FFE600", color: "#000", fontWeight: 800 }}>
+                ⚠️
               </span>
               Duplicates
-              <span className="n">0</span>
+              <span className="n">{duplicateCount}</span>
             </div>
-            <div className="ci">
-              <span className="ic" style={{ background: "#fff" }}>
-                ✕
+
+            <Link
+              href="/stats"
+              style={{ textDecoration: "none", color: "inherit" }}
+              onClick={() => {
+                if (onCloseMobile) onCloseMobile();
+              }}
+            >
+              <div
+                className="ci"
+                style={{ marginTop: "10px", background: "#00F0FF", borderColor: "#000", fontWeight: "800" }}
+              >
+                <span className="ic" style={{ background: "#000", color: "#00F0FF" }}>
+                  📊
+                </span>
+                ANALYTICS DASHBOARD
+              </div>
+            </Link>
+
+            <div
+              className="ci"
+              onClick={() => {
+                onOpenImport();
+                if (onCloseMobile) onCloseMobile();
+              }}
+              style={{ marginTop: "6px", background: "#FFE600", borderColor: "#000", fontWeight: "800" }}
+            >
+              <span className="ic" style={{ background: "#000", color: "#FFE600" }}>
+                ↑
               </span>
-              Broken links
-              <span className="n">3</span>
+              IMPORT BOOKMARKS
             </div>
+
             {isInstallable && (
               <div
                 className="ci"
@@ -238,7 +309,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   promptInstall();
                   if (onCloseMobile) onCloseMobile();
                 }}
-                style={{ marginTop: "12px", background: "#B6FF3C", borderColor: "#000", fontWeight: "800" }}
+                style={{ marginTop: "6px", background: "#B6FF3C", borderColor: "#000", fontWeight: "800" }}
               >
                 <span className="ic" style={{ background: "#000", color: "#B6FF3C" }}>
                   ⚡
@@ -246,15 +317,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 INSTALL APP
               </div>
             )}
+
             <div
               className="ci"
               onClick={() => {
                 window.open("/api/export", "_blank");
                 if (onCloseMobile) onCloseMobile();
               }}
-              style={{ marginTop: isInstallable ? "6px" : "12px", background: "#FFE600", borderColor: "#000" }}
+              style={{ marginTop: "6px", background: "#FFFDF8", borderColor: "#000" }}
             >
-              <span className="ic" style={{ background: "#000", color: "#FFE600" }}>
+              <span className="ic" style={{ background: "#000", color: "#fff" }}>
                 ↓
               </span>
               EXPORT DATA

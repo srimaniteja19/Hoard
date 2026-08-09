@@ -10,6 +10,7 @@ import { BulkActionBar } from "@/components/BulkActionBar";
 import { InspectorDrawer } from "@/components/InspectorDrawer";
 import { CaptureModal } from "@/components/CaptureModal";
 import { NewFolderModal } from "@/components/NewFolderModal";
+import { ImportModal } from "@/components/ImportModal";
 import { MasonryView } from "@/components/views/MasonryView";
 import { GridView } from "@/components/views/GridView";
 import { ListView } from "@/components/views/ListView";
@@ -59,6 +60,7 @@ export default function Home() {
 
   const [captureUrl, setCaptureUrl] = useState("");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleOpenCaptureWithUrl = React.useCallback(
@@ -102,6 +104,7 @@ export default function Home() {
       if (e.key === "Escape") {
         setIsCaptureOpen(false);
         setIsNewFolderOpen(false);
+        setIsImportOpen(false);
         setIsMobileSidebarOpen(false);
         setOpenId(null);
       }
@@ -152,6 +155,7 @@ export default function Home() {
           setIsCaptureOpen(true);
         }}
         onOpenNewFolder={() => setIsNewFolderOpen(true)}
+        onOpenImport={() => setIsImportOpen(true)}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
@@ -264,9 +268,11 @@ export default function Home() {
       <CaptureModal
         isOpen={isCaptureOpen}
         collections={collections}
+        bookmarks={bookmarks}
         initialUrl={captureUrl}
         onClose={() => setIsCaptureOpen(false)}
         onSave={addBookmark}
+        onSelectExisting={(id) => setOpenId(id)}
       />
 
       {/* Create New Folder Modal */}
@@ -275,6 +281,13 @@ export default function Home() {
         collections={collections}
         onClose={() => setIsNewFolderOpen(false)}
         onAddCollection={addCollection}
+      />
+
+      {/* One-Click Import Modal */}
+      <ImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onImportComplete={() => window.location.reload()}
       />
     </div>
   );
