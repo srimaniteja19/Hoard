@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HOARD — Contextual Bookmark Manager
 
-## Getting Started
+A neo-brutalist contextual bookmark manager for articles, videos, repos, papers, and apps.
 
-First, run the development server:
+## 🚀 Features
+
+- **Neo-Brutalist Aesthetic**: Built with Space Grotesk & JetBrains Mono typography, bold color palette (`#FFE600`, `#FF007A`, `#00F0FF`, `#B6FF3C`), 3px solid black borders, and hard shadow cards.
+- **Mobile Responsive**: Fully responsive grid/list/masonry/headlines layouts, touch controls, and slide-out mobile navigation drawer (`☰ MENU`).
+- **PWA Ready**: Installable as a standalone app on iOS, Android, macOS, and Windows with offline Service Worker caching.
+- **Web Share Target**: Share links directly from YouTube, Twitter, Chrome, Safari, or Spotify into HOARD.
+- **Browser Extension**: Manifest V3 extension with smart URL auto-detection, keyboard shortcuts (`Alt+Shift+H`), right-click context menu, and popup search.
+
+---
+
+## 🔌 Browser Extension Installation
+
+1. Open your browser extension management page:
+   - **Chrome / Brave / Edge**: `chrome://extensions`
+   - **Arc**: `arc://extensions`
+2. Enable **Developer mode** (toggle in the top-right corner).
+3. Click **Load unpacked**.
+4. Select the `extension/` directory in this repository.
+
+### Extension Shortcuts:
+- **Save Tab**: `Alt + Shift + H` (or `Cmd + Shift + H` on Mac)
+- **Right-Click**: Right-click any web link or highlighted text → **"Save to HOARD"**
+
+---
+
+## 🏃 Running Locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to launch the web application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Build Production Bundle:
+```bash
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

@@ -1,0 +1,401 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  --cream: #F4F0EA;
+  --paper: #FFFDF8;
+  --ink: #000000;
+  --yel: #FFE600;
+  --pink: #FF007A;
+  --cyan: #00F0FF;
+  --lime: #B6FF3C;
+  --orange: #FF6B00;
+  --violet: #7C4DFF;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --grot: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --bd: 3px solid #000;
+  --sh: 4px 4px 0 #000;
+  --sh-sm: 2px 2px 0 #000;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 380px;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--grot);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+.popup-container {
+  padding: 14px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-badge {
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -.05em;
+  background: var(--yel);
+  border: var(--bd);
+  box-shadow: var(--sh-sm);
+  padding: 3px 8px;
+}
+
+.version-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  border: 2px solid #000;
+  background: var(--lime);
+  padding: 2px 5px;
+}
+
+.status-indicator {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #008744;
+}
+
+/* Navigation Tabs */
+.tab-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border: var(--bd);
+  box-shadow: var(--sh-sm);
+  background: var(--paper);
+  margin-bottom: 12px;
+}
+
+.tab-btn {
+  border: 0;
+  border-right: 2px solid #000;
+  background: none;
+  padding: 8px 4px;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-align: center;
+  transition: .1s;
+}
+
+.tab-btn:last-child {
+  border-right: 0;
+}
+
+.tab-btn.active {
+  background: #000;
+  color: var(--yel);
+}
+
+.tab-btn:hover:not(.active) {
+  background: var(--yel);
+}
+
+/* Notification Toast */
+.toast {
+  border: var(--bd);
+  background: var(--pink);
+  color: #fff;
+  box-shadow: var(--sh-sm);
+  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+/* Forms & Fields */
+.form-group {
+  margin-bottom: 10px;
+}
+
+.field-lbl {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  margin-bottom: 4px;
+  background: #000;
+  color: var(--yel);
+  display: inline-block;
+  padding: 2px 6px;
+}
+
+.input-field, .select-field, .textarea-field {
+  width: 100%;
+  border: var(--bd);
+  background: var(--paper);
+  padding: 7px 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  outline: 0;
+  box-shadow: var(--sh-sm);
+}
+
+.input-field-sm {
+  width: 100%;
+  border: 2px solid #000;
+  background: var(--paper);
+  padding: 5px 7px;
+  font-size: 11px;
+  font-family: var(--mono);
+  outline: 0;
+  margin-top: 5px;
+}
+
+.input-field:focus, .select-field:focus, .textarea-field:focus {
+  background: #fff;
+  box-shadow: var(--sh);
+}
+
+.textarea-field {
+  min-height: 52px;
+  resize: vertical;
+}
+
+/* Detection Card */
+.detection-card {
+  border: var(--bd);
+  background: var(--paper);
+  box-shadow: var(--sh-sm);
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+
+.detection-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.type-tag {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  border: 2px solid #000;
+  background: var(--cyan);
+  padding: 1px 5px;
+}
+
+.detect-title {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.detect-details {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  opacity: .75;
+  margin-top: 4px;
+}
+
+/* Tag Picker */
+.tag-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag-chip {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  border: 2px solid #000;
+  background: var(--paper);
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.tag-chip.active {
+  background: var(--pink);
+  color: #fff;
+}
+
+/* Buttons */
+.btn-primary {
+  width: 100%;
+  border: var(--bd);
+  background: var(--pink);
+  color: #fff;
+  box-shadow: var(--sh);
+  padding: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  transition: .1s;
+}
+
+.btn-primary:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 #000;
+}
+
+.btn-primary kbd {
+  font-size: 9.5px;
+  border: 2px solid #fff;
+  padding: 1px 4px;
+}
+
+.btn-secondary {
+  width: 100%;
+  border: var(--bd);
+  background: var(--yel);
+  color: #000;
+  box-shadow: var(--sh-sm);
+  padding: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: var(--cyan);
+}
+
+/* Tab 2: My Hoard Search & List */
+.search-bar {
+  margin-bottom: 8px;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+}
+
+.filter-chip {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  border: 2px solid #000;
+  background: var(--paper);
+  padding: 3px 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.filter-chip.active {
+  background: #000;
+  color: var(--yel);
+}
+
+.hoard-list {
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hoard-item {
+  border: 2px solid #000;
+  background: var(--paper);
+  padding: 7px 9px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.hoard-item-title {
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.25;
+  margin-bottom: 3px;
+}
+
+.hoard-item-meta {
+  font-family: var(--mono);
+  font-size: 9px;
+  opacity: .7;
+}
+
+.hoard-item-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.icon-btn {
+  border: 2px solid #000;
+  background: #fff;
+  padding: 2px 5px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--yel);
+}
+
+/* Tab 3: Settings Info Box */
+.info-box {
+  border: 2px solid #000;
+  background: var(--paper);
+  padding: 8px 10px;
+  margin-top: 8px;
+}
+
+.info-box b {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.shortcut-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+.shortcut-row kbd {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  border: 2px solid #000;
+  background: var(--cream);
+  padding: 1px 5px;
+  font-weight: 800;
+}
