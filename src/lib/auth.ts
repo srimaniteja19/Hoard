@@ -4,8 +4,11 @@ import { db } from "@/db";
 import * as schema from "@/db/schema";
 
 export const auth = betterAuth({
-  secret: process.env.BETTER_AUTH_SECRET || "hoard_default_secret_key_9837429837",
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+  secret: process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET || "hoard_default_secret_key_9837429837",
+  baseURL:
+    process.env.BETTER_AUTH_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"),
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
