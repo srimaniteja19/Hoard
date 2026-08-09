@@ -1,6 +1,6 @@
 // HOARD Browser Extension Popup Logic
 
-const DEFAULT_SERVER_URL = "http://localhost:3000";
+const DEFAULT_SERVER_URL = "https://hoard-ten.vercel.app";
 
 // Content Kind Auto-Detection
 function detectUrlMeta(u) {
