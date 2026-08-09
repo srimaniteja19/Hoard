@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Bookmark, Collection, ContextType, KindType, SearchFilter, SortMode, ViewMode } from "@/types";
 import { INITIAL_BOOKMARKS, CTX, COLLS } from "@/data/initialBookmarks";
 
-const BOOKMARKS_STORAGE_KEY = "shelf_bookmarks_v1";
-const COLLECTIONS_STORAGE_KEY = "shelf_collections_v1";
+const BOOKMARKS_STORAGE_KEY = "hoard_bookmarks_v2";
+const COLLECTIONS_STORAGE_KEY = "hoard_collections_v2";
 
 export function parseQ(q: string): SearchFilter {
   const f: SearchFilter = {

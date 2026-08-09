@@ -155,9 +155,25 @@ export default function Home() {
 
         <div className="scroll">
           {filteredBookmarks.length === 0 ? (
-            <div className="empty">
-              <b>NOTHING FITS</b>
-              Widen the time, change context, or drop a filter.
+            <div className="empty" style={{ padding: "60px 20px", textAlign: "center" }}>
+              <div
+                style={{
+                  display: "inline-block",
+                  fontFamily: "var(--mono)",
+                  fontWeight: 800,
+                  fontSize: "18px",
+                  background: "#FFE600",
+                  border: "3px solid #000",
+                  boxShadow: "4px 4px 0 #000",
+                  padding: "6px 16px",
+                  marginBottom: "12px",
+                }}
+              >
+                YOUR HOARD IS BLANK
+              </div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "#444" }}>
+                Click <b>+ ADD LINK</b> in the header bar or press <kbd style={{ background: "#000", color: "#FFE600", padding: "2px 6px", fontFamily: "var(--mono)", fontSize: "11px" }}>Cmd + N</kbd> to save your first bookmark.
+              </div>
             </div>
           ) : view === "masonry" ? (
             <MasonryView
