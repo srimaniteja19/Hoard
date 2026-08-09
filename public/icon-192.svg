@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" fill="#F4F0EA"/>
+  <!-- Neobrutalist Shadow -->
+  <rect x="32" y="32" width="136" height="136" rx="8" fill="#000000"/>
+  <!-- Main Badge -->
+  <rect x="24" y="24" width="136" height="136" rx="8" fill="#FFE600" stroke="#000000" stroke-width="12"/>
+  <!-- H letter mark -->
+  <path d="M60 52V140M132 52V140M60 96H132" stroke="#000000" stroke-width="20" stroke-linecap="square" stroke-linejoin="miter"/>
+</svg>

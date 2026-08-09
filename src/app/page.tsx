@@ -61,10 +61,35 @@ export default function Home() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleOpenCaptureWithUrl = (url: string) => {
-    setCaptureUrl(url);
-    setIsCaptureOpen(true);
-  };
+  const handleOpenCaptureWithUrl = React.useCallback(
+    (url: string) => {
+      setCaptureUrl(url);
+      setIsCaptureOpen(true);
+    },
+    [setIsCaptureOpen]
+  );
+
+  // Web Share Target & Query Parameter Listener
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const sharedUrl = params.get("url") || params.get("text") || "";
+    const action = params.get("action");
+
+    if (action === "capture") {
+      setCaptureUrl("");
+      setIsCaptureOpen(true);
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (sharedUrl) {
+      // Find URL match if text contains extra string
+      const urlMatch = sharedUrl.match(/https?:\/\/[^\s]+/i);
+      const targetUrl = urlMatch ? urlMatch[0] : sharedUrl;
+      if (/^https?:\/\//i.test(targetUrl.trim())) {
+        handleOpenCaptureWithUrl(targetUrl.trim());
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, [setIsCaptureOpen, handleOpenCaptureWithUrl]);
 
   // Keyboard shortcut listener
   useEffect(() => {

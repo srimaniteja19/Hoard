@@ -5,6 +5,7 @@ import { Bookmark, Collection, KindType } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import { inColl } from "@/hooks/useBookmarks";
 import { UserMenu } from "@/components/UserMenu";
+import { usePWA } from "@/components/PWAProvider";
 
 interface SidebarProps {
   bookmarks: Bookmark[];
@@ -39,6 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen = false,
   onCloseMobile,
 }) => {
+  const { isInstallable, promptInstall } = usePWA();
   const cnt = (cId: string) => bookmarks.filter((x) => inColl(x, cId, collections)).length;
 
   const typeCounts = useMemo(() => {
@@ -229,13 +231,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
               Broken links
               <span className="n">3</span>
             </div>
+            {isInstallable && (
+              <div
+                className="ci"
+                onClick={() => {
+                  promptInstall();
+                  if (onCloseMobile) onCloseMobile();
+                }}
+                style={{ marginTop: "12px", background: "#B6FF3C", borderColor: "#000", fontWeight: "800" }}
+              >
+                <span className="ic" style={{ background: "#000", color: "#B6FF3C" }}>
+                  ⚡
+                </span>
+                INSTALL APP
+              </div>
+            )}
             <div
               className="ci"
               onClick={() => {
                 window.open("/api/export", "_blank");
                 if (onCloseMobile) onCloseMobile();
               }}
-              style={{ marginTop: "12px", background: "#FFE600", borderColor: "#000" }}
+              style={{ marginTop: isInstallable ? "6px" : "12px", background: "#FFE600", borderColor: "#000" }}
             >
               <span className="ic" style={{ background: "#000", color: "#FFE600" }}>
                 ↓
