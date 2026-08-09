@@ -6,7 +6,6 @@ import { INITIAL_BOOKMARKS, CTX, COLLS } from "@/data/initialBookmarks";
 
 const BOOKMARKS_STORAGE_KEY = "hoard_bookmarks_v2";
 const COLLECTIONS_STORAGE_KEY = "hoard_collections_v2";
-const PENDING_BRIDGE_KEY = "hoard_pending_bridge"; // written by content script from chrome.storage
 
 export function parseQ(q: string): SearchFilter {
   const f: SearchFilter = {
@@ -131,9 +130,11 @@ export function useBookmarks() {
     setIsLoaded(true);
   }, []);
 
-  // Re-sync when the extension injects a bookmark into localStorage
-  // (extension fires a StorageEvent after writing hoard_bookmarks_v2)
+  // Live updates from the extension:
+  // - StorageEvent:  fired by executeScript (world: MAIN) when Hoard tab is already open
+  // - message event: fired by content.js (postMessage) when tab was just opened / page loaded
   useEffect(() => {
+    // Case 1: Hoard tab was open — extension injected via executeScript + StorageEvent
     const handleStorage = (e: StorageEvent) => {
       if (e.key === BOOKMARKS_STORAGE_KEY && e.newValue) {
         try {
@@ -142,28 +143,24 @@ export function useBookmarks() {
           // ignore malformed
         }
       }
+    };
 
-      // Content script bridges pending bookmarks via localStorage
-      if (e.key === PENDING_BRIDGE_KEY && e.newValue) {
-        try {
-          const pending: Omit<Bookmark, "id">[] = JSON.parse(e.newValue);
-          if (pending.length > 0) {
-            setBookmarks((prev) => {
-              const maxId = prev.reduce((acc, x) => Math.max(acc, x.id), -1);
-              const toAdd = pending.map((bm, i) => ({ ...bm, id: maxId + 1 + i }));
-              const merged = [...toAdd, ...prev];
-              localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(merged));
-              return merged;
-            });
-            localStorage.removeItem(PENDING_BRIDGE_KEY);
-          }
-        } catch {
-          // ignore
-        }
+    // Case 2: Hoard tab just opened — content script drained pending queue + postMessage
+    const handleMessage = (e: MessageEvent) => {
+      if (
+        e.data?.type === "HOARD_BOOKMARKS_UPDATED" &&
+        Array.isArray(e.data.bookmarks)
+      ) {
+        setBookmarks(e.data.bookmarks);
       }
     };
+
     window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
+    window.addEventListener("message", handleMessage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("message", handleMessage);
+    };
   }, []);
 
   // Save bookmarks to localStorage

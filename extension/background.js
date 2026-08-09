@@ -119,6 +119,7 @@ async function injectIntoHoardTab(bookmark) {
     const tabId = tabs[0].id;
     await chrome.scripting.executeScript({
       target: { tabId },
+      world: "MAIN",
       func: (bm, storageKey) => {
         try {
           const raw = localStorage.getItem(storageKey);

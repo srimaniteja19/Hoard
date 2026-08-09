@@ -197,6 +197,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           // Hoard tab is open — inject directly into its localStorage
           chrome.scripting.executeScript({
             target: { tabId: tabs[0].id },
+            world: "MAIN",
             func: (bm, storageKey) => {
               try {
                 const raw = localStorage.getItem(storageKey);
