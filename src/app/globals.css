@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
-:root {
+:root, [data-theme="default"] {
   --cream: #F4F0EA;
   --paper: #FFFDF8;
   --ink: #000000;
@@ -13,11 +13,80 @@
   --mint: #00E58A;
   --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
   --grot: "Space Grotesk", "Inter", system-ui, sans-serif;
-  --bd: 3px solid #000;
-  --sh: 5px 5px 0 #000;
-  --sh-lg: 8px 8px 0 #000;
-  --sh-sm: 3px 3px 0 #000;
+  --bd: 3px solid #000000;
+  --sh: 5px 5px 0 #000000;
+  --sh-lg: 8px 8px 0 #000000;
+  --sh-sm: 3px 3px 0 #000000;
 }
+
+[data-theme="cyberpunk"] {
+  --cream: #0D0E15;
+  --paper: #161925;
+  --ink: #F0F4FC;
+  --yel: #FFE600;
+  --pink: #FF007A;
+  --cyan: #00F0FF;
+  --lime: #B6FF3C;
+  --orange: #FF7700;
+  --violet: #A060FF;
+  --mint: #00FF9D;
+  --bd: 3px solid #00F0FF;
+  --sh: 5px 5px 0 #00F0FF;
+  --sh-lg: 8px 8px 0 #00F0FF;
+  --sh-sm: 3px 3px 0 #00F0FF;
+}
+
+[data-theme="nordic"] {
+  --cream: #EBF0F5;
+  --paper: #F8FAFC;
+  --ink: #1A202C;
+  --yel: #ED8936;
+  --pink: #E53E3E;
+  --cyan: #319795;
+  --lime: #48BB78;
+  --orange: #DD6B20;
+  --violet: #667EEA;
+  --mint: #38B2AC;
+  --bd: 3px solid #2D3748;
+  --sh: 5px 5px 0 #2D3748;
+  --sh-lg: 8px 8px 0 #2D3748;
+  --sh-sm: 3px 3px 0 #2D3748;
+}
+
+[data-theme="tokyo"] {
+  --cream: #1A1B26;
+  --paper: #24283B;
+  --ink: #C0CAF5;
+  --yel: #E0AF68;
+  --pink: #F7768E;
+  --cyan: #7DCFFF;
+  --lime: #9ECE6A;
+  --orange: #FF9E64;
+  --violet: #BB9AF7;
+  --mint: #73DACA;
+  --bd: 3px solid #7AA2F7;
+  --sh: 5px 5px 0 #7AA2F7;
+  --sh-lg: 8px 8px 0 #7AA2F7;
+  --sh-sm: 3px 3px 0 #7AA2F7;
+}
+
+[data-theme="matcha"] {
+  --cream: #EFECE6;
+  --paper: #F9F7F1;
+  --ink: #2C3531;
+  --yel: #E7C66B;
+  --pink: #D9822B;
+  --cyan: #8E9A82;
+  --lime: #A3B18A;
+  --orange: #C86D51;
+  --violet: #7E8D85;
+  --mint: #52796F;
+  --bd: 3px solid #116466;
+  --sh: 5px 5px 0 #116466;
+  --sh-lg: 8px 8px 0 #116466;
+  --sh-sm: 3px 3px 0 #116466;
+}
+
 
 * {
   box-sizing: border-box;

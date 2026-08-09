@@ -2,6 +2,7 @@
 
 import React from "react";
 import { SortMode, ViewMode } from "@/types";
+import { ThemePicker } from "@/components/ThemePicker";
 
 interface HeaderBarProps {
   query: string;
@@ -134,6 +135,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             A–Z
           </button>
         </div>
+
+        <ThemePicker />
       </div>
     </div>
   );
