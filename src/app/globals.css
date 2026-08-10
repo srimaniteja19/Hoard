@@ -2007,6 +2007,11 @@ input[type=range]::-moz-range-thumb {
     color: #000000 !important;
   }
 
+  /* Hide UI chrome on print */
+  .no-print,
+  header,
+  nav,
+  button,
   .sb,
   .topbar,
   .bulk-bar,
@@ -2016,7 +2021,6 @@ input[type=range]::-moz-range-thumb {
   .status-line-bar,
   .bar,
   .timebar-wrapper,
-  button,
   .chk,
   .read-stamp,
   .bar-controls-row {
@@ -2028,6 +2032,33 @@ input[type=range]::-moz-range-thumb {
     padding: 0 !important;
     margin: 0 !important;
     max-width: 100% !important;
+  }
+
+  /* TIL PRESS Zine Print Formatting */
+  .til-press-zine {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+  }
+
+  /* Two-column layout preservation in print */
+  .til-press-zine div[style*="column-count"],
+  .til-press-zine div[style*="columnCount"] {
+    column-count: 2 !important;
+    column-gap: 32px !important;
+    column-rule: 1px solid #000000 !important;
+  }
+
+  /* Print link URLs directly after link text */
+  .til-press-zine a[href^="http"]:after {
+    content: " (" attr(href) ")" !important;
+    font-size: 0.85em !important;
+    opacity: 0.75 !important;
+    word-break: break-all !important;
   }
 
   .grid,
@@ -2081,4 +2112,16 @@ input[type=range]::-moz-range-thumb {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
+}
+
+/* Reduced Motion Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
