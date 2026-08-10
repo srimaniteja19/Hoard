@@ -322,6 +322,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             <Link
+              href="/til"
+              style={{ textDecoration: "none", color: "inherit" }}
+              onClick={() => {
+                if (onCloseMobile) onCloseMobile();
+              }}
+            >
+              <div
+                className="ci"
+                style={{ marginTop: "10px", background: "#FFE600", color: "#000", borderColor: "#000", fontWeight: "800" }}
+              >
+                <span className="ic" style={{ background: "#000", color: "#FFE600" }}>
+                  💡
+                </span>
+                TODAY I LEARNED (TIL)
+              </div>
+            </Link>
+
+            <Link
               href="/stats"
               style={{ textDecoration: "none", color: "inherit" }}
               onClick={() => {
@@ -330,7 +348,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <div
                 className="ci"
-                style={{ marginTop: "10px", background: "#00F0FF", borderColor: "#000", fontWeight: "800" }}
+                style={{ marginTop: "6px", background: "#00F0FF", borderColor: "#000", fontWeight: "800" }}
               >
                 <span className="ic" style={{ background: "#000", color: "#00F0FF" }}>
                   📊

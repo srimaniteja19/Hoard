@@ -1,0 +1,255 @@
+"use client";
+
+import React, { useMemo } from "react";
+import { TilItem, TilFeedItem } from "@/components/til/TilFeedItem";
+import { TilType } from "@/db/schema";
+import { Calendar, Filter, X } from "lucide-react";
+
+interface TilFeedProps {
+  items: TilItem[];
+  nextCursor: string | null;
+  onLoadMore: () => void;
+  loadingMore: boolean;
+  onUpdate: (id: string, updated: Partial<TilItem>) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  selectedTag: string | null;
+  selectedType: TilType | null;
+  selectedDay: string | null;
+  onClearTagFilter: () => void;
+  onClearTypeFilter: () => void;
+  onClearDayFilter: () => void;
+  onSelectTag: (tag: string) => void;
+  onSelectType: (type: TilType) => void;
+}
+
+export const TilFeed: React.FC<TilFeedProps> = ({
+  items,
+  nextCursor,
+  onLoadMore,
+  loadingMore,
+  onUpdate,
+  onDelete,
+  selectedTag,
+  selectedType,
+  selectedDay,
+  onClearTagFilter,
+  onClearTypeFilter,
+  onClearDayFilter,
+  onSelectTag,
+  onSelectType,
+}) => {
+  // Group feed items by loggedFor date
+  const groupedByDay = useMemo(() => {
+    const map = new Map<string, TilItem[]>();
+    for (const item of items) {
+      const day = item.loggedFor || item.createdAt.split("T")[0];
+      const list = map.get(day) || [];
+      list.push(item);
+      map.set(day, list);
+    }
+    return Array.from(map.entries());
+  }, [items]);
+
+  const hasActiveFilters = Boolean(selectedTag || selectedType || selectedDay);
+
+  const formatDayHeader = (dayStr: string) => {
+    try {
+      const [year, month, day] = dayStr.split("-").map(Number);
+      const d = new Date(year, month - 1, day);
+      const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+      const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+      return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${year}`;
+    } catch {
+      return dayStr;
+    }
+  };
+
+  return (
+    <div>
+      {/* Active Filter Bar */}
+      {hasActiveFilters && (
+        <div
+          style={{
+            background: "var(--paper)",
+            border: "var(--bd)",
+            padding: "8px 12px",
+            marginBottom: "16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 800, color: "var(--ink)", display: "flex", alignItems: "center", gap: "4px" }}>
+            <Filter size={12} /> ACTIVE FILTERS:
+          </span>
+
+          {selectedDay && (
+            <span
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "11px",
+                fontWeight: 800,
+                background: "#FFE600",
+                color: "#000",
+                border: "1px solid var(--ink)",
+                padding: "2px 6px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              DAY: {selectedDay}
+              <X size={11} style={{ cursor: "pointer" }} onClick={onClearDayFilter} />
+            </span>
+          )}
+
+          {selectedType && (
+            <span
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "11px",
+                fontWeight: 800,
+                background: "#00F0FF",
+                color: "#000",
+                border: "1px solid var(--ink)",
+                padding: "2px 6px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              TYPE: {selectedType}
+              <X size={11} style={{ cursor: "pointer" }} onClick={onClearTypeFilter} />
+            </span>
+          )}
+
+          {selectedTag && (
+            <span
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "11px",
+                fontWeight: 800,
+                background: "var(--ink)",
+                color: "var(--cream)",
+                padding: "2px 6px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              TAG: #{selectedTag}
+              <X size={11} style={{ cursor: "pointer" }} onClick={onClearTagFilter} />
+            </span>
+          )}
+        </div>
+      )}
+
+      {items.length === 0 ? (
+        <div
+          style={{
+            background: "var(--paper)",
+            border: "var(--bd)",
+            padding: "32px 16px",
+            textAlign: "center",
+            fontFamily: "var(--mono)",
+          }}
+        >
+          <div style={{ fontSize: "24px", marginBottom: "8px" }}>💡</div>
+          <div style={{ fontWeight: 800, fontSize: "14px", color: "var(--ink)", marginBottom: "4px" }}>
+            No TIL entries found
+          </div>
+          <div style={{ fontSize: "12px", opacity: 0.7, color: "var(--ink)" }}>
+            {hasActiveFilters ? "Try clearing your filters or create a new entry above." : "Use the composer above to log your first TIL entry!"}
+          </div>
+        </div>
+      ) : (
+        /* Timeline Feed with left spine */
+        <div style={{ position: "relative" }}>
+          {groupedByDay.map(([dayStr, dayItems]) => (
+            <div key={dayStr} style={{ marginBottom: "24px", position: "relative" }}>
+              {/* Day Spine Header */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginBottom: "12px",
+                  position: "sticky",
+                  top: "60px",
+                  zIndex: 5,
+                  background: "var(--bg, #FFFDF8)",
+                  padding: "4px 0",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: "var(--mono)",
+                    fontSize: "11px",
+                    fontWeight: 900,
+                    background: "var(--ink)",
+                    color: "var(--cream)",
+                    padding: "3px 8px",
+                    border: "1.5px solid var(--ink)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    boxShadow: "2px 2px 0 var(--ink)",
+                  }}
+                >
+                  <Calendar size={12} /> {formatDayHeader(dayStr)}
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    height: "2px",
+                    background: "var(--ink)",
+                    opacity: 0.3,
+                  }}
+                />
+              </div>
+
+              {/* Entries for this Day */}
+              <div style={{ paddingLeft: "12px" }}>
+                {dayItems.map((item) => (
+                  <TilFeedItem
+                    key={item.id}
+                    item={item}
+                    onUpdate={onUpdate}
+                    onDelete={onDelete}
+                    onSelectTag={onSelectTag}
+                    onSelectType={onSelectType}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* Load More Button */}
+          {nextCursor && (
+            <div style={{ textAlign: "center", marginTop: "24px", marginBottom: "32px" }}>
+              <button
+                type="button"
+                onClick={onLoadMore}
+                disabled={loadingMore}
+                style={{
+                  fontFamily: "var(--mono)",
+                  fontSize: "12px",
+                  fontWeight: 900,
+                  background: "var(--paper)",
+                  color: "var(--ink)",
+                  border: "var(--bd)",
+                  padding: "8px 24px",
+                  cursor: loadingMore ? "wait" : "pointer",
+                  boxShadow: "var(--sh)",
+                }}
+              >
+                {loadingMore ? "LOADING..." : "LOAD MORE ENTRIES"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};

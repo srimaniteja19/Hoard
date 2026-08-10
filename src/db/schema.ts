@@ -212,3 +212,25 @@ export const tilEntryTags = pgTable(
   (table) => [primaryKey({ columns: [table.tilId, table.tagId] })]
 );
 
+export const extensionTokens = pgTable(
+  "extension_tokens",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    name: text("name").notNull().default("Chrome Extension"),
+    scopes: text("scopes").notNull().default("til:write bookmark:write bookmark:read"),
+    lastUsedAt: timestamp("last_used_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    revokedAt: timestamp("revoked_at"),
+  },
+  (table) => [
+    index("ext_token_user_idx").on(table.userId),
+    uniqueIndex("ext_token_hash_idx").on(table.tokenHash),
+  ]
+);
+

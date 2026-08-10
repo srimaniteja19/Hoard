@@ -47,109 +47,77 @@ chrome.commands.onCommand.addListener(async (command) => {
   }
 });
 
-// ─── Messages from popup ──────────────────────────────────────────────────────
+// ─── Messages & Sync Triggers ──────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "bookmark_saved") {
+  if (request.action === "bookmark_saved" || request.action === "til_saved") {
     showBadge();
     sendResponse({ status: "success" });
+  } else if (request.action === "trigger_til_sync") {
+    processOfflineTilQueue();
+    sendResponse({ status: "sync_started" });
   }
 });
 
-// ─── Build bookmark payload (UI shape) ───────────────────────────────────────
+// ─── Background Sync for Offline TIL Queue ────────────────────────────────────
 
-function buildBookmark(url, title, note) {
-  if (!url?.startsWith("http")) return null;
-  let domain = "web";
-  try { domain = new URL(url).hostname.replace(/^www\./, ""); } catch {}
-  const isVideo    = /youtube\.com|youtu\.be/.test(url);
-  const isRepo     = /github\.com/.test(url);
-  const isPaper    = /arxiv\.org/.test(url);
-  const isPlaylist = /youtube\.com\/playlist/.test(url);
-  const ty = isPlaylist ? "PLY" : isVideo ? "VID" : isRepo ? "GIT" : isPaper ? "PPR" : "ART";
-  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const d = new Date();
-  return {
-    t: title || "New Bookmark", ty, src: domain, url,
-    mins: isVideo ? 45 : isPaper ? 40 : 15,
-    tag: isRepo ? "craft" : isVideo ? "ai" : "systems",
-    coll: "unsorted", unread: true,
-    ex: { Source: domain },
-    note: note || "",
-    source: "Saved via HOARD Extension",
-    when: `${months[d.getMonth()]} ${d.getDate()}`,
-  };
-}
+async function processOfflineTilQueue() {
+  chrome.storage.local.get(["offline_til_queue", "hoard_server_url", "extension_token"], async (res) => {
+    const queue = res.offline_til_queue || [];
+    if (!queue.length) return;
 
-// ─── Save: inject fetch into open Hoard tab (same-origin → cookie auth) ──────
+    const origin = (res.hoard_server_url || HOARD_ORIGIN).replace(/\/$/, "");
+    const token = res.extension_token || "";
 
-async function saveIntoHoardTab(bm) {
-  try {
-    const tabs = await chrome.tabs.query({ url: `${HOARD_ORIGIN}/*` });
-    if (!tabs?.length) return false;
+    const remainingQueue = [];
+    let syncedCount = 0;
 
-    await chrome.scripting.executeScript({
-      target: { tabId: tabs[0].id },
-      world: "MAIN",
-      func: async (bookmark) => {
-        try {
-          const res = await fetch("/api/bookmarks", {
-            method: "POST",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(bookmark),
-          });
-          if (res.ok) {
-            // Tell the React app to re-fetch
-            window.postMessage({ type: "HOARD_BOOKMARKS_UPDATED" }, "*");
-          }
-        } catch (e) {
-          console.error("[HOARD Inject] fetch failed:", e);
+    for (const item of queue) {
+      try {
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const apiRes = await fetch(`${origin}/api/til`, {
+          method: "POST",
+          credentials: "include",
+          headers,
+          body: JSON.stringify(item),
+        });
+
+        if (apiRes.ok) {
+          syncedCount++;
+        } else {
+          remainingQueue.push(item);
         }
-      },
-      args: [bm],
-    });
-    return true;
-  } catch (err) {
-    console.warn("[HOARD Background] Could not inject into Hoard tab:", err);
-    return false;
-  }
-}
+      } catch (err) {
+        console.warn("[HOARD Sync] Offline sync item failed:", err);
+        remainingQueue.push(item);
+      }
+    }
 
-// ─── Main save flow ───────────────────────────────────────────────────────────
+    chrome.storage.local.set({ offline_til_queue: remainingQueue });
 
-async function saveBookmark(url, title, note) {
-  const bm = buildBookmark(url, title, note);
-  if (!bm) return;
-
-  // Always save to extension's local list for popup "MY HOARD" tab
-  chrome.storage.local.get(["hoard_bookmarks"], (res) => {
-    const list = res.hoard_bookmarks || [];
-    list.unshift({ ...bm, id: Date.now() });
-    chrome.storage.local.set({ hoard_bookmarks: list });
+    if (syncedCount > 0) {
+      showBadge(`+${syncedCount}`);
+      console.log(`[HOARD Sync] Successfully synced ${syncedCount} offline TIL entries.`);
+    }
   });
-
-  // Try to save directly to DB via the open Hoard tab
-  const injected = await saveIntoHoardTab(bm);
-
-  if (!injected) {
-    // Hoard tab not open — queue for content script to pick up on next load
-    chrome.storage.local.get([PENDING_KEY], (res) => {
-      const pending = res[PENDING_KEY] || [];
-      pending.push(bm);
-      chrome.storage.local.set({ [PENDING_KEY]: pending }, () => {
-        console.log("[HOARD Background] Queued for next Hoard load:", bm.t);
-      });
-    });
-  }
-
-  showBadge();
 }
+
+// ─── Alarms for Background Sync ───────────────────────────────────────────────
+
+chrome.alarms.create("til_sync_alarm", { periodInMinutes: 5 });
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "til_sync_alarm") {
+    processOfflineTilQueue();
+  }
+});
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 
-function showBadge() {
-  chrome.action.setBadgeText({ text: "✓" });
+function showBadge(text = "✓") {
+  chrome.action.setBadgeText({ text });
   chrome.action.setBadgeBackgroundColor({ color: "#FFE600" });
-  setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2800);
+  setTimeout(() => chrome.action.setBadgeText({ text: "" }), 3000);
 }

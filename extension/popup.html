@@ -20,6 +20,7 @@
     <!-- Tab Switcher -->
     <nav class="tab-nav">
       <button class="tab-btn active" data-tab="save">SAVE TAB</button>
+      <button class="tab-btn" data-tab="til">CAPTURE TIL</button>
       <button class="tab-btn" data-tab="hoard">MY HOARD</button>
       <button class="tab-btn" data-tab="settings">SETTINGS</button>
     </nav>
@@ -86,6 +87,70 @@
       </button>
     </main>
 
+    <!-- TAB: CAPTURE TIL -->
+    <main class="tab-content" id="tab-til" style="display: none;">
+      <div class="tab-scroll">
+        <!-- TIL Type selector chips -->
+        <div class="form-group">
+          <label class="field-lbl">TIL TYPE</label>
+          <div class="til-type-chips" id="tilTypeChips">
+            <button type="button" class="til-chip active" data-type="FACT">FACT</button>
+            <button type="button" class="til-chip" data-type="GOTCHA">GOTCHA</button>
+            <button type="button" class="til-chip" data-type="SNIPPET">SNIPPET</button>
+            <button type="button" class="til-chip" data-type="PATTERN">PATTERN</button>
+            <button type="button" class="til-chip" data-type="QUOTE">QUOTE</button>
+            <button type="button" class="til-chip" data-type="OPINION">OPINION</button>
+            <button type="button" class="til-chip" data-type="LINK">LINK</button>
+          </div>
+        </div>
+
+        <!-- Body Textarea -->
+        <div class="form-group">
+          <label class="field-lbl">WHAT DID YOU LEARN?</label>
+          <textarea id="tilBody" class="textarea-field" placeholder="Today I learned that..." rows="4"></textarea>
+        </div>
+
+        <!-- Snippet Code area (visible for SNIPPET) -->
+        <div class="form-group" id="tilSnippetGroup" style="display: none;">
+          <label class="field-lbl">CODE SNIPPET</label>
+          <textarea id="tilCode" class="textarea-field mono-code" placeholder="// Paste code..." rows="3"></textarea>
+        </div>
+
+        <!-- Link URL -->
+        <div class="form-group">
+          <label class="field-lbl">LINK URL</label>
+          <input type="url" id="tilLinkUrl" class="input-field" placeholder="https://..." />
+        </div>
+
+        <!-- Discharge Bookmark Dropdown -->
+        <div class="form-group">
+          <label class="field-lbl">DISCHARGE A BOOKMARK</label>
+          <select id="tilDischargeSelect" class="select-field">
+            <option value="">-- Optional: Select bookmark to mark read --</option>
+          </select>
+        </div>
+
+        <!-- Tags input -->
+        <div class="form-group">
+          <label class="field-lbl">TAGS (COMMA SEPARATED)</label>
+          <input type="text" id="tilTags" class="input-field-sm" placeholder="ai, postgres, nextjs..." />
+        </div>
+
+        <!-- Save to Hoard Queue checkbox -->
+        <div class="form-group-checkbox">
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer;">
+            <input type="checkbox" id="tilSaveToQueue" />
+            <span>Also save link to HOARD unread queue</span>
+          </label>
+        </div>
+      </div>
+
+      <button id="commitTilBtn" class="btn-primary" style="background: var(--cyan); color: #000;">
+        <span>COMMIT TIL ENTRY</span>
+        <kbd>⌘↵</kbd>
+      </button>
+    </main>
+
     <!-- TAB 2: MY HOARD SEARCH -->
     <main class="tab-content" id="tab-hoard" style="display: none;">
       <div class="search-bar">
@@ -110,7 +175,15 @@
       <div class="settings-inner">
         <div class="form-group">
           <label class="field-lbl">HOARD APP SERVER URL</label>
-          <input type="text" id="serverUrl" class="input-field" value="https://hoard-ten.vercel.app" />
+          <input type="text" id="serverUrl" class="input-field" value="http://localhost:3000" />
+        </div>
+
+        <div class="form-group">
+          <label class="field-lbl">EXTENSION BEARER TOKEN</label>
+          <input type="password" id="extensionToken" class="input-field" placeholder="htk_..." />
+          <span style="font-size: 9px; opacity: 0.7; margin-top: 2px; display: block;">
+            Generate your token in HOARD Web App → Settings
+          </span>
         </div>
 
         <div class="info-box">

@@ -503,3 +503,43 @@ button, input, select, textarea {
   padding: 1px 5px;
   font-weight: 800;
 }
+
+/* TIL Capture Tab Styles */
+.til-type-chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.til-chip {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border: var(--bd);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 1px 1px 0 #000;
+}
+
+.til-chip.active {
+  background: var(--cyan);
+  color: #000;
+  box-shadow: 2px 2px 0 #000;
+  transform: translate(-1px, -1px);
+}
+
+.mono-code {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: #000;
+  color: #00F0FF;
+  border: var(--bd);
+}
+
+.form-group-checkbox {
+  margin-top: 6px;
+  margin-bottom: 6px;
+}

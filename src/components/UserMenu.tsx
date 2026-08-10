@@ -77,22 +77,43 @@ export const UserMenu: React.FC = () => {
         </div>
       </div>
 
-      <button
-        onClick={() => signOut()}
-        style={{
-          width: "100%",
-          border: "2px solid #000",
-          background: "#FF007A",
-          color: "#fff",
-          padding: "6px",
-          fontFamily: "var(--mono)",
-          fontSize: "10px",
-          fontWeight: 800,
-          cursor: "pointer",
-        }}
-      >
-        SIGN OUT
-      </button>
+      <div style={{ display: "flex", gap: "6px" }}>
+        <Link
+          href="/settings"
+          style={{
+            flex: 1,
+            display: "block",
+            textAlign: "center",
+            border: "2px solid #000",
+            background: "#00F0FF",
+            color: "#000",
+            padding: "6px",
+            fontFamily: "var(--mono)",
+            fontSize: "10px",
+            fontWeight: 800,
+            textDecoration: "none",
+          }}
+        >
+          SETTINGS ⚙️
+        </Link>
+
+        <button
+          onClick={() => signOut()}
+          style={{
+            flex: 1,
+            border: "2px solid #000",
+            background: "#FF007A",
+            color: "#fff",
+            padding: "6px",
+            fontFamily: "var(--mono)",
+            fontSize: "10px",
+            fontWeight: 800,
+            cursor: "pointer",
+          }}
+        >
+          SIGN OUT
+        </button>
+      </div>
     </div>
   );
 };

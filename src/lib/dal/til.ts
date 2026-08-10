@@ -67,8 +67,6 @@ export type HeatmapData = {
  * Single grouped query for 26 weeks (182 days) of TIL entry counts.
  */
 export async function getTilHeatmap(userId: string, timezone: string = "UTC"): Promise<HeatmapData> {
-  const todayStr = getLoggedForDate(timezone, new Date());
-  
   // Calculate date 182 days ago
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - 182);
@@ -196,4 +194,40 @@ export async function getTilStreak(userId: string, timezone: string = "UTC"): Pr
     streakAtRisk,
     skipsUsedThisMonth,
   };
+}
+
+export type OnThisDayResult = {
+  entry: typeof tilEntries.$inferSelect;
+  daysAgo: number;
+} | null;
+
+/**
+ * Resurfaces one TIL entry from 30, 90, or 365 days ago in the user's timezone.
+ */
+export async function getOnThisDayEntry(
+  userId: string,
+  timezone: string = "UTC"
+): Promise<OnThisDayResult> {
+  const milestones = [30, 90, 365];
+
+  for (const daysAgo of milestones) {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() - daysAgo);
+    const targetDateStr = getLoggedForDate(timezone, targetDate);
+
+    const rows = await db
+      .select()
+      .from(tilEntries)
+      .where(and(eq(tilEntries.userId, userId), eq(tilEntries.loggedFor, targetDateStr)))
+      .limit(1);
+
+    if (rows.length > 0) {
+      return {
+        entry: rows[0],
+        daysAgo,
+      };
+    }
+  }
+
+  return null;
 }

@@ -5,6 +5,8 @@ import { Bookmark, Collection } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import { Plus, Lightbulb } from "lucide-react";
 
+import { TilItem } from "@/components/til/TilFeedItem";
+
 interface InspectorDrawerProps {
   bookmark: Bookmark | null;
   allBookmarks?: Bookmark[];
@@ -43,10 +45,19 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
   const [chapMins, setChapMins] = useState(10);
   const [chapSec, setChapSec] = useState(0);
 
+  const [dischargedTils, setDischargedTils] = useState<TilItem[]>([]);
+
   useEffect(() => {
     if (bookmark) {
       setNoteVal(bookmark.note || "");
       setShowAddChap(false);
+
+      fetch(`/api/bookmarks/${bookmark.id}/tils`, { credentials: "include" })
+        .then((res) => (res.ok ? res.json() : { items: [] }))
+        .then((data) => setDischargedTils(data.items || []))
+        .catch(() => setDischargedTils([]));
+    } else {
+      setDischargedTils([]);
     }
   }, [bookmark]);
 
@@ -483,6 +494,51 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
               <span>Pin to top of collection</span>
               <i></i>
             </div>
+          </div>
+
+          {/* 💡 OUTCOME LEDGER / BOOKMARK BACKLINKS */}
+          <div className="fld" style={{ marginTop: "16px", background: "var(--paper)", border: "2px solid #000", padding: "12px" }}>
+            <span className="flbl" style={{ marginBottom: "8px", display: "flex", alignItems: "center", gap: "4px" }}>
+              <Lightbulb size={13} fill="#FFE600" color="#000" /> OUTCOME LEDGER ({dischargedTils.length} TILS CAME OUT OF THIS)
+            </span>
+
+            {dischargedTils.length === 0 ? (
+              <div style={{ fontFamily: "var(--mono)", fontSize: "11px", opacity: 0.6 }}>
+                No TIL entries logged from this bookmark yet.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {dischargedTils.map((til) => (
+                  <a
+                    key={til.id}
+                    href={`/til#til-${til.shortHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      textDecoration: "none",
+                      color: "inherit",
+                      background: "#FFFDF8",
+                      border: "1.5px solid #000",
+                      padding: "6px 8px",
+                      fontFamily: "var(--mono)",
+                      fontSize: "11px",
+                      display: "block",
+                      boxShadow: "2px 2px 0 #000",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, marginBottom: "2px" }}>
+                      <span style={{ background: "#00F0FF", color: "#000", padding: "0 4px", fontSize: "9px", border: "1px solid #000" }}>
+                        {til.type}
+                      </span>
+                      <span>#{til.shortHash}</span>
+                    </div>
+                    <div style={{ fontSize: "11px", opacity: 0.9, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {til.body || til.code || "TIL Entry"}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </aside>

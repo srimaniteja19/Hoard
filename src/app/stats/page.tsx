@@ -6,23 +6,32 @@ import { TYPES } from "@/data/initialBookmarks";
 import Link from "next/link";
 import { Flame } from "lucide-react";
 
+import { TilItem } from "@/components/til/TilFeedItem";
+
 export default function AnalyticsPage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [tilItems, setTilItems] = useState<TilItem[]>([]);
+
   useEffect(() => {
     async function load() {
       try {
-        const [bmsRes, collsRes] = await Promise.all([
+        const [bmsRes, collsRes, tilRes] = await Promise.all([
           fetch("/api/bookmarks", { credentials: "include" }),
           fetch("/api/collections", { credentials: "include" }),
+          fetch("/api/til?limit=200", { credentials: "include" }),
         ]);
         if (bmsRes.ok && collsRes.ok) {
           const bms = await bmsRes.json();
           const colls = await collsRes.json();
           setBookmarks(bms);
           setCollections(colls);
+        }
+        if (tilRes && tilRes.ok) {
+          const tilData = await tilRes.json();
+          setTilItems(tilData.items || []);
         }
       } catch (e) {
         console.error("Failed to load analytics data", e);
@@ -84,6 +93,11 @@ export default function AnalyticsPage() {
       unread,
     ];
 
+    // TIL Discharge Rate Calculation
+    const totalTil = tilItems.length;
+    const dischargedTil = tilItems.filter((item) => Boolean(item.dischargesBookmarkId)).length;
+    const dischargeRate = totalTil > 0 ? Math.round((dischargedTil / totalTil) * 100) : 0;
+
     return {
       total,
       read,
@@ -99,8 +113,11 @@ export default function AnalyticsPage() {
       addedThisWeek,
       monthsToClear,
       sparklineData,
+      totalTil,
+      dischargedTil,
+      dischargeRate,
     };
-  }, [bookmarks, collections]);
+  }, [bookmarks, collections, tilItems]);
 
   if (loading) {
     return (
@@ -247,6 +264,61 @@ export default function AnalyticsPage() {
             <div style={{ fontSize: "10px", fontWeight: 800, color: "#000" }}>ACTIVE STREAK</div>
             <div style={{ fontSize: "32px", fontWeight: 800, margin: "4px 0" }}>⚡ {stats.streakDays} DAYS</div>
             <div style={{ fontSize: "10px", fontWeight: 700 }}>Consecutive hoard days</div>
+          </div>
+        </div>
+
+        {/* 💡 TIL GAINS LEDGER & DISCHARGE RATE CARD */}
+        <div
+          style={{
+            border: "4px solid #000",
+            background: "#00F0FF",
+            boxShadow: "6px 6px 0 #000",
+            padding: "24px",
+            fontFamily: "var(--mono)",
+            marginBottom: "32px",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
+            <div style={{ fontSize: "16px", fontWeight: 900 }}>
+              💡 TIL GAINS LEDGER & DISCHARGE RATE
+            </div>
+            <Link
+              href="/til"
+              style={{
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#000",
+                background: "#FFE600",
+                border: "2px solid #000",
+                padding: "5px 10px",
+                textDecoration: "none",
+                boxShadow: "2px 2px 0 #000",
+              }}
+            >
+              OPEN TIL ARCHIVE →
+            </Link>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
+            <div style={{ background: "#FFFDF8", border: "2px solid #000", padding: "14px" }}>
+              <div style={{ fontSize: "10px", fontWeight: 800, color: "#666" }}>DISCHARGE RATE</div>
+              <div style={{ fontSize: "36px", fontWeight: 900, color: "#000", margin: "4px 0" }}>
+                {stats.dischargeRate}%
+              </div>
+              <div style={{ fontSize: "11px", fontWeight: 700 }}>
+                {stats.dischargedTil} of {stats.totalTil} TILs extracted from queue
+              </div>
+            </div>
+
+            <div style={{ background: "#FFFDF8", border: "2px solid #000", padding: "14px" }}>
+              <div style={{ fontSize: "10px", fontWeight: 800, color: "#666" }}>TOTAL EXTRACTED GAINS</div>
+              <div style={{ fontSize: "36px", fontWeight: 900, color: "#000", margin: "4px 0" }}>
+                {stats.totalTil} TILs
+              </div>
+              <div style={{ fontSize: "11px", fontWeight: 700 }}>
+                Total learning log entries
+              </div>
+            </div>
           </div>
         </div>
 

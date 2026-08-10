@@ -54,11 +54,48 @@ document.addEventListener("DOMContentLoaded", async () => {
   const filterChips = document.querySelectorAll(".filter-chip");
   const openWebAppBtn = document.getElementById("openWebAppBtn");
   const serverUrlInput = document.getElementById("serverUrl");
+  const extensionTokenInput = document.getElementById("extensionToken");
 
+  // TIL Elements
+  const tilTypeChips = document.querySelectorAll("#tilTypeChips .til-chip");
+  const tilBodyInput = document.getElementById("tilBody");
+  const tilSnippetGroup = document.getElementById("tilSnippetGroup");
+  const tilCodeInput = document.getElementById("tilCode");
+  const tilLinkUrlInput = document.getElementById("tilLinkUrl");
+  const tilDischargeSelect = document.getElementById("tilDischargeSelect");
+  const tilTagsInput = document.getElementById("tilTags");
+  const tilSaveToQueueCheckbox = document.getElementById("tilSaveToQueue");
+  const commitTilBtn = document.getElementById("commitTilBtn");
+
+  let selectedTilType = "FACT";
   let activeTags = new Set(["ai"]);
   let currentActiveTab = null;
 
-  // Load active tab info from Chrome API
+  // Restore Settings (Server URL & Extension Token)
+  if (typeof chrome !== "undefined" && chrome.storage) {
+    chrome.storage.local.get(["hoard_server_url", "extension_token"], (res) => {
+      if (res.hoard_server_url && serverUrlInput) serverUrlInput.value = res.hoard_server_url;
+      if (res.extension_token && extensionTokenInput) extensionTokenInput.value = res.extension_token;
+    });
+  }
+
+  // Save Settings Changes
+  if (serverUrlInput) {
+    serverUrlInput.addEventListener("change", () => {
+      if (typeof chrome !== "undefined" && chrome.storage) {
+        chrome.storage.local.set({ hoard_server_url: serverUrlInput.value.trim() });
+      }
+    });
+  }
+  if (extensionTokenInput) {
+    extensionTokenInput.addEventListener("change", () => {
+      if (typeof chrome !== "undefined" && chrome.storage) {
+        chrome.storage.local.set({ extension_token: extensionTokenInput.value.trim() });
+      }
+    });
+  }
+
+  // Load active tab info & selection text from Chrome API
   if (typeof chrome !== "undefined" && chrome.tabs) {
     try {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -67,6 +104,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         pageTitleInput.value = currentActiveTab.title || "";
         pageUrlInput.value = currentActiveTab.url || "";
         updateDetectionUI(currentActiveTab.url);
+
+        if (tilLinkUrlInput) tilLinkUrlInput.value = currentActiveTab.url || "";
+
+        // Extract selected text if text was highlighted when opening popup
+        try {
+          const selResult = await chrome.scripting.executeScript({
+            target: { tabId: currentActiveTab.id },
+            func: () => window.getSelection()?.toString() || "",
+          });
+          const text = selResult?.[0]?.result;
+          if (text && text.trim() && tilBodyInput) {
+            tilBodyInput.value = `"${text.trim()}"`;
+          }
+        } catch {
+          // ignore selection extraction error
+        }
       }
     } catch (err) {
       console.warn("Could not query active tab:", err);
@@ -87,6 +140,36 @@ document.addEventListener("DOMContentLoaded", async () => {
     detectDetails.textContent = meta.f;
   }
 
+  // Load Unread Bookmarks for Discharge Dropdown
+  async function loadUnreadBookmarksForDischarge() {
+    if (!tilDischargeSelect) return;
+    const serverUrl = (serverUrlInput?.value || DEFAULT_SERVER_URL).replace(/\/$/, "");
+    const token = extensionTokenInput?.value || "";
+
+    try {
+      const headers = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch(`${serverUrl}/api/bookmarks?unread=true`, {
+        credentials: "include",
+        headers,
+      });
+
+      if (res.ok) {
+        const bookmarks = await res.json();
+        tilDischargeSelect.innerHTML = `<option value="">-- Optional: Select bookmark to mark read --</option>`;
+        bookmarks.forEach((b) => {
+          const opt = document.createElement("option");
+          opt.value = String(b.id);
+          opt.textContent = `[${b.ty}] ${b.title || b.url}`;
+          tilDischargeSelect.appendChild(opt);
+        });
+      }
+    } catch (e) {
+      console.warn("Could not load unread bookmarks for discharge:", e);
+    }
+  }
+
   // Tab Navigation Switching
   tabBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -100,9 +183,96 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (targetTab === "hoard") {
         renderHoardList();
+      } else if (targetTab === "til") {
+        loadUnreadBookmarksForDischarge();
       }
     });
   });
+
+  // TIL Type Chips Selection
+  tilTypeChips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      tilTypeChips.forEach((c) => c.classList.remove("active"));
+      chip.classList.add("active");
+      selectedTilType = chip.getAttribute("data-type") || "FACT";
+
+      if (tilSnippetGroup) {
+        tilSnippetGroup.style.display = selectedTilType === "SNIPPET" ? "block" : "none";
+      }
+    });
+  });
+
+  // Commit TIL Entry
+  if (commitTilBtn) {
+    commitTilBtn.addEventListener("click", async () => {
+      const bodyText = tilBodyInput.value.trim();
+      const codeText = tilCodeInput ? tilCodeInput.value.trim() : "";
+      if (!bodyText && (selectedTilType !== "SNIPPET" || !codeText)) {
+        showToast("⚠️ PLEASE ENTER LEARNING BODY OR CODE", true);
+        return;
+      }
+
+      const serverUrl = (serverUrlInput?.value || DEFAULT_SERVER_URL).replace(/\/$/, "");
+      const token = extensionTokenInput?.value || "";
+
+      const rawTags = tilTagsInput ? tilTagsInput.value : "";
+      const tags = rawTags
+        .split(",")
+        .map((t) => t.trim().replace(/^#/, ""))
+        .filter(Boolean);
+
+      const payload = {
+        type: selectedTilType,
+        body: bodyText,
+        code: selectedTilType === "SNIPPET" ? codeText : undefined,
+        linkUrl: tilLinkUrlInput ? tilLinkUrlInput.value.trim() || undefined : undefined,
+        dischargesBookmarkId: tilDischargeSelect?.value ? parseInt(tilDischargeSelect.value, 10) : undefined,
+        tags,
+        saveToHoardQueue: tilSaveToQueueCheckbox ? tilSaveToQueueCheckbox.checked : false,
+      };
+
+      try {
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await fetch(`${serverUrl}/api/til`, {
+          method: "POST",
+          credentials: "include",
+          headers,
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          showToast("✓ TIL COMMITTED!");
+          tilBodyInput.value = "";
+          if (tilCodeInput) tilCodeInput.value = "";
+          if (tilTagsInput) tilTagsInput.value = "";
+          if (typeof chrome !== "undefined" && chrome.runtime) {
+            chrome.runtime.sendMessage({ action: "til_saved" });
+          }
+          return;
+        }
+      } catch (err) {
+        console.warn("Direct TIL commit failed, saving to offline queue:", err);
+      }
+
+      // Offline Queue Fallback
+      if (typeof chrome !== "undefined" && chrome.storage) {
+        chrome.storage.local.get(["offline_til_queue"], (res) => {
+          const queue = res.offline_til_queue || [];
+          queue.push({ ...payload, createdAt: new Date().toISOString() });
+          chrome.storage.local.set({ offline_til_queue: queue }, () => {
+            showToast("✓ SAVED OFFLINE — will sync");
+            if (typeof chrome !== "undefined" && chrome.runtime) {
+              chrome.runtime.sendMessage({ action: "trigger_til_sync" });
+            }
+          });
+        });
+      } else {
+        showToast("✓ TIL SAVED");
+      }
+    });
+  }
 
   // Tag Chips Handler
   tagChips.forEach((chip) => {
