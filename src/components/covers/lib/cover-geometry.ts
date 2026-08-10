@@ -43,10 +43,23 @@ export function normalizeValues(values: number[], maxCap = 100): number[] {
  */
 export function calculateSunFadeOpacity(createdAtOrWhen?: string | number | Date): number {
   if (!createdAtOrWhen) return 1.0;
-  const date = new Date(createdAtOrWhen);
+  let date: Date;
+  if (typeof createdAtOrWhen === "string") {
+    if (createdAtOrWhen.match(/\d{4}/)) {
+      date = new Date(createdAtOrWhen);
+    } else {
+      // String like "Aug 10" or "May 14" without year -> append current year
+      const currentYear = new Date().getFullYear();
+      date = new Date(`${createdAtOrWhen} ${currentYear}`);
+    }
+  } else {
+    date = new Date(createdAtOrWhen);
+  }
+
   if (isNaN(date.getTime())) return 1.0;
-  const ageInDays = Math.max(0, (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
-  if (ageInDays <= 90) return 1.0;
-  const fade = 1 - ((ageInDays - 90) / 365) * 0.4;
-  return Math.max(0.45, Math.round(fade * 100) / 100);
+  const ageInDays = (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24);
+  if (isNaN(ageInDays) || ageInDays <= 90 || ageInDays < 0) return 1.0;
+
+  const fade = 1 - ((ageInDays - 90) / 365) * 0.05;
+  return Math.max(0.92, Math.round(fade * 100) / 100);
 }

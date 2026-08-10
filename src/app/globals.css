@@ -731,16 +731,18 @@ input[type=range]::-moz-range-thumb {
 
 .ct {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.24;
   letter-spacing: -.02em;
+  color: var(--fg);
 }
 
 .cex {
   font-size: 12px;
   line-height: 1.42;
   margin: 7px 0 0;
-  color: #3A3A3A;
+  color: var(--fg);
+  opacity: 0.85;
 }
 
 .cmeta {
@@ -752,7 +754,8 @@ input[type=range]::-moz-range-thumb {
   gap: 7px;
   flex-wrap: wrap;
   align-items: center;
-  opacity: .72;
+  color: var(--fg);
+  opacity: 0.85;
 }
 
 .ctags {

@@ -48,7 +48,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
 
   const is404 = bookmark.driftStatus === "404_preserved";
   const isChanged = bookmark.driftStatus === "changed";
-  const sunFadeOpacity = calculateSunFadeOpacity(bookmark.when);
+  const sunFadeOpacity = calculateSunFadeOpacity(bookmark.lastFetchedAt || bookmark.when);
 
   return (
     <article
@@ -56,7 +56,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
       onClick={handleClick}
       style={{
         position: "relative",
-        opacity: sunFadeOpacity,
+        ...(sunFadeOpacity < 1 ? { opacity: sunFadeOpacity } : {}),
         ...(cardWidthPx ? { width: `${cardWidthPx}px`, minWidth: `${cardWidthPx}px`, flexShrink: 0 } : {}),
       }}
     >
