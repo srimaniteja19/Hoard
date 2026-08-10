@@ -168,20 +168,27 @@ export function useBookmarks() {
       } catch {}
     }
 
-    // 4. Background polling every 8s while tab is visible
+    // 4. Fast active polling (3s) while tab is visible so mobile/extension saves pop up dynamically
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") {
         refresh();
       }
-    }, 8000);
+    }, 3000);
+
+    // 5. Listen for window storage changes
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "hoard_last_sync" || e.key === "hoard_bookmarks_v2") refresh();
+    };
 
     window.addEventListener("message", handleMessage);
     window.addEventListener("focus", handleFocus);
+    window.addEventListener("storage", handleStorage);
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       window.removeEventListener("message", handleMessage);
       window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("storage", handleStorage);
       document.removeEventListener("visibilitychange", handleVisibility);
       clearInterval(timer);
       if (channel) channel.close();

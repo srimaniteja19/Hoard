@@ -184,8 +184,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         chrome.storage.local.set({ hoard_bookmarks: list });
       });
 
-      // 2. Try saving to DB via open Hoard tab (same-origin fetch → cookie auth)
-      chrome.tabs.query({ url: `${DEFAULT_SERVER_URL}/*` }, (tabs) => {
+      // 2. Save to DB via open Hoard tab or backend API
+      chrome.tabs.query({ url: ["*://*.vercel.app/*", "*://localhost/*"] }, (tabs) => {
         if (tabs && tabs.length > 0) {
           chrome.scripting.executeScript({
             target: { tabId: tabs[0].id },
