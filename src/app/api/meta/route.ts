@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cleanTitle } from "@/lib/cleanTitle";
 
 /**
  * GET /api/meta?url=<encoded-url>
@@ -65,7 +66,7 @@ export async function GET(req: Request) {
       ?? html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i)?.[1];
 
     const rawTitle = ogTitle || metaTitle || null;
-    const title = rawTitle ? rawTitle.trim().replace(/\s+/g, " ").slice(0, 200) : null;
+    const title = cleanTitle(rawTitle, targetUrl);
     const description = ogDescription ? ogDescription.trim().replace(/\s+/g, " ").slice(0, 400) : null;
 
     return NextResponse.json({ title, description }, { status: 200 });

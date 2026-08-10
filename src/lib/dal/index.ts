@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { parseCoverData } from "@/lib/cover-data";
+import { cleanTitle } from "@/lib/cleanTitle";
 import { bookmarks as bookmarksTable, collections as collectionsTable } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { Bookmark, Collection } from "@/types";
@@ -14,7 +15,7 @@ export async function fetchUserBookmarks(userId: string): Promise<Bookmark[]> {
       .where(and(eq(bookmarksTable.userId, userId), isNull(bookmarksTable.deletedAt)));
 
     const titleMap = new Map<number, string>();
-    rows.forEach((r) => titleMap.set(r.id, r.title));
+    rows.forEach((r) => titleMap.set(r.id, cleanTitle(r.title, r.url)));
 
     return rows.map((r) => {
       const d = new Date(r.createdAt);
@@ -23,7 +24,7 @@ export async function fetchUserBookmarks(userId: string): Promise<Bookmark[]> {
 
       return {
         id: r.id,
-        t: r.title,
+        t: cleanTitle(r.title, r.url),
         ty: r.type,
         src: r.source,
         url: r.url,
@@ -99,7 +100,7 @@ export async function createBookmarkInDb(userId: string, bm: Omit<Bookmark, "id"
       .insert(bookmarksTable)
       .values({
         userId,
-        title: bm.t,
+        title: cleanTitle(bm.t, bm.url),
         type: bm.ty,
         source: bm.src,
         url: bm.url,

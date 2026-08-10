@@ -4,6 +4,7 @@ import { bookmarks, collections } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { enrichCoverData } from "@/lib/cover-data";
+import { cleanTitle } from "@/lib/cleanTitle";
 
 // CORS headers for extension requests (same-origin fetch from injected scripts)
 const CORS = {
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
         .insert(bookmarks)
         .values({
           userId,
-          title:        bookmark.t    || "Untitled",
+          title:        cleanTitle(bookmark.t, bookmark.url),
           type:         bookmark.ty   || "ART",
           source:       bookmark.source || bookmark.src || "Saved via HOARD Extension",
           url:          bookmark.url,

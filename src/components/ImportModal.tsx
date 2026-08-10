@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { KindType } from "@/types";
+import { cleanTitle } from "@/lib/cleanTitle";
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -24,7 +25,7 @@ function parseHTMLBookmarks(html: string): ParsedItem[] {
 
   links.forEach((a) => {
     const href = a.getAttribute("href");
-    const title = a.textContent?.trim() || href || "Imported Bookmark";
+    const rawTitle = a.textContent?.trim() || "";
     if (href && href.startsWith("http")) {
       // Try to determine folder from parent DL header if available
       let folder = "Imported";
@@ -37,7 +38,7 @@ function parseHTMLBookmarks(html: string): ParsedItem[] {
       }
 
       items.push({
-        title,
+        title: cleanTitle(rawTitle, href),
         url: href,
         folder,
         type: detectKind(href),
@@ -56,8 +57,9 @@ function parseJSONBookmarks(jsonStr: string): ParsedItem[] {
       .filter((x: Record<string, unknown>) => x.url || x.href || x.link)
       .map((x: Record<string, unknown>) => {
         const url = String(x.url || x.href || x.link);
+        const rawTitle = String(x.title || x.t || x.name || "");
         return {
-          title: String(x.title || x.t || x.name || url),
+          title: cleanTitle(rawTitle, url),
           url,
           folder: String(x.folder || x.coll || x.collection || "Imported"),
           type: (x.ty || x.type || detectKind(url)) as KindType,
@@ -78,7 +80,7 @@ function parseTextUrls(text: string): ParsedItem[] {
     if (match) {
       const url = match[0];
       items.push({
-        title: url.split("/").pop() || url,
+        title: cleanTitle(null, url),
         url,
         folder: "Imported",
         type: detectKind(url),

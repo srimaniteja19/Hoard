@@ -4,6 +4,7 @@ import { bookmarks, collections } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { KindType } from "@/types";
+import { cleanTitle } from "@/lib/cleanTitle";
 
 interface ImportBookmarkPayload {
   t?: string;
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
       if (!item.url || !item.url.trim()) continue;
       const rawUrl = item.url.trim();
       const validUrl = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`;
-      const title = item.t || item.title || validUrl.split("/").pop() || "Imported Link";
+      const title = cleanTitle(item.t || item.title, validUrl);
       const type = item.ty || item.type || detectType(validUrl);
       const source = item.src || extractDomain(validUrl);
 

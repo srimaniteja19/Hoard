@@ -1,6 +1,7 @@
 import { LinkPreview } from "@/db/schema";
 import { validateUrlForSsrf, fetchWithSsrfGuard } from "@/lib/security/ssrfGuard";
 import { enrichRepoCoverData } from "@/lib/cover-data";
+import { cleanTitle } from "@/lib/cleanTitle";
 
 export interface PreviewProvider {
   providerName: LinkPreview["provider"];
@@ -328,7 +329,7 @@ export const genericProvider: PreviewProvider = {
         html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1] ||
         html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i)?.[1];
       const metaTitle = html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1];
-      const title = sanitizeString(ogTitle || metaTitle) || host;
+      const title = cleanTitle(ogTitle || metaTitle, targetUrlStr);
 
       // Extract og:description or description
       const ogDescription =
@@ -359,7 +360,7 @@ export const genericProvider: PreviewProvider = {
         provider: "GENERIC",
         kind: "article",
         url: targetUrlStr,
-        title: targetUrlStr,
+        title: cleanTitle(null, targetUrlStr),
         host,
         fetchedAt,
         failed: true,

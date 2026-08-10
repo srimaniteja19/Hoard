@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Bookmark, Collection, DetectionResult, KindType } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
+import { cleanTitle } from "@/lib/cleanTitle";
 
 interface CaptureModalProps {
   isOpen: boolean;
@@ -169,7 +170,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
       domain = "web";
     }
 
-    // Priority: fetched og:title → URL slug → "New Bookmark"
+    // Priority: fetched og:title → smart cleanTitle from URL
     let title = fetchedTitle;
     if (!title) {
       // Attempt a fresh fetch if the debounce hasn't resolved yet
@@ -181,20 +182,14 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
           if (data.title) title = data.title;
         }
       } catch {
-        // Ignore — fall through to slug
+        // Ignore — cleanTitle handles fallbacks cleanly
       }
     }
 
-    if (!title) {
-      const slug = url.split("/").filter(Boolean).pop() || "";
-      const cleaned = slug.replace(/[-_]/g, " ").replace(/\.[a-z]+$/i, "").trim();
-      title = cleaned
-        ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
-        : domain || "New Bookmark";
-    }
+    const finalTitle = cleanTitle(title, url);
 
     onSave({
-      t: title,
+      t: finalTitle,
       ty,
       src: domain,
       url: url.startsWith("http") ? url : `https://${url}`,

@@ -5,15 +5,17 @@ import { eq, isNull, and, desc } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { Bookmark, KindType } from "@/types";
 import { parseCoverData, enrichCoverData } from "@/lib/cover-data";
+import { cleanTitle } from "@/lib/cleanTitle";
 
 // ─── Shape mapper ────────────────────────────────────────────────────────────
 
 function dbToUi(row: typeof bookmarks.$inferSelect, titleMap?: Map<number, string>): Bookmark {
   const d = new Date(row.createdAt);
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const uiTitle = cleanTitle(row.title, row.url);
   return {
     id:     row.id,
-    t:      row.title,
+    t:      uiTitle,
     ty:     row.type as KindType,
     src:    row.source,
     url:    row.url,
@@ -94,7 +96,7 @@ export async function GET() {
       .orderBy(desc(bookmarks.createdAt));
 
     const titleMap = new Map<number, string>();
-    rows.forEach((r) => titleMap.set(r.id, r.title));
+    rows.forEach((r) => titleMap.set(r.id, cleanTitle(r.title, r.url)));
 
     return NextResponse.json(rows.map((r) => dbToUi(r, titleMap)));
   } catch (e) {
@@ -122,7 +124,7 @@ export async function POST(req: Request) {
       .insert(bookmarks)
       .values({
         userId,
-        title:        body.t      || "Untitled",
+        title:        cleanTitle(body.t, body.url),
         type:         body.ty     || "ART",
         source:       body.src    || "",
         url:          body.url,
