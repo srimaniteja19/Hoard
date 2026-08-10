@@ -39,7 +39,7 @@ export const CrumbBar: React.FC<CrumbBarProps> = ({ items, coll, ty }) => {
         <span className="stat">
           <b>{items.length}</b> ITEMS
         </span>
-        <span className="stat">
+        <span className="stat desktop-only-stat">
           <b>{uniqueKinds}</b> KINDS
         </span>
         <span

@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { SortMode, ViewMode } from "@/types";
 import { ThemePicker } from "@/components/ThemePicker";
-import { Zap } from "lucide-react";
+import { Zap, SlidersHorizontal } from "lucide-react";
 
 interface HeaderBarProps {
   query: string;
@@ -32,6 +32,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenCapture,
   onOpenFocusMode,
 }) => {
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
     if (/^https?:\/\//i.test(v.trim())) {
@@ -58,7 +60,25 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           <b>HOARD</b>
         </div>
 
-        <div style={{ display: "flex", gap: "6px" }}>
+        <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+          <button
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            style={{
+              background: showMobileFilters ? "#B6FF3C" : "#FFFDF8",
+              border: "2px solid #000",
+              padding: "4px 8px",
+              fontWeight: 800,
+              fontSize: "11px",
+              fontFamily: "var(--mono)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "2px",
+            }}
+          >
+            <SlidersHorizontal size={13} /> {showMobileFilters ? "CLOSE" : "FILTER"}
+          </button>
+
           {onOpenFocusMode && (
             <button
               onClick={onOpenFocusMode}
@@ -91,99 +111,103 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </div>
       </div>
 
-      <div className="searchbox">
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#000"
-          strokeWidth="3"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-4-4" />
-        </svg>
-        <input
-          ref={searchInputRef}
-          value={query}
-          onChange={handleInput}
-          placeholder="Search — try  is:video  under:20m  #ai  lang:ts"
-          autoComplete="off"
-        />
-      </div>
-
-      <div className="bar-controls-row">
-        {onOpenFocusMode && (
-          <button
-            onClick={onOpenFocusMode}
-            style={{
-              background: "#FFE600",
-              color: "#000",
-              border: "2px solid #000",
-              boxShadow: "2px 2px 0 #000",
-              padding: "5px 12px",
-              fontWeight: 900,
-              fontFamily: "var(--mono)",
-              fontSize: "12px",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-            }}
+      {/* Search box & controls (hidden on mobile unless expanded or on desktop) */}
+      <div className={`mobile-collapsible-controls ${showMobileFilters ? "open" : ""}`}>
+        <div className="searchbox">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#000"
+            strokeWidth="3"
           >
-            <Zap size={14} fill="#000" /> START SESSION
-          </button>
-        )}
-
-        <div className="grp view-grp">
-          <button
-            className={view === "masonry" ? "on" : ""}
-            onClick={() => setView("masonry")}
-          >
-            MASONRY
-          </button>
-          <button
-            className={view === "grid" ? "on" : ""}
-            onClick={() => setView("grid")}
-          >
-            GRID
-          </button>
-          <button
-            className={view === "list" ? "on" : ""}
-            onClick={() => setView("list")}
-          >
-            LIST
-          </button>
-          <button
-            className={view === "heads" ? "on" : ""}
-            onClick={() => setView("heads")}
-          >
-            HEADLINES
-          </button>
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-4-4" />
+          </svg>
+          <input
+            ref={searchInputRef}
+            value={query}
+            onChange={handleInput}
+            placeholder="Search — try  is:video  under:20m  #ai  lang:ts"
+            autoComplete="off"
+          />
         </div>
 
-        <div className="grp sort-grp">
-          <button
-            className={sort === "recent" ? "on" : ""}
-            onClick={() => setSort("recent")}
-          >
-            RECENT
-          </button>
-          <button
-            className={sort === "short" ? "on" : ""}
-            onClick={() => setSort("short")}
-          >
-            SHORTEST
-          </button>
-          <button
-            className={sort === "az" ? "on" : ""}
-            onClick={() => setSort("az")}
-          >
-            A–Z
-          </button>
-        </div>
+        <div className="bar-controls-row">
+          {onOpenFocusMode && (
+            <button
+              className="desktop-start-session-btn"
+              onClick={onOpenFocusMode}
+              style={{
+                background: "#FFE600",
+                color: "#000",
+                border: "2px solid #000",
+                boxShadow: "2px 2px 0 #000",
+                padding: "5px 12px",
+                fontWeight: 900,
+                fontFamily: "var(--mono)",
+                fontSize: "12px",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <Zap size={14} fill="#000" /> START SESSION
+            </button>
+          )}
 
-        <ThemePicker />
+          <div className="grp view-grp">
+            <button
+              className={view === "masonry" ? "on" : ""}
+              onClick={() => setView("masonry")}
+            >
+              MASONRY
+            </button>
+            <button
+              className={view === "grid" ? "on" : ""}
+              onClick={() => setView("grid")}
+            >
+              GRID
+            </button>
+            <button
+              className={view === "list" ? "on" : ""}
+              onClick={() => setView("list")}
+            >
+              LIST
+            </button>
+            <button
+              className={view === "heads" ? "on" : ""}
+              onClick={() => setView("heads")}
+            >
+              HEADLINES
+            </button>
+          </div>
+
+          <div className="grp sort-grp">
+            <button
+              className={sort === "recent" ? "on" : ""}
+              onClick={() => setSort("recent")}
+            >
+              RECENT
+            </button>
+            <button
+              className={sort === "short" ? "on" : ""}
+              onClick={() => setSort("short")}
+            >
+              SHORTEST
+            </button>
+            <button
+              className={sort === "az" ? "on" : ""}
+              onClick={() => setSort("az")}
+            >
+              A–Z
+            </button>
+          </div>
+
+          <ThemePicker />
+        </div>
       </div>
     </div>
   );
