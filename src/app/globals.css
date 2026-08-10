@@ -660,28 +660,19 @@ input[type=range]::-moz-range-thumb {
   column-gap: 16px;
 }
 
-/* ---------- cold start: <15 items forces a single centered column ---------- */
-.cold-start-view .masonry {
-  columns: 1 !important;
-  max-width: min(760px, 90%);
-  margin: 0 auto;
-}
-
+/* ---------- cold start: <15 items centers a capped, responsive grid so it
+   doesn't sprawl edge-to-edge with only a handful of cards, but still wraps
+   to 2/3/4-up naturally as width allows (same auto-fill/columns math as the
+   normal view, just width-capped). ---------- */
+.cold-start-view .masonry,
 .cold-start-view .grid {
-  max-width: min(760px, 90%);
+  max-width: min(960px, 94%);
   margin: 0 auto;
-}
-
-.cold-start-view .grid .card {
-  width: 100% !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  flex-shrink: 1 !important;
 }
 
 .cold-start-view .list,
 .cold-start-view .heads {
-  max-width: min(860px, 92%);
+  max-width: min(960px, 94%);
   margin: 0 auto;
 }
 
