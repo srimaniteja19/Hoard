@@ -177,7 +177,6 @@ export default function Home() {
         }}
         onOpenNewFolder={() => setIsNewFolderOpen(true)}
         onOpenImport={() => setIsImportOpen(true)}
-        onOpenFocusMode={() => setIsFocusOpen(true)}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />

@@ -11,6 +11,7 @@ export interface KindMeta {
   c: string; // Background color hex
   fg: string; // Text color hex
   verb: string;
+  icon: string;
 }
 
 export interface Collection {
@@ -37,6 +38,7 @@ export interface Bookmark {
   unread: boolean;
   ex: Record<string, string>;
   note: string;
+  source?: string;
 
   // Chapter decomposition
   parentId?: number | null;

@@ -172,7 +172,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       coll:   folderSelect.value || "unsorted",
       unread: true,
       ex:     { Source: domain, Type: meta.name },
-      note:   pageNoteInput.value.trim() || "Saved via HOARD Extension",
+      note:   pageNoteInput.value.trim() || "",
+      source: "Saved via HOARD Extension",
       when:   `${months[d.getMonth()]} ${d.getDate()}`,
     };
 

@@ -75,7 +75,8 @@ function buildBookmark(url, title, note) {
     tag: isRepo ? "craft" : isVideo ? "ai" : "systems",
     coll: "unsorted", unread: true,
     ex: { Source: domain },
-    note: note || "Saved via HOARD Extension",
+    note: note || "",
+    source: "Saved via HOARD Extension",
     when: `${months[d.getMonth()]} ${d.getDate()}`,
   };
 }

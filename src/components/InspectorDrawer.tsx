@@ -409,6 +409,10 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                 </div>
               ))}
               <div className="kv">
+                <dt>SOURCE</dt>
+                <dd>{bookmark.source || (bookmark.note === "Saved via HOARD Extension" ? "Saved via HOARD Extension" : bookmark.src || "Direct Save")}</dd>
+              </div>
+              <div className="kv">
                 <dt>SAVED</dt>
                 <dd>{bookmark.when}</dd>
               </div>

@@ -57,13 +57,13 @@ export async function POST(req: Request) {
           userId,
           title:        bookmark.t    || "Untitled",
           type:         bookmark.ty   || "ART",
-          source:       bookmark.src  || "",
+          source:       bookmark.source || bookmark.src || "Saved via HOARD Extension",
           url:          bookmark.url,
           mins:         bookmark.mins ?? 5,
           tag:          bookmark.tag  || "general",
           collectionId,
           unread:       bookmark.unread ?? true,
-          note:         bookmark.note || "Saved via HOARD Extension",
+          note:         bookmark.note === "Saved via HOARD Extension" ? "" : (bookmark.note || ""),
           extra:        bookmark.ex   || {},
         })
         .returning();

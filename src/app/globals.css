@@ -1306,6 +1306,7 @@ input[type=range]::-moz-range-thumb {
   background: rgba(0, 0, 0, 0.5);
   z-index: 80;
   backdrop-filter: blur(2px);
+  display: none;
 }
 
 .mobile-side-close {
@@ -1316,7 +1317,7 @@ input[type=range]::-moz-range-thumb {
   height: 28px;
   font-weight: 800;
   cursor: pointer;
-  display: grid;
+  display: none;
   place-items: center;
   font-size: 13px;
 }
@@ -1358,7 +1359,15 @@ input[type=range]::-moz-range-thumb {
 }
 
 /* ---------------- responsive media queries ---------------- */
-@media (max-width: 980px) {
+@media (max-width: 1023px) {
+  .sidebar-backdrop {
+    display: block;
+  }
+
+  .mobile-side-close {
+    display: grid;
+  }
+
   .app-container {
     grid-template-columns: 1fr;
     height: 100vh;

@@ -108,7 +108,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         )}
 
         <div className="ct">{bookmark.t}</div>
-        {bookmark.note && <p className="cex">{bookmark.note}</p>}
+        {bookmark.note && bookmark.note !== "Saved via HOARD Extension" && <p className="cex">{bookmark.note}</p>}
         
         <div className="cmeta">
           <span>{bookmark.src}</span>

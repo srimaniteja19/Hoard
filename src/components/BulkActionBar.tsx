@@ -15,8 +15,10 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
   onMarkRead,
   onDelete,
 }) => {
+  if (selectedCount <= 0) return null;
+
   return (
-    <div className={`bulk ${selectedCount > 0 ? "on" : ""}`}>
+    <div className="bulk on">
       <b>{selectedCount} SELECTED</b>
       <button onClick={onMarkRead}>MARK READ</button>
       <button onClick={onDelete}>DELETE</button>
