@@ -156,7 +156,17 @@ export default function AnalyticsPage() {
     .join(" ");
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--cream)", color: "var(--ink)", padding: "20px" }}>
+    <div
+      className="stats-page-container"
+      style={{
+        height: "100vh",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        background: "var(--cream)",
+        color: "var(--ink)",
+        padding: "20px",
+      }}
+    >
       {/* Top Bar */}
       <div
         style={{

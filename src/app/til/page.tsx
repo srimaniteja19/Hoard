@@ -172,7 +172,16 @@ function TilPageContent() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg, #FFFDF8)", color: "var(--ink)" }}>
+    <div
+      className="til-page-container"
+      style={{
+        height: "100vh",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        background: "var(--bg, #FFFDF8)",
+        color: "var(--ink)",
+      }}
+    >
       <TilHeaderNav />
 
       <main style={{ maxWidth: "840px", margin: "0 auto", padding: "24px 16px" }}>

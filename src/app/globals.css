@@ -153,6 +153,13 @@ body {
   overflow: hidden;
 }
 
+body:has(.til-page-container),
+body:has(.stats-page-container),
+body:has(.settings-page-container) {
+  overflow: auto !important;
+  overflow-y: auto !important;
+}
+
 button, input, textarea {
   font-family: inherit;
   color: inherit;
