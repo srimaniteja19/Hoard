@@ -8,8 +8,42 @@ import {
   jsonb,
   uniqueIndex,
   index,
+  pgEnum,
+  varchar,
+  date,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { KindType } from "@/types";
+
+export type LinkPreview = {
+  provider: "YOUTUBE" | "VIMEO" | "SPOTIFY" | "GITHUB" | "ARXIV" | "X" | "GENERIC";
+  kind: "video" | "audio" | "repo" | "paper" | "post" | "article";
+  url: string;
+  canonicalUrl?: string;
+  title: string;
+  description?: string;
+  host: string;
+  thumbnailKey?: string;
+  durationSec?: number;
+  author?: string;
+  meta: Record<string, string | number>;
+  fetchedAt: string;
+  failed?: boolean;
+};
+
+export const tilTypeValues = [
+  "FACT",
+  "GOTCHA",
+  "SNIPPET",
+  "PATTERN",
+  "QUOTE",
+  "OPINION",
+  "LINK",
+] as const;
+
+export type TilType = typeof tilTypeValues[number];
+
+export const tilType = pgEnum("til_type", tilTypeValues);
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -17,6 +51,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  timezone: text("timezone").notNull().default("UTC"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -128,3 +163,52 @@ export const tags = pgTable(
   },
   (table) => [uniqueIndex("user_tag_idx").on(table.userId, table.name)]
 );
+
+export const tilEntries = pgTable(
+  "til_entries",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    shortHash: varchar("short_hash", { length: 4 }).notNull(),
+    type: tilType("type").notNull().default("FACT"),
+
+    body: text("body"),
+    code: text("code"),
+    codeLang: varchar("code_lang", { length: 24 }),
+
+    linkUrl: text("link_url"),
+    linkPreview: jsonb("link_preview").$type<LinkPreview>(),
+    linkDensity: varchar("link_density", { length: 8 }).default("card"),
+
+    dischargesBookmarkId: integer("discharges_bookmark_id").references(
+      () => bookmarks.id,
+      { onDelete: "set null" }
+    ),
+
+    loggedFor: date("logged_for").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("til_user_logged_for_idx").on(table.userId, table.loggedFor.desc()),
+    uniqueIndex("til_user_short_hash_idx").on(table.userId, table.shortHash),
+  ]
+);
+
+export const tilEntryTags = pgTable(
+  "til_entry_tags",
+  {
+    tilId: text("til_id")
+      .notNull()
+      .references(() => tilEntries.id, { onDelete: "cascade" }),
+    tagId: integer("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (table) => [primaryKey({ columns: [table.tilId, table.tagId] })]
+);
+
