@@ -38,23 +38,38 @@ export async function GET(req: Request) {
 
     // ── Query 2: Active Topic Page (Oldest First) ─────────────────────────────
     if (activeTopicName) {
-      // Find matching TIL IDs for active topic
-      const matchingTilRows = await db
-        .select({ tilId: tilEntryTags.tilId })
-        .from(tilEntryTags)
+      // Fetch topic entries oldest-first, joined straight to the tag filter
+      // (avoids a separate matching-IDs round-trip)
+      const rows = await db
+        .select({
+          id: tilEntries.id,
+          userId: tilEntries.userId,
+          shortHash: tilEntries.shortHash,
+          type: tilEntries.type,
+          body: tilEntries.body,
+          code: tilEntries.code,
+          codeLang: tilEntries.codeLang,
+          linkUrl: tilEntries.linkUrl,
+          linkPreview: tilEntries.linkPreview,
+          linkDensity: tilEntries.linkDensity,
+          dischargesBookmarkId: tilEntries.dischargesBookmarkId,
+          supersededById: tilEntries.supersededById,
+          stability: tilEntries.stability,
+          ease: tilEntries.ease,
+          reviewCount: tilEntries.reviewCount,
+          lastReviewedAt: tilEntries.lastReviewedAt,
+          nextReviewAt: tilEntries.nextReviewAt,
+          loggedFor: tilEntries.loggedFor,
+          createdAt: tilEntries.createdAt,
+          updatedAt: tilEntries.updatedAt,
+        })
+        .from(tilEntries)
+        .innerJoin(tilEntryTags, eq(tilEntries.id, tilEntryTags.tilId))
         .innerJoin(tagsTable, eq(tilEntryTags.tagId, tagsTable.id))
-        .where(and(eq(tagsTable.userId, userId), eq(tagsTable.name, activeTopicName)));
+        .where(and(eq(tilEntries.userId, userId), eq(tagsTable.userId, userId), eq(tagsTable.name, activeTopicName)))
+        .orderBy(asc(tilEntries.loggedFor), asc(tilEntries.createdAt));
 
-      const matchingTilIds = matchingTilRows.map((r) => r.tilId);
-
-      if (matchingTilIds.length > 0) {
-        // Fetch topic entries oldest-first
-        const rows = await db
-          .select()
-          .from(tilEntries)
-          .where(and(eq(tilEntries.userId, userId), inArray(tilEntries.id, matchingTilIds)))
-          .orderBy(asc(tilEntries.loggedFor), asc(tilEntries.createdAt));
-
+      if (rows.length > 0) {
         const tilIds = rows.map((r) => r.id);
 
         // Fetch tags for all topic entries in ONE batch query (No N+1)

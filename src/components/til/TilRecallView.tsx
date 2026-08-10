@@ -38,12 +38,13 @@ export const TilRecallView: React.FC<TilRecallViewProps> = ({
       try {
         setSubmitting(true);
         // Persist per-card immediately so mid-session tab close preserves ratings
-        await fetch("/api/til/recall/review", {
+        const res = await fetch("/api/til/recall", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: currentCard.id, rating }),
         });
+        if (!res.ok) throw new Error(`Rating persist failed: ${res.status}`);
 
         setSessionRatings((prev) => [...prev, { id: currentCard.id, rating }]);
         setIsRevealed(false);

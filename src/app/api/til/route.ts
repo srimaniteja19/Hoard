@@ -206,6 +206,9 @@ export async function POST(req: Request) {
     }
 
     // 4. Insert TIL Entry
+    // Seed SRS state the same way the backfill does, so new entries enter the
+    // RECALL rotation instead of sitting with a null nextReviewAt forever.
+    const now = new Date();
     const [inserted] = await db
       .insert(tilEntries)
       .values({
@@ -221,6 +224,8 @@ export async function POST(req: Request) {
         linkDensity: data.linkDensity || "card",
         dischargesBookmarkId: data.dischargesBookmarkId || null,
         loggedFor,
+        lastReviewedAt: now,
+        nextReviewAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
       })
       .returning();
 
