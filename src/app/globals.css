@@ -673,12 +673,7 @@ input[type=range]::-moz-range-thumb {
   height: 74px;
 }
 
-.cover::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(45deg, rgba(0, 0, 0, .13) 0 6px, transparent 6px 13px);
-}
+
 
 .tybadge {
   font-family: var(--mono);
@@ -973,12 +968,8 @@ input[type=range]::-moz-range-thumb {
   padding: 11px;
 }
 
-.icover::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(45deg, rgba(0, 0, 0, .13) 0 6px, transparent 6px 13px);
-}
+
+
 
 .iclose {
   position: absolute;
