@@ -7,34 +7,17 @@ export const NON_UTC_USER_ID = "usr_test_pacific";
 export const NON_UTC_TIMEZONE = "America/Los_Angeles";
 
 export async function seedTilData() {
-  console.log("🌱 Starting Phase 1 TIL Seeding...");
+  console.log("🌱 Starting Phase 1 TIL Seeding for all database users...");
 
-  // 1. Ensure user with non-UTC timezone exists
-  const existingUser = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, NON_UTC_USER_ID));
+  const allUsers = await db.select().from(users);
+  console.log(`Found ${allUsers.length} user(s) to seed.`);
 
-  if (existingUser.length === 0) {
-    await db.insert(users).values({
-      id: NON_UTC_USER_ID,
-      name: "Pacific Learner",
-      email: "pacific.learner@hoard.internal",
-      emailVerified: true,
-      timezone: NON_UTC_TIMEZONE,
-    });
-    console.log(`✓ Created test user ${NON_UTC_USER_ID} with timezone ${NON_UTC_TIMEZONE}`);
-  } else {
-    // Ensure timezone is set to America/Los_Angeles
-    await db
-      .update(users)
-      .set({ timezone: NON_UTC_TIMEZONE })
-      .where(eq(users.id, NON_UTC_USER_ID));
-    console.log(`✓ Updated user ${NON_UTC_USER_ID} timezone to ${NON_UTC_TIMEZONE}`);
-  }
+  for (const targetUser of allUsers) {
+    const userId = targetUser.id;
+    console.log(`\nSeeding TIL entries for user: ${userId} (${targetUser.email})...`);
 
-  // 2. Clean up existing TIL entries for test user
-  await db.delete(tilEntries).where(eq(tilEntries.userId, NON_UTC_USER_ID));
+    // Clean existing TIL entries for target user
+    await db.delete(tilEntries).where(eq(tilEntries.userId, userId));
 
   // 3. Create sample tags
   const tagNames = ["typescript", "drizzle", "nextjs", "security", "css"];
@@ -103,42 +86,43 @@ export async function seedTilData() {
 
   console.log(`✓ Creating 20 TIL entries across 14 days for ${NON_UTC_TIMEZONE}...`);
 
-  for (let i = 0; i < sampleEntries.length; i++) {
-    const offset = dayOffsets[i];
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() - offset);
+    const now = new Date();
+    for (let i = 0; i < sampleEntries.length; i++) {
+      const sample = sampleEntries[i];
+      const offsetDays = dayOffsets[i];
+      const targetDate = new Date(now.getTime() - offsetDays * 24 * 60 * 60 * 1000);
+      const loggedFor = getLoggedForDate("America/Los_Angeles", targetDate);
+      const shortHash = await generateShortHash(userId);
 
-    const loggedFor = getLoggedForDate(NON_UTC_TIMEZONE, targetDate);
-    const shortHash = await generateShortHash(NON_UTC_USER_ID);
-    const entryData = sampleEntries[i];
+      const [inserted] = await db
+        .insert(tilEntries)
+        .values({
+          userId,
+          shortHash,
+          type: sample.type,
+          body: sample.body,
+          code: sample.code || null,
+          codeLang: sample.codeLang || null,
+          linkUrl: sample.linkUrl || null,
+          loggedFor,
+          createdAt: targetDate,
+          updatedAt: targetDate,
+        })
+        .returning();
 
-    const [inserted] = await db
-      .insert(tilEntries)
-      .values({
-        userId: NON_UTC_USER_ID,
-        shortHash,
-        type: entryData.type,
-        body: entryData.body,
-        code: entryData.code || null,
-        codeLang: entryData.codeLang || null,
-        linkUrl: entryData.linkUrl || null,
-        loggedFor,
-        createdAt: targetDate,
-        updatedAt: targetDate,
-      })
-      .returning();
+      const tagName = tagNames[i % tagNames.length];
+      const tagId = tagMap.get(tagName);
 
-    // Attach random tag
-    const tagId = tagMap.get(tagNames[i % tagNames.length]);
-    if (tagId) {
-      await db.insert(tilEntryTags).values({
-        tilId: inserted.id,
-        tagId,
-      }).onConflictDoNothing();
+      if (tagId) {
+        await db.insert(tilEntryTags).values({
+          tilId: inserted.id,
+          tagId,
+        }).onConflictDoNothing();
+      }
     }
   }
 
-  console.log("✓ Seeded 20 entries successfully!");
+  console.log("✓ Seeded entries for all users successfully!");
 
   // 5. Query Heatmap and Streak for verification
   console.log("\n📊 Verification Queries:");

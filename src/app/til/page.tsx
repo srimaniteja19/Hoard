@@ -173,11 +173,8 @@ function TilPageContent() {
 
   return (
     <div
-      className="til-page-container"
       style={{
-        height: "100vh",
-        overflowY: "auto",
-        WebkitOverflowScrolling: "touch",
+        minHeight: "100vh",
         background: "var(--bg, #FFFDF8)",
         color: "var(--ink)",
       }}

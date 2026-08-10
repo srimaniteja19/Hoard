@@ -141,7 +141,7 @@
 
 html, body {
   margin: 0;
-  height: 100%;
+  min-height: 100vh;
 }
 
 body {
@@ -150,14 +150,7 @@ body {
   font-family: var(--grot);
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
-}
-
-body:has(.til-page-container),
-body:has(.stats-page-container),
-body:has(.settings-page-container) {
-  overflow: auto !important;
-  overflow-y: auto !important;
+  overflow-y: auto;
 }
 
 button, input, textarea {
