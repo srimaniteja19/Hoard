@@ -64,6 +64,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { isInstallable, promptInstall } = usePWA();
   const [shareCopied, setShareCopied] = useState(false);
+  const [showAllCollections, setShowAllCollections] = useState(false);
+  const isColdStart = bookmarks.length > 0 && bookmarks.length < 15;
 
   const cnt = (cId: string) => bookmarks.filter((x) => inColl(x, cId, collections)).length;
 
@@ -226,7 +228,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
               + FOLDER
             </button>
           </div>
-          <div id="colls">{renderCollectionTree(collections)}</div>
+          <div id="colls">
+            {renderCollectionTree(
+              isColdStart && !showAllCollections
+                ? collections.filter((c) => cnt(c.id) > 0)
+                : collections
+            )}
+          </div>
+
+          {isColdStart && !showAllCollections && collections.some((c) => cnt(c.id) === 0) && (
+            <button
+              onClick={() => setShowAllCollections(true)}
+              style={{
+                width: "100%",
+                fontFamily: "var(--mono)",
+                fontSize: "9px",
+                fontWeight: 800,
+                border: "2px solid var(--fg)",
+                background: "var(--paper)",
+                color: "var(--fg)",
+                padding: "4px 8px",
+                cursor: "pointer",
+                margin: "2px 0 8px 0",
+                opacity: 0.7,
+              }}
+            >
+              SHOW {collections.filter((c) => cnt(c.id) === 0).length} EMPTY COLLECTION
+              {collections.filter((c) => cnt(c.id) === 0).length === 1 ? "" : "S"}
+            </button>
+          )}
 
           {/* Share Collection Button if a specific collection is selected */}
           {coll !== "all" && (
@@ -248,6 +278,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {shareCopied ? "✓ SHARE LINK COPIED!" : "🔗 SHARE COLLECTION"}
             </button>
           )}
+
+          <button
+            onClick={() => window.print()}
+            style={{
+              width: "100%",
+              fontFamily: "var(--mono)",
+              fontSize: "10px",
+              fontWeight: 800,
+              border: "2px solid var(--fg)",
+              background: "var(--paper)",
+              color: "var(--fg)",
+              padding: "5px 8px",
+              cursor: "pointer",
+              margin: "4px 0 10px 0",
+              boxShadow: "2px 2px 0 var(--fg)",
+            }}
+          >
+            🖨️ PRINT COLLECTION
+          </button>
 
           <div className="slbl">
             KIND<i></i>

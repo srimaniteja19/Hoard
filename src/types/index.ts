@@ -37,6 +37,8 @@ export interface Bookmark {
   tag: string;
   coll: string;
   when: string;
+  createdAt?: string;
+  updatedAt?: string;
   unread: boolean;
   ex: Record<string, string>;
   note: string;

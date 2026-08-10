@@ -11,7 +11,6 @@ import { InspectorDrawer } from "@/components/InspectorDrawer";
 import { CaptureModal } from "@/components/CaptureModal";
 import { NewFolderModal } from "@/components/NewFolderModal";
 import { ImportModal } from "@/components/ImportModal";
-import { FocusModeModal } from "@/components/FocusModeModal";
 import { DiffViewerModal } from "@/components/DiffViewerModal";
 import { MasonryView } from "@/components/views/MasonryView";
 import { GridView } from "@/components/views/GridView";
@@ -54,8 +53,6 @@ export default function Home() {
     setIsCaptureOpen,
     isNewFolderOpen,
     setIsNewFolderOpen,
-    isFocusOpen,
-    setIsFocusOpen,
     isDiffOpen,
     setIsDiffOpen,
     diffBookmark,
@@ -130,7 +127,6 @@ export default function Home() {
         setIsNewFolderOpen(false);
         setIsImportOpen(false);
         setIsMobileSidebarOpen(false);
-        setIsFocusOpen(false);
         setIsDiffOpen(false);
         setOpenId(null);
       }
@@ -142,7 +138,7 @@ export default function Home() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setIsCaptureOpen, setIsNewFolderOpen, setOpenId, setIsFocusOpen, setIsDiffOpen]);
+  }, [setIsCaptureOpen, setIsNewFolderOpen, setOpenId, setIsDiffOpen]);
 
   if (!isLoaded) {
     return (
@@ -202,7 +198,6 @@ export default function Home() {
             setCaptureUrl("");
             setIsCaptureOpen(true);
           }}
-          onOpenFocusMode={() => setIsFocusOpen(true)}
         />
 
         <CrumbBar
@@ -218,16 +213,7 @@ export default function Home() {
           setCtx={setCtx}
         />
 
-        <div className="scroll">
-          <StatusLine
-            bookmarks={filteredBookmarks}
-            coll={coll}
-            ty={ty}
-            tag={tag}
-            unreadOnly={unreadOnly}
-            searchQuery={query}
-          />
-
+        <div className={`scroll ${bookmarks.length > 0 && bookmarks.length < 15 ? "cold-start-view" : ""}`}>
           {bookmarks.length === 0 ? (
             <ColdStart onOpenImport={() => setIsImportOpen(true)} />
           ) : filteredBookmarks.length === 0 ? (
@@ -307,6 +293,8 @@ export default function Home() {
           onOpenDiff={handleOpenDiffModal}
           onSelectBookmark={(id) => setOpenId(id)}
         />
+
+        <StatusLine bookmarks={bookmarks} />
       </main>
 
       {/* Save Link Modal */}
@@ -333,14 +321,6 @@ export default function Home() {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         onImportComplete={() => window.location.reload()}
-      />
-
-      {/* ⚡ Session Queue + Focus Mode Modal */}
-      <FocusModeModal
-        isOpen={isFocusOpen}
-        onClose={() => setIsFocusOpen(false)}
-        bookmarks={bookmarks}
-        onToggleRead={toggleReadStatus}
       />
 
       {/* ⚡ Content Drift & Preserved Copy Reader Modal */}

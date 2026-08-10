@@ -147,7 +147,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
         onClick={onClose}
       />
       <aside className={`insp ${bookmark ? "on" : ""}`}>
-        <div className="icover" style={{ background: typeMeta.c }}>
+        <div className="icover" style={{ background: typeMeta.c, color: typeMeta.fg }}>
           <button className="iclose" onClick={onClose} aria-label="Close inspector">
             ✕
           </button>
@@ -178,17 +178,18 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
             <div
               style={{
                 marginTop: "16px",
-                background: "#FFE60022",
-                border: "2px solid #000",
-                boxShadow: "3px 3px 0 #000",
+                background: "var(--cream)",
+                border: "var(--bd)",
+                boxShadow: "var(--sh-sm)",
                 padding: "12px",
                 fontFamily: "var(--mono)",
+                color: "var(--fg)",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 800, fontSize: "11px", marginBottom: "6px" }}>
-                <Lightbulb size={14} color="#000" /> FROM YOUR ARCHIVE:
+                <Lightbulb size={14} color="var(--fg)" /> FROM YOUR ARCHIVE:
               </div>
-              <div style={{ fontSize: "11px", color: "#555", marginBottom: "8px" }}>
+              <div style={{ fontSize: "11px", color: "var(--fg)", opacity: 0.65, marginBottom: "8px" }}>
                 You previously saved these items about #{bookmark.tag}:
               </div>
               <div style={{ display: "grid", gap: "6px" }}>
@@ -197,8 +198,9 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                     key={rec.id}
                     onClick={() => onSelectBookmark && onSelectBookmark(rec.id)}
                     style={{
-                      background: "#FFF",
-                      border: "1px solid #000",
+                      background: "var(--paper)",
+                      border: "1px solid var(--fg)",
+                      color: "var(--fg)",
                       padding: "6px 8px",
                       fontSize: "11px",
                       fontWeight: 700,
@@ -347,13 +349,13 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
           {/* CONTENT DRIFT & LINK ROT SECTION */}
           <div className="fld">
             <span className="flbl">CONTENT DRIFT & LINK ROT</span>
-            <div style={{ background: "#FFF", border: "2px solid #000", padding: "12px", fontFamily: "var(--mono)" }}>
+            <div style={{ background: "var(--paper)", border: "var(--bd)", color: "var(--fg)", padding: "12px", fontFamily: "var(--mono)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                 <span style={{ fontSize: "11px", fontWeight: 800 }}>
                   STATUS: {bookmark.driftStatus === "changed" ? "⚡ DRIFT DETECTED" : bookmark.driftStatus === "404_preserved" ? "🛡️ 404 PRESERVED" : "CLEAN"}
                 </span>
                 {bookmark.driftPercent ? (
-                  <span style={{ fontSize: "10px", fontWeight: 800, background: "#FFE600", padding: "1px 5px", border: "1px solid #000" }}>
+                  <span style={{ fontSize: "10px", fontWeight: 800, background: "#FFE600", color: "#000", padding: "1px 5px", border: "1px solid #000" }}>
                     {bookmark.driftPercent}% CHANGE
                   </span>
                 ) : null}
@@ -467,10 +469,10 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
           <div className="fld">
             <span className="flbl">TAGS</span>
             <div className="ctags">
-              <span className="ctag" style={{ background: typeMeta.c }}>
+              <span className="ctag" style={{ background: typeMeta.c, color: typeMeta.fg }}>
                 #{bookmark.tag}
               </span>
-              <span className="ctag" style={{ background: "#fff" }}>
+              <span className="ctag" style={{ background: "var(--paper)", color: "var(--fg)" }}>
                 + ADD
               </span>
             </div>

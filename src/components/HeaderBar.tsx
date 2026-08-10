@@ -17,7 +17,6 @@ interface HeaderBarProps {
   searchInputRef: React.RefObject<HTMLInputElement | null>;
   onToggleMobileSidebar?: () => void;
   onOpenCapture?: () => void;
-  onOpenFocusMode?: () => void;
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
@@ -31,7 +30,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   searchInputRef,
   onToggleMobileSidebar,
   onOpenCapture,
-  onOpenFocusMode,
 }) => {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
@@ -84,26 +82,26 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <Search size={13} /> {showMobileFilters ? "✕" : "FIND"}
           </button>
 
-          {onOpenFocusMode && (
-            <button
-              onClick={onOpenFocusMode}
-              style={{
-                background: "#FFE600",
-                border: "2px solid #000",
-                padding: "5px 7px",
-                fontWeight: 900,
-                fontSize: "11px",
-                fontFamily: "var(--mono)",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "2px",
-                boxShadow: "2px 2px 0 #000",
-              }}
-            >
-              <Zap size={12} fill="#000" /> FOCUS
-            </button>
-          )}
+          <Link
+            href="/session"
+            style={{
+              background: "#FFE600",
+              color: "#000",
+              border: "2px solid #000",
+              padding: "5px 7px",
+              fontWeight: 900,
+              fontSize: "11px",
+              fontFamily: "var(--mono)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "2px",
+              boxShadow: "2px 2px 0 #000",
+              textDecoration: "none",
+            }}
+          >
+            <Zap size={12} fill="#000" /> SESSION
+          </Link>
 
           {onOpenCapture && (
             <button
@@ -141,28 +139,26 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </div>
 
         <div className="bar-controls-row">
-          {onOpenFocusMode && (
-            <Link
-              href="/session"
-              style={{
-                background: "#FFE600",
-                color: "#000",
-                border: "2px solid #000",
-                boxShadow: "2px 2px 0 #000",
-                padding: "5px 12px",
-                fontWeight: 900,
-                fontFamily: "var(--mono)",
-                fontSize: "12px",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                textDecoration: "none",
-              }}
-            >
-              <Zap size={14} fill="#000" /> START SESSION
-            </Link>
-          )}
+          <Link
+            href="/session"
+            style={{
+              background: "#FFE600",
+              color: "#000",
+              border: "2px solid #000",
+              boxShadow: "2px 2px 0 #000",
+              padding: "5px 12px",
+              fontWeight: 900,
+              fontFamily: "var(--mono)",
+              fontSize: "12px",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              textDecoration: "none",
+            }}
+          >
+            <Zap size={14} fill="#000" /> START SESSION
+          </Link>
 
           <div className="grp view-grp">
             <button

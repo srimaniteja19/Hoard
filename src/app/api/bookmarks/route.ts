@@ -23,6 +23,8 @@ function dbToUi(row: typeof bookmarks.$inferSelect, titleMap?: Map<number, strin
     tag:    row.tag,
     coll:   row.collectionId,
     when:   `${months[d.getMonth()]} ${d.getDate()}`,
+    createdAt: d.toISOString(),
+    updatedAt: new Date(row.updatedAt).toISOString(),
     unread: row.unread,
     ex:     (() => {
       const raw = (row.extra as Record<string, unknown>) || {};

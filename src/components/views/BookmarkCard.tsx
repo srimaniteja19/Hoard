@@ -148,6 +148,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         )}
 
         <div className="ct">{bookmark.t}</div>
+        <div className="print-url">{bookmark.url}</div>
         {bookmark.note && bookmark.note !== "Saved via HOARD Extension" && <p className="cex">{bookmark.note}</p>}
         
         <div className="cmeta">
@@ -160,7 +161,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
 
         {/* Drift & Badges Row */}
         <div className="ctags" style={{ flexWrap: "wrap", gap: "4px" }}>
-          <span className="ctag" style={{ background: typeMeta.c }}>
+          <span className="ctag" style={{ background: typeMeta.c, color: typeMeta.fg }}>
             #{bookmark.tag}
           </span>
 

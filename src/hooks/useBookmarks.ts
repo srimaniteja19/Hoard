@@ -113,7 +113,6 @@ export function useBookmarks() {
   // Modals state
   const [isCaptureOpen, setIsCaptureOpen]     = useState(false);
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
-  const [isFocusOpen, setIsFocusOpen]         = useState(false);
   const [isDiffOpen, setIsDiffOpen]           = useState(false);
   const [diffBookmark, setDiffBookmark]       = useState<Bookmark | null>(null);
 
@@ -537,7 +536,6 @@ export function useBookmarks() {
     openBookmark,
     isCaptureOpen,   setIsCaptureOpen,
     isNewFolderOpen, setIsNewFolderOpen,
-    isFocusOpen,     setIsFocusOpen,
     isDiffOpen,      setIsDiffOpen,
     diffBookmark,    setDiffBookmark,
     addBookmark,
