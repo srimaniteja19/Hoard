@@ -2,11 +2,31 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ThemePicker } from "@/components/ThemePicker";
 import { UserMenu } from "@/components/UserMenu";
-import { ArrowLeft, BarChart2 } from "lucide-react";
+import { ArrowLeft, BarChart2, Layers, BookOpen, RotateCcw, Printer } from "lucide-react";
+
+export type TilViewMode = "stream" | "codex" | "recall" | "press";
 
 export const TilHeaderNav: React.FC = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentView = (searchParams.get("view") as TilViewMode) || "stream";
+
+  const handleSwitchView = (view: TilViewMode) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("view", view);
+    router.push(`/til?${params.toString()}`);
+  };
+
+  const VIEWS: Array<{ mode: TilViewMode; label: string; icon: React.ReactNode }> = [
+    { mode: "stream", label: "STREAM", icon: <Layers size={12} /> },
+    { mode: "codex", label: "CODEX", icon: <BookOpen size={12} /> },
+    { mode: "recall", label: "RECALL", icon: <RotateCcw size={12} /> },
+    { mode: "press", label: "PRESS", icon: <Printer size={12} /> },
+  ];
+
   return (
     <header
       style={{
@@ -20,6 +40,8 @@ export const TilHeaderNav: React.FC = () => {
         top: 0,
         zIndex: 100,
         boxShadow: "var(--sh-sm)",
+        flexWrap: "wrap",
+        gap: "10px",
       }}
     >
       {/* Left: Brand / Title & Back Link */}
@@ -60,9 +82,40 @@ export const TilHeaderNav: React.FC = () => {
               border: "1px solid var(--ink)",
             }}
           >
-            TODAY I LEARNED (TIL)
+            TIL
           </span>
         </div>
+      </div>
+
+      {/* Center: 4 View Modes Switcher */}
+      <div style={{ display: "flex", alignItems: "center", gap: "4px", background: "rgba(0,0,0,0.04)", padding: "3px", border: "1.5px solid var(--ink)" }}>
+        {VIEWS.map((v) => {
+          const isActive = currentView === v.mode;
+          return (
+            <button
+              key={v.mode}
+              type="button"
+              onClick={() => handleSwitchView(v.mode)}
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "11px",
+                fontWeight: 900,
+                padding: "4px 10px",
+                border: isActive ? "1.5px solid var(--ink)" : "1px solid transparent",
+                background: isActive ? "var(--yel, #FFE600)" : "transparent",
+                color: isActive ? "#000" : "var(--ink)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                boxShadow: isActive ? "1.5px 1.5px 0 var(--ink)" : "none",
+              }}
+            >
+              {v.icon}
+              {v.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Right: Quick Links, ThemePicker & User */}

@@ -12,6 +12,8 @@ import {
   varchar,
   date,
   primaryKey,
+  real,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { KindType } from "@/types";
 
@@ -189,6 +191,19 @@ export const tilEntries = pgTable(
       { onDelete: "set null" }
     ),
 
+    // Supersession — a newer entry marks an older one obsolete
+    supersededById: text("superseded_by_id").references(
+      (): AnyPgColumn => tilEntries.id,
+      { onDelete: "set null" }
+    ),
+
+    // Spaced repetition state (SM-2 lite)
+    stability: real("stability").notNull().default(1),
+    ease: real("ease").notNull().default(2.5),
+    reviewCount: integer("review_count").notNull().default(0),
+    lastReviewedAt: timestamp("last_reviewed_at"),
+    nextReviewAt: timestamp("next_review_at"),
+
     loggedFor: date("logged_for").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -196,6 +211,8 @@ export const tilEntries = pgTable(
   (table) => [
     index("til_user_logged_for_idx").on(table.userId, table.loggedFor.desc()),
     uniqueIndex("til_user_short_hash_idx").on(table.userId, table.shortHash),
+    index("til_user_review_idx").on(table.userId, table.nextReviewAt),
+    index("til_superseded_idx").on(table.supersededById),
   ]
 );
 

@@ -6,6 +6,9 @@ import { requireUserId, AuthError } from "@/lib/session";
 import { createTilSchema } from "@/lib/validations/til";
 import { getLoggedForDate, generateShortHash, getUserTimezone } from "@/lib/dal/til";
 import { fetchLinkPreview } from "@/lib/til/previewRegistry";
+import { confidence, confidenceSql } from "@/lib/til/confidence";
+import { checkSupersessionCycle } from "@/lib/til/supersession";
+import crypto from "crypto";
 
 // Helper to fetch tag names for a set of TIL entry IDs
 async function getTagsForTilEntries(tilIds: string[]): Promise<Map<string, string[]>> {
@@ -41,6 +44,7 @@ export async function GET(req: Request) {
     const tag = searchParams.get("tag");
     const type = searchParams.get("type");
     const day = searchParams.get("day");
+    const sort = searchParams.get("sort");
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
 
     const conditions = [eq(tilEntries.userId, userId)];
@@ -60,8 +64,6 @@ export async function GET(req: Request) {
       }
     }
 
-
-
     if (tag) {
       // Join tag filter
       const matchingTilRows = await db
@@ -77,11 +79,15 @@ export async function GET(req: Request) {
       conditions.push(inArray(tilEntries.id, matchingTilIds));
     }
 
+    const orderByClause = sort === "confidence"
+      ? [desc(confidenceSql), desc(tilEntries.createdAt)]
+      : [desc(tilEntries.loggedFor), desc(tilEntries.createdAt)];
+
     const rows = await db
       .select()
       .from(tilEntries)
       .where(and(...conditions))
-      .orderBy(desc(tilEntries.loggedFor), desc(tilEntries.createdAt))
+      .orderBy(...orderByClause)
       .limit(limit + 1);
 
     let nextCursor: string | null = null;
@@ -96,13 +102,26 @@ export async function GET(req: Request) {
     const tilIds = pageRows.map((r) => r.id);
     const tagMap = await getTagsForTilEntries(tilIds);
 
-    const items = pageRows.map((r) => ({
-      ...r,
-      linkDensity: r.linkDensity || "card",
-      tags: tagMap.get(r.id) || [],
-      createdAt: r.createdAt.toISOString(),
-      updatedAt: r.updatedAt.toISOString(),
-    }));
+    const items = pageRows.map((r) => {
+      const stability = r.stability ?? 1;
+      const lastReviewedAtDate = r.lastReviewedAt ?? r.createdAt;
+      const confVal = confidence(stability, lastReviewedAtDate);
+
+      return {
+        ...r,
+        stability,
+        ease: r.ease ?? 2.5,
+        reviewCount: r.reviewCount ?? 0,
+        lastReviewedAt: r.lastReviewedAt ? r.lastReviewedAt.toISOString() : null,
+        nextReviewAt: r.nextReviewAt ? r.nextReviewAt.toISOString() : null,
+        supersededById: r.supersededById || null,
+        confidence: confVal,
+        linkDensity: r.linkDensity || "card",
+        tags: tagMap.get(r.id) || [],
+        createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
+      };
+    });
 
     return NextResponse.json({ items, nextCursor });
   } catch (e) {
@@ -134,6 +153,18 @@ export async function POST(req: Request) {
 
     const loggedFor = data.loggedFor || getLoggedForDate(userTimezone);
     const shortHash = await generateShortHash(userId);
+    const newEntryId = crypto.randomUUID();
+
+    // 0. Cycle guard check if replacesEntryId is specified
+    if (data.replacesEntryId) {
+      const cycleCheck = await checkSupersessionCycle(data.replacesEntryId, newEntryId, userId);
+      if (cycleCheck.hasCycle) {
+        return NextResponse.json(
+          { error: cycleCheck.reason || "Supersession cycle detected" },
+          { status: 400 }
+        );
+      }
+    }
 
     // 1. Discharge bookmark if dischargesBookmarkId provided
     if (data.dischargesBookmarkId) {
@@ -178,6 +209,7 @@ export async function POST(req: Request) {
     const [inserted] = await db
       .insert(tilEntries)
       .values({
+        id: newEntryId,
         userId,
         shortHash,
         type: data.type,
@@ -191,6 +223,14 @@ export async function POST(req: Request) {
         loggedFor,
       })
       .returning();
+
+    // 5. If replacesEntryId provided, mark that older entry as superseded by new entry
+    if (data.replacesEntryId) {
+      await db
+        .update(tilEntries)
+        .set({ supersededById: inserted.id, updatedAt: new Date() })
+        .where(and(eq(tilEntries.id, data.replacesEntryId), eq(tilEntries.userId, userId)));
+    }
 
     // 4. Associate Tags
     const createdTagNames: string[] = [];

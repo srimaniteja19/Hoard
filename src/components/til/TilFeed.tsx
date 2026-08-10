@@ -50,6 +50,10 @@ export const TilFeed: React.FC<TilFeedProps> = ({
     return Array.from(map.entries());
   }, [items]);
 
+  const validHashes = useMemo(() => {
+    return new Set(items.map((i) => i.shortHash.toLowerCase()));
+  }, [items]);
+
   const hasActiveFilters = Boolean(selectedTag || selectedType || selectedDay);
 
   const formatDayHeader = (dayStr: string) => {
@@ -219,6 +223,7 @@ export const TilFeed: React.FC<TilFeedProps> = ({
                     onDelete={onDelete}
                     onSelectTag={onSelectTag}
                     onSelectType={onSelectType}
+                    validHashes={validHashes}
                   />
                 ))}
               </div>

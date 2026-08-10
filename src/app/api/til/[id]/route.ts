@@ -4,6 +4,7 @@ import { tilEntries, tilEntryTags, tags as tagsTable } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { updateTilSchema } from "@/lib/validations/til";
+import { checkSupersessionCycle } from "@/lib/til/supersession";
 
 // ─── PATCH /api/til/:id ──────────────────────────────────────────────────────
 
@@ -37,6 +38,16 @@ export async function PATCH(
       return NextResponse.json({ error: "Entry not found" }, { status: 404 });
     }
 
+    if (data.supersededById !== undefined && data.supersededById !== null) {
+      const cycleCheck = await checkSupersessionCycle(id, data.supersededById, userId);
+      if (cycleCheck.hasCycle) {
+        return NextResponse.json(
+          { error: cycleCheck.reason || "Supersession cycle detected" },
+          { status: 400 }
+        );
+      }
+    }
+
     const updatePayload: Partial<typeof tilEntries.$inferInsert> = {
       updatedAt: new Date(),
     };
@@ -48,6 +59,7 @@ export async function PATCH(
     if (data.linkUrl !== undefined) updatePayload.linkUrl = data.linkUrl || null;
     if (data.linkDensity !== undefined) updatePayload.linkDensity = data.linkDensity || "card";
     if (data.dischargesBookmarkId !== undefined) updatePayload.dischargesBookmarkId = data.dischargesBookmarkId || null;
+    if (data.supersededById !== undefined) updatePayload.supersededById = data.supersededById || null;
 
     const [updated] = await db
       .update(tilEntries)

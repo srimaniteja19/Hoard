@@ -16,6 +16,8 @@ export const createTilSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format YYYY-MM-DD")
     .optional(),
+  replacesEntryId: z.string().max(128).optional().nullable(),
+  supersededById: z.string().max(128).optional().nullable(),
   tags: z.array(z.string().min(1).max(50)).optional().default([]),
   idempotencyKey: z.string().max(128).optional().nullable(),
   clientLoggedAt: z.string().optional().nullable(),

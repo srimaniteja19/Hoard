@@ -5,6 +5,7 @@ import { TilType, tilTypeValues, LinkPreview } from "@/db/schema";
 import { MarkdownLite } from "@/components/til/MarkdownLite";
 import { EmbedRouter } from "@/components/til/embeds/EmbedRouter";
 import { Edit2, Trash2, X } from "lucide-react";
+import { confidence } from "@/lib/til/confidence";
 
 export interface TilItem {
   id: string;
@@ -18,6 +19,13 @@ export interface TilItem {
   linkPreview: LinkPreview | null;
   linkDensity: string;
   dischargesBookmarkId: number | null;
+  supersededById?: string | null;
+  stability?: number;
+  ease?: number;
+  reviewCount?: number;
+  lastReviewedAt?: string | null;
+  nextReviewAt?: string | null;
+  confidence?: number;
   loggedFor: string;
   createdAt: string;
   updatedAt: string;
@@ -30,6 +38,7 @@ interface TilFeedItemProps {
   onDelete: (id: string) => Promise<void>;
   onSelectTag?: (tag: string) => void;
   onSelectType?: (type: TilType) => void;
+  validHashes?: Set<string>;
 }
 
 const TYPE_RAIL_COLOR: Record<TilType, string> = {
@@ -48,6 +57,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
   onDelete,
   onSelectTag,
   onSelectType,
+  validHashes,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editBody, setEditBody] = useState(item.body || "");
@@ -60,6 +70,14 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const railColor = TYPE_RAIL_COLOR[item.type] || "#00F0FF";
+
+  const itemConfidence =
+    typeof item.confidence === "number"
+      ? item.confidence
+      : confidence(
+          item.stability ?? 1,
+          item.lastReviewedAt ? new Date(item.lastReviewedAt) : new Date(item.createdAt)
+        );
 
   const handleSaveEdit = async () => {
     if (saving) return;
@@ -112,6 +130,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         display: "flex",
         flexDirection: "column",
         borderLeft: `6px solid ${railColor}`,
+        opacity: item.supersededById ? 0.6 : 1,
       }}
     >
       {/* Header bar: Hash anchor, Type Badge, Controls */}
@@ -155,6 +174,65 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
           >
             #{item.shortHash}
           </a>
+
+          {/* Confidence Badge */}
+          <span
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "9px",
+              fontWeight: 800,
+              background:
+                itemConfidence >= 70
+                  ? "rgba(182, 255, 60, 0.25)"
+                  : itemConfidence >= 40
+                  ? "rgba(255, 230, 0, 0.25)"
+                  : "rgba(255, 0, 122, 0.2)",
+              color: "var(--ink)",
+              border: "1px solid var(--ink)",
+              padding: "1px 5px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "3px",
+            }}
+            title={`Memory confidence: ${itemConfidence}% (stability: ${(item.stability ?? 1).toFixed(1)}d)`}
+          >
+            <span
+              style={{
+                width: "5px",
+                height: "5px",
+                borderRadius: "50%",
+                background:
+                  itemConfidence >= 70
+                    ? "#B6FF3C"
+                    : itemConfidence >= 40
+                    ? "#FFE600"
+                    : "#FF007A",
+                border: "0.5px solid var(--ink)",
+                display: "inline-block",
+              }}
+            />
+            {itemConfidence}%
+          </span>
+
+          {item.supersededById && (
+            <span
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "9px",
+                fontWeight: 900,
+                background: "#FF007A",
+                color: "#FFF",
+                border: "1px solid var(--ink)",
+                padding: "1px 5px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "3px",
+              }}
+              title="This entry has been superseded by a newer entry"
+            >
+              SUPERSEDED
+            </span>
+          )}
 
           {item.dischargesBookmarkId && (
             <span
@@ -282,8 +360,16 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         {!isEditing ? (
           <>
             {item.body && (
-              <div style={{ fontSize: "14px", lineHeight: "1.5", color: "var(--ink)", marginBottom: "8px" }}>
-                <MarkdownLite content={item.body} />
+              <div
+                style={{
+                  fontSize: "14px",
+                  lineHeight: "1.5",
+                  color: "var(--ink)",
+                  marginBottom: "8px",
+                  textDecoration: item.supersededById ? "line-through" : "none",
+                }}
+              >
+                <MarkdownLite content={item.body} validHashes={validHashes} />
               </div>
             )}
 

@@ -14,6 +14,7 @@ interface TilComposerProps {
     linkDensity?: "inline" | "card" | "quote" | "full";
     tags: string[];
     saveToHoardQueue: boolean;
+    replacesEntryId?: string;
   }) => Promise<void>;
 }
 
@@ -125,6 +126,31 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
     }
   }
 
+  const [replacesEntryId, setReplacesEntryId] = useState<string | null>(null);
+  const [replacesSearch, setReplacesSearch] = useState("");
+  const [candidateEntries, setCandidateEntries] = useState<Array<{ id: string; shortHash: string; body: string | null; tags: string[] }>>([]);
+  const [showReplacesPicker, setShowReplacesPicker] = useState(false);
+
+  // Fetch candidate entries for supersession picker (scoped to first tag if available)
+  useEffect(() => {
+    if (!showReplacesPicker) return;
+    let isMounted = true;
+    const fetchCandidates = async () => {
+      try {
+        const tagFilter = tags[0] ? `&tag=${encodeURIComponent(tags[0])}` : "";
+        const res = await fetch(`/api/til?limit=15${tagFilter}`, { credentials: "include" });
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          setCandidateEntries(data.items || []);
+        }
+      } catch (err) {
+        console.error("Failed to load supersession candidates", err);
+      }
+    };
+    fetchCandidates();
+    return () => { isMounted = false; };
+  }, [showReplacesPicker, tags]);
+
   const handleSubmit = async () => {
     if (!body.trim() && (type !== "SNIPPET" || !code.trim())) return;
     if (submitting) return;
@@ -140,6 +166,7 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
         linkDensity,
         tags,
         saveToHoardQueue,
+        replacesEntryId: replacesEntryId || undefined,
       });
 
       // Reset form
@@ -149,6 +176,8 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
       setTags([]);
       setTagInput("");
       setSaveToHoardQueue(false);
+      setReplacesEntryId(null);
+      setShowReplacesPicker(false);
     } catch (err) {
       console.error("Composer commit failed:", err);
     } finally {
@@ -385,6 +414,108 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
             outline: "none",
           }}
         />
+      </div>
+
+      {/* Supersession Picker: "Does this replace an earlier entry?" */}
+      <div style={{ marginBottom: "12px" }}>
+        {!showReplacesPicker && !replacesEntryId ? (
+          <button
+            type="button"
+            onClick={() => setShowReplacesPicker(true)}
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "11px",
+              fontWeight: 800,
+              background: "transparent",
+              color: "var(--ink)",
+              border: "1px dashed var(--ink)",
+              padding: "3px 8px",
+              cursor: "pointer",
+              opacity: 0.8,
+            }}
+          >
+            + REPLACES AN EARLIER ENTRY?
+          </button>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", background: "rgba(0,0,0,0.02)", border: "1px solid var(--ink)", padding: "8px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 900, color: "var(--ink)" }}>
+                REPLACES EARLIER ENTRY:
+              </span>
+              <button
+                type="button"
+                onClick={() => { setShowReplacesPicker(false); setReplacesEntryId(null); setReplacesSearch(""); }}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--ink)" }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+
+            {replacesEntryId ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span
+                  style={{
+                    fontFamily: "var(--mono)",
+                    fontSize: "11px",
+                    fontWeight: 900,
+                    background: "#FF007A",
+                    color: "#FFF",
+                    padding: "2px 8px",
+                    border: "1px solid var(--ink)",
+                  }}
+                >
+                  REPLACES #{candidateEntries.find(c => c.id === replacesEntryId)?.shortHash || "ENTRY"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setReplacesEntryId(null)}
+                  style={{ fontFamily: "var(--mono)", fontSize: "10px", background: "transparent", border: "none", textDecoration: "underline", cursor: "pointer" }}
+                >
+                  Change
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <input
+                  type="text"
+                  value={replacesSearch}
+                  onChange={(e) => setReplacesSearch(e.target.value)}
+                  placeholder="Filter entries by text or tag..."
+                  style={{
+                    fontFamily: "var(--mono)",
+                    fontSize: "11px",
+                    padding: "3px 6px",
+                    border: "1px solid var(--ink)",
+                    background: "var(--paper)",
+                    color: "var(--ink)",
+                    outline: "none",
+                  }}
+                />
+                <select
+                  onChange={(e) => setReplacesEntryId(e.target.value || null)}
+                  defaultValue=""
+                  style={{
+                    fontFamily: "var(--mono)",
+                    fontSize: "11px",
+                    padding: "4px",
+                    border: "1px solid var(--ink)",
+                    background: "var(--paper)",
+                    color: "var(--ink)",
+                  }}
+                >
+                  <option value="">-- Select entry to supersede --</option>
+                  {candidateEntries
+                    .filter((c) => !replacesSearch || (c.body && c.body.toLowerCase().includes(replacesSearch.toLowerCase())) || c.shortHash.includes(replacesSearch))
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        #{c.shortHash} — {(c.body || "").slice(0, 60)}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Footer Controls: Bookmark Opt-In & Commit Button */}

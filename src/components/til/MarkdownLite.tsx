@@ -4,6 +4,7 @@ interface MarkdownLiteProps {
   content: string;
   className?: string;
   style?: React.CSSProperties;
+  validHashes?: Set<string> | string[];
 }
 
 /**
@@ -13,18 +14,30 @@ interface MarkdownLiteProps {
  * - Bold: **text**
  * - Italic: *text*
  * - Links: [title](url)
+ * - Cross-references: #a3f9 (rendered as anchor links if hash is in validHashes, otherwise plain text)
  *
  * Sanitized by design: plain text is rendered as React children (no dangerouslySetInnerHTML).
  */
-export const MarkdownLite: React.FC<MarkdownLiteProps> = ({ content, className, style }) => {
+export const MarkdownLite: React.FC<MarkdownLiteProps> = ({
+  content,
+  className,
+  style,
+  validHashes,
+}) => {
+  const validHashSet = React.useMemo(() => {
+    if (!validHashes) return new Set<string>();
+    if (validHashes instanceof Set) return validHashes;
+    return new Set(validHashes.map((h) => h.toLowerCase()));
+  }, [validHashes]);
+
   if (!content) return null;
 
-  // Split content by inline code blocks first to protect code contents from bold/italic/link parsing
+  // Split content by inline code blocks first to protect code contents from markdown parsing
   const codeParts = content.split(/(`[^`]+`)/g);
 
   const renderTextSegment = (text: string, keyPrefix: string): React.ReactNode[] => {
-    // Regex matching [title](url), **bold**, *italic*
-    const combinedRegex = /(\[[^\]]+\]\(https?:\/\/[^\s\)]+\)|\*\*[^*]+\*\*|\*[^*]+\*)/g;
+    // Combined regex for links [title](url), **bold**, *italic*, and #hash refs (#a3f9)
+    const combinedRegex = /(\[[^\]]+\]\(https?:\/\/[^\s\)]+\)|\*\*[^*]+\*\*|\*[^*]+\*|#[0-9a-fA-F]{4}\b)/g;
     const parts = text.split(combinedRegex);
 
     return parts.map((part, idx) => {
@@ -63,6 +76,37 @@ export const MarkdownLite: React.FC<MarkdownLiteProps> = ({ content, className, 
       const italicMatch = part.match(/^\*([^*]+)\*$/);
       if (italicMatch) {
         return <em key={key} style={{ fontStyle: "italic" }}>{italicMatch[1]}</em>;
+      }
+
+      // Check for cross-reference #hash (e.g. #a3f9)
+      const hashMatch = part.match(/^#([0-9a-fA-F]{4})$/);
+      if (hashMatch) {
+        const hash = hashMatch[1].toLowerCase();
+        if (validHashSet.has(hash)) {
+          return (
+            <a
+              key={key}
+              href={`#til-${hash}`}
+              className="til-crossref-link"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                fontFamily: "var(--mono)",
+                fontWeight: 800,
+                color: "var(--ink)",
+                textDecoration: "underline",
+                background: "rgba(0, 240, 255, 0.2)",
+                padding: "0 3px",
+                border: "1px solid var(--ink)",
+                borderRadius: "2px",
+              }}
+              title={`Jump to TIL #${hash}`}
+            >
+              #{hash}
+            </a>
+          );
+        }
+        // Unresolvable hash renders as plain text
+        return <React.Fragment key={key}>#{part}</React.Fragment>;
       }
 
       // Plain text
