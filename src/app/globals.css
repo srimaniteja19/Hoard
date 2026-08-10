@@ -663,12 +663,12 @@ input[type=range]::-moz-range-thumb {
 /* ---------- cold start: <15 items forces a single centered column ---------- */
 .cold-start-view .masonry {
   columns: 1 !important;
-  max-width: 480px;
+  max-width: min(760px, 90%);
   margin: 0 auto;
 }
 
 .cold-start-view .grid {
-  max-width: 480px;
+  max-width: min(760px, 90%);
   margin: 0 auto;
 }
 
@@ -681,7 +681,7 @@ input[type=range]::-moz-range-thumb {
 
 .cold-start-view .list,
 .cold-start-view .heads {
-  max-width: 640px;
+  max-width: min(860px, 92%);
   margin: 0 auto;
 }
 
