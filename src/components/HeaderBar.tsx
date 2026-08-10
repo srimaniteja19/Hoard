@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { SortMode, ViewMode } from "@/types";
 import { ThemePicker } from "@/components/ThemePicker";
-import { Zap, SlidersHorizontal } from "lucide-react";
+import { Zap, Search } from "lucide-react";
 
 interface HeaderBarProps {
   query: string;
@@ -48,25 +48,27 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
     <div className="bar">
       {/* Mobile Top Header Strip */}
       <div className="mobile-header-strip">
-        <button
-          className="mobile-menu-btn"
-          onClick={onToggleMobileSidebar}
-          aria-label="Open navigation menu"
-        >
-          <span>☰</span> MENU
-        </button>
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <button
+            className="mobile-menu-btn"
+            onClick={onToggleMobileSidebar}
+            aria-label="Open navigation menu"
+          >
+            <span>☰</span> MENU
+          </button>
 
-        <div className="mobile-brand">
-          <b>HOARD</b>
+          <div className="mobile-brand">
+            <b>HOARD</b>
+          </div>
         </div>
 
-        <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
           <button
             onClick={() => setShowMobileFilters(!showMobileFilters)}
             style={{
               background: showMobileFilters ? "#B6FF3C" : "#FFFDF8",
               border: "2px solid #000",
-              padding: "4px 8px",
+              padding: "5px 7px",
               fontWeight: 800,
               fontSize: "11px",
               fontFamily: "var(--mono)",
@@ -74,9 +76,11 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               display: "flex",
               alignItems: "center",
               gap: "2px",
+              boxShadow: "2px 2px 0 #000",
             }}
+            title="Search & View Settings"
           >
-            <SlidersHorizontal size={13} /> {showMobileFilters ? "CLOSE" : "FILTER"}
+            <Search size={13} /> {showMobileFilters ? "✕" : "FIND"}
           </button>
 
           {onOpenFocusMode && (
@@ -85,7 +89,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               style={{
                 background: "#FFE600",
                 border: "2px solid #000",
-                padding: "4px 8px",
+                padding: "5px 7px",
                 fontWeight: 900,
                 fontSize: "11px",
                 fontFamily: "var(--mono)",
@@ -93,9 +97,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 display: "flex",
                 alignItems: "center",
                 gap: "2px",
+                boxShadow: "2px 2px 0 #000",
               }}
             >
-              <Zap size={12} /> FOCUS
+              <Zap size={12} fill="#000" /> FOCUS
             </button>
           )}
 
