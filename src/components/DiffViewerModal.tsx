@@ -37,6 +37,7 @@ export function DiffViewerModal({
       }}
     >
       <div
+        className="modal-container-responsive"
         style={{
           width: "100%",
           maxWidth: "800px",

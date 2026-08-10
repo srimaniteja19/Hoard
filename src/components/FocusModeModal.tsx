@@ -131,9 +131,12 @@ export function FocusModeModal({
       }}
     >
       <div
+        className="modal-container-responsive"
         style={{
           width: "100%",
           maxWidth: "760px",
+          maxHeight: "90vh",
+          overflowY: "auto",
           background: "#FFFDF8",
           border: "4px solid #000",
           boxShadow: "10px 10px 0 #000",
@@ -193,7 +196,7 @@ export function FocusModeModal({
               HOARD will run a greedy algorithm across your unread bookmarks and chapters to assemble a perfectly fitted focus queue.
             </p>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "32px" }}>
+            <div className="focus-grid-btns" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "32px" }}>
               {[15, 30, 45, 60].map((mins) => (
                 <button
                   key={mins}
