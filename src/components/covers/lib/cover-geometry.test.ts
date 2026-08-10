@@ -3,6 +3,7 @@ import {
   calculateCardWidth,
   calculateCoverHeight,
   normalizeValues,
+  calculateSunFadeOpacity,
 } from "./cover-geometry";
 
 export function runCoverGeometryTests() {
@@ -39,6 +40,18 @@ export function runCoverGeometryTests() {
   const norm = normalizeValues([10, 50, 100]);
   const normPassed = norm[0] === 10 && norm[1] === 50 && norm[2] === 100;
   results.push({ test: "normalizeValues scaling", passed: normPassed });
+
+  // Test 5: calculateSunFadeOpacity (fresh vs aged items)
+  const freshDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(); // 10 days old
+  const agedDate = new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOString(); // 200 days old
+  const freshOpacity = calculateSunFadeOpacity(freshDate);
+  const agedOpacity = calculateSunFadeOpacity(agedDate);
+  const sunFadePassed = freshOpacity === 1.0 && agedOpacity < 1.0 && agedOpacity >= 0.45;
+  results.push({
+    test: "calculateSunFadeOpacity calculates sun-fade after 90 days",
+    passed: sunFadePassed,
+    details: `10d -> ${freshOpacity}, 200d -> ${agedOpacity}`,
+  });
 
   const allPassed = results.every((r) => r.passed);
   console.log("--- Cover Geometry Unit Tests ---");

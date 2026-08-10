@@ -6,11 +6,14 @@ import { TYPES } from "@/data/initialBookmarks";
 import { Layers, ShieldCheck, AlertTriangle, Zap } from "lucide-react";
 
 import { CoverCanvas } from "@/components/covers/CoverCanvas";
+import { calculateSunFadeOpacity } from "@/components/covers/lib/cover-geometry";
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
   isSelected: boolean;
   heightClass?: "tall" | "short" | "";
+  heightPx?: number;
+  cardWidthPx?: number;
   onToggleSelect: (id: number, e: React.MouseEvent) => void;
   onOpen: (id: number) => void;
   onOpenDiff?: (bookmark: Bookmark) => void;
@@ -20,6 +23,8 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   bookmark,
   isSelected,
   heightClass = "",
+  heightPx,
+  cardWidthPx,
   onToggleSelect,
   onOpen,
   onOpenDiff,
@@ -43,18 +48,50 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
 
   const is404 = bookmark.driftStatus === "404_preserved";
   const isChanged = bookmark.driftStatus === "changed";
+  const sunFadeOpacity = calculateSunFadeOpacity(bookmark.when);
 
   return (
     <article
       className={`card ${isSelected ? "sel" : ""}`}
       onClick={handleClick}
-      style={{ position: "relative" }}
+      style={{
+        position: "relative",
+        opacity: sunFadeOpacity,
+        ...(cardWidthPx ? { width: `${cardWidthPx}px`, minWidth: `${cardWidthPx}px`, flexShrink: 0 } : {}),
+      }}
     >
       <div
         className={`cover ${heightClass}`}
         data-kind={bookmark.ty}
+        style={heightPx ? { height: `${heightPx}px` } : undefined}
       >
-        <CoverCanvas kind={bookmark.ty} coverData={bookmark.coverData} />
+        <CoverCanvas kind={bookmark.ty} coverData={bookmark.coverData} height={heightPx} />
+
+        {/* READ Stamp Overlay */}
+        {!bookmark.unread && (
+          <div
+            className="read-stamp"
+            style={{
+              position: "absolute",
+              bottom: "10px",
+              right: "10px",
+              fontFamily: "var(--mono)",
+              fontSize: "11px",
+              fontWeight: 900,
+              letterSpacing: "0.1em",
+              color: "currentColor",
+              opacity: 0.35,
+              transform: "rotate(-6deg)",
+              border: "2px solid currentColor",
+              padding: "1px 5px",
+              pointerEvents: "none",
+              zIndex: 3,
+            }}
+          >
+            [READ]
+          </div>
+        )}
+
         <span
           className="chk"
           onClick={(evt) => {

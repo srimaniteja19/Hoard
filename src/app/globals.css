@@ -304,9 +304,31 @@ button, input, textarea {
   font-weight: 700;
 }
 
+.ci.kind-row {
+  position: relative;
+  overflow: hidden;
+}
+
+.ci.kind-row .occupancy-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 0;
+  pointer-events: none;
+  --kc: var(--kind-color, var(--cyan));
+  background: color-mix(in oklab, var(--kc) 35%, transparent);
+  border-right: 2px solid #000;
+  transition: width 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.ci.dimmed {
+  opacity: 0.34;
+}
+
 .ci .ic {
-  width: 19px;
-  height: 19px;
+  width: 22px;
+  height: 22px;
   border: 2px solid #000;
   flex: 0 0 auto;
   display: grid;
@@ -314,6 +336,13 @@ button, input, textarea {
   font-family: var(--mono);
   font-size: 8px;
   font-weight: 800;
+  z-index: 1;
+}
+
+.ci .ic[data-kind] {
+  --kc: var(--kind-color, var(--cyan));
+  background: var(--kc);
+  color: var(--fg);
 }
 
 .ci .n {
@@ -1748,6 +1777,53 @@ input[type=range]::-moz-range-thumb {
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior-y: contain !important;
+  }
+}
+
+/* ─── PRINT STYLESHEET (OFFLINE READING LISTS) ────────────────────────────────── */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .sb,
+  .topbar,
+  .bulk-bar,
+  .drawer,
+  .mobile-side-close,
+  .sidebar-backdrop,
+  button,
+  .chk,
+  .read-stamp,
+  .bar-controls-row {
+    display: none !important;
+  }
+
+  .main-content,
+  .shelf {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .grid,
+  .masonry {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+    page-break-inside: avoid;
+  }
+
+  .card {
+    border: 1px solid #000 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .cover {
+    filter: grayscale(100%) !important;
   }
 }
 

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { SortMode, ViewMode } from "@/types";
 import { ThemePicker } from "@/components/ThemePicker";
 import { Zap, Search } from "lucide-react";
+import Link from "next/link";
 
 interface HeaderBarProps {
   query: string;
@@ -141,9 +142,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
         <div className="bar-controls-row">
           {onOpenFocusMode && (
-            <button
-              className="desktop-start-session-btn"
-              onClick={onOpenFocusMode}
+            <Link
+              href="/session"
               style={{
                 background: "#FFE600",
                 color: "#000",
@@ -157,10 +157,11 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "4px",
+                textDecoration: "none",
               }}
             >
               <Zap size={14} fill="#000" /> START SESSION
-            </button>
+            </Link>
           )}
 
           <div className="grp view-grp">

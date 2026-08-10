@@ -7,6 +7,25 @@ import { inColl } from "@/hooks/useBookmarks";
 import { UserMenu } from "@/components/UserMenu";
 import { usePWA } from "@/components/PWAProvider";
 import Link from "next/link";
+import {
+  FileText,
+  Film,
+  Headphones,
+  FolderGit2,
+  AppWindow,
+  GraduationCap,
+  BookOpen,
+} from "lucide-react";
+
+const KIND_GLYPHS: Record<KindType, React.ReactNode> = {
+  ART: <FileText size={12} strokeWidth={2.5} />,
+  VID: <Film size={12} strokeWidth={2.5} />,
+  PLY: <Headphones size={12} strokeWidth={2.5} />,
+  GIT: <FolderGit2 size={12} strokeWidth={2.5} />,
+  APP: <AppWindow size={12} strokeWidth={2.5} />,
+  PPR: <GraduationCap size={12} strokeWidth={2.5} />,
+  DOC: <BookOpen size={12} strokeWidth={2.5} />,
+};
 
 interface SidebarProps {
   bookmarks: Bookmark[];
@@ -55,6 +74,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
     });
     return map;
   }, [bookmarks]);
+
+  // Single grouped aggregate calculation of queued minutes per Kind
+  const kindQueuedMinutes = useMemo(() => {
+    const map: Record<KindType, number> = {
+      ART: 0, VID: 0, PLY: 0, GIT: 0, APP: 0, PPR: 0, DOC: 0,
+    };
+    bookmarks.forEach((x) => {
+      map[x.ty] = (map[x.ty] || 0) + (x.mins || 0);
+    });
+    return map;
+  }, [bookmarks]);
+
+  const maxQueuedMinutes = useMemo(() => {
+    const vals = Object.values(kindQueuedMinutes);
+    return Math.max(...vals, 1);
+  }, [kindQueuedMinutes]);
 
   const tagCounts = useMemo(() => {
     const map: Record<string, number> = {};
@@ -220,17 +255,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div id="kinds">
             {(Object.keys(TYPES) as KindType[]).map((k) => {
               const v = TYPES[k];
+              const queuedMins = kindQueuedMinutes[k] || 0;
+              const count = typeCounts[k] || 0;
+              const isZero = count === 0 || queuedMins === 0;
+
+              const barWidthPct = queuedMins > 0 ? Math.round(18 + (queuedMins / maxQueuedMinutes) * 82) : 0;
+              const trailingLabel = queuedMins > 0 ? `${queuedMins}m` : "empty";
+
               return (
                 <div
                   key={k}
-                  className={`ci ${ty === k ? "on" : ""}`}
+                  className={`ci kind-row ${ty === k ? "on" : ""} ${isZero ? "dimmed" : ""}`}
+                  data-kind={k}
                   onClick={() => handleSelectType(k)}
                 >
-                  <span className="ic" style={{ background: v.c }}>
-                    {v.icon || k[0]}
+                  {barWidthPct > 0 && (
+                    <div
+                      className="occupancy-bar"
+                      style={{ width: `${barWidthPct}%` }}
+                    />
+                  )}
+                  <span className="ic" data-kind={k}>
+                    {KIND_GLYPHS[k]}
                   </span>
-                  {v.name}
-                  <span className="n">{typeCounts[k] || 0}</span>
+                  <span style={{ position: "relative", zIndex: 1, flex: 1 }}>{v.name}</span>
+                  <span className="n" style={{ position: "relative", zIndex: 1 }}>{trailingLabel}</span>
                 </div>
               );
             })}

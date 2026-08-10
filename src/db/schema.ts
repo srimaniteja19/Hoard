@@ -92,7 +92,7 @@ export const bookmarks = pgTable(
       .references(() => collections.id),
     unread: boolean("unread").notNull().default(true),
     note: text("note").notNull().default(""),
-    extra: jsonb("extra").$type<Record<string, string>>().notNull().default({}),
+    extra: jsonb("extra").$type<Record<string, unknown>>().notNull().default({}),
     parentId: integer("parent_id"),
     startTimeSec: integer("start_time_sec"),
     chapterIndex: integer("chapter_index"),

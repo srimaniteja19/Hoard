@@ -17,6 +17,8 @@ import { MasonryView } from "@/components/views/MasonryView";
 import { GridView } from "@/components/views/GridView";
 import { ListView } from "@/components/views/ListView";
 import { HeadlinesView } from "@/components/views/HeadlinesView";
+import { StatusLine } from "@/components/StatusLine";
+import { ColdStart } from "@/components/ColdStart";
 import { Bookmark } from "@/types";
 
 export default function Home() {
@@ -214,7 +216,18 @@ export default function Home() {
         />
 
         <div className="scroll">
-          {filteredBookmarks.length === 0 ? (
+          <StatusLine
+            bookmarks={filteredBookmarks}
+            coll={coll}
+            ty={ty}
+            tag={tag}
+            unreadOnly={unreadOnly}
+            searchQuery={query}
+          />
+
+          {bookmarks.length === 0 ? (
+            <ColdStart onOpenImport={() => setIsImportOpen(true)} />
+          ) : filteredBookmarks.length === 0 ? (
             <div className="empty" style={{ padding: "60px 20px", textAlign: "center" }}>
               <div
                 style={{
@@ -229,10 +242,10 @@ export default function Home() {
                   marginBottom: "12px",
                 }}
               >
-                YOUR HOARD IS BLANK
+                NO MATCHING BOOKMARKS
               </div>
-              <div style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "#444" }}>
-                Click <b>+ ADD LINK</b> in the header bar or press <kbd style={{ background: "#000", color: "#FFE600", padding: "2px 6px", fontFamily: "var(--mono)", fontSize: "11px" }}>Cmd + N</kbd> to save your first bookmark.
+              <div style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "var(--fg)", opacity: 0.8 }}>
+                No bookmarks match the current filter or search query.
               </div>
             </div>
           ) : view === "masonry" ? (

@@ -36,3 +36,17 @@ export function normalizeValues(values: number[], maxCap = 100): number[] {
   const max = Math.max(...values, 1);
   return values.map((v) => Math.min(maxCap, Math.round((v / max) * maxCap)));
 }
+
+/**
+ * Calculates sun-fade opacity for bookmarks older than 90 days.
+ * Equation: sunFadeOpacity = max(0.45, 1 - (ageInDays - 90) / 365 * 0.4)
+ */
+export function calculateSunFadeOpacity(createdAtOrWhen?: string | number | Date): number {
+  if (!createdAtOrWhen) return 1.0;
+  const date = new Date(createdAtOrWhen);
+  if (isNaN(date.getTime())) return 1.0;
+  const ageInDays = Math.max(0, (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+  if (ageInDays <= 90) return 1.0;
+  const fade = 1 - ((ageInDays - 90) / 365) * 0.4;
+  return Math.max(0.45, Math.round(fade * 100) / 100);
+}

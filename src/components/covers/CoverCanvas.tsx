@@ -70,6 +70,30 @@ export const CoverCanvas: React.FC<CoverCanvasProps> = (props) => {
       }}
     >
       {renderInnerCover()}
+
+      {/* Risograph halftone texture pattern overlay */}
+      <svg
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+        }}
+      >
+        <defs>
+          <pattern
+            id="risograph-halftone"
+            width="6"
+            height="6"
+            patternUnits="userSpaceOnUse"
+          >
+            <circle cx="3" cy="3" r="0.85" fill="currentColor" fillOpacity="0.08" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#risograph-halftone)" />
+      </svg>
     </div>
   );
 };

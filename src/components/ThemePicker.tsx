@@ -33,9 +33,50 @@ export function applyTheme(themeId: ThemeId) {
   }
 }
 
+const SIZE_BY_TIME_KEY = "hoard_size_by_time_v1";
+
+export function useSizeByTimePreference() {
+  const [sizeByTime, setSizeByTime] = useState<boolean>(true);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SIZE_BY_TIME_KEY);
+      if (saved !== null) {
+        setSizeByTime(saved === "true");
+      }
+    } catch {
+      // ignore
+    }
+
+    const handlePrefChange = () => {
+      try {
+        const saved = localStorage.getItem(SIZE_BY_TIME_KEY);
+        if (saved !== null) {
+          setSizeByTime(saved === "true");
+        }
+      } catch {}
+    };
+
+    window.addEventListener("hoard_preference_changed", handlePrefChange);
+    return () => window.removeEventListener("hoard_preference_changed", handlePrefChange);
+  }, []);
+
+  const toggleSizeByTime = () => {
+    const nextVal = !sizeByTime;
+    setSizeByTime(nextVal);
+    try {
+      localStorage.setItem(SIZE_BY_TIME_KEY, String(nextVal));
+      window.dispatchEvent(new Event("hoard_preference_changed"));
+    } catch {}
+  };
+
+  return { sizeByTime, toggleSizeByTime };
+}
+
 export const ThemePicker: React.FC = () => {
   const [currentTheme, setCurrentTheme] = useState<ThemeId>("default");
   const [isOpen, setIsOpen] = useState(false);
+  const { sizeByTime, toggleSizeByTime } = useSizeByTimePreference();
 
   useEffect(() => {
     try {
@@ -99,7 +140,7 @@ export const ThemePicker: React.FC = () => {
             background: "var(--paper)",
             border: "var(--bd)",
             boxShadow: "var(--sh)",
-            width: "180px",
+            width: "190px",
             display: "flex",
             flexDirection: "column",
             gap: "2px",
@@ -151,6 +192,30 @@ export const ThemePicker: React.FC = () => {
               </span>
             </button>
           ))}
+
+          {/* Size-by-Time User Preference Switch */}
+          <div style={{ borderTop: "1px solid var(--ink)", marginTop: "4px", paddingTop: "4px" }}>
+            <button
+              onClick={toggleSizeByTime}
+              style={{
+                width: "100%",
+                fontFamily: "var(--mono)",
+                fontSize: "9.5px",
+                fontWeight: 800,
+                border: "1.5px solid var(--ink)",
+                background: sizeByTime ? "var(--yel)" : "var(--paper)",
+                color: "#000",
+                padding: "5px 6px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <span>⚡ SIZE BY TIME</span>
+              <span>[{sizeByTime ? "ON" : "OFF"}]</span>
+            </button>
+          </div>
         </div>
       )}
     </div>
