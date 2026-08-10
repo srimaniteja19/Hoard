@@ -242,6 +242,39 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
           autoComplete="off"
         />
 
+        {/* Title resolution preview */}
+        {url.trim().length > 8 && (
+          <div
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "11px",
+              fontWeight: 700,
+              padding: "5px 0 2px",
+              color: "var(--fg)",
+              opacity: isFetchingMeta ? 0.5 : fetchedTitle ? 1 : 0.4,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              minHeight: "20px",
+              letterSpacing: "0.04em",
+            }}
+          >
+            {isFetchingMeta ? (
+              <>
+                <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⟳</span>
+                FETCHING TITLE…
+              </>
+            ) : fetchedTitle ? (
+              <>
+                <span style={{ color: "var(--acc)" }}>✓</span>
+                {fetchedTitle}
+              </>
+            ) : (
+              "TITLE NOT FOUND — WILL USE URL"
+            )}
+          </div>
+        )}
+
         {/* Duplicate Warning Banner */}
         {duplicateMatch && (
           <div
