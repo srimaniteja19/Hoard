@@ -99,10 +99,37 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
 }) => {
   const [url, setUrl] = useState(initialUrl);
   const [selectedColl, setSelectedColl] = useState("unsorted");
+  const [fetchedTitle, setFetchedTitle] = useState<string | null>(null);
+  const [isFetchingMeta, setIsFetchingMeta] = useState(false);
 
   useEffect(() => {
     if (initialUrl) setUrl(initialUrl);
   }, [initialUrl]);
+
+  // Debounced og:title fetch — fires 500ms after URL stops changing
+  useEffect(() => {
+    setFetchedTitle(null);
+    const trimmed = url.trim();
+    if (!trimmed || trimmed.length < 8) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        setIsFetchingMeta(true);
+        const fullUrl = trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
+        const res = await fetch(`/api/meta?url=${encodeURIComponent(fullUrl)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.title) setFetchedTitle(data.title);
+        }
+      } catch {
+        // Network error — silently ignore, fall back to URL slug
+      } finally {
+        setIsFetchingMeta(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [url]);
 
   // Duplicate Check
   const duplicateMatch = useMemo(() => {
@@ -130,7 +157,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
   const availableFolders = flattenCollections(collections);
   const detection = detectUrlMeta(url);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!url.trim()) return;
     const detected = detectUrlMeta(url);
     const ty: KindType = detected?.ty || "ART";
@@ -142,14 +169,32 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
       domain = "web";
     }
 
-    const titleFallback =
-      url
-        .split("/")
-        .pop()
-        ?.replace(/[-_]/g, " ") || "New Bookmark";
+    // Priority: fetched og:title → URL slug → "New Bookmark"
+    let title = fetchedTitle;
+    if (!title) {
+      // Attempt a fresh fetch if the debounce hasn't resolved yet
+      try {
+        const fullUrl = url.startsWith("http") ? url : `https://${url}`;
+        const res = await fetch(`/api/meta?url=${encodeURIComponent(fullUrl)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.title) title = data.title;
+        }
+      } catch {
+        // Ignore — fall through to slug
+      }
+    }
+
+    if (!title) {
+      const slug = url.split("/").filter(Boolean).pop() || "";
+      const cleaned = slug.replace(/[-_]/g, " ").replace(/\.[a-z]+$/i, "").trim();
+      title = cleaned
+        ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
+        : domain || "New Bookmark";
+    }
 
     onSave({
-      t: titleFallback.charAt(0).toUpperCase() + titleFallback.slice(1),
+      t: title,
       ty,
       src: domain,
       url: url.startsWith("http") ? url : `https://${url}`,
@@ -162,6 +207,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
     });
 
     setUrl("");
+    setFetchedTitle(null);
     onClose();
   };
 
