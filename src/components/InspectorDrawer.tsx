@@ -402,7 +402,9 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                   {typeMeta.verb} {formatMins(bookmark.mins)}
                 </dd>
               </div>
-              {Object.entries(bookmark.ex || {}).map(([k, v]) => (
+              {Object.entries(bookmark.ex || {})
+                .filter(([k, v]) => k !== "coverData" && typeof v === "string")
+                .map(([k, v]) => (
                 <div className="kv" key={k}>
                   <dt>{k.toUpperCase()}</dt>
                   <dd>{v}</dd>

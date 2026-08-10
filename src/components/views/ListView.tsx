@@ -26,6 +26,7 @@ export const ListView: React.FC<ListViewProps> = ({
   const getMetaBits = (x: Bookmark) => {
     const bits: string[] = [x.src];
     Object.entries(x.ex)
+      .filter(([k, v]) => k !== "coverData" && typeof v === "string")
       .slice(0, 2)
       .forEach(([k, v]) => {
         bits.push(x.ty === "GIT" && k === "Stars" ? `${v}★` : v);

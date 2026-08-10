@@ -262,7 +262,7 @@ export function useBookmarks() {
       if (!okKinds.includes(x.ty))         return false;
       if (time < 180 && x.mins > time)     return false;
       if (f.text.length) {
-        const hay = (x.t + " " + x.src + " " + x.tag + " " + x.note + " " + (x.parentTitle || "") + " " + Object.values(x.ex).join(" ")).toLowerCase();
+        const hay = (x.t + " " + x.src + " " + x.tag + " " + x.note + " " + (x.parentTitle || "") + " " + Object.entries(x.ex).filter(([, v]) => typeof v === "string").map(([, v]) => v).join(" ")).toLowerCase();
         if (!f.text.every((t) => hay.includes(t))) return false;
       }
       return true;

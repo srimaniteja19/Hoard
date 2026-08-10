@@ -20,7 +20,12 @@ function dbToUi(row: typeof bookmarks.$inferSelect): Bookmark {
     coll:   row.collectionId,
     when:   `${months[d.getMonth()]} ${d.getDate()}`,
     unread: row.unread,
-    ex:     (row.extra as Record<string, string>) || {},
+    ex:     (() => {
+      const raw = (row.extra as Record<string, unknown>) || {};
+      return Object.fromEntries(
+        Object.entries(raw).filter(([k, v]) => k !== "coverData" && typeof v === "string")
+      ) as Record<string, string>;
+    })(),
     note:   row.note,
   };
 }

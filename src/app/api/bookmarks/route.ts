@@ -22,7 +22,13 @@ function dbToUi(row: typeof bookmarks.$inferSelect, titleMap?: Map<number, strin
     coll:   row.collectionId,
     when:   `${months[d.getMonth()]} ${d.getDate()}`,
     unread: row.unread,
-    ex:     (row.extra as Record<string, string>) || {},
+    ex:     (() => {
+      const raw = (row.extra as Record<string, unknown>) || {};
+      // Omit 'coverData' — it's a nested object, not a display string
+      return Object.fromEntries(
+        Object.entries(raw).filter(([k, v]) => k !== "coverData" && typeof v === "string")
+      ) as Record<string, string>;
+    })(),
     note:   row.note,
     coverData: parseCoverData((row.extra as Record<string, unknown>)?.coverData),
     parentId: row.parentId,
