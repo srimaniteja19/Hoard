@@ -141,17 +141,51 @@ export function useBookmarks() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // ── Live update listener ─────────────────────────────────────────────────
+  // ── Live update & real-time sync listeners ───────────────────────────────
 
   useEffect(() => {
     const refresh = () => { loadData(); };
 
+    // 1. Listen for postMessage (e.g. from extension content script)
     const handleMessage = (e: MessageEvent) => {
       if (e.data?.type === "HOARD_BOOKMARKS_UPDATED") refresh();
     };
 
+    // 2. Listen for tab focus & visibility change (auto-refresh when switching back to tab)
+    const handleFocus = () => refresh();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+
+    // 3. Cross-tab BroadcastChannel for instant real-time sync across tabs
+    let channel: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      try {
+        channel = new BroadcastChannel("hoard_live_sync");
+        channel.onmessage = (msg) => {
+          if (msg.data?.type === "REFRESH_BOOKMARKS") refresh();
+        };
+      } catch {}
+    }
+
+    // 4. Background polling every 8s while tab is visible
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        refresh();
+      }
+    }, 8000);
+
     window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      clearInterval(timer);
+      if (channel) channel.close();
+    };
   }, [loadData]);
 
   // ── Smart Collections lookup ─────────────────────────────────────────────
