@@ -15,7 +15,6 @@ interface TilComposerProps {
     tags: string[];
     saveToHoardQueue: boolean;
   }) => Promise<void>;
-  existingTags?: string[];
 }
 
 const TYPE_CONFIG: Record<
@@ -80,7 +79,7 @@ const CODE_LANGUAGES = [
   "json",
 ];
 
-export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, existingTags = [] }) => {
+export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
   const [type, setType] = useState<TilType>("FACT");
   const [body, setBody] = useState("");
   const [code, setCode] = useState("");
@@ -111,9 +110,12 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, existingTags
 
   const [linkDensity, setLinkDensity] = useState<"inline" | "card" | "quote" | "full">("card");
 
-  // Reset or update linkDensity default based on URL type
-  useEffect(() => {
-    if (!linkUrl) return;
+  // Reset or update linkDensity default based on URL type. Adjusting state during
+  // render (https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  // so the user can still manually override the density afterward.
+  const [prevLinkUrl, setPrevLinkUrl] = useState(linkUrl);
+  if (linkUrl && linkUrl !== prevLinkUrl) {
+    setPrevLinkUrl(linkUrl);
     if (linkUrl.includes("youtube.com") || linkUrl.includes("youtu.be") || linkUrl.includes("vimeo.com")) {
       setLinkDensity("full");
     } else if (linkUrl.includes("x.com") || linkUrl.includes("twitter.com")) {
@@ -121,10 +123,9 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, existingTags
     } else {
       setLinkDensity("card");
     }
-  }, [linkUrl]);
+  }
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleSubmit = async () => {
     if (!body.trim() && (type !== "SNIPPET" || !code.trim())) return;
     if (submitting) return;
 

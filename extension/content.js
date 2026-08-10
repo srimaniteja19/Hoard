@@ -5,7 +5,7 @@
 const PENDING_KEY = "hoard_pending_sync";
 
 async function drainPending() {
-  return new Promise<void>((resolve) => {
+  return new Promise((resolve) => {
     chrome.storage.local.get([PENDING_KEY], async (res) => {
       const pending = res[PENDING_KEY];
       if (!pending || pending.length === 0) { resolve(); return; }

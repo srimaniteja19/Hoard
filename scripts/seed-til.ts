@@ -1,5 +1,5 @@
 import { db } from "../src/db";
-import { users, tilEntries, tags, tilEntryTags, bookmarks, collections } from "../src/db/schema";
+import { users, tilEntries, tags, tilEntryTags } from "../src/db/schema";
 import { getLoggedForDate, generateShortHash, getTilHeatmap, getTilStreak } from "../src/lib/dal/til";
 import { eq } from "drizzle-orm";
 

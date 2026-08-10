@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import { useEffect, useState, use } from "react";
 import { Bookmark } from "@/types";
 import { MasonryView } from "@/components/views/MasonryView";
 import { GridView } from "@/components/views/GridView";

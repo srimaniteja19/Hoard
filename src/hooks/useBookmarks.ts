@@ -139,6 +139,8 @@ export function useBookmarks() {
     }
   }, [router]);
 
+  // Idiomatic fetch-on-mount.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadData(); }, [loadData]);
 
   // ── Live update & real-time sync listeners ───────────────────────────────

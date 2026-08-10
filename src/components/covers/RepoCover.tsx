@@ -28,20 +28,15 @@ export const RepoCover: React.FC<RepoCoverProps> = ({ data }) => {
 
   // Language bar calculation (x: 14 to x: 274 = 260px total width)
   const langWidthTotal = 260;
-  let currentX = startX;
-  const langSegments = languages.map(([name, pct], idx) => {
-    const w = (pct / 100) * langWidthTotal;
-    const segX = currentX;
-    currentX += w;
-    const opacities = [0.95, 0.65, 0.35];
-    return {
-      name,
-      pct,
-      x: segX,
-      w: Math.max(0, w),
-      opacity: opacities[idx % 3],
-    };
-  });
+  const opacities = [0.95, 0.65, 0.35];
+  const rawWidths = languages.map(([, pct]) => (pct / 100) * langWidthTotal);
+  const langSegments = languages.map(([name, pct], idx) => ({
+    name,
+    pct,
+    x: startX + rawWidths.slice(0, idx).reduce((sum, w) => sum + w, 0),
+    w: Math.max(0, rawWidths[idx]),
+    opacity: opacities[idx % 3],
+  }));
 
   const langText = languages.map(([l, p]) => `${p}% ${l}`).join(" · ") || "Code";
   const pushedText = pushedDaysAgo === 0 ? "PUSHED TODAY" : `PUSHED ${pushedDaysAgo}D`;

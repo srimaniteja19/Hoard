@@ -33,6 +33,9 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         window.matchMedia("(display-mode: standalone)").matches ||
         (window.navigator as unknown as { standalone?: boolean }).standalone === true;
 
+      // Must run post-mount: matchMedia/navigator.standalone are unavailable during SSR,
+      // so this can't be a lazy useState initializer without causing a hydration mismatch.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsInstalled(!!isStandalone);
 
       // Register Service Worker

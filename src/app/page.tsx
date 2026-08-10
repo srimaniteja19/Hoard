@@ -100,6 +100,9 @@ export default function Home() {
     const action = params.get("action");
 
     if (action === "capture") {
+      // Must run post-mount: window.location is unavailable during SSR, so this
+      // can't be a lazy useState initializer without a hydration mismatch.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCaptureUrl("");
       setIsCaptureOpen(true);
       window.history.replaceState({}, "", window.location.pathname);

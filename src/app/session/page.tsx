@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { CoverCanvas } from "@/components/covers/CoverCanvas";
@@ -19,13 +19,14 @@ export default function SessionPage() {
   const [timeLeftSec, setTimeLeftSec] = useState<number>(1500); // 25 min default
   const [isRunning, setIsRunning] = useState<boolean>(true);
 
-  // Initialize timer whenever active item changes
-  useEffect(() => {
-    if (currentItem) {
-      setTimeLeftSec((currentItem.mins || 15) * 60);
-      setIsRunning(true);
-    }
-  }, [currentItem]);
+  // Initialize timer whenever active item changes (adjusting state during render,
+  // per https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  const [initedItemId, setInitedItemId] = useState(currentItem?.id);
+  if (currentItem && currentItem.id !== initedItemId) {
+    setInitedItemId(currentItem.id);
+    setTimeLeftSec((currentItem.mins || 15) * 60);
+    setIsRunning(true);
+  }
 
   // Timer countdown effect
   useEffect(() => {

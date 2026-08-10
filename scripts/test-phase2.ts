@@ -1,5 +1,5 @@
 import { db } from "../src/db";
-import { users, tilEntries } from "../src/db/schema";
+import { tilEntries } from "../src/db/schema";
 import { createTilSchema } from "../src/lib/validations/til";
 import { eq } from "drizzle-orm";
 
@@ -9,7 +9,7 @@ async function testPhase2() {
   console.log("🧪 Testing Phase 2 TIL CRUD & Filtering...");
 
   // 1. Fetch feed for test user via direct DB query / logic
-  const feedRes = await fetch("http://localhost:3000/api/til?limit=10", {
+  await fetch("http://localhost:3000/api/til?limit=10", {
     headers: { "x-user-id": TEST_USER_ID },
   }).catch(() => null);
 

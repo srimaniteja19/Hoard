@@ -42,7 +42,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (evt: React.FormEvent) => {
+  const handleSubmit = (evt: React.SubmitEvent) => {
     evt.preventDefault();
     if (!name.trim()) return;
 

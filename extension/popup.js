@@ -1,7 +1,6 @@
 // HOARD Browser Extension Popup Logic
 
 const DEFAULT_SERVER_URL = "https://hoard-ten.vercel.app";
-const STORAGE_KEY = "hoard_bookmarks_v2";
 const PENDING_KEY = "hoard_pending_sync";
 
 // Content Kind Auto-Detection

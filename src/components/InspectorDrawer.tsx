@@ -47,17 +47,22 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
 
   const [dischargedTils, setDischargedTils] = useState<TilItem[]>([]);
 
+  // Sync noteVal from the bookmark prop when it changes (adjusting state during
+  // render, per https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  const [prevBookmarkId, setPrevBookmarkId] = useState(bookmark?.id ?? null);
+  if ((bookmark?.id ?? null) !== prevBookmarkId) {
+    setPrevBookmarkId(bookmark?.id ?? null);
+    setNoteVal(bookmark?.note || "");
+    setShowAddChap(false);
+    if (!bookmark) setDischargedTils([]);
+  }
+
   useEffect(() => {
     if (bookmark) {
-      setNoteVal(bookmark.note || "");
-      setShowAddChap(false);
-
       fetch(`/api/bookmarks/${bookmark.id}/tils`, { credentials: "include" })
         .then((res) => (res.ok ? res.json() : { items: [] }))
         .then((data) => setDischargedTils(data.items || []))
         .catch(() => setDischargedTils([]));
-    } else {
-      setDischargedTils([]);
     }
   }, [bookmark]);
 
@@ -116,7 +121,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
     onUpdateNote(bookmark.id, val);
   };
 
-  const handleCreateChapter = async (e: React.FormEvent) => {
+  const handleCreateChapter = async (e: React.SubmitEvent) => {
     e.preventDefault();
     if (!chapTitle.trim() || !onAddChapter) return;
     const timeParam = chapSec > 0 ? `?t=${chapSec}` : "";

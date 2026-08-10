@@ -1,11 +1,11 @@
 import { db } from "../src/db";
-import { tilEntries, tilEntryTags, users } from "../src/db/schema";
+import { tilEntries, users } from "../src/db/schema";
 import { eq } from "drizzle-orm";
 
 async function removeTestData() {
   console.log("🧹 Cleaning test TIL data from database...");
 
-  // Delete tilEntryTags and tilEntries for test user
+  // Delete tilEntries for test user (tilEntryTags cascade-deletes with it)
   await db.delete(tilEntries).where(eq(tilEntries.userId, "usr_test_pacific"));
   await db.delete(users).where(eq(users.id, "usr_test_pacific"));
 

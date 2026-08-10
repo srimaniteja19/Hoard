@@ -25,7 +25,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
 
-  const handleSignInSubmit = async (e: React.FormEvent) => {
+  const handleSignInSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setOauthNotice(null);
@@ -57,7 +57,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleSignUpSubmit = async (e: React.FormEvent) => {
+  const handleSignUpSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setOauthNotice(null);

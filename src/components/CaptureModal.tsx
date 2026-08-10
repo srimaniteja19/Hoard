@@ -103,13 +103,23 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
   const [fetchedTitle, setFetchedTitle] = useState<string | null>(null);
   const [isFetchingMeta, setIsFetchingMeta] = useState(false);
 
-  useEffect(() => {
-    if (initialUrl) setUrl(initialUrl);
-  }, [initialUrl]);
+  // Sync local url from the initialUrl prop when it changes (adjusting state during
+  // render, per https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  const [prevInitialUrl, setPrevInitialUrl] = useState(initialUrl);
+  if (initialUrl && initialUrl !== prevInitialUrl) {
+    setPrevInitialUrl(initialUrl);
+    setUrl(initialUrl);
+  }
+
+  // Clear the stale fetched title as soon as the url changes, same render-time pattern.
+  const [prevUrlForTitle, setPrevUrlForTitle] = useState(url);
+  if (url !== prevUrlForTitle) {
+    setPrevUrlForTitle(url);
+    setFetchedTitle(null);
+  }
 
   // Debounced og:title fetch — fires 500ms after URL stops changing
   useEffect(() => {
-    setFetchedTitle(null);
     const trimmed = url.trim();
     if (!trimmed || trimmed.length < 8) return;
 

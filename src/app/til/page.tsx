@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { TilHeaderNav } from "@/components/til/TilHeaderNav";
 import { TilComposer } from "@/components/til/TilComposer";
 import { TilFeed } from "@/components/til/TilFeed";
@@ -108,8 +108,12 @@ function TilPageContent() {
   );
 
   useEffect(() => {
+    // Fetch on mount and whenever the URL filters change; both set loading
+    // state before their first await.
+    /* eslint-disable react-hooks/set-state-in-effect */
     fetchFeed();
     fetchAuxiliaryData();
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [fetchFeed, fetchAuxiliaryData]);
 
   const handleCommit = async (newEntry: {

@@ -1,4 +1,4 @@
-import { cleanTitle, isGenericTitle, extractTitleFromUrl, sanitizeTitleText } from "../src/lib/cleanTitle";
+import { cleanTitle } from "../src/lib/cleanTitle";
 
 function assertEqual(actual: string, expected: string, testName: string) {
   if (actual === expected) {

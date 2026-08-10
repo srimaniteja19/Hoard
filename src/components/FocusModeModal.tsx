@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Bookmark, SessionQueueItem } from "@/types";
 import { ExternalLink, CheckCircle, SkipForward, Play, Pause, X, Zap } from "lucide-react";
 
@@ -72,20 +72,24 @@ export function FocusModeModal({
     }
   };
 
+  // If the timer already hit zero (e.g. right after a reset), stop it during render
+  // rather than in an effect (https://react.dev/learn/you-might-not-need-an-effect).
+  if (isSessionActive && isTimerRunning && secondsRemaining <= 0) {
+    setIsTimerRunning(false);
+  }
+
   // Timer countdown
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (isSessionActive && isTimerRunning && secondsRemaining > 0) {
-      interval = setInterval(() => {
-        setSecondsRemaining((prev) => prev - 1);
-      }, 1000);
-    } else if (secondsRemaining === 0 && isSessionActive && isTimerRunning) {
-      // Auto advance or pause on item time end
-      setIsTimerRunning(false);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    if (!isSessionActive || !isTimerRunning || secondsRemaining <= 0) return;
+    const interval = setInterval(() => {
+      setSecondsRemaining((prev) => {
+        const next = prev - 1;
+        // Auto advance or pause on item time end
+        if (next <= 0) setIsTimerRunning(false);
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
   }, [isSessionActive, isTimerRunning, secondsRemaining]);
 
   const handleNext = useCallback(

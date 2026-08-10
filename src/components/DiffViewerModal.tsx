@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { Bookmark } from "@/types";
 import { X, FileText, AlertTriangle, ShieldCheck } from "lucide-react";
 

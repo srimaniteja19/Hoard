@@ -1,7 +1,6 @@
 // HOARD Extension Background Service Worker (Manifest V3)
 
 const HOARD_ORIGIN = "https://hoard-ten.vercel.app";
-const PENDING_KEY  = "hoard_pending_sync";
 
 // ─── Context Menus ────────────────────────────────────────────────────────────
 

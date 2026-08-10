@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Bookmark, Collection, KindType } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import Link from "next/link";

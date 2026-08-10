@@ -38,10 +38,12 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
+    // Idiomatic fetch-on-mount; fetchTokens sets loading state before its first await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTokens();
   }, []);
 
-  const handleIssueToken = async (e: React.FormEvent) => {
+  const handleIssueToken = async (e: React.SubmitEvent) => {
     e.preventDefault();
     if (!newTokenName.trim() || issuing) return;
 

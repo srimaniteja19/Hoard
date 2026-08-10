@@ -42,6 +42,9 @@ export function useSizeByTimePreference() {
     try {
       const saved = localStorage.getItem(SIZE_BY_TIME_KEY);
       if (saved !== null) {
+        // Must run post-mount: localStorage is unavailable during SSR, so this
+        // can't be a lazy useState initializer without a hydration mismatch.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSizeByTime(saved === "true");
       }
     } catch {
@@ -82,6 +85,9 @@ export const ThemePicker: React.FC = () => {
     try {
       const saved = localStorage.getItem(THEME_STORAGE_KEY) as ThemeId | null;
       if (saved && THEMES.some((t) => t.id === saved)) {
+        // Must run post-mount: localStorage is unavailable during SSR, so this
+        // can't be a lazy useState initializer without a hydration mismatch.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCurrentTheme(saved);
         applyTheme(saved);
       }
