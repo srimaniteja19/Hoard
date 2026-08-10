@@ -54,7 +54,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         className={`cover ${heightClass}`}
         data-kind={bookmark.ty}
       >
-        <CoverCanvas kind={bookmark.ty} />
+        <CoverCanvas kind={bookmark.ty} coverData={bookmark.coverData} />
         <span
           className="chk"
           onClick={(evt) => {
