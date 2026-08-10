@@ -728,6 +728,177 @@ input[type=range]::-moz-range-thumb {
   height: 74px;
 }
 
+/* ---------- flip toggle: abstract cover <-> real fetch log ---------- */
+.flip-btn {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  z-index: 4;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--fg);
+  background: var(--paper);
+  color: var(--fg);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity .12s, transform .12s;
+}
+
+.card:hover .flip-btn,
+.flip-btn.on {
+  opacity: 1;
+}
+
+.flip-btn:hover {
+  transform: scale(1.08);
+}
+
+.flip-btn.on {
+  background: #B6FF3C;
+  border-color: #000;
+  color: #000;
+}
+
+/* ---------- fetch log: "what did we actually pull down" receipt view ---------- */
+.fetch-log {
+  width: calc(100% + 18px);
+  height: calc(100% + 18px);
+  margin: -9px;
+  display: flex;
+  flex-direction: column;
+  background: #F4F0EA;
+  color: #14140F;
+  font-family: var(--mono);
+  position: relative;
+  overflow: hidden;
+  background-image: radial-gradient(circle, rgba(0,0,0,0.09) 0.5px, transparent 0.5px);
+  background-size: 5px 5px;
+}
+
+.fetch-log-req {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 34px 5px 34px;
+  background: #14140F;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.fetch-log-verb {
+  color: #B6FF3C;
+}
+
+.fetch-log-path {
+  color: #F4F0EA;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fetch-log-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  font-size: 8.5px;
+  font-weight: 700;
+  opacity: 0.75;
+  flex-shrink: 0;
+  border-bottom: 1px dashed rgba(20,20,15,0.3);
+}
+
+.fetch-log-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #00C46A;
+  flex-shrink: 0;
+}
+
+.fetch-log-body {
+  flex: 1;
+  overflow: hidden;
+  padding: 6px 60px 6px 9px;
+  display: flex;
+  align-items: center;
+}
+
+.fetch-log-excerpt {
+  font-family: var(--grot);
+  font-style: italic;
+  font-size: 11px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+.fetch-log-receipt {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fetch-log-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.fetch-log-row span:first-child {
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.fetch-log-row span:last-child {
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 45%;
+}
+
+.fetch-log-leader {
+  flex: 1;
+  border-bottom: 1px dotted rgba(20,20,15,0.35);
+  margin-bottom: 3px;
+  min-width: 6px;
+}
+
+.fetch-log-empty {
+  width: 100%;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.4;
+  letter-spacing: 0.06em;
+}
+
+.fetch-log-barcode {
+  height: 7px;
+  flex-shrink: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    #14140F 0px, #14140F 1px,
+    transparent 1px, transparent 2px,
+    #14140F 2px, #14140F 4px,
+    transparent 4px, transparent 5px,
+    #14140F 5px, #14140F 6px,
+    transparent 6px, transparent 8px
+  );
+  opacity: 0.55;
+}
 
 
 .tybadge {

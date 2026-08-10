@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Bookmark } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
-import { Layers, ShieldCheck, AlertTriangle, Zap } from "lucide-react";
+import { Layers, ShieldCheck, AlertTriangle, Zap, Terminal } from "lucide-react";
 
 import { CoverCanvas } from "@/components/covers/CoverCanvas";
+import { RealContentCover } from "@/components/covers/RealContentCover";
 import { calculateSunFadeOpacity } from "@/components/covers/lib/cover-geometry";
 
 interface BookmarkCardProps {
@@ -29,6 +30,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   onOpen,
   onOpenDiff,
 }) => {
+  const [showFetchLog, setShowFetchLog] = useState(false);
   const typeMeta = TYPES[bookmark.ty] || { name: bookmark.ty, c: "#00F0FF", fg: "#000", verb: "READ" };
   const e = bookmark.ex || {};
   const durationText =
@@ -65,7 +67,24 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         data-kind={bookmark.ty}
         style={heightPx ? { height: `${heightPx}px` } : undefined}
       >
-        <CoverCanvas kind={bookmark.ty} coverData={bookmark.coverData} height={heightPx} />
+        {showFetchLog ? (
+          <RealContentCover bookmark={bookmark} />
+        ) : (
+          <CoverCanvas kind={bookmark.ty} coverData={bookmark.coverData} height={heightPx} />
+        )}
+
+        <button
+          type="button"
+          className={`flip-btn ${showFetchLog ? "on" : ""}`}
+          onClick={(evt) => {
+            evt.stopPropagation();
+            setShowFetchLog((v) => !v);
+          }}
+          title={showFetchLog ? "Show cover" : "Show what HOARD actually fetched"}
+          aria-label={showFetchLog ? "Show cover" : "Show what HOARD actually fetched"}
+        >
+          <Terminal size={12} strokeWidth={2.5} />
+        </button>
 
         {/* READ Stamp Overlay */}
         {!bookmark.unread && (
