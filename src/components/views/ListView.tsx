@@ -53,7 +53,7 @@ export const ListView: React.FC<ListViewProps> = ({
               }
             }}
           >
-            <div className="swatch" style={{ background: typeMeta.c }}>
+            <div className="swatch" data-kind={x.ty}>
               {x.ty}
             </div>
 

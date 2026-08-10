@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Bookmark } from "@/types";
-import { TYPES } from "@/data/initialBookmarks";
 
 interface HeadlinesViewProps {
   items: Bookmark[];
@@ -24,7 +23,6 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
   return (
     <div className="heads">
       {items.map((x) => {
-        const typeMeta = TYPES[x.ty];
         const isSel = selectedIds.has(x.id);
 
         return (
@@ -39,7 +37,7 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
               }
             }}
           >
-            <span className="hb" style={{ background: typeMeta.c }}>
+            <span className="hb" data-kind={x.ty}>
               {x.ty}
             </span>
             <span className="ht">{x.t}</span>

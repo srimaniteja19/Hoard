@@ -4,6 +4,7 @@ import { bookmarks, collections } from "@/db/schema";
 import { eq, isNull, and, desc } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { Bookmark, KindType } from "@/types";
+import { parseCoverData, enrichCoverData } from "@/lib/cover-data";
 
 // ─── Shape mapper ────────────────────────────────────────────────────────────
 
@@ -23,6 +24,7 @@ function dbToUi(row: typeof bookmarks.$inferSelect, titleMap?: Map<number, strin
     unread: row.unread,
     ex:     (row.extra as Record<string, string>) || {},
     note:   row.note,
+    coverData: parseCoverData((row.extra as Record<string, unknown>)?.coverData),
     parentId: row.parentId,
     parentTitle: row.parentId && titleMap ? titleMap.get(row.parentId) || null : null,
     startTimeSec: row.startTimeSec,
@@ -108,6 +110,8 @@ export async function POST(req: Request) {
       body.coll || "unsorted"
     );
 
+    const coverData = await enrichCoverData(body.url, body.ty || "ART");
+
     const [row] = await db
       .insert(bookmarks)
       .values({
@@ -121,7 +125,7 @@ export async function POST(req: Request) {
         collectionId,
         unread:       body.unread ?? true,
         note:         body.note   || "",
-        extra:        body.ex     || {},
+        extra:        { ...(body.ex || {}), ...(coverData ? { coverData } : {}) },
         parentId:     body.parentId ?? null,
         startTimeSec: body.startTimeSec ?? null,
         chapterIndex: body.chapterIndex ?? null,

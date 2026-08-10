@@ -1,4 +1,5 @@
 import { db } from "@/db";
+import { parseCoverData } from "@/lib/cover-data";
 import { bookmarks as bookmarksTable, collections as collectionsTable } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { Bookmark, Collection } from "@/types";
@@ -33,6 +34,7 @@ export async function fetchUserBookmarks(userId: string): Promise<Bookmark[]> {
         unread: r.unread,
         ex: (r.extra as Record<string, string>) || {},
         note: r.note || "",
+        coverData: parseCoverData((r.extra as Record<string, unknown>)?.coverData),
 
         parentId: r.parentId,
         parentTitle: r.parentId ? titleMap.get(r.parentId) || null : null,

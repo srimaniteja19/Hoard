@@ -3,7 +3,11 @@
 :root, [data-theme="default"] {
   --cream: #F4F0EA;
   --paper: #FFFDF8;
+  --surface: #FFFDF8;
+  --fg: #000000;
   --ink: #000000;
+  --cover-ink: #0A0A0A;
+  --cover-mix: 82%;
   --yel: #FFE600;
   --pink: #FF007A;
   --cyan: #00F0FF;
@@ -22,7 +26,11 @@
 [data-theme="cyberpunk"] {
   --cream: #0D0E15;
   --paper: #161925;
+  --surface: #161925;
+  --fg: #F0F4FC;
   --ink: #F0F4FC;
+  --cover-ink: #F0F4FC;
+  --cover-mix: 30%;
   --yel: #FFE600;
   --pink: #FF007A;
   --cyan: #00F0FF;
@@ -39,7 +47,11 @@
 [data-theme="nordic"] {
   --cream: #EBF0F5;
   --paper: #F8FAFC;
+  --surface: #F8FAFC;
+  --fg: #1A202C;
   --ink: #1A202C;
+  --cover-ink: #1A202C;
+  --cover-mix: 75%;
   --yel: #ED8936;
   --pink: #E53E3E;
   --cyan: #319795;
@@ -56,7 +68,11 @@
 [data-theme="tokyo"] {
   --cream: #1A1B26;
   --paper: #24283B;
+  --surface: #24283B;
+  --fg: #C0CAF5;
   --ink: #C0CAF5;
+  --cover-ink: #C0CAF5;
+  --cover-mix: 30%;
   --yel: #E0AF68;
   --pink: #F7768E;
   --cyan: #7DCFFF;
@@ -73,7 +89,11 @@
 [data-theme="matcha"] {
   --cream: #EFECE6;
   --paper: #F9F7F1;
+  --surface: #F9F7F1;
+  --fg: #2C3531;
   --ink: #2C3531;
+  --cover-ink: #2C3531;
+  --cover-mix: 75%;
   --yel: #E7C66B;
   --pink: #D9822B;
   --cyan: #8E9A82;
@@ -85,6 +105,33 @@
   --sh: 5px 5px 0 #116466;
   --sh-lg: 8px 8px 0 #116466;
   --sh-sm: 3px 3px 0 #116466;
+}
+
+/* ---------- kind color tokens & cover baseline ---------- */
+:root {
+  --kind-art: var(--cyan);
+  --kind-vid: var(--pink);
+  --kind-ply: var(--violet);
+  --kind-git: var(--lime);
+  --kind-app: var(--yel);
+  --kind-ppr: var(--orange);
+  --kind-doc: var(--mint);
+}
+
+[data-kind="ART"] { --kind-color: var(--kind-art); }
+[data-kind="VID"] { --kind-color: var(--kind-vid); }
+[data-kind="PLY"] { --kind-color: var(--kind-ply); }
+[data-kind="GIT"] { --kind-color: var(--kind-git); }
+[data-kind="APP"] { --kind-color: var(--kind-app); }
+[data-kind="PPR"] { --kind-color: var(--kind-ppr); }
+[data-kind="DOC"] { --kind-color: var(--kind-doc); }
+
+.cover, .cover-canvas-wrap, .swatch, .hb {
+  --kc: var(--kind-color, var(--cyan));
+  background: color-mix(in oklab, var(--kc) var(--cover-mix, 82%), var(--surface));
+  color: var(--cover-ink);
+  position: relative;
+  overflow: hidden;
 }
 
 

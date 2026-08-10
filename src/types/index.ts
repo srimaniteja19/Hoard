@@ -1,3 +1,5 @@
+import { CoverData } from "@/lib/cover-data";
+
 export type KindType = 'ART' | 'VID' | 'PLY' | 'GIT' | 'APP' | 'PPR' | 'DOC';
 
 export type ContextType = 'all' | 'desk' | 'commute' | 'wind';
@@ -39,6 +41,7 @@ export interface Bookmark {
   ex: Record<string, string>;
   note: string;
   source?: string;
+  coverData?: CoverData | null;
 
   // Chapter decomposition
   parentId?: number | null;

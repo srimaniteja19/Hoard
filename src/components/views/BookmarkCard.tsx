@@ -5,6 +5,8 @@ import { Bookmark } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import { Layers, ShieldCheck, AlertTriangle, Zap } from "lucide-react";
 
+import { CoverCanvas } from "@/components/covers/CoverCanvas";
+
 interface BookmarkCardProps {
   bookmark: Bookmark;
   isSelected: boolean;
@@ -50,8 +52,9 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
     >
       <div
         className={`cover ${heightClass}`}
-        style={{ background: typeMeta.c }}
+        data-kind={bookmark.ty}
       >
+        <CoverCanvas kind={bookmark.ty} />
         <span
           className="chk"
           onClick={(evt) => {

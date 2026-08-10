@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { bookmarks, collections } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
+import { enrichCoverData } from "@/lib/cover-data";
 
 // CORS headers for extension requests (same-origin fetch from injected scripts)
 const CORS = {
@@ -50,6 +51,7 @@ export async function POST(req: Request) {
     if ((action === "add_bookmark" || bookmark) && bookmark?.url) {
       const collSlug = (bookmark.coll || "unsorted").split("-").pop() || "unsorted";
       const collectionId = await ensureCollection(userId, collSlug);
+      const coverData = await enrichCoverData(bookmark.url, bookmark.ty || "ART");
 
       const [row] = await db
         .insert(bookmarks)
@@ -64,7 +66,7 @@ export async function POST(req: Request) {
           collectionId,
           unread:       bookmark.unread ?? true,
           note:         bookmark.note === "Saved via HOARD Extension" ? "" : (bookmark.note || ""),
-          extra:        bookmark.ex   || {},
+          extra:        { ...(bookmark.ex || {}), ...(coverData ? { coverData } : {}) },
         })
         .returning();
 
