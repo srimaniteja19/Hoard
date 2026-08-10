@@ -54,7 +54,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const filterChips = document.querySelectorAll(".filter-chip");
   const openWebAppBtn = document.getElementById("openWebAppBtn");
   const serverUrlInput = document.getElementById("serverUrl");
-  const extensionTokenInput = document.getElementById("extensionToken");
 
   // TIL Elements
   const tilTypeChips = document.querySelectorAll("#tilTypeChips .til-chip");
@@ -71,11 +70,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   let activeTags = new Set(["ai"]);
   let currentActiveTab = null;
 
-  // Restore Settings (Server URL & Extension Token)
+  // Restore Settings (Server URL)
   if (typeof chrome !== "undefined" && chrome.storage) {
-    chrome.storage.local.get(["hoard_server_url", "extension_token"], (res) => {
+    chrome.storage.local.get(["hoard_server_url"], (res) => {
       if (res.hoard_server_url && serverUrlInput) serverUrlInput.value = res.hoard_server_url;
-      if (res.extension_token && extensionTokenInput) extensionTokenInput.value = res.extension_token;
     });
   }
 
@@ -84,13 +82,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     serverUrlInput.addEventListener("change", () => {
       if (typeof chrome !== "undefined" && chrome.storage) {
         chrome.storage.local.set({ hoard_server_url: serverUrlInput.value.trim() });
-      }
-    });
-  }
-  if (extensionTokenInput) {
-    extensionTokenInput.addEventListener("change", () => {
-      if (typeof chrome !== "undefined" && chrome.storage) {
-        chrome.storage.local.set({ extension_token: extensionTokenInput.value.trim() });
       }
     });
   }
@@ -144,15 +135,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function loadUnreadBookmarksForDischarge() {
     if (!tilDischargeSelect) return;
     const serverUrl = (serverUrlInput?.value || DEFAULT_SERVER_URL).replace(/\/$/, "");
-    const token = extensionTokenInput?.value || "";
 
     try {
-      const headers = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
       const res = await fetch(`${serverUrl}/api/bookmarks?unread=true`, {
         credentials: "include",
-        headers,
       });
 
       if (res.ok) {
@@ -213,7 +199,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       const serverUrl = (serverUrlInput?.value || DEFAULT_SERVER_URL).replace(/\/$/, "");
-      const token = extensionTokenInput?.value || "";
 
       const rawTags = tilTagsInput ? tilTagsInput.value : "";
       const tags = rawTags
@@ -232,13 +217,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       };
 
       try {
-        const headers = { "Content-Type": "application/json" };
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-
         const res = await fetch(`${serverUrl}/api/til`, {
           method: "POST",
           credentials: "include",
-          headers,
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 

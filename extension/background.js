@@ -62,25 +62,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // ─── Background Sync for Offline TIL Queue ────────────────────────────────────
 
 async function processOfflineTilQueue() {
-  chrome.storage.local.get(["offline_til_queue", "hoard_server_url", "extension_token"], async (res) => {
+  chrome.storage.local.get(["offline_til_queue", "hoard_server_url"], async (res) => {
     const queue = res.offline_til_queue || [];
     if (!queue.length) return;
 
     const origin = (res.hoard_server_url || HOARD_ORIGIN).replace(/\/$/, "");
-    const token = res.extension_token || "";
 
     const remainingQueue = [];
     let syncedCount = 0;
 
     for (const item of queue) {
       try {
-        const headers = { "Content-Type": "application/json" };
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-
         const apiRes = await fetch(`${origin}/api/til`, {
           method: "POST",
           credentials: "include",
-          headers,
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(item),
         });
 
