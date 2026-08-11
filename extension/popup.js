@@ -6,15 +6,25 @@ const PENDING_KEY = "hoard_pending_sync";
 // Content Kind Auto-Detection
 function detectUrlMeta(u) {
   const urlLower = (u || "").toLowerCase().trim();
-  if (!urlLower) return { ty: "ART", name: "Article", bg: "#00F0FF", fg: "#000", f: "Web Article" };
+  const fallback = { ty: "APP", name: "App Shelf", bg: "#7C4DFF", fg: "#fff", f: "Platform: Web" };
+  if (!urlLower) return fallback;
+
+  let hostname = "";
+  try {
+    hostname = new URL(urlLower.startsWith("http") ? urlLower : `https://${urlLower}`).hostname.replace(/^www\./, "");
+  } catch {
+    hostname = "";
+  }
 
   if (/youtube\.com\/playlist/.test(urlLower)) {
     return { ty: "PLY", name: "Playlist", bg: "#00E58A", fg: "#000", f: "Source: YouTube · Playlist" };
   }
-  if (/youtube\.com|youtu\.be/.test(urlLower)) {
+  if (hostname === "youtube.com" || hostname === "youtu.be") {
     return { ty: "VID", name: "Video", bg: "#FF6B00", fg: "#fff", f: "Source: YouTube · Video" };
   }
-  if (/spotify|music\.apple/.test(urlLower)) {
+  // Exact-host match only — a marketing/portal page hosted on a spotify.com
+  // subdomain (e.g. xirp.spotify.com) is not a music link.
+  if (hostname === "open.spotify.com" || hostname === "music.apple.com") {
     return { ty: "PLY", name: "Audio", bg: "#00E58A", fg: "#000", f: "Source: Spotify · Audio" };
   }
   if (/github\.com\/[\w.-]+\/[\w.-]+/.test(urlLower)) {
@@ -29,7 +39,10 @@ function detectUrlMeta(u) {
   if (/docs\.|developer\.|\/docs\//.test(urlLower)) {
     return { ty: "DOC", name: "Documentation", bg: "#FFE600", fg: "#000", f: "Type: Reference Docs" };
   }
-  return { ty: "ART", name: "Article", bg: "#00F0FF", fg: "#000", f: "Type: Web Article" };
+  // Unrecognized domain: default to APP, not ART. A tool/site we don't
+  // recognize is far more often a tool than a long-form article, and ART
+  // carries UI implications (word count, reading time) that mislead here.
+  return fallback;
 }
 
 document.addEventListener("DOMContentLoaded", async () => {

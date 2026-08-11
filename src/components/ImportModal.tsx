@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import { KindType } from "@/types";
 import { cleanTitle } from "@/lib/cleanTitle";
+import { detectKind } from "@/lib/detectKind";
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -89,17 +90,6 @@ function parseTextUrls(text: string): ParsedItem[] {
   });
 
   return items;
-}
-
-function detectKind(u: string): KindType {
-  const urlLower = u.toLowerCase();
-  if (/youtube\.com\/playlist/.test(urlLower)) return "PLY";
-  if (/youtube\.com|youtu\.be/.test(urlLower)) return "VID";
-  if (/github\.com/.test(urlLower)) return "GIT";
-  if (/arxiv|acm\.org|ieee/.test(urlLower)) return "PPR";
-  if (/raycast|warp\.dev|apps\.apple/.test(urlLower)) return "APP";
-  if (/docs\.|developer\.|\/docs\//.test(urlLower)) return "DOC";
-  return "ART";
 }
 
 export const ImportModal: React.FC<ImportModalProps> = ({

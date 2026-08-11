@@ -72,7 +72,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         {showFetchLog ? (
           <RealContentCover bookmark={bookmark} />
         ) : (
-          <CoverCanvas kind={bookmark.ty} coverData={bookmark.coverData} height={heightPx} />
+          <CoverCanvas kind={bookmark.ty} coverData={bookmark.coverData} image={bookmark.coverImage} height={heightPx} />
         )}
 
         <button

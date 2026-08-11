@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { KindType } from "@/types";
 import { cleanTitle } from "@/lib/cleanTitle";
+import { detectKind } from "@/lib/detectKind";
 
 interface ImportBookmarkPayload {
   t?: string;
@@ -20,17 +21,6 @@ interface ImportBookmarkPayload {
   unread?: boolean;
   note?: string;
   ex?: Record<string, string>;
-}
-
-function detectType(u: string): KindType {
-  const urlLower = u.toLowerCase();
-  if (/youtube\.com\/playlist/.test(urlLower)) return "PLY";
-  if (/youtube\.com|youtu\.be/.test(urlLower)) return "VID";
-  if (/github\.com/.test(urlLower)) return "GIT";
-  if (/arxiv|acm\.org|ieee/.test(urlLower)) return "PPR";
-  if (/raycast|warp\.dev|apps\.apple/.test(urlLower)) return "APP";
-  if (/docs\.|developer\.|\/docs\//.test(urlLower)) return "DOC";
-  return "ART";
 }
 
 function extractDomain(u: string): string {
@@ -84,7 +74,7 @@ export async function POST(req: Request) {
       const rawUrl = item.url.trim();
       const validUrl = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`;
       const title = cleanTitle(item.t || item.title, validUrl);
-      const type = item.ty || item.type || detectType(validUrl);
+      const type = item.ty || item.type || detectKind(validUrl);
       const source = item.src || extractDomain(validUrl);
 
       // Handle folder / collection target

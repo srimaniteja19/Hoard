@@ -4,6 +4,14 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Bookmark, Collection, DetectionResult, KindType } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import { cleanTitle } from "@/lib/cleanTitle";
+import { detectKindFromMetadata, detectKindFromUrl } from "@/lib/detectKind";
+
+interface FetchedMeta {
+  title: string | null;
+  description: string | null;
+  image: string | null;
+  ogType: string | null;
+}
 
 interface CaptureModalProps {
   isOpen: boolean;
@@ -15,67 +23,49 @@ interface CaptureModalProps {
   onSelectExisting?: (id: number) => void;
 }
 
+const DETECTION_COPY: Record<KindType, Pick<DetectionResult, "f" | "n">> = {
+  PLY: {
+    f: { Source: "Streaming", Suggested: "Listening" },
+    n: "Playlists never enter the unread queue. They're ambient, not debt.",
+  },
+  VID: {
+    f: { Source: "Video", Suggested: "AI & retrieval" },
+    n: "Chapters are stored too — a 2-hour video can still surface in a 20-minute slot as one chapter.",
+  },
+  GIT: {
+    f: { Source: "GitHub", Suggested: "AI & retrieval" },
+    n: "Stars and last-commit refresh on a schedule, so an abandoned repo tells you it's abandoned.",
+  },
+  PPR: {
+    f: { Source: "Paper", Suggested: "AI & retrieval" },
+    n: "The PDF is mirrored locally, so link rot is not your problem.",
+  },
+  APP: {
+    f: { Platform: "Web / Desktop", Suggested: "Build shelf" },
+    n: "Tools and apps skip the reading queue and land on a shelf you check when setting up a machine.",
+  },
+  DOC: {
+    f: { Source: "Documentation", Section: "Reference", Suggested: "Engineering" },
+    n: "Docs are reference, never unread. You don't owe a docs page a read-through.",
+  },
+  ART: {
+    f: { Author: "Web Article", Suggested: "Data & storage" },
+    n: "Full text is archived at save time so the article outlives the site.",
+  },
+};
+
+/**
+ * Live preview shown as the user types — URL-pattern only (synchronous, no
+ * network wait). The final kind used to actually save is decided in
+ * handleSave, which also has fetched page metadata (og:type) to fall back on
+ * for URLs this pass can't confidently classify.
+ */
 export function detectUrlMeta(u: string): DetectionResult | null {
   const urlLower = u.toLowerCase().trim();
-  if (!urlLower) return null;
+  if (urlLower.length <= 8) return null;
 
-  if (/youtube\.com\/playlist/.test(urlLower)) {
-    return {
-      ty: "PLY",
-      f: { Source: "YouTube", Contains: "22 videos", Runtime: "9h 40m", Suggested: "Listening" },
-      n: "Playlists store item count and total runtime, so the time filter can reason about them.",
-    };
-  }
-  if (/youtube\.com|youtu\.be/.test(urlLower)) {
-    return {
-      ty: "VID",
-      f: { Source: "YouTube", Channel: "A. Karpathy", Runtime: "1:56:20", Chapters: "9", Suggested: "AI & retrieval" },
-      n: "Chapters are stored too — a 2-hour video can still surface in a 20-minute slot as one chapter.",
-    };
-  }
-  if (/spotify|music\.apple/.test(urlLower)) {
-    return {
-      ty: "PLY",
-      f: { Source: "Spotify", Tracks: "84", Runtime: "5h 12m", Suggested: "Listening" },
-      n: "Playlists never enter the unread queue. They're ambient, not debt.",
-    };
-  }
-  if (/github\.com\/[\w.-]+\/[\w.-]+/.test(urlLower)) {
-    return {
-      ty: "GIT",
-      f: { Source: "GitHub", Language: "TypeScript / C", Stars: "12.4k", Updated: "1 day ago", Suggested: "AI & retrieval" },
-      n: "Stars and last-commit refresh on a schedule, so an abandoned repo tells you it's abandoned.",
-    };
-  }
-  if (/arxiv|acm\.org|ieee/.test(urlLower)) {
-    return {
-      ty: "PPR",
-      f: { Source: "arXiv", Authors: "Lewis et al.", Pages: "19", Year: "2020", Suggested: "AI & retrieval" },
-      n: "The PDF is mirrored locally, so link rot is not your problem.",
-    };
-  }
-  if (/raycast|warp\.dev|excalidraw|apps\.apple|play\.google/.test(urlLower)) {
-    return {
-      ty: "APP",
-      f: { Platform: "macOS / Web", Price: "Free tier", Suggested: "Build shelf" },
-      n: "Apps skip the reading queue and land on a shelf you check when setting up a machine.",
-    };
-  }
-  if (/docs\.|developer\.|\/docs\//.test(urlLower)) {
-    return {
-      ty: "DOC",
-      f: { Source: "Documentation", Section: "Reference", Suggested: "Engineering" },
-      n: "Docs are reference, never unread. You don't owe a docs page a read-through.",
-    };
-  }
-  if (urlLower.length > 8) {
-    return {
-      ty: "ART",
-      f: { Author: "Web Article", Words: "3,500", Reading: "15 min", Suggested: "Data & storage" },
-      n: "Full text is archived at save time so the article outlives the site.",
-    };
-  }
-  return null;
+  const ty = detectKindFromUrl(urlLower) ?? "APP";
+  return { ty, ...DETECTION_COPY[ty] };
 }
 
 function normalizeUrl(u: string): string {
@@ -100,7 +90,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
 }) => {
   const [url, setUrl] = useState(initialUrl);
   const [selectedColl, setSelectedColl] = useState("unsorted");
-  const [fetchedTitle, setFetchedTitle] = useState<string | null>(null);
+  const [fetchedMeta, setFetchedMeta] = useState<FetchedMeta | null>(null);
   const [isFetchingMeta, setIsFetchingMeta] = useState(false);
 
   // Sync local url from the initialUrl prop when it changes (adjusting state during
@@ -111,14 +101,17 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
     setUrl(initialUrl);
   }
 
-  // Clear the stale fetched title as soon as the url changes, same render-time pattern.
+  // Clear the stale fetched meta as soon as the url changes, same render-time pattern.
   const [prevUrlForTitle, setPrevUrlForTitle] = useState(url);
   if (url !== prevUrlForTitle) {
     setPrevUrlForTitle(url);
-    setFetchedTitle(null);
+    setFetchedMeta(null);
   }
 
-  // Debounced og:title fetch — fires 500ms after URL stops changing
+  // Debounced metadata fetch (title, description, og:image, og:type) — fires
+  // 500ms after the URL stops changing. og:type feeds the kind classifier's
+  // fallback pass for URLs the pattern-matcher can't confidently place, and
+  // og:image becomes the card's real cover instead of synthetic SVG art.
   useEffect(() => {
     const trimmed = url.trim();
     if (!trimmed || trimmed.length < 8) return;
@@ -130,7 +123,12 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
         const res = await fetch(`/api/meta?url=${encodeURIComponent(fullUrl)}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.title) setFetchedTitle(data.title);
+          setFetchedMeta({
+            title: data.title ?? null,
+            description: data.description ?? null,
+            image: data.image ?? null,
+            ogType: data.ogType ?? null,
+          });
         }
       } catch {
         // Network error — silently ignore, fall back to URL slug
@@ -170,8 +168,6 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
 
   const handleSave = async () => {
     if (!url.trim()) return;
-    const detected = detectUrlMeta(url);
-    const ty: KindType = detected?.ty || "ART";
     let domain = "web";
     try {
       const parsed = new URL(url.startsWith("http") ? url : `https://${url}`);
@@ -180,23 +176,33 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
       domain = "web";
     }
 
-    // Priority: fetched og:title → smart cleanTitle from URL
-    let title = fetchedTitle;
-    if (!title) {
-      // Attempt a fresh fetch if the debounce hasn't resolved yet
+    // Priority: fetched metadata → a fresh fetch if the debounce hasn't
+    // resolved yet (the URL-pattern pass alone can't tell an unrecognized
+    // tool site from an article — og:type from this fetch is what decides
+    // between them for anything the pattern pass didn't already match).
+    let meta = fetchedMeta;
+    if (!meta) {
       try {
         const fullUrl = url.startsWith("http") ? url : `https://${url}`;
         const res = await fetch(`/api/meta?url=${encodeURIComponent(fullUrl)}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.title) title = data.title;
+          meta = {
+            title: data.title ?? null,
+            description: data.description ?? null,
+            image: data.image ?? null,
+            ogType: data.ogType ?? null,
+          };
         }
       } catch {
-        // Ignore — cleanTitle handles fallbacks cleanly
+        // Ignore — cleanTitle and the metadata-fallback classifier both
+        // handle a null meta cleanly.
       }
     }
 
-    const finalTitle = cleanTitle(title, url);
+    const ty: KindType = detectKindFromUrl(url) ?? detectKindFromMetadata(meta?.ogType);
+    const detected = DETECTION_COPY[ty];
+    const finalTitle = cleanTitle(meta?.title ?? null, url);
 
     onSave({
       t: finalTitle,
@@ -207,12 +213,13 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
       tag: ty === "GIT" ? "craft" : ty === "VID" ? "ai" : "systems",
       coll: selectedColl || (ty === "PLY" ? "listen" : "unsorted"),
       unread: true,
-      ex: detected?.f || { Words: "1,500" },
-      note: detected?.n || "Saved via link capture.",
+      ex: detected.f,
+      note: detected.n,
+      coverImage: meta?.image ?? undefined,
     });
 
     setUrl("");
-    setFetchedTitle(null);
+    setFetchedMeta(null);
     onClose();
   };
 
@@ -256,7 +263,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
               fontWeight: 700,
               padding: "5px 0 2px",
               color: "var(--fg)",
-              opacity: isFetchingMeta ? 0.5 : fetchedTitle ? 1 : 0.4,
+              opacity: isFetchingMeta ? 0.5 : fetchedMeta?.title ? 1 : 0.4,
               display: "flex",
               alignItems: "center",
               gap: "6px",
@@ -269,10 +276,10 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
                 <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⟳</span>
                 FETCHING TITLE…
               </>
-            ) : fetchedTitle ? (
+            ) : fetchedMeta?.title ? (
               <>
                 <span style={{ color: "var(--acc)" }}>✓</span>
-                {fetchedTitle}
+                {fetchedMeta?.title}
               </>
             ) : (
               "TITLE NOT FOUND — WILL USE URL"

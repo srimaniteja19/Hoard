@@ -44,6 +44,7 @@ export interface Bookmark {
   note: string;
   source?: string;
   coverData?: CoverData | null;
+  coverImage?: string | null;
 
   // Chapter decomposition
   parentId?: number | null;

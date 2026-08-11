@@ -28,13 +28,14 @@ function dbToUi(row: typeof bookmarks.$inferSelect, titleMap?: Map<number, strin
     unread: row.unread,
     ex:     (() => {
       const raw = (row.extra as Record<string, unknown>) || {};
-      // Omit 'coverData' — it's a nested object, not a display string
+      // Omit 'coverData'/'coverImage' — structured fields, not display strings
       return Object.fromEntries(
-        Object.entries(raw).filter(([k, v]) => k !== "coverData" && typeof v === "string")
+        Object.entries(raw).filter(([k, v]) => k !== "coverData" && k !== "coverImage" && typeof v === "string")
       ) as Record<string, string>;
     })(),
     note:   row.note,
     coverData: parseCoverData((row.extra as Record<string, unknown>)?.coverData),
+    coverImage: ((row.extra as Record<string, unknown>)?.coverImage as string) || null,
     parentId: row.parentId,
     parentTitle: row.parentId && titleMap ? titleMap.get(row.parentId) || null : null,
     startTimeSec: row.startTimeSec,
@@ -135,7 +136,11 @@ export async function POST(req: Request) {
         collectionId,
         unread:       body.unread ?? true,
         note:         body.note   || "",
-        extra:        { ...(body.ex || {}), ...(coverData ? { coverData } : {}) },
+        extra:        {
+          ...(body.ex || {}),
+          ...(coverData ? { coverData } : {}),
+          ...(typeof body.coverImage === "string" && body.coverImage ? { coverImage: body.coverImage } : {}),
+        },
         parentId:     body.parentId ?? null,
         startTimeSec: body.startTimeSec ?? null,
         chapterIndex: body.chapterIndex ?? null,

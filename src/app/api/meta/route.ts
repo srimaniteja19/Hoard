@@ -1,10 +1,22 @@
 import { NextResponse } from "next/server";
 import { cleanTitle } from "@/lib/cleanTitle";
 
+function resolveUrl(candidate: string | null | undefined, base: string): string | null {
+  if (!candidate) return null;
+  try {
+    const resolved = new URL(candidate.trim(), base);
+    return resolved.protocol === "http:" || resolved.protocol === "https:" ? resolved.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * GET /api/meta?url=<encoded-url>
- * Fetches og:title, og:description, and <title> from a given URL
- * by proxy-fetching the HTML server-side (avoids CORS on the client).
+ * Fetches og:title, og:description, og:image, og:type, and <title> from a
+ * given URL by proxy-fetching the HTML server-side (avoids CORS on the
+ * client). og:image falls back to twitter:image, then a <link rel="icon">
+ * favicon — in that order, whichever is found first.
  */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -33,12 +45,12 @@ export async function GET(req: Request) {
     });
 
     if (!res.ok) {
-      return NextResponse.json({ title: null, description: null }, { status: 200 });
+      return NextResponse.json({ title: null, description: null, image: null, ogType: null }, { status: 200 });
     }
 
     const contentType = res.headers.get("content-type") || "";
     if (!contentType.includes("html")) {
-      return NextResponse.json({ title: null, description: null }, { status: 200 });
+      return NextResponse.json({ title: null, description: null, image: null, ogType: null }, { status: 200 });
     }
 
     // Read first 32 KB — enough to capture <head> meta tags without full body
@@ -69,9 +81,23 @@ export async function GET(req: Request) {
     const title = cleanTitle(rawTitle, targetUrl);
     const description = ogDescription ? ogDescription.trim().replace(/\s+/g, " ").slice(0, 400) : null;
 
-    return NextResponse.json({ title, description }, { status: 200 });
+    const ogType =
+      html.match(/<meta[^>]+property=["']og:type["'][^>]+content=["']([^"']+)["']/i)?.[1]
+      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:type["']/i)?.[1]
+      ?? null;
+
+    const ogImageRaw =
+      html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1]
+      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)?.[1]
+      ?? html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1]
+      ?? html.match(/<link[^>]+rel=["'](?:shortcut icon|icon|apple-touch-icon)["'][^>]+href=["']([^"']+)["']/i)?.[1]
+      ?? null;
+
+    const image = resolveUrl(ogImageRaw, targetUrl);
+
+    return NextResponse.json({ title, description, image, ogType }, { status: 200 });
   } catch {
     // Timeout or network error — return null so caller falls back gracefully
-    return NextResponse.json({ title: null, description: null }, { status: 200 });
+    return NextResponse.json({ title: null, description: null, image: null, ogType: null }, { status: 200 });
   }
 }

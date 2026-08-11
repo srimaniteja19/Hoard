@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { KindType } from "@/types";
 import { parseCoverData } from "@/lib/cover-data";
 import { HatchFallback } from "./HatchFallback";
@@ -13,6 +13,7 @@ import { AppCover } from "./AppCover";
 export interface CoverCanvasProps {
   kind: KindType;
   coverData?: unknown;
+  image?: string | null;
   height?: number;
   className?: string;
   ariaLabel?: string;
@@ -20,12 +21,15 @@ export interface CoverCanvasProps {
 
 /**
  * CoverCanvas — Master cover router component.
- * Evaluates kind and coverData, returning server-rendered SVG.
- * Falls back to HatchFallback when coverData is missing or invalid.
+ * A real `image` (og:image/favicon fetched at save time) always wins when
+ * present, since an actual screenshot of the page beats any synthetic art.
+ * Falls back to a kind-specific SVG built from coverData, and finally to
+ * HatchFallback when neither is available — or if the image fails to load.
  */
 export const CoverCanvas: React.FC<CoverCanvasProps> = (props) => {
-  const { kind, coverData, height, className = "", ariaLabel } = props;
+  const { kind, coverData, image, height, className = "", ariaLabel } = props;
   const parsed = parseCoverData(coverData);
+  const [imageFailed, setImageFailed] = useState(false);
 
   const renderInnerCover = () => {
     if (parsed) {
@@ -55,6 +59,7 @@ export const CoverCanvas: React.FC<CoverCanvasProps> = (props) => {
   };
 
   const defaultLabel = `${kind} cover visualization`;
+  const showImage = !!image && !imageFailed;
 
   return (
     <div
@@ -69,31 +74,43 @@ export const CoverCanvas: React.FC<CoverCanvasProps> = (props) => {
         overflow: "hidden",
       }}
     >
-      {renderInnerCover()}
+      {showImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={image}
+          alt=""
+          onError={() => setImageFailed(true)}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      ) : (
+        <>
+          {renderInnerCover()}
 
-      {/* Risograph halftone texture pattern overlay */}
-      <svg
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
-        }}
-      >
-        <defs>
-          <pattern
-            id="risograph-halftone"
-            width="6"
-            height="6"
-            patternUnits="userSpaceOnUse"
+          {/* Risograph halftone texture pattern overlay */}
+          <svg
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              pointerEvents: "none",
+            }}
           >
-            <circle cx="3" cy="3" r="0.85" fill="currentColor" fillOpacity="0.08" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#risograph-halftone)" />
-      </svg>
+            <defs>
+              <pattern
+                id="risograph-halftone"
+                width="6"
+                height="6"
+                patternUnits="userSpaceOnUse"
+              >
+                <circle cx="3" cy="3" r="0.85" fill="currentColor" fillOpacity="0.08" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#risograph-halftone)" />
+          </svg>
+        </>
+      )}
     </div>
   );
 };
