@@ -37,8 +37,6 @@ export const CoverCanvas: React.FC<CoverCanvasProps> = (props) => {
     image,
     ogImageKey,
     ogLqip,
-    coverSource,
-    ogStatus,
     height,
     className = "",
     ariaLabel,
@@ -46,9 +44,8 @@ export const CoverCanvas: React.FC<CoverCanvasProps> = (props) => {
   const parsed = parseCoverData(coverData);
   const [imageFailed, setImageFailed] = useState(false);
 
-  const isReadyOg = (coverSource === "og" || (!coverSource && !!ogImageKey)) && (ogStatus === "READY" || !ogStatus) && !!ogImageKey;
-  const resolvedImgUrl = isReadyOg ? getBlobUrl(ogImageKey) : image;
-  const filterStyle = isReadyOg ? `url(#duotone-${kind})` : "none";
+  const resolvedImgUrl = (ogImageKey ? getBlobUrl(ogImageKey) : null) || image;
+  const filterStyle = resolvedImgUrl ? `url(#duotone-${kind})` : "none";
 
   const renderInnerCover = () => {
     if (parsed) {
