@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { PWAProvider } from "@/components/PWAProvider";
+import { DuotoneFilters } from "@/components/covers/DuotoneFilters";
 
 export const metadata: Metadata = {
   title: "HOARD — Bookmark Manager",
@@ -37,8 +38,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <DuotoneFilters />
         <PWAProvider>{children}</PWAProvider>
       </body>
     </html>
