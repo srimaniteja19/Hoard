@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Bookmark, Collection } from "@/types";
+import { Bookmark, Collection, KindType } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import { Plus, Lightbulb } from "lucide-react";
 
@@ -15,6 +15,7 @@ interface InspectorDrawerProps {
   onToggleRead: (id: number) => void;
   onUpdateNote: (id: number, note: string) => void;
   onChangeCollection: (id: number, targetCollId: string) => void;
+  onChangeKind?: (id: number, targetKind: KindType) => void;
   onAddChapter?: (parentId: number, chap: { t: string; mins: number; url: string; startTimeSec?: number }) => Promise<void>;
   onCheckDrift?: (id: number) => Promise<void>;
   onOpenDiff?: (b: Bookmark) => void;
@@ -29,6 +30,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
   onToggleRead,
   onUpdateNote,
   onChangeCollection,
+  onChangeKind,
   onAddChapter,
   onCheckDrift,
   onOpenDiff,
@@ -411,8 +413,32 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
             <span className="flbl">DETAILS</span>
             <div className="kvs">
               <div className="kv">
-                <dt>KIND</dt>
-                <dd>{typeMeta.name}</dd>
+                <dt>KIND / TYPE</dt>
+                <dd>
+                  <select
+                    value={bookmark.ty}
+                    onChange={(e) => onChangeKind && onChangeKind(bookmark.id, e.target.value as KindType)}
+                    style={{
+                      border: "1.5px solid #000",
+                      background: typeMeta.c,
+                      color: typeMeta.fg,
+                      padding: "2px 6px",
+                      fontFamily: "var(--mono)",
+                      fontSize: "11px",
+                      fontWeight: "800",
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="ART">ART — Article / Post</option>
+                    <option value="VID">VID — Video</option>
+                    <option value="PLY">PLY — Playlist / Audio</option>
+                    <option value="GIT">GIT — Code Repo</option>
+                    <option value="APP">APP — Tool / Application</option>
+                    <option value="PPR">PPR — Research Paper</option>
+                    <option value="DOC">DOC — Documentation</option>
+                  </select>
+                </dd>
               </div>
               <div className="kv">
                 <dt>COST</dt>

@@ -90,6 +90,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
 }) => {
   const [url, setUrl] = useState(initialUrl);
   const [selectedColl, setSelectedColl] = useState("unsorted");
+  const [manualKind, setManualKind] = useState<KindType | null>(null);
   const [fetchedMeta, setFetchedMeta] = useState<FetchedMeta | null>(null);
   const [isFetchingMeta, setIsFetchingMeta] = useState(false);
 
@@ -101,11 +102,12 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
     setUrl(initialUrl);
   }
 
-  // Clear the stale fetched meta as soon as the url changes, same render-time pattern.
+  // Clear the stale fetched meta and manualKind override as soon as the url changes
   const [prevUrlForTitle, setPrevUrlForTitle] = useState(url);
   if (url !== prevUrlForTitle) {
     setPrevUrlForTitle(url);
     setFetchedMeta(null);
+    setManualKind(null);
   }
 
   // Debounced metadata fetch (title, description, og:image, og:type) — fires
@@ -164,7 +166,11 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
   };
 
   const availableFolders = flattenCollections(collections);
-  const detection = detectUrlMeta(url);
+
+  // Auto-detected kind
+  const autoKind: KindType = detectKindFromUrl(url) ?? detectKindFromMetadata(fetchedMeta?.ogType);
+  const effectiveKind: KindType = manualKind ?? autoKind;
+  const detectionCopy = DETECTION_COPY[effectiveKind];
 
   const handleSave = async () => {
     if (!url.trim()) return;
@@ -177,9 +183,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
     }
 
     // Priority: fetched metadata → a fresh fetch if the debounce hasn't
-    // resolved yet (the URL-pattern pass alone can't tell an unrecognized
-    // tool site from an article — og:type from this fetch is what decides
-    // between them for anything the pattern pass didn't already match).
+    // resolved yet
     let meta = fetchedMeta;
     if (!meta) {
       try {
@@ -195,12 +199,11 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
           };
         }
       } catch {
-        // Ignore — cleanTitle and the metadata-fallback classifier both
-        // handle a null meta cleanly.
+        // Ignore
       }
     }
 
-    const ty: KindType = detectKindFromUrl(url) ?? detectKindFromMetadata(meta?.ogType);
+    const ty: KindType = manualKind ?? detectKindFromUrl(url) ?? detectKindFromMetadata(meta?.ogType);
     const detected = DETECTION_COPY[ty];
     const finalTitle = cleanTitle(meta?.title ?? null, url);
 
@@ -220,6 +223,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
 
     setUrl("");
     setFetchedMeta(null);
+    setManualKind(null);
     onClose();
   };
 
@@ -342,29 +346,62 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
             <div className="dnote">
               Paste anything. What kind of thing it is decides which fields get captured — a repo needs stars and a language, a video needs a runtime, an app needs a platform.
             </div>
-          ) : !detection ? (
-            <div className="dnote">Not a URL yet.</div>
           ) : (
             <>
               <div className="drow">
-                <dt>DETECTED</dt>
-                <dd>
-                  <span
-                    className="ctag"
+                <dt>TYPE</dt>
+                <dd style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <select
+                    value={effectiveKind}
+                    onChange={(e) => setManualKind(e.target.value as KindType)}
                     style={{
-                      background: TYPES[detection.ty].c,
-                      color: TYPES[detection.ty].fg,
-                      padding: "3px 7px",
+                      border: "2px solid #000",
+                      background: TYPES[effectiveKind].c,
+                      color: TYPES[effectiveKind].fg,
+                      padding: "3px 8px",
+                      fontFamily: "var(--mono)",
+                      fontSize: "12px",
+                      fontWeight: "900",
+                      cursor: "pointer",
+                      outline: "none",
+                      boxShadow: "2px 2px 0 #000",
                     }}
                   >
-                    {detection.ty}
-                  </span>
-                  <span style={{ marginLeft: 8 }}>
-                    {TYPES[detection.ty].name.replace(/s$/, "")}
-                  </span>
+                    <option value="ART">ART — Article / Post</option>
+                    <option value="VID">VID — Video</option>
+                    <option value="PLY">PLY — Playlist / Audio</option>
+                    <option value="GIT">GIT — Code Repo</option>
+                    <option value="APP">APP — Tool / Application</option>
+                    <option value="PPR">PPR — Research Paper</option>
+                    <option value="DOC">DOC — Documentation</option>
+                  </select>
+
+                  {manualKind ? (
+                    <button
+                      type="button"
+                      onClick={() => setManualKind(null)}
+                      style={{
+                        border: "1.5px solid #000",
+                        background: "#FFE600",
+                        color: "#000",
+                        fontSize: "10px",
+                        fontWeight: 800,
+                        padding: "2px 6px",
+                        cursor: "pointer",
+                        fontFamily: "var(--mono)",
+                      }}
+                      title="Reset to auto-detected type"
+                    >
+                      RESET AUTO ⟲
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: "10px", fontFamily: "var(--mono)", opacity: 0.6, fontWeight: 700 }}>
+                      (AUTO-DETECTED)
+                    </span>
+                  )}
                 </dd>
               </div>
-              {Object.entries(detection.f).map(([k, v]) => (
+              {Object.entries(detectionCopy.f).map(([k, v]) => (
                 <div className="drow" key={k}>
                   <dt>{k.toUpperCase()}</dt>
                   <dd>{v}</dd>
@@ -394,7 +431,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
                   </select>
                 </dd>
               </div>
-              <div className="dnote">{detection.n}</div>
+              <div className="dnote">{detectionCopy.n}</div>
             </>
           )}
         </div>

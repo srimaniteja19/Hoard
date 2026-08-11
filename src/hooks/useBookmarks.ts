@@ -391,6 +391,21 @@ export function useBookmarks() {
     }
   }, []);
 
+  const changeBookmarkKind = useCallback(async (id: number, newKind: KindType) => {
+    setBookmarks((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, ty: newKind } : b))
+    );
+    try {
+      await apiFetch(`/api/bookmarks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ty: newKind }),
+      });
+    } catch (e) {
+      console.error("[changeBookmarkKind]", e);
+    }
+  }, []);
+
   const bulkMarkRead = useCallback(async () => {
     const ids = Array.from(selectedIds);
     setBookmarks((prev) =>
@@ -561,6 +576,7 @@ export function useBookmarks() {
     toggleReadStatus,
     updateNote,
     changeBookmarkCollection,
+    changeBookmarkKind,
     bulkMarkRead,
     bulkDelete,
     addCollection,

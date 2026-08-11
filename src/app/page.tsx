@@ -66,6 +66,7 @@ export default function Home() {
     toggleReadStatus,
     updateNote,
     changeBookmarkCollection,
+    changeBookmarkKind,
     bulkMarkRead,
     bulkDelete,
     addCollection,
@@ -347,6 +348,7 @@ export default function Home() {
           onToggleRead={toggleReadStatus}
           onUpdateNote={updateNote}
           onChangeCollection={changeBookmarkCollection}
+          onChangeKind={changeBookmarkKind}
           onAddChapter={addChapter}
           onCheckDrift={checkDrift}
           onOpenDiff={handleOpenDiffModal}
