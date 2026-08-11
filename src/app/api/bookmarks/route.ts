@@ -4,8 +4,9 @@ import { bookmarks, collections } from "@/db/schema";
 import { eq, isNull, and, desc } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { Bookmark, KindType } from "@/types";
-import { parseCoverData, enrichCoverData } from "@/lib/cover-data";
+import { parseCoverData } from "@/lib/cover-data";
 import { cleanTitle } from "@/lib/cleanTitle";
+import { enrichBookmarkValues } from "@/lib/enrichBookmark";
 
 // ─── Shape mapper ────────────────────────────────────────────────────────────
 
@@ -101,6 +102,48 @@ export async function GET() {
     const titleMap = new Map<number, string>();
     rows.forEach((r) => titleMap.set(r.id, cleanTitle(r.title, r.url)));
 
+    // Non-blocking auto-heal: enrich any rows missing coverImage in the background
+    const unenrichedRows = rows.filter((r) => {
+      const extra = (r.extra as Record<string, unknown>) || {};
+      const hasImage = typeof extra.coverImage === "string" && extra.coverImage.length > 0;
+      return !hasImage;
+    }).slice(0, 5);
+
+    if (unenrichedRows.length > 0) {
+      Promise.allSettled(
+        unenrichedRows.map(async (r) => {
+          try {
+            const extra = (r.extra as Record<string, unknown>) || {};
+            const enriched = await enrichBookmarkValues(
+              r.url,
+              r.type as KindType,
+              r.title,
+              r.note,
+              extra.coverImage as string | null
+            );
+
+            if (enriched.coverImage || enriched.note || enriched.title) {
+              await db
+                .update(bookmarks)
+                .set({
+                  title: enriched.title,
+                  note: enriched.note,
+                  extra: {
+                    ...extra,
+                    ...(enriched.coverData ? { coverData: enriched.coverData } : {}),
+                    ...(enriched.coverImage ? { coverImage: enriched.coverImage } : {}),
+                  },
+                  updatedAt: new Date(),
+                })
+                .where(eq(bookmarks.id, r.id));
+            }
+          } catch {
+            // Ignore
+          }
+        })
+      );
+    }
+
     return NextResponse.json(rows.map((r) => dbToUi(r, titleMap)));
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -121,23 +164,30 @@ export async function POST(req: Request) {
       body.coll || "unsorted"
     );
 
-    const coverData = await enrichCoverData(body.url, body.ty || "ART");
+    const kind: KindType = body.ty || "ART";
+    const enriched = await enrichBookmarkValues(
+      body.url,
+      kind,
+      body.t || body.title,
+      body.note,
+      body.coverImage || body.ex?.coverImage
+    );
 
     const values = {
       userId,
-      title:        cleanTitle(body.t, body.url),
-      type:         body.ty     || "ART",
+      title:        enriched.title,
+      type:         kind,
       source:       body.src    || "",
       url:          body.url,
-      mins:         body.mins   ?? 5,
+      mins:         body.mins   ?? (kind === "VID" ? 45 : kind === "PPR" ? 40 : 12),
       tag:          body.tag    || "general",
       collectionId,
       unread:       body.unread ?? true,
-      note:         body.note   || "",
+      note:         enriched.note,
       extra:        {
         ...(body.ex || {}),
-        ...(coverData ? { coverData } : {}),
-        ...(typeof body.coverImage === "string" && body.coverImage ? { coverImage: body.coverImage } : {}),
+        ...(enriched.coverData ? { coverData: enriched.coverData } : {}),
+        ...(enriched.coverImage ? { coverImage: enriched.coverImage } : {}),
       },
       parentId:     body.parentId ?? null,
       startTimeSec: body.startTimeSec ?? null,
@@ -149,12 +199,6 @@ export async function POST(req: Request) {
       clusterTitle: body.clusterTitle ?? null,
     };
 
-    // (userId, url) is unique — including soft-deleted rows, since deleting a
-    // bookmark only sets deletedAt rather than removing the row. Without
-    // onConflictDoUpdate, re-saving a URL you'd previously deleted (or just
-    // saving an active duplicate) hits that constraint and 500s, and the
-    // "bookmark" silently never appears. Resurrect/refresh the existing row
-    // instead — deletedAt: null undoes the soft delete either way.
     const [row] = await db
       .insert(bookmarks)
       .values(values)

@@ -80,12 +80,29 @@ export function sanitizeTitleText(title: string): string {
   // Collapse excess whitespace
   cleaned = cleaned.replace(/\s+/g, " ").trim();
 
-  // Strip trailing site name suffix branding if title text is substantial
-  // E.g., "Article Title | Substack" -> "Article Title"
-  // E.g., "Article Title - YouTube" -> "Article Title"
-  const suffixMatch = cleaned.match(/^(.+?)\s+[\-|•|—|\|]\s+(Substack|YouTube|Medium|GitHub|Dev\.to|Hashnode|Twitter|X)$/i);
+  // Strip trailing site name branding suffix (e.g., "Title | Quanta Magazine", "Title - Substack", "Title · Laurentiu Raducu")
+  const suffixMatch = cleaned.match(/^(.+?)\s+[\-|•|—|\|·]\s+(.+)$/i);
   if (suffixMatch && suffixMatch[1].trim().length >= 5) {
-    cleaned = suffixMatch[1].trim();
+    const mainTitle = suffixMatch[1].trim();
+    const candidateBranding = suffixMatch[2].trim().toLowerCase();
+    const knownBrands = new Set([
+      "substack", "youtube", "medium", "github", "dev.to", "hashnode", "twitter", "x",
+      "quanta magazine", "quanta", "the verge", "techcrunch", "wired", "ars technica",
+      "hbr", "harvard business review", "aeon", "nautilus", "the atlantic", "new yorker",
+      "nytimes", "the new york times", "wall street journal", "wsj", "bloomberg", "reuters",
+      "the guardian", "slashdot", "hacker news", "lobsters", "pocket", "raindrop", "lithub"
+    ]);
+
+    if (
+      knownBrands.has(candidateBranding) ||
+      candidateBranding.endsWith("magazine") ||
+      candidateBranding.endsWith("blog") ||
+      candidateBranding.endsWith("news") ||
+      candidateBranding.endsWith("daily") ||
+      candidateBranding.endsWith("times")
+    ) {
+      cleaned = mainTitle;
+    }
   }
 
   return cleaned;

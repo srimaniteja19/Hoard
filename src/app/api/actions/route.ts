@@ -3,8 +3,9 @@ import { db } from "@/db";
 import { bookmarks, collections } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
-import { enrichCoverData } from "@/lib/cover-data";
-import { cleanTitle } from "@/lib/cleanTitle";
+import { KindType } from "@/types";
+import { enrichBookmarkValues } from "@/lib/enrichBookmark";
+import { detectKind } from "@/lib/detectKind";
 
 // CORS headers for extension requests (same-origin fetch from injected scripts)
 const CORS = {
@@ -49,25 +50,45 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { action, bookmark } = body;
 
-    if ((action === "add_bookmark" || bookmark) && bookmark?.url) {
-      const collSlug = (bookmark.coll || "unsorted").split("-").pop() || "unsorted";
+    const bm = bookmark || (action === "add_bookmark" ? body : null);
+
+    if (bm?.url) {
+      const kind: KindType = bm.ty || bm.type || detectKind(bm.url);
+      const collSlug = (bm.coll || "unsorted").split("-").pop() || "unsorted";
       const collectionId = await ensureCollection(userId, collSlug);
-      const coverData = await enrichCoverData(bookmark.url, bookmark.ty || "ART");
+
+      const enriched = await enrichBookmarkValues(
+        bm.url,
+        kind,
+        bm.t || bm.title,
+        bm.note,
+        bm.coverImage || bm.ex?.coverImage
+      );
+
+      const values = {
+        userId,
+        title:        enriched.title,
+        type:         kind,
+        source:       bm.source || bm.src || "Saved via HOARD Extension",
+        url:          bm.url,
+        mins:         bm.mins ?? (kind === "VID" ? 45 : kind === "PPR" ? 40 : 12),
+        tag:          bm.tag  || "general",
+        collectionId,
+        unread:       bm.unread ?? true,
+        note:         enriched.note,
+        extra:        {
+          ...(bm.ex || {}),
+          ...(enriched.coverData ? { coverData: enriched.coverData } : {}),
+          ...(enriched.coverImage ? { coverImage: enriched.coverImage } : {}),
+        },
+      };
 
       const [row] = await db
         .insert(bookmarks)
-        .values({
-          userId,
-          title:        cleanTitle(bookmark.t, bookmark.url),
-          type:         bookmark.ty   || "ART",
-          source:       bookmark.source || bookmark.src || "Saved via HOARD Extension",
-          url:          bookmark.url,
-          mins:         bookmark.mins ?? 5,
-          tag:          bookmark.tag  || "general",
-          collectionId,
-          unread:       bookmark.unread ?? true,
-          note:         bookmark.note === "Saved via HOARD Extension" ? "" : (bookmark.note || ""),
-          extra:        { ...(bookmark.ex || {}), ...(coverData ? { coverData } : {}) },
+        .values(values)
+        .onConflictDoUpdate({
+          target: [bookmarks.userId, bookmarks.url],
+          set: { ...values, deletedAt: null, updatedAt: new Date() },
         })
         .returning();
 
