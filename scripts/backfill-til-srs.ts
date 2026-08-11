@@ -1,10 +1,11 @@
 import { neon } from "@neondatabase/serverless";
 
-const databaseUrl =
-  process.env.DATABASE_URL ||
-  "postgresql://neondb_owner:npg_s0I7RgTOcUCj@ep-lingering-smoke-audr3wu7-pooler.c-10.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require";
-
 async function backfill() {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL environment variable is missing.");
+  }
+
   const sql = neon(databaseUrl);
 
   // Backfill: set last_reviewed_at = created_at, next_review_at = created_at + 1 day
