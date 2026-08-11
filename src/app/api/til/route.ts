@@ -4,34 +4,11 @@ import { tilEntries, tilEntryTags, tags as tagsTable, bookmarks, TilType } from 
 import { eq, and, desc, lt, inArray } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { createTilSchema } from "@/lib/validations/til";
-import { getLoggedForDate, generateShortHash, getUserTimezone } from "@/lib/dal/til";
+import { getLoggedForDate, generateShortHash, getUserTimezone, getTagsForTilEntries } from "@/lib/dal/til";
 import { fetchLinkPreview } from "@/lib/til/previewRegistry";
 import { confidence, confidenceSql } from "@/lib/til/confidence";
 import { checkSupersessionCycle } from "@/lib/til/supersession";
 import crypto from "crypto";
-
-// Helper to fetch tag names for a set of TIL entry IDs
-async function getTagsForTilEntries(tilIds: string[]): Promise<Map<string, string[]>> {
-  const map = new Map<string, string[]>();
-  if (tilIds.length === 0) return map;
-
-  const rows = await db
-    .select({
-      tilId: tilEntryTags.tilId,
-      tagName: tagsTable.name,
-    })
-    .from(tilEntryTags)
-    .innerJoin(tagsTable, eq(tilEntryTags.tagId, tagsTable.id))
-    .where(inArray(tilEntryTags.tilId, tilIds));
-
-  for (const row of rows) {
-    const list = map.get(row.tilId) || [];
-    list.push(row.tagName);
-    map.set(row.tilId, list);
-  }
-
-  return map;
-}
 
 // ─── GET /api/til ────────────────────────────────────────────────────────────
 
@@ -166,14 +143,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // 1. Discharge bookmark if dischargesBookmarkId provided
-    if (data.dischargesBookmarkId) {
-      await db
-        .update(bookmarks)
-        .set({ unread: false, updatedAt: new Date() })
-        .where(and(eq(bookmarks.id, data.dischargesBookmarkId), eq(bookmarks.userId, userId)));
-    }
-
     // 2. Save to bookmark queue ONLY if explicitly requested by user (default off)
     if (rawBody.saveToHoardQueue && data.linkUrl) {
       let domain = "web";
@@ -208,26 +177,45 @@ export async function POST(req: Request) {
     // 4. Insert TIL Entry
     // Seed SRS state the same way the backfill does, so new entries enter the
     // RECALL rotation instead of sitting with a null nextReviewAt forever.
+    //
+    // If this discharges a bookmark, the insert and the bookmark's unread flip
+    // run in one db.batch() — a genuine atomic transaction on this driver
+    // (drizzle-orm/neon-http has no db.transaction() support; batch() is the
+    // primitive it does support). A partial success here — bookmark marked
+    // read with no entry to show for it — is the one failure mode this must
+    // never produce.
     const now = new Date();
-    const [inserted] = await db
-      .insert(tilEntries)
-      .values({
-        id: newEntryId,
-        userId,
-        shortHash,
-        type: data.type,
-        body: data.body || null,
-        code: data.type === "SNIPPET" ? data.code || null : null,
-        codeLang: data.type === "SNIPPET" ? data.codeLang || null : null,
-        linkUrl: data.linkUrl || null,
-        linkPreview,
-        linkDensity: data.linkDensity || "card",
-        dischargesBookmarkId: data.dischargesBookmarkId || null,
-        loggedFor,
-        lastReviewedAt: now,
-        nextReviewAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
-      })
-      .returning();
+    const insertValues = {
+      id: newEntryId,
+      userId,
+      shortHash,
+      type: data.type,
+      body: data.body || null,
+      code: data.type === "SNIPPET" ? data.code || null : null,
+      codeLang: data.type === "SNIPPET" ? data.codeLang || null : null,
+      linkUrl: data.linkUrl || null,
+      linkPreview,
+      linkDensity: data.linkDensity || "card",
+      dischargesBookmarkId: data.dischargesBookmarkId || null,
+      loggedFor,
+      lastReviewedAt: now,
+      nextReviewAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
+    };
+
+    let inserted: typeof tilEntries.$inferSelect;
+    if (data.dischargesBookmarkId) {
+      const [insertedRows] = await db.batch([
+        db.insert(tilEntries).values(insertValues).returning(),
+        db
+          .update(bookmarks)
+          .set({ unread: false, updatedAt: now })
+          .where(and(eq(bookmarks.id, data.dischargesBookmarkId), eq(bookmarks.userId, userId))),
+      ]);
+      inserted = insertedRows[0];
+    } else {
+      const [row] = await db.insert(tilEntries).values(insertValues).returning();
+      inserted = row;
+    }
 
     // 5. If replacesEntryId provided, mark that older entry as superseded by new entry
     if (data.replacesEntryId) {

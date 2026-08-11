@@ -12,6 +12,7 @@ import { CaptureModal } from "@/components/CaptureModal";
 import { NewFolderModal } from "@/components/NewFolderModal";
 import { ImportModal } from "@/components/ImportModal";
 import { DiffViewerModal } from "@/components/DiffViewerModal";
+import { DischargeModal } from "@/components/DischargeModal";
 import { MasonryView } from "@/components/views/MasonryView";
 import { GridView } from "@/components/views/GridView";
 import { ListView } from "@/components/views/ListView";
@@ -19,6 +20,9 @@ import { HeadlinesView } from "@/components/views/HeadlinesView";
 import { StatusLine } from "@/components/StatusLine";
 import { ColdStart } from "@/components/ColdStart";
 import { Bookmark } from "@/types";
+import { TilType } from "@/db/schema";
+import { useReducedMotion } from "@/lib/useReducedMotion";
+import { computeFlipDelta, flipArrivalTransform, formatReceiptLine } from "@/lib/til/flipAnimation";
 
 export default function Home() {
   const {
@@ -66,11 +70,21 @@ export default function Home() {
     bulkDelete,
     addCollection,
     checkDrift,
+    dischargeBookmark,
   } = useBookmarks();
 
   const [captureUrl, setCaptureUrl] = useState("");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [dischargeTarget, setDischargeTarget] = useState<Bookmark | null>(null);
+  const [dischargeSourceRect, setDischargeSourceRect] = useState<DOMRect | null>(null);
+  const [dischargeCount, setDischargeCount] = useState(0);
+  const [dischargePulseNonce, setDischargePulseNonce] = useState(0);
+  const [dischargeFlyers, setDischargeFlyers] = useState<
+    Array<{ id: string; rect: DOMRect; title: string; arrivalTransform: string }>
+  >([]);
+  const [dischargeReceiptLines, setDischargeReceiptLines] = useState<string[]>([]);
+  const dischargeReducedMotion = useReducedMotion();
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleOpenCaptureWithUrl = React.useCallback(
@@ -87,6 +101,46 @@ export default function Home() {
       setIsDiffOpen(true);
     },
     [setDiffBookmark, setIsDiffOpen]
+  );
+
+  const handleOpenDischargeModal = React.useCallback((bm: Bookmark, sourceRect: DOMRect) => {
+    setDischargeTarget(bm);
+    setDischargeSourceRect(sourceRect);
+  }, []);
+
+  const handleDischargeSubmit = React.useCallback(
+    async (input: { type: TilType; body: string; tags: string[] }) => {
+      if (!dischargeTarget) return;
+      const target = dischargeTarget;
+      const sourceRect = dischargeSourceRect;
+
+      await dischargeBookmark(target.id, input);
+
+      // Real balance, not a hardcoded string — one fewer unread than before
+      // this discharge, since dischargeBookmark already flipped it locally.
+      const unreadBalance = bookmarks.filter((b) => b.unread && b.id !== target.id).length;
+      setDischargeReceiptLines((prev) => [formatReceiptLine(target.t, unreadBalance), ...prev].slice(0, 10));
+
+      setDischargeCount((c) => c + 1);
+      setDischargePulseNonce((n) => n + 1);
+
+      if (!dischargeReducedMotion && sourceRect) {
+        const destEl = document.getElementById("til-gains-counter");
+        const destRect = destEl?.getBoundingClientRect();
+        if (destRect) {
+          const delta = computeFlipDelta(sourceRect, destRect);
+          const flyerId = `${target.id}-${Date.now()}`;
+          setDischargeFlyers((prev) => [
+            ...prev,
+            { id: flyerId, rect: sourceRect, title: target.t, arrivalTransform: flipArrivalTransform(delta) },
+          ]);
+          setTimeout(() => {
+            setDischargeFlyers((prev) => prev.filter((f) => f.id !== flyerId));
+          }, 420);
+        }
+      }
+    },
+    [dischargeTarget, dischargeSourceRect, dischargeBookmark, bookmarks, dischargeReducedMotion]
   );
 
   // Web Share Target & Query Parameter Listener
@@ -180,6 +234,9 @@ export default function Home() {
         onOpenImport={() => setIsImportOpen(true)}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        dischargeCount={dischargeCount}
+        dischargePulseNonce={dischargePulseNonce}
+        dischargeReducedMotion={dischargeReducedMotion}
       />
 
       {/* Main Content Area */}
@@ -244,6 +301,7 @@ export default function Home() {
               onToggleSelect={(id) => toggleSelect(id)}
               onOpen={(id) => setOpenId(id)}
               onOpenDiff={handleOpenDiffModal}
+              onDischarge={handleOpenDischargeModal}
             />
           ) : view === "grid" ? (
             <GridView
@@ -252,6 +310,7 @@ export default function Home() {
               onToggleSelect={(id) => toggleSelect(id)}
               onOpen={(id) => setOpenId(id)}
               onOpenDiff={handleOpenDiffModal}
+              onDischarge={handleOpenDischargeModal}
             />
           ) : view === "list" ? (
             <ListView
@@ -330,6 +389,69 @@ export default function Home() {
         bookmark={diffBookmark}
         onRecheckDrift={checkDrift}
       />
+
+      {/* 💡 Discharge: turn a queued bookmark into the TIL entry it produced */}
+      <DischargeModal
+        bookmark={dischargeTarget}
+        onClose={() => setDischargeTarget(null)}
+        onSubmit={handleDischargeSubmit}
+      />
+
+      {/* Discharge FLIP flyers — one per in-flight discharge, independently
+          timed and removed, so rapid discharges never collide (SPECTACLE.md §4). */}
+      {dischargeFlyers.map((f) => (
+        <div
+          key={f.id}
+          className="discharge-flyer"
+          style={
+            {
+              position: "fixed",
+              left: f.rect.left,
+              top: f.rect.top,
+              width: f.rect.width,
+              zIndex: 999,
+              pointerEvents: "none",
+              border: "var(--bd)",
+              background: "var(--yel, #FFE600)",
+              boxShadow: "var(--sh)",
+              padding: "10px 12px",
+              fontSize: "13px",
+              fontWeight: 700,
+              fontFamily: "var(--grot)",
+              color: "#000",
+              "--flyer-start": "translate(0px, 0px) scale(1) rotate(0deg)",
+              "--flyer-end": f.arrivalTransform,
+            } as React.CSSProperties
+          }
+        >
+          {f.title}
+        </div>
+      ))}
+
+      {/* Discharge receipt — running log printed from real state, newest first. */}
+      {dischargeReceiptLines.length > 0 && (
+        <div
+          style={{
+            position: "fixed",
+            left: 12,
+            bottom: 12,
+            zIndex: 998,
+            maxWidth: 360,
+            fontFamily: "var(--mono)",
+            fontSize: "10.5px",
+            fontWeight: 700,
+            border: "2px dashed var(--ink)",
+            background: "var(--cream)",
+            color: "var(--ink)",
+            padding: "9px 11px",
+            lineHeight: 1.7,
+          }}
+        >
+          {dischargeReceiptLines.map((line, i) => (
+            <div key={i}>{line}</div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

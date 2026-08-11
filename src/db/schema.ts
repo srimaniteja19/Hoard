@@ -229,6 +229,19 @@ export const tilEntryTags = pgTable(
   (table) => [primaryKey({ columns: [table.tilId, table.tagId] })]
 );
 
+export const constellationLayouts = pgTable(
+  "constellation_layouts",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    cacheKey: text("cache_key").notNull(),
+    positions: jsonb("positions").$type<Record<string, { x: number; y: number }>>().notNull(),
+    computedAt: timestamp("computed_at").notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("constellation_layouts_user_idx").on(table.userId)]
+);
+
 export const extensionTokens = pgTable(
   "extension_tokens",
   {

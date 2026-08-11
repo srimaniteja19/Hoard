@@ -12,6 +12,7 @@ interface GridViewProps {
   onToggleSelect: (id: number, e: React.MouseEvent) => void;
   onOpen: (id: number) => void;
   onOpenDiff?: (bookmark: Bookmark) => void;
+  onDischarge?: (bookmark: Bookmark, sourceRect: DOMRect) => void;
 }
 
 export const GridView: React.FC<GridViewProps> = ({
@@ -20,6 +21,7 @@ export const GridView: React.FC<GridViewProps> = ({
   onToggleSelect,
   onOpen,
   onOpenDiff,
+  onDischarge,
 }) => {
   const { sizeByTime } = useSizeByTimePreference();
 
@@ -37,6 +39,7 @@ export const GridView: React.FC<GridViewProps> = ({
             onToggleSelect={onToggleSelect}
             onOpen={onOpen}
             onOpenDiff={onOpenDiff}
+            onDischarge={onDischarge}
           />
         );
       })}

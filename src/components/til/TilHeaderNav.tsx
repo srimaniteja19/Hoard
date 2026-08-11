@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ThemePicker } from "@/components/ThemePicker";
 import { UserMenu } from "@/components/UserMenu";
-import { ArrowLeft, BarChart2, Layers, BookOpen, RotateCcw, Printer } from "lucide-react";
+import { ArrowLeft, BarChart2, Layers, BookOpen, RotateCcw, Printer, Grid3x3, Network } from "lucide-react";
 
-export type TilViewMode = "stream" | "codex" | "recall" | "press";
+export type TilViewMode = "stream" | "codex" | "recall" | "press" | "wall" | "constellation";
 
 export const TilHeaderNav: React.FC = () => {
   const router = useRouter();
@@ -25,6 +25,8 @@ export const TilHeaderNav: React.FC = () => {
     { mode: "codex", label: "CODEX", icon: <BookOpen size={12} /> },
     { mode: "recall", label: "RECALL", icon: <RotateCcw size={12} /> },
     { mode: "press", label: "PRESS", icon: <Printer size={12} /> },
+    { mode: "wall", label: "WALL", icon: <Grid3x3 size={12} /> },
+    { mode: "constellation", label: "CONSTELLATION", icon: <Network size={12} /> },
   ];
 
   return (

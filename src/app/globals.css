@@ -126,6 +126,18 @@
 [data-kind="PPR"] { --kind-color: var(--kind-ppr); }
 [data-kind="DOC"] { --kind-color: var(--kind-doc); }
 
+/* ---------- Constellation (SPECTACLE.md §3) ----------
+   --cream/--ink already invert correctly between dark and light themes (dark
+   canvas + light ink on the two dark themes; light canvas + dark ink on the
+   three light themes), so these are semantic aliases onto the existing
+   per-theme cascade, not new hardcoded colours. */
+:root {
+  --constellation-bg: var(--cream);
+  --constellation-node: var(--ink);
+  --constellation-hub: var(--cyan);
+  --constellation-warn: var(--orange);
+}
+
 .cover, .cover-canvas-wrap, .swatch, .hb {
   --kc: var(--kind-color, var(--cyan));
   background: color-mix(in oklab, var(--kc) var(--cover-mix, 82%), var(--surface));
@@ -2112,6 +2124,36 @@ input[type=range]::-moz-range-thumb {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
+}
+
+/* Discharge (SPECTACLE.md §4): counter feedback on arrival. Two distinct
+   treatments — a bouncy pulse for full motion, a calmer cross-fade for
+   prefers-reduced-motion — chosen in JS via useReducedMotion(). Both are
+   also covered by the blanket reduced-motion rule below as a second layer. */
+@keyframes discharge-counter-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.28); color: var(--pink, #FF007A); }
+  100% { transform: scale(1); }
+}
+.counter-pulse {
+  animation: discharge-counter-pulse 0.5s ease-out;
+}
+
+@keyframes discharge-counter-crossfade {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.35; }
+  100% { opacity: 1; }
+}
+.counter-crossfade {
+  animation: discharge-counter-crossfade 0.3s ease-out;
+}
+
+@keyframes discharge-flyer-arrive {
+  from { transform: var(--flyer-start, none); opacity: 1; }
+  to   { transform: var(--flyer-end, none); opacity: 0; }
+}
+.discharge-flyer {
+  animation: discharge-flyer-arrive 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 /* Reduced Motion Accessibility */

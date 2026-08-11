@@ -11,6 +11,8 @@ import { TilOnThisDay } from "@/components/til/TilOnThisDay";
 import { TilCodexView, CodexTopicSummary, CodexTopicDetail } from "@/components/til/TilCodexView";
 import { TilRecallView } from "@/components/til/TilRecallView";
 import { TilPressView } from "@/components/til/TilPressView";
+import { TilWallView } from "@/components/til/TilWallView";
+import { TilConstellationView } from "@/components/til/TilConstellationView";
 import { TilType } from "@/db/schema";
 import { StreakData, HeatmapData } from "@/lib/dal/til";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -198,10 +200,14 @@ function TilPageContent() {
       fetchRecall();
     } else if (viewMode === "press") {
       fetchPress();
+    } else if (viewMode === "wall" || viewMode === "constellation") {
+      // Self-contained views fetch their own data internally (Phase 4 / Phase 8).
     } else {
       fetchFeed();
     }
-    fetchAuxiliaryData();
+    if (viewMode !== "wall" && viewMode !== "constellation") {
+      fetchAuxiliaryData();
+    }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [viewMode, fetchFeed, fetchCodex, fetchRecall, fetchPress, fetchAuxiliaryData]);
 
@@ -288,7 +294,10 @@ function TilPageContent() {
 
       <main
         style={{
-          maxWidth: viewMode === "codex" || viewMode === "press" ? "1050px" : "840px",
+          maxWidth:
+            viewMode === "codex" || viewMode === "press" || viewMode === "wall" || viewMode === "constellation"
+              ? "1050px"
+              : "840px",
           margin: "0 auto",
           padding: "24px 16px",
         }}
@@ -374,6 +383,12 @@ function TilPageContent() {
               />
             )}
           </div>
+        ) : viewMode === "wall" ? (
+          /* WALL VIEW MODE */
+          <TilWallView />
+        ) : viewMode === "constellation" ? (
+          /* CONSTELLATION VIEW MODE */
+          <TilConstellationView />
         ) : (
           /* STREAM VIEW MODE (Default) */
           <div>

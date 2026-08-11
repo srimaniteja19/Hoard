@@ -5,6 +5,7 @@ import { Bookmark } from "@/types";
 import { MasonryView } from "@/components/views/MasonryView";
 import { GridView } from "@/components/views/GridView";
 import Link from "next/link";
+import { sigil } from "@/lib/sigil";
 
 interface SharedCollectionData {
   collection: {
@@ -192,15 +193,12 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
               style={{
                 width: "36px",
                 height: "36px",
-                display: "grid",
-                placeItems: "center",
-                background: collection.color,
+                display: "block",
                 border: "2px solid #000",
-                fontSize: "18px",
+                overflow: "hidden",
               }}
-            >
-              {collection.icon}
-            </span>
+              dangerouslySetInnerHTML={{ __html: sigil(collection.name, 36).svg }}
+            />
             <h1 style={{ fontSize: "28px", fontWeight: 800, margin: 0, textTransform: "uppercase" }}>
               {collection.name}
             </h1>

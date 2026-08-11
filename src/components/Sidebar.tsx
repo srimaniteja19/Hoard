@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import { Bookmark, Collection, KindType } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import { inColl } from "@/hooks/useBookmarks";
+import { sigil } from "@/lib/sigil";
 import { UserMenu } from "@/components/UserMenu";
 import { usePWA } from "@/components/PWAProvider";
 import Link from "next/link";
@@ -43,6 +44,11 @@ interface SidebarProps {
   onOpenImport: () => void;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
+  /** Session count of bookmarks discharged into TIL entries (SPECTACLE.md §4). */
+  dischargeCount?: number;
+  /** Bumped on each discharge to retrigger the counter pulse/cross-fade via key remount. */
+  dischargePulseNonce?: number;
+  dischargeReducedMotion?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -61,6 +67,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenImport,
   isMobileOpen = false,
   onCloseMobile,
+  dischargeCount = 0,
+  dischargePulseNonce = 0,
+  dischargeReducedMotion = false,
 }) => {
   const { isInstallable, promptInstall } = usePWA();
   const [shareCopied, setShareCopied] = useState(false);
@@ -155,9 +164,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => handleSelectCollection(c.id)}
           title={c.query ? `Smart Collection Query: ${c.query}` : undefined}
         >
-          <span className="ic" style={{ background: c.c }}>
-            {c.query ? "⚡" : c.ic}
-          </span>
+          {c.query ? (
+            <span className="ic" style={{ background: c.c }}>
+              ⚡
+            </span>
+          ) : (
+            <span
+              className="ic"
+              style={{ overflow: "hidden" }}
+              dangerouslySetInnerHTML={{ __html: sigil(c.name, 22).svg }}
+            />
+          )}
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
             {c.name}
           </span>
@@ -359,7 +376,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <span className="ic" style={{ background: "#FF007A" }}></span>
               Unread only
-              <span className="n">{unreadCount}</span>
+              <span
+                key={`unread-${dischargePulseNonce}`}
+                className={`n ${dischargePulseNonce > 0 ? (dischargeReducedMotion ? "counter-crossfade" : "counter-pulse") : ""}`}
+              >
+                {unreadCount}
+              </span>
+            </div>
+
+            <div className="ci" id="til-gains-counter" title="Bookmarks discharged into TIL entries this session">
+              <span className="ic" style={{ background: "var(--lime, #B6FF3C)" }}>💡</span>
+              TIL gains (session)
+              <span
+                key={`gains-${dischargePulseNonce}`}
+                className={`n ${dischargePulseNonce > 0 ? (dischargeReducedMotion ? "counter-crossfade" : "counter-pulse") : ""}`}
+              >
+                {dischargeCount}
+              </span>
             </div>
 
             <div className="ci">

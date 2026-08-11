@@ -12,6 +12,8 @@ import {
   ViewMode,
 } from "@/types";
 import { CTX } from "@/data/initialBookmarks";
+import { dischargeBookmarkAction, DischargeResult } from "@/app/actions/discharge";
+import { TilType } from "@/db/schema";
 
 // ─── Query Parser ─────────────────────────────────────────────────────────────
 
@@ -421,6 +423,22 @@ export function useBookmarks() {
     }
   }, [selectedIds]);
 
+  // ── Discharge: turn a queued bookmark into the TIL entry it produced ───────
+  // Deliberately not optimistic here — the user is mid-compose in a modal, so
+  // there's nothing to visually roll back yet. The FLIP/optimistic/counter-
+  // pulse treatment lands in Phase 7 on top of this correctness-first write.
+
+  const dischargeBookmark = useCallback(
+    async (bookmarkId: number, input: { type: TilType; body: string; tags: string[] }): Promise<DischargeResult> => {
+      const result = await dischargeBookmarkAction({ bookmarkId, ...input });
+      setBookmarks((prev) =>
+        prev.map((b) => (b.id === bookmarkId ? { ...b, unread: false } : b))
+      );
+      return result;
+    },
+    []
+  );
+
   // ── Content Drift Check ───────────────────────────────────────────────────
 
   const checkDrift = useCallback(async (bookmarkId: number) => {
@@ -548,5 +566,6 @@ export function useBookmarks() {
     addCollection,
     checkDrift,
     mergeCluster,
+    dischargeBookmark,
   };
 }

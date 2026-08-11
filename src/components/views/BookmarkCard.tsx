@@ -18,6 +18,7 @@ interface BookmarkCardProps {
   onToggleSelect: (id: number, e: React.MouseEvent) => void;
   onOpen: (id: number) => void;
   onOpenDiff?: (bookmark: Bookmark) => void;
+  onDischarge?: (bookmark: Bookmark, sourceRect: DOMRect) => void;
 }
 
 export const BookmarkCard: React.FC<BookmarkCardProps> = ({
@@ -29,6 +30,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   onToggleSelect,
   onOpen,
   onOpenDiff,
+  onDischarge,
 }) => {
   const [showFetchLog, setShowFetchLog] = useState(false);
   const typeMeta = TYPES[bookmark.ty] || { name: bookmark.ty, c: "#00F0FF", fg: "#000", verb: "READ" };
@@ -187,6 +189,27 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
           {bookmark.unread && (
             <span className="ctag" style={{ background: "#FF007A", color: "#fff" }}>
               UNREAD
+            </span>
+          )}
+
+          {bookmark.unread && onDischarge && (
+            <span
+              className="ctag"
+              onClick={(e) => {
+                e.stopPropagation();
+                const cardEl = (e.currentTarget as HTMLElement).closest("article");
+                const rect = cardEl?.getBoundingClientRect() ?? e.currentTarget.getBoundingClientRect();
+                onDischarge(bookmark, rect);
+              }}
+              style={{
+                background: "var(--lime, #B6FF3C)",
+                color: "#000",
+                cursor: "pointer",
+                fontWeight: 800,
+              }}
+              title="Turn this into a TIL entry"
+            >
+              DISCHARGE ↦
             </span>
           )}
 

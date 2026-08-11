@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HOARD — spectacle with a job</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#F4F0EA; --paper:#FFFDF8; --ink:#000;
+  --yel:#FFE600; --pink:#FF007A; --cyan:#00F0FF; --lime:#B6FF3C;
+  --orange:#FF6B00; --violet:#7C4DFF; --mint:#00E58A;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --grot:"Space Grotesk",system-ui,sans-serif;
+  --bd:3px solid #000; --sh:5px 5px 0 #000; --sh-sm:3px 3px 0 #000;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:#000;font-family:var(--grot);font-size:14px;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(#0000001a 1px,transparent 1px);background-size:22px 22px}
+button,input{font-family:inherit;color:inherit}
+::selection{background:var(--yel)}
+.wrap{max-width:1120px;margin:0 auto;padding:34px 22px 120px}
+h1{font-family:var(--mono);font-weight:800;font-size:clamp(25px,4.6vw,44px);letter-spacing:-.07em;margin:0;
+  text-transform:uppercase;background:var(--yel);border:var(--bd);box-shadow:6px 6px 0 #000;display:inline-block;padding:5px 14px;line-height:1}
+.dek{font-size:15px;line-height:1.6;max-width:66ch;margin:20px 0 6px}
+h2{font-family:var(--mono);font-weight:800;font-size:14px;letter-spacing:.08em;text-transform:uppercase;
+  margin:56px 0 6px;display:flex;align-items:center;gap:11px}
+h2 span{background:#000;color:var(--yel);padding:3px 8px}
+h2 i{flex:1;height:3px;background:#000}
+.sub{font-size:14px;line-height:1.6;max-width:70ch;margin:0 0 18px;color:#242424}
+.note{font-family:var(--mono);font-size:11.5px;line-height:1.7;border-left:5px solid var(--pink);
+  background:var(--paper);border-top:2px solid #000;border-right:2px solid #000;border-bottom:2px solid #000;
+  padding:11px 13px;margin-top:16px}
+.panel{border:var(--bd);background:var(--paper);box-shadow:var(--sh);overflow:hidden}
+.bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:11px 14px;border-bottom:var(--bd);background:var(--cream)}
+.lbl{font-family:var(--mono);font-size:9.5px;font-weight:800;letter-spacing:.13em;opacity:.6}
+input[type=range]{-webkit-appearance:none;appearance:none;width:190px;height:10px;background:var(--cyan);border:2px solid #000;outline:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:22px;background:var(--pink);border:2px solid #000;cursor:grab}
+input[type=range]::-moz-range-thumb{width:16px;height:22px;background:var(--pink);border:2px solid #000;border-radius:0;cursor:grab}
+.chip{border:2px solid #000;background:var(--paper);padding:5px 10px;font-family:var(--mono);font-size:10px;font-weight:800;cursor:pointer}
+.chip.on{background:#000;color:var(--yel)}
+
+/* ---------- 01 YEAR WALL ---------- */
+.wall{padding:14px;display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start;
+  max-height:520px;overflow-y:auto;transition:none}
+.tile{border:2px solid #000;overflow:hidden;cursor:pointer;position:relative;flex:0 0 auto;
+  transition:transform .12s, box-shadow .12s}
+.tile:hover{transform:translate(-2px,-2px);box-shadow:3px 3px 0 #000;z-index:3}
+.tile .mini{font-family:var(--mono);font-size:8px;font-weight:800;position:absolute;left:2px;top:1px;opacity:.8}
+.tile .lg{padding:7px 8px}
+.tile .lgty{font-family:var(--mono);font-size:8px;font-weight:800;letter-spacing:.08em;
+  border:2px solid #000;background:#fff;padding:0 4px;display:inline-block;margin-bottom:5px}
+.tile .lgtx{font-size:11px;line-height:1.3;font-weight:600;
+  display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.tile.empty{border-color:#0002;background:transparent!important;cursor:default}
+.tile.empty:hover{transform:none;box-shadow:none}
+.zoomreadout{font-family:var(--mono);font-size:11px;font-weight:800;min-width:132px}
+
+/* ---------- 02 CONSTELLATION ---------- */
+.constel{position:relative;background:#0E1018;height:520px;overflow:hidden}
+.constel svg{width:100%;height:100%;display:block}
+.cedge{stroke:#2A3050;stroke-width:1}
+.cedge.hot{stroke:#00F0FF;stroke-width:2}
+.cedge.sup{stroke:#FF6B00;stroke-dasharray:4 3;stroke-width:1.6}
+.cnode{cursor:pointer}
+.cnode text{font-family:var(--mono);font-size:9px;font-weight:800;fill:#8891B4;pointer-events:none;text-anchor:middle}
+.chub text{font-size:10.5px;fill:#0E1018}
+.ctip{position:absolute;pointer-events:none;background:var(--paper);border:2px solid #000;
+  box-shadow:4px 4px 0 #000;padding:9px 11px;max-width:280px;font-size:12.5px;line-height:1.45;
+  opacity:0;transition:opacity .12s;z-index:5}
+.ctip.on{opacity:1}
+.ctip b{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.1em;display:block;margin-bottom:5px}
+.legend{position:absolute;left:12px;bottom:12px;font-family:var(--mono);font-size:9px;font-weight:700;
+  color:#6B739A;line-height:1.9;letter-spacing:.06em}
+.legend i{display:inline-block;width:9px;height:9px;border:1px solid #000;vertical-align:-1px;margin-right:5px}
+
+/* ---------- 03 DISCHARGE ---------- */
+.dis{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.discol{padding:14px}
+.discol:first-child{border-right:var(--bd)}
+.dhd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px}
+.dhd b{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.1em}
+.dnum{font-family:var(--mono);font-size:22px;font-weight:800;letter-spacing:-.05em}
+.qcard{border:var(--bd);background:var(--cream);box-shadow:var(--sh-sm);padding:10px 12px;margin-bottom:9px;
+  position:relative;transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s}
+.qcard .qt{font-size:13.5px;font-weight:700;letter-spacing:-.02em;line-height:1.25}
+.qcard .qm{font-family:var(--mono);font-size:9.5px;font-weight:700;opacity:.55;margin-top:6px}
+.qbtn{border:2px solid #000;background:var(--lime);padding:5px 9px;font-family:var(--mono);font-size:9.5px;
+  font-weight:800;cursor:pointer;margin-top:9px}
+.qbtn:hover{box-shadow:2px 2px 0 #000;transform:translate(-1px,-1px)}
+.tilbox{border:var(--bd);background:var(--paper);box-shadow:var(--sh-sm);padding:11px 12px;margin-bottom:9px;
+  position:relative;overflow:hidden}
+.tilbox .rail{position:absolute;left:0;top:0;bottom:0;width:7px;background:var(--cyan)}
+.tilbox .tt{font-size:13.5px;line-height:1.45;padding-left:12px}
+.tilbox .tm{font-family:var(--mono);font-size:9px;font-weight:800;opacity:.5;margin-top:8px;padding-left:12px}
+.cite{font-family:var(--mono);font-size:9px;font-weight:800;background:#000;color:var(--lime);padding:2px 6px;
+  display:inline-block;margin-left:12px;margin-top:9px}
+.flyer{position:fixed;z-index:99;pointer-events:none;border:var(--bd);background:var(--yel);
+  box-shadow:var(--sh);padding:10px 12px;font-size:13px;font-weight:700;max-width:260px}
+.receipt{font-family:var(--mono);font-size:10.5px;font-weight:700;border:2px dashed #000;padding:9px 11px;
+  background:var(--cream);margin-top:12px;line-height:1.9;opacity:0;transition:opacity .3s}
+.receipt.on{opacity:1}
+.pulse{animation:pulse .5s ease-out}
+@keyframes pulse{0%{transform:scale(1)}40%{transform:scale(1.28);color:var(--pink)}100%{transform:scale(1)}}
+
+/* ---------- 04 SIGILS ---------- */
+.sigrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:14px;padding:16px}
+.sig{border:var(--bd);background:var(--paper);box-shadow:var(--sh-sm);overflow:hidden;cursor:pointer;transition:.12s}
+.sig:hover{transform:translate(-3px,-3px);box-shadow:var(--sh)}
+.sig .art{border-bottom:var(--bd);aspect-ratio:1}
+.sig .nm{padding:8px 10px;font-family:var(--mono);font-size:10.5px;font-weight:800;letter-spacing:-.02em}
+.sig .ct{font-family:var(--mono);font-size:9px;font-weight:700;opacity:.5;padding:0 10px 9px}
+.siginput{display:flex;gap:9px;align-items:center;padding:12px 14px;border-top:var(--bd);background:var(--cream)}
+.siginput input{flex:1;border:2px solid #000;background:var(--paper);padding:8px 10px;
+  font-family:var(--mono);font-size:12px;font-weight:700;outline:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Spectacle with a job</h1>
+  <p class="dek">Four interactions that look expensive because they're computing something real. No parallax, no confetti, nothing that would embarrass you in six months. Each one answers a question the current UI can't.</p>
+
+  <!-- ============ 01 ============ -->
+  <h2><span>01</span> The Year Wall — semantic zoom<i></i></h2>
+  <p class="sub">One tile per day for a year, and <strong>zoom changes what a tile is</strong>, not just its size. Zoomed out you're reading rhythm — the dead fortnight in April, the streak in July. Halfway in, tiles carry a type letter and you're reading composition. All the way in, tiles become the entries themselves. Same view, three levels of meaning, one slider.</p>
+  <div class="panel">
+    <div class="bar">
+      <span class="lbl">ZOOM</span>
+      <input type="range" id="zoom" min="9" max="150" value="16">
+      <span class="zoomreadout" id="zread"></span>
+      <span style="flex:1"></span>
+      <span class="lbl" id="wallstat"></span>
+    </div>
+    <div class="wall" id="wall"></div>
+  </div>
+  <div class="note">Semantic zoom is the trick maps use and interfaces almost never do. It works here because a TIL log has three genuinely different readings at three scales. Render cost stays flat — tiles are divs, and above ~40px you virtualise to only what's in view.</div>
+
+  <!-- ============ 02 ============ -->
+  <h2><span>02</span> Constellation — the shape of what you know<i></i></h2>
+  <p class="sub">A real force simulation over your topics and entries, settling live on load. Hubs are topics sized by depth. Satellites are entries, and <strong>brightness is confidence</strong> — the things you're forgetting literally dim. Orange dashed edges are supersessions: places where you corrected yourself. Hover anything.</p>
+  <div class="panel constel" id="constel">
+    <svg id="csvg" viewBox="0 0 900 520"></svg>
+    <div class="ctip" id="ctip"></div>
+    <div class="legend">
+      <i style="background:#00F0FF"></i>TOPIC HUB · SIZE = ENTRY COUNT<br>
+      <i style="background:#8891B4"></i>ENTRY · BRIGHTNESS = CONFIDENCE<br>
+      <i style="background:#FF6B00"></i>SUPERSESSION EDGE
+    </div>
+  </div>
+  <div class="note">The useful read isn't the pretty part — it's the dim clusters. A topic with eight satellites all faded is a subject you researched hard and then completely lost, which no list view would ever tell you. Simulation runs ~200 ticks then freezes; re-run only on data change, never on every render.</div>
+
+  <!-- ============ 03 ============ -->
+  <h2><span>03</span> Discharge — make the transfer visible<i></i></h2>
+  <p class="sub">The emotional core of the whole app is debt becoming knowledge, and right now that happens silently in a database. Click DISCHARGE on a queued item: it physically leaves the queue, lands in the entry that consumed it, both counters move, and a receipt line prints. You should <em>feel</em> the queue getting shorter.</p>
+  <div class="panel dis">
+    <div class="discol">
+      <div class="dhd"><b>QUEUE · UNREAD</b><span class="dnum" id="qn">4</span></div>
+      <div id="queue"></div>
+      <div class="receipt" id="receipt"></div>
+    </div>
+    <div class="discol">
+      <div class="dhd"><b>TIL · TODAY</b><span class="dnum" id="tn">1</span></div>
+      <div id="tils"></div>
+    </div>
+  </div>
+  <div class="note">Motion here is doing information work, not decoration: it shows <em>which</em> item went <em>where</em>. Use FLIP against real bounding boxes so it survives layout changes, keep it under 400ms, and honour <code>prefers-reduced-motion</code> by cross-fading counters instead.</div>
+
+  <!-- ============ 04 ============ -->
+  <h2><span>04</span> Sigils — every collection gets a face<i></i></h2>
+  <p class="sub">Picking an icon and colour for each collection is a chore nobody does well. Hash the name instead and generate a deterministic hard-edged sigil — mirrored, four-colour, unique per name, stable forever. Collections become recognisable at a glance in the sidebar, in share cards, and on the OG image. Type a name to generate one.</p>
+  <div class="panel">
+    <div class="sigrow" id="sigs"></div>
+    <div class="siginput">
+      <span class="lbl">NEW COLLECTION</span>
+      <input id="signame" value="Distributed systems" autocomplete="off">
+      <span class="lbl" id="sighash"></span>
+    </div>
+  </div>
+  <div class="note">Deterministic from the name, so it's identical on server and client with no storage and no flash on hydration. Rename the collection and it gets a new face — which is correct, because it's a different thing now.</div>
+</div>
+
+<script>
+const TYPES={FACT:"#00F0FF",GOTCHA:"#FF007A",SNIPPET:"#B6FF3C",PATTERN:"#7C4DFF",QUOTE:"#FF6B00",OPINION:"#00E58A"};
+const TK=Object.keys(TYPES);
+const MONTHS=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const rand=(s=>()=>((s=s*16807%2147483647)-1)/2147483646)(20260809);
+
+/* ================= 01 YEAR WALL ================= */
+const BODIES=[
+ "view-transition-name must be unique per document or the transition silently no-ops",
+ "NULLS NOT DISTINCT lets a unique index treat NULLs as equal",
+ "FIFO dedup window is five minutes and is not configurable",
+ "color-mix in oklab stays evenly light across every theme",
+ "content-visibility auto skips layout and paint off-screen",
+ "oEmbed gives you no duration — that needs Data API v3",
+ "Neon's pooled string is a different host, not a different port",
+ "text-wrap balance stops applying past about six lines",
+ "greedy-descending is optimal enough below fifty items",
+ "commit_activity returns 202 with an empty body while computing",
+ "$inferSelect gives unknown without an explicit $type",
+ "ef_construction dominates HNSW build time, not row count"
+];
+const DAYS=[];
+for(let i=364;i>=0;i--){
+  const d=new Date(2026,7,9); d.setDate(d.getDate()-i);
+  const streaky=(i>200&&i<250)||(i<40);
+  const gap=(i>120&&i<150);
+  const n=gap?0:Math.floor(rand()*(streaky?3.4:2.2));
+  DAYS.push({d,n,es:Array.from({length:n},()=>({
+    ty:TK[Math.floor(rand()*TK.length)], b:BODIES[Math.floor(rand()*BODIES.length)]}))});
+}
+function drawWall(){
+  const z=+document.getElementById('zoom').value;
+  const wall=document.getElementById('wall');
+  const mode=z<15?"rhythm":z<62?"composition":"content";
+  document.getElementById('zread').textContent=`${z}px · ${mode.toUpperCase()}`;
+  const total=DAYS.reduce((a,b)=>a+b.n,0);
+  document.getElementById('wallstat').textContent=`365 DAYS · ${total} ENTRIES · ${DAYS.filter(d=>d.n).length} ACTIVE`;
+  wall.innerHTML=DAYS.map(day=>{
+    if(!day.n) return `<div class="tile empty" style="width:${z}px;height:${z}px"></div>`;
+    const e=day.es[0], c=TYPES[e.ty];
+    if(mode==="rhythm")
+      return `<div class="tile" title="${MONTHS[day.d.getMonth()]} ${day.d.getDate()} — ${day.n}" style="width:${z}px;height:${z}px;background:${c};opacity:${.45+day.n*.2}"></div>`;
+    if(mode==="composition")
+      return `<div class="tile" title="${MONTHS[day.d.getMonth()]} ${day.d.getDate()}" style="width:${z}px;height:${z}px;background:${c}">
+        <span class="mini">${e.ty[0]}${day.n>1?day.n:""}</span></div>`;
+    return `<div class="tile" style="width:${z}px;height:${Math.round(z*1.15)}px;background:${c}">
+      <div class="lg"><span class="lgty">${e.ty}</span><div class="lgtx">${e.b}</div></div></div>`;
+  }).join('');
+}
+document.getElementById('zoom').addEventListener('input',drawWall);
+drawWall();
+
+/* ================= 02 CONSTELLATION ================= */
+const TOPICS=["postgres","css","typescript","architecture","aws","ai","design","api"];
+const ENTRIES=[];
+TOPICS.forEach((t,ti)=>{
+  const n=2+Math.floor(rand()*4);
+  for(let i=0;i<n;i++) ENTRIES.push({
+    id:`e${ti}_${i}`, topic:t, conf:Math.round(18+rand()*82),
+    ty:TK[Math.floor(rand()*TK.length)], b:BODIES[Math.floor(rand()*BODIES.length)],
+    h:Math.random().toString(16).slice(2,6)
+  });
+});
+const SUPS=[[ENTRIES[1],ENTRIES[0]],[ENTRIES[9],ENTRIES[8]]].filter(p=>p[0]&&p[1]);
+
+const N=[],L=[];
+TOPICS.forEach(t=>{
+  const c=ENTRIES.filter(e=>e.topic===t).length;
+  N.push({id:t,hub:true,r:11+c*3.1,x:450+(rand()-.5)*420,y:260+(rand()-.5)*280,vx:0,vy:0,count:c});
+});
+ENTRIES.forEach(e=>{
+  N.push({id:e.id,hub:false,r:4.5,x:450+(rand()-.5)*640,y:260+(rand()-.5)*380,vx:0,vy:0,e});
+  L.push({a:e.topic,b:e.id,len:74});
+});
+for(let i=0;i<TOPICS.length-1;i++) L.push({a:TOPICS[i],b:TOPICS[i+1],len:190});
+SUPS.forEach(([a,b])=>L.push({a:a.id,b:b.id,len:60,sup:true}));
+const byId=id=>N.find(n=>n.id===id);
+
+function tick(){
+  for(let i=0;i<N.length;i++)for(let j=i+1;j<N.length;j++){
+    const a=N[i],b=N[j];let dx=b.x-a.x,dy=b.y-a.y;
+    let d2=dx*dx+dy*dy||.01;const d=Math.sqrt(d2);
+    const f=(a.hub&&b.hub?9000:2600)/d2;
+    const ux=dx/d,uy=dy/d;
+    a.vx-=ux*f;a.vy-=uy*f;b.vx+=ux*f;b.vy+=uy*f;
+  }
+  L.forEach(l=>{
+    const a=byId(l.a),b=byId(l.b);if(!a||!b)return;
+    const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||.01;
+    const f=(d-l.len)*0.012,ux=dx/d,uy=dy/d;
+    a.vx+=ux*f*(a.hub?.4:1);a.vy+=uy*f*(a.hub?.4:1);
+    b.vx-=ux*f*(b.hub?.4:1);b.vy-=uy*f*(b.hub?.4:1);
+  });
+  N.forEach(n=>{
+    n.vx+=(450-n.x)*0.0016;n.vy+=(260-n.y)*0.0016;
+    n.vx*=.82;n.vy*=.82;n.x+=n.vx;n.y+=n.vy;
+    n.x=Math.max(46,Math.min(854,n.x));n.y=Math.max(34,Math.min(486,n.y));
+  });
+}
+function drawConstel(){
+  const svg=document.getElementById('csvg');
+  const edges=L.map(l=>{
+    const a=byId(l.a),b=byId(l.b);if(!a||!b)return"";
+    return `<line class="cedge${l.sup?' sup':''}" data-a="${l.a}" data-b="${l.b}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`;
+  }).join('');
+  const nodes=N.map(n=>{
+    if(n.hub) return `<g class="cnode chub" data-id="${n.id}">
+      <circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="#00F0FF" stroke="#0E1018" stroke-width="2"/>
+      <text x="${n.x}" y="${n.y+3.4}">${n.count}</text>
+      <text x="${n.x}" y="${n.y+n.r+13}" style="fill:#9AA3C8">${n.id}</text></g>`;
+    const c=n.e.conf;
+    const col=c>75?"#DCE3FF":c>50?"#8891B4":c>30?"#4E5678":"#333A57";
+    return `<g class="cnode" data-id="${n.id}">
+      <circle cx="${n.x}" cy="${n.y}" r="${4+c/34}" fill="${col}"/></g>`;
+  }).join('');
+  svg.innerHTML=edges+nodes;
+  svg.querySelectorAll('.cnode').forEach(g=>{
+    g.addEventListener('mouseenter',ev=>showTip(g.dataset.id,ev));
+    g.addEventListener('mouseleave',()=>document.getElementById('ctip').classList.remove('on'));
+  });
+}
+function showTip(id,ev){
+  const tip=document.getElementById('ctip'),n=byId(id);
+  const box=document.getElementById('constel').getBoundingClientRect();
+  document.querySelectorAll('.cedge').forEach(e=>
+    e.classList.toggle('hot',!e.classList.contains('sup')&&(e.dataset.a===id||e.dataset.b===id)));
+  tip.innerHTML=n.hub
+    ? `<b>TOPIC · ${n.count} ENTRIES</b>#${n.id}`
+    : `<b>${n.e.ty} · #${n.e.h} · CONF ${n.e.conf}%</b>${n.e.b}`;
+  tip.classList.add('on');
+  const sx=box.width/900, sy=box.height/520;
+  tip.style.left=Math.min(box.width-290,n.x*sx+14)+"px";
+  tip.style.top=Math.max(6,n.y*sy-18)+"px";
+}
+let frames=0;
+(function loop(){ tick(); if(frames%2===0) drawConstel(); if(++frames<200) requestAnimationFrame(loop); else drawConstel(); })();
+
+/* ================= 03 DISCHARGE ================= */
+let Q=[
+ {id:1,t:"Single-table design in DynamoDB",m:"alexdebrie.com · READ 22 MIN",learned:"Model access patterns before tables — designing entities first is why my first attempt needed three rewrites."},
+ {id:2,t:"Exactly-once semantics in Kafka",m:"confluent.io · READ 14 MIN",learned:"Exactly-once is really at-least-once plus idempotent writes. The guarantee lives in the sink, not the broker."},
+ {id:3,t:"pgvector/pgvector",m:"github.com · SKIM 7 MIN",learned:"ef_construction dominates HNSW build time far more than row count — 200 → 64 took 40 minutes down to 9."},
+ {id:4,t:"Liveness vs readiness probes",m:"kubernetes.io · REF 13 MIN",learned:"A failing liveness probe restarts the pod; a failing readiness probe just pulls it from the load balancer. Confusing them causes restart storms."}
+];
+let TILS=[{t:"Chapter markers come from the video description, not a dedicated API field.",m:"FACT · #c41a · 09 AUG",cite:null}];
+let receiptLines=[];
+function drawDis(){
+  document.getElementById('queue').innerHTML=Q.map(q=>`
+    <div class="qcard" id="q${q.id}">
+      <div class="qt">${q.t}</div><div class="qm">${q.m}</div>
+      <button class="qbtn" data-q="${q.id}">DISCHARGE ↦</button></div>`).join('')
+    || `<div style="border:2px dashed #000;padding:22px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:800">QUEUE EMPTY. GO OUTSIDE.</div>`;
+  document.getElementById('tils').innerHTML=TILS.map(t=>`
+    <div class="tilbox"><span class="rail"></span>
+      <div class="tt">${t.t}</div>
+      ${t.cite?`<span class="cite">↩ DISCHARGED · ${t.cite}</span>`:''}
+      <div class="tm">${t.m}</div></div>`).join('');
+  document.getElementById('qn').textContent=Q.length;
+  document.getElementById('tn').textContent=TILS.length;
+  document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>discharge(+b.dataset.q));
+}
+function discharge(id){
+  const q=Q.find(x=>x.id===id); if(!q)return;
+  const src=document.getElementById('q'+id).getBoundingClientRect();
+  const dstBox=document.getElementById('tils').getBoundingClientRect();
+  const fly=document.createElement('div');
+  fly.className='flyer';fly.textContent=q.t;
+  fly.style.left=src.left+'px';fly.style.top=src.top+'px';fly.style.width=src.width+'px';
+  document.body.appendChild(fly);
+  requestAnimationFrame(()=>{
+    fly.style.transition='transform .42s cubic-bezier(.4,0,.2,1), opacity .42s';
+    fly.style.transform=`translate(${dstBox.left-src.left}px, ${dstBox.top-src.top+4}px) scale(.86) rotate(-2deg)`;
+    fly.style.opacity='0';
+  });
+  setTimeout(()=>{
+    fly.remove();
+    Q=Q.filter(x=>x.id!==id);
+    TILS.unshift({t:q.learned,m:`FACT · #${Math.random().toString(16).slice(2,6)} · 09 AUG`,cite:q.t});
+    receiptLines.unshift(`DISCHARGED  ${q.t.slice(0,26).toUpperCase().padEnd(26,'.')} ${q.m.split('· ')[1]}`);
+    drawDis();
+    ['qn','tn'].forEach(i=>{const el=document.getElementById(i);el.classList.remove('pulse');void el.offsetWidth;el.classList.add('pulse')});
+    const r=document.getElementById('receipt');
+    r.innerHTML=receiptLines.join('<br>')+`<br>———————————————<br>BALANCE OWED ${Q.length} ITEMS`;
+    r.classList.add('on');
+  },430);
+}
+drawDis();
+
+/* ================= 04 SIGILS ================= */
+const PALETTES=[["#FFE600","#000"],["#FF007A","#000"],["#00F0FF","#000"],["#B6FF3C","#000"],["#FF6B00","#000"],["#7C4DFF","#fff"],["#00E58A","#000"]];
+function hash32(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function sigil(name,size=140){
+  let h=hash32(name.toLowerCase().trim());
+  const nx=()=>{h^=h<<13;h>>>=0;h^=h>>17;h^=h<<5;h>>>=0;return h/4294967296};
+  const [bg,fg]=PALETTES[Math.floor(nx()*PALETTES.length)];
+  const acc=PALETTES[Math.floor(nx()*PALETTES.length)][0];
+  const G=5,cell=size/G;
+  let shapes="";
+  for(let x=0;x<Math.ceil(G/2);x++)for(let y=0;y<G;y++){
+    const r=nx();
+    if(r<0.42)continue;
+    const kind=Math.floor(nx()*4), col=r>0.82?acc:fg;
+    const draw=(cx)=>{
+      const X=cx*cell,Y=y*cell;
+      if(kind===0) return `<rect x="${X}" y="${Y}" width="${cell}" height="${cell}" fill="${col}"/>`;
+      if(kind===1) return `<circle cx="${X+cell/2}" cy="${Y+cell/2}" r="${cell/2}" fill="${col}"/>`;
+      if(kind===2) return `<path d="M${X} ${Y+cell}L${X+cell} ${Y+cell}L${X+cell} ${Y}Z" fill="${col}"/>`;
+      return `<rect x="${X+cell*.2}" y="${Y+cell*.2}" width="${cell*.6}" height="${cell*.6}" fill="${col}"/>`;
+    };
+    shapes+=draw(x);
+    if(x!==G-1-x) shapes+=draw(G-1-x);
+  }
+  return {svg:`<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" style="display:block">
+    <rect width="${size}" height="${size}" fill="${bg}"/>${shapes}</svg>`, hash:hash32(name.toLowerCase().trim()).toString(16).slice(0,6)};
+}
+const COLLS=["Unsorted","Read queue","Listen shelf","Build shelf","AI & retrieval","Data & storage","Distributed systems","Career notes"];
+function drawSigils(extra){
+  const list=extra?[extra,...COLLS]:COLLS;
+  document.getElementById('sigs').innerHTML=list.map(c=>{
+    const s=sigil(c);
+    return `<div class="sig"><div class="art">${s.svg}</div>
+      <div class="nm">${c.toUpperCase()}</div><div class="ct">0x${s.hash}</div></div>`;
+  }).join('');
+}
+document.getElementById('signame').addEventListener('input',e=>{
+  const v=e.target.value.trim();
+  document.getElementById('sighash').textContent=v?"0x"+sigil(v).hash:"";
+  drawSigils(v||null);
+});
+document.getElementById('sighash').textContent="0x"+sigil("Distributed systems").hash;
+drawSigils("Distributed systems");
+</script>
+</body>
+</html>

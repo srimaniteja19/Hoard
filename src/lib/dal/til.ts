@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { tilEntries, users } from "@/db/schema";
-import { eq, and, sql, gte, desc } from "drizzle-orm";
+import { tilEntries, tilEntryTags, tags as tagsTable, users, TilType } from "@/db/schema";
+import { eq, and, sql, gte, lte, desc, inArray } from "drizzle-orm";
 import crypto from "crypto";
 
 /**
@@ -230,4 +230,84 @@ export async function getOnThisDayEntry(
   }
 
   return null;
+}
+
+/**
+ * Fetches tag names for a set of TIL entry IDs in one batch query (no N+1).
+ * Shared by every route that needs to attach tags to a list of entries.
+ */
+export async function getTagsForTilEntries(tilIds: string[]): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  if (tilIds.length === 0) return map;
+
+  const rows = await db
+    .select({
+      tilId: tilEntryTags.tilId,
+      tagName: tagsTable.name,
+    })
+    .from(tilEntryTags)
+    .innerJoin(tagsTable, eq(tilEntryTags.tagId, tagsTable.id))
+    .where(inArray(tilEntryTags.tilId, tilIds));
+
+  for (const row of rows) {
+    const list = map.get(row.tilId) || [];
+    list.push(row.tagName);
+    map.set(row.tilId, list);
+  }
+
+  return map;
+}
+
+export interface WallDayAggregate {
+  loggedFor: string;
+  count: number;
+  dominantType: TilType;
+}
+
+const WALL_ROLLING_DAYS = 364;
+
+/**
+ * One row per active day over a rolling year: count and the most common TIL
+ * type that day (via Postgres's mode() ordered-set aggregate). This is the
+ * entire data cost of rendering the Year Wall in `rhythm`/`composition` mode —
+ * no entry bodies are fetched here (SPECTACLE.md §2).
+ */
+export async function getTilWallAggregate(userId: string, timezone: string = "UTC"): Promise<WallDayAggregate[]> {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - WALL_ROLLING_DAYS);
+  const startDateStr = getLoggedForDate(timezone, startDate);
+
+  const rows = await db
+    .select({
+      day: tilEntries.loggedFor,
+      count: sql<number>`count(*)::int`,
+      dominantType: sql<TilType>`mode() within group (order by ${tilEntries.type})`,
+    })
+    .from(tilEntries)
+    .where(and(eq(tilEntries.userId, userId), gte(tilEntries.loggedFor, startDateStr)))
+    .groupBy(tilEntries.loggedFor);
+
+  return rows
+    .filter((r): r is { day: string; count: number; dominantType: TilType } => !!r.day)
+    .map((r) => ({ loggedFor: r.day, count: r.count, dominantType: r.dominantType }));
+}
+
+/**
+ * Full TIL entries (bodies included) for a date range — used only by the
+ * Wall's `content`-mode viewport fetch, never for rhythm/composition mode.
+ */
+export async function getTilEntriesByDateRange(userId: string, from: string, to: string) {
+  const rows = await db
+    .select()
+    .from(tilEntries)
+    .where(and(eq(tilEntries.userId, userId), gte(tilEntries.loggedFor, from), lte(tilEntries.loggedFor, to)))
+    .orderBy(tilEntries.loggedFor);
+
+  const tilIds = rows.map((r) => r.id);
+  const tagMap = await getTagsForTilEntries(tilIds);
+
+  return rows.map((r) => ({
+    ...r,
+    tags: tagMap.get(r.id) || [],
+  }));
 }

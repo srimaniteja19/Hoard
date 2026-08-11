@@ -12,6 +12,7 @@ interface MasonryViewProps {
   onToggleSelect: (id: number, e: React.MouseEvent) => void;
   onOpen: (id: number) => void;
   onOpenDiff?: (bookmark: Bookmark) => void;
+  onDischarge?: (bookmark: Bookmark, sourceRect: DOMRect) => void;
 }
 
 export const MasonryView: React.FC<MasonryViewProps> = ({
@@ -20,6 +21,7 @@ export const MasonryView: React.FC<MasonryViewProps> = ({
   onToggleSelect,
   onOpen,
   onOpenDiff,
+  onDischarge,
 }) => {
   const { sizeByTime } = useSizeByTimePreference();
 
@@ -39,6 +41,7 @@ export const MasonryView: React.FC<MasonryViewProps> = ({
             onToggleSelect={onToggleSelect}
             onOpen={onOpen}
             onOpenDiff={onOpenDiff}
+            onDischarge={onDischarge}
           />
         );
       })}
