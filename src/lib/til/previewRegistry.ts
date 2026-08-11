@@ -1,7 +1,7 @@
 import { LinkPreview } from "@/db/schema";
 import { validateUrlForSsrf, fetchWithSsrfGuard } from "@/lib/security/ssrfGuard";
 import { enrichRepoCoverData } from "@/lib/cover-data";
-import { cleanTitle } from "@/lib/cleanTitle";
+import { cleanTitle, extractYouTubeVideoId } from "@/lib/cleanTitle";
 
 export interface PreviewProvider {
   providerName: LinkPreview["provider"];
@@ -31,6 +31,7 @@ export const youtubeProvider: PreviewProvider = {
   async fetch(url: URL): Promise<LinkPreview> {
     const targetUrlStr = url.toString();
     const fetchedAt = new Date().toISOString();
+    const videoId = extractYouTubeVideoId(url) || undefined;
 
     try {
       const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(targetUrlStr)}&format=json`;
@@ -41,13 +42,11 @@ export const youtubeProvider: PreviewProvider = {
       if (!res.ok) throw new Error("YouTube oEmbed request failed");
 
       const data = JSON.parse(res.text);
-      const title = sanitizeString(data.title) || targetUrlStr;
+      const title = sanitizeString(data.title) || (videoId ? "YouTube Video" : targetUrlStr);
       const author = sanitizeString(data.author_name);
+      const thumbnailKey = (data.thumbnail_url as string) || (videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : undefined);
 
       let durationSec: number | undefined;
-      // Extract video ID for YouTube Data API duration lookup if key is present
-      const videoId =
-        url.searchParams.get("v") || (url.hostname.includes("youtu.be") ? url.pathname.slice(1) : undefined);
 
       if (videoId && process.env.YOUTUBE_API_KEY) {
         try {
@@ -81,6 +80,7 @@ export const youtubeProvider: PreviewProvider = {
         title,
         description: author ? `By ${author}` : undefined,
         host: "youtube.com",
+        thumbnailKey,
         durationSec,
         author,
         meta: {
@@ -93,11 +93,14 @@ export const youtubeProvider: PreviewProvider = {
         provider: "YOUTUBE",
         kind: "video",
         url: targetUrlStr,
-        title: targetUrlStr,
+        title: videoId ? "YouTube Video" : targetUrlStr,
         host: "youtube.com",
+        thumbnailKey: videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : undefined,
         fetchedAt,
-        failed: true,
-        meta: {},
+        failed: !videoId,
+        meta: {
+          videoId: videoId || "",
+        },
       };
     }
   },
@@ -337,6 +340,12 @@ export const genericProvider: PreviewProvider = {
         html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i)?.[1];
       const description = sanitizeString(ogDescription, 200);
 
+      // Extract og:image or twitter:image
+      const ogImageRaw =
+        html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1] ||
+        html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)?.[1] ||
+        html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1];
+
       // Estimate read time (words / 200)
       const cleanText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
       const words = cleanText.split(" ").length;
@@ -349,6 +358,7 @@ export const genericProvider: PreviewProvider = {
         title,
         description,
         host,
+        thumbnailKey: ogImageRaw || undefined,
         durationSec: readMins * 60,
         meta: {
           readMins,

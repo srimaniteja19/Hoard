@@ -7,6 +7,7 @@ interface VideoFacadeProps {
   embedUrl: string; // iframe URL to mount on click
   title: string;
   author?: string;
+  thumbnailUrl?: string;
   durationSec?: number;
   providerName: "YOUTUBE" | "VIMEO" | "GENERIC";
 }
@@ -15,10 +16,12 @@ export const VideoFacade: React.FC<VideoFacadeProps> = ({
   embedUrl,
   title,
   author,
+  thumbnailUrl,
   durationSec,
   providerName,
 }) => {
   const [isMounted, setIsMounted] = useState(false);
+  const [thumbFailed, setThumbFailed] = useState(false);
 
   const formatDuration = (sec?: number) => {
     if (!sec) return undefined;
@@ -60,6 +63,7 @@ export const VideoFacade: React.FC<VideoFacadeProps> = ({
   }
 
   const stageColor = providerName === "YOUTUBE" ? "#FF007A" : "#00F0FF";
+  const showThumb = !!thumbnailUrl && !thumbFailed;
 
   return (
     <div
@@ -75,6 +79,24 @@ export const VideoFacade: React.FC<VideoFacadeProps> = ({
         overflow: "hidden",
       }}
     >
+      {showThumb && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={thumbnailUrl}
+          alt=""
+          onError={() => setThumbFailed(true)}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      )}
+
       {/* Facade Overlay */}
       <div
         style={{

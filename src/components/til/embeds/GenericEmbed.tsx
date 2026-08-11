@@ -10,6 +10,7 @@ interface GenericEmbedProps {
 }
 
 export const GenericEmbed: React.FC<GenericEmbedProps> = ({ preview, density }) => {
+  const [imgFailed, setImgFailed] = React.useState(false);
   const readMins = (preview.meta?.readMins as number) || (preview.durationSec ? Math.ceil(preview.durationSec / 60) : undefined);
 
   if (density === "inline") {
@@ -36,6 +37,8 @@ export const GenericEmbed: React.FC<GenericEmbedProps> = ({ preview, density }) 
       </a>
     );
   }
+
+  const showThumb = !!preview.thumbnailKey && !imgFailed;
 
   return (
     <div
@@ -94,15 +97,37 @@ export const GenericEmbed: React.FC<GenericEmbedProps> = ({ preview, density }) 
         </a>
       </div>
 
-      <div style={{ fontFamily: "var(--mono)", fontSize: "13px", fontWeight: 900, color: "var(--ink)", marginBottom: "4px" }}>
-        {preview.title}
-      </div>
+      <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "var(--mono)", fontSize: "13px", fontWeight: 900, color: "var(--ink)", marginBottom: "4px" }}>
+            {preview.title}
+          </div>
 
-      {preview.description && (
-        <div style={{ fontSize: "12px", opacity: 0.8, color: "var(--ink)", lineHeight: "1.4" }}>
-          {preview.description}
+          {preview.description && (
+            <div style={{ fontSize: "12px", opacity: 0.8, color: "var(--ink)", lineHeight: "1.4" }}>
+              {preview.description}
+            </div>
+          )}
         </div>
-      )}
+
+        {showThumb && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={preview.thumbnailKey}
+            alt=""
+            onError={() => setImgFailed(true)}
+            style={{
+              width: "90px",
+              height: "65px",
+              objectFit: "cover",
+              border: "2px solid #000",
+              boxShadow: "2px 2px 0 #000",
+              flexShrink: 0,
+              borderRadius: "2px",
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 };

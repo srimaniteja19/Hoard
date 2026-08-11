@@ -91,6 +91,41 @@ export function sanitizeTitleText(title: string): string {
   return cleaned;
 }
 
+// Extract YouTube video ID from various YouTube URL formats (watch?v=, youtu.be/, shorts/, embed/, v/)
+export function extractYouTubeVideoId(rawUrl: string | URL): string | null {
+  if (!rawUrl) return null;
+  try {
+    const urlObj = typeof rawUrl === "string"
+      ? new URL(rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`)
+      : rawUrl;
+
+    const host = urlObj.hostname.toLowerCase().replace(/^www\./, "");
+    if (!host.includes("youtube.com") && !host.includes("youtu.be")) {
+      return null;
+    }
+
+    // 1. youtu.be/<id>
+    if (host.includes("youtu.be")) {
+      const id = urlObj.pathname.slice(1).split("/")[0].split("?")[0].split("#")[0];
+      if (id && id.length >= 5) return id;
+    }
+
+    // 2. youtube.com/watch?v=<id>
+    const vParam = urlObj.searchParams.get("v");
+    if (vParam) return vParam.split("?")[0].split("&")[0];
+
+    // 3. youtube.com/shorts/<id>, youtube.com/embed/<id>, youtube.com/v/<id>
+    const match = urlObj.pathname.match(/\/(?:shorts|embed|v)\/([a-zA-Z0-9_-]+)/i);
+    if (match && match[1]) {
+      return match[1];
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 // Extract a clean human-friendly title from a URL when meta title is generic or missing
 export function extractTitleFromUrl(rawUrl: string): string {
   if (!rawUrl) return "Untitled Link";
@@ -119,10 +154,10 @@ export function extractTitleFromUrl(rawUrl: string): string {
       }
     }
 
-    // 3. YouTube URLs (youtube.com/watch?v=...)
+    // 3. YouTube URLs (youtube.com/watch?v=..., youtu.be/..., shorts/...)
     if (host.includes("youtube.com") || host.includes("youtu.be")) {
-      const v = urlObj.searchParams.get("v");
-      if (v) return `YouTube Video (${v})`;
+      const ytId = extractYouTubeVideoId(fullUrl);
+      if (ytId) return "YouTube Video";
     }
 
     // 4. Path-based slug extraction

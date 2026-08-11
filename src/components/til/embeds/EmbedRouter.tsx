@@ -8,6 +8,7 @@ import { ArxivEmbed } from "@/components/til/embeds/ArxivEmbed";
 import { XEmbed } from "@/components/til/embeds/XEmbed";
 import { GenericEmbed } from "@/components/til/embeds/GenericEmbed";
 import { AlertCircle } from "lucide-react";
+import { extractYouTubeVideoId } from "@/lib/cleanTitle";
 
 export type DensityOption = "inline" | "card" | "quote" | "full";
 
@@ -69,7 +70,7 @@ export const EmbedRouter: React.FC<EmbedRouterProps> = ({
   if (effectiveDensity === "full" && (preview.provider === "YOUTUBE" || preview.provider === "VIMEO")) {
     let embedUrl = "";
     if (preview.provider === "YOUTUBE") {
-      const videoId = (preview.meta?.videoId as string) || targetUrl.split("v=")[1] || targetUrl.split("/").pop();
+      const videoId = (preview.meta?.videoId as string) || extractYouTubeVideoId(targetUrl) || targetUrl.split("/").pop();
       embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`;
     } else if (preview.provider === "VIMEO") {
       const vimeoId = targetUrl.split("/").pop();
@@ -82,6 +83,7 @@ export const EmbedRouter: React.FC<EmbedRouterProps> = ({
           embedUrl={embedUrl}
           title={preview.title}
           author={preview.author}
+          thumbnailUrl={preview.thumbnailKey}
           durationSec={preview.durationSec}
           providerName={preview.provider as "YOUTUBE" | "VIMEO"}
         />
