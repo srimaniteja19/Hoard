@@ -123,32 +123,44 @@ export async function POST(req: Request) {
 
     const coverData = await enrichCoverData(body.url, body.ty || "ART");
 
+    const values = {
+      userId,
+      title:        cleanTitle(body.t, body.url),
+      type:         body.ty     || "ART",
+      source:       body.src    || "",
+      url:          body.url,
+      mins:         body.mins   ?? 5,
+      tag:          body.tag    || "general",
+      collectionId,
+      unread:       body.unread ?? true,
+      note:         body.note   || "",
+      extra:        {
+        ...(body.ex || {}),
+        ...(coverData ? { coverData } : {}),
+        ...(typeof body.coverImage === "string" && body.coverImage ? { coverImage: body.coverImage } : {}),
+      },
+      parentId:     body.parentId ?? null,
+      startTimeSec: body.startTimeSec ?? null,
+      chapterIndex: body.chapterIndex ?? null,
+      archivedText: body.archivedText ?? null,
+      driftStatus:  body.driftStatus ?? null,
+      driftPercent: body.driftPercent ?? null,
+      clusterId:    body.clusterId ?? null,
+      clusterTitle: body.clusterTitle ?? null,
+    };
+
+    // (userId, url) is unique — including soft-deleted rows, since deleting a
+    // bookmark only sets deletedAt rather than removing the row. Without
+    // onConflictDoUpdate, re-saving a URL you'd previously deleted (or just
+    // saving an active duplicate) hits that constraint and 500s, and the
+    // "bookmark" silently never appears. Resurrect/refresh the existing row
+    // instead — deletedAt: null undoes the soft delete either way.
     const [row] = await db
       .insert(bookmarks)
-      .values({
-        userId,
-        title:        cleanTitle(body.t, body.url),
-        type:         body.ty     || "ART",
-        source:       body.src    || "",
-        url:          body.url,
-        mins:         body.mins   ?? 5,
-        tag:          body.tag    || "general",
-        collectionId,
-        unread:       body.unread ?? true,
-        note:         body.note   || "",
-        extra:        {
-          ...(body.ex || {}),
-          ...(coverData ? { coverData } : {}),
-          ...(typeof body.coverImage === "string" && body.coverImage ? { coverImage: body.coverImage } : {}),
-        },
-        parentId:     body.parentId ?? null,
-        startTimeSec: body.startTimeSec ?? null,
-        chapterIndex: body.chapterIndex ?? null,
-        archivedText: body.archivedText ?? null,
-        driftStatus:  body.driftStatus ?? null,
-        driftPercent: body.driftPercent ?? null,
-        clusterId:    body.clusterId ?? null,
-        clusterTitle: body.clusterTitle ?? null,
+      .values(values)
+      .onConflictDoUpdate({
+        target: [bookmarks.userId, bookmarks.url],
+        set: { ...values, deletedAt: null, updatedAt: new Date() },
       })
       .returning();
 

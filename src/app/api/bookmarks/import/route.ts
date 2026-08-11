@@ -120,13 +120,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No valid bookmarks found to import" }, { status: 400 });
     }
 
-    // Insert into DB
-    const inserted = await db.insert(bookmarks).values(toInsert).returning({ id: bookmarks.id });
+    // Insert into DB. onConflictDoNothing on (userId, url): without it, a
+    // single item that's already saved (or was saved and soft-deleted —
+    // deletedAt doesn't exempt a row from the unique constraint) fails the
+    // unique constraint for the whole batch, silently dropping every other
+    // item in the import along with it.
+    const inserted = await db
+      .insert(bookmarks)
+      .values(toInsert)
+      .onConflictDoNothing({ target: [bookmarks.userId, bookmarks.url] })
+      .returning({ id: bookmarks.id });
+
+    const skipped = toInsert.length - inserted.length;
 
     return NextResponse.json({
       success: true,
       importedCount: inserted.length,
-      message: `Successfully imported ${inserted.length} bookmark(s).`,
+      skippedCount: skipped,
+      message:
+        skipped > 0
+          ? `Imported ${inserted.length} bookmark(s), skipped ${skipped} already-saved URL(s).`
+          : `Successfully imported ${inserted.length} bookmark(s).`,
     });
   } catch (e) {
     if (e instanceof AuthError) {
