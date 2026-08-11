@@ -1,6 +1,87 @@
 // HOARD Extension Background Service Worker (Manifest V3)
 
 const HOARD_ORIGIN = "https://hoard-ten.vercel.app";
+const PENDING_KEY = "hoard_pending_sync";
+
+// ─── Kind Detection (minimal — kept in sync with src/lib/detectKind.ts) ───────
+
+function detectKindForSave(u) {
+  const urlLower = (u || "").toLowerCase().trim();
+  if (!urlLower) return "APP";
+
+  let hostname = "";
+  try {
+    hostname = new URL(urlLower.startsWith("http") ? urlLower : `https://${urlLower}`).hostname.replace(/^www\./, "");
+  } catch {
+    hostname = "";
+  }
+
+  if (/youtube\.com\/playlist/.test(urlLower)) return "PLY";
+  if (hostname === "youtube.com" || hostname === "youtu.be") return "VID";
+  if (hostname === "open.spotify.com" || hostname === "music.apple.com") return "PLY";
+  if (/github\.com\/[\w.-]+\/[\w.-]+/.test(urlLower)) return "GIT";
+  if (/arxiv|acm\.org|ieee/.test(urlLower)) return "PPR";
+  if (/raycast|warp\.dev|excalidraw|apps\.apple|play\.google/.test(urlLower)) return "APP";
+  if (/docs\.|developer\.|\/docs\//.test(urlLower)) return "DOC";
+  return "APP";
+}
+
+// ─── Save Bookmark (context menu + keyboard shortcut) ─────────────────────────
+//
+// Runs in the service worker, so it can't rely on an open HOARD tab the way
+// the popup's own save button does — it POSTs directly. The request only
+// succeeds if the browser already holds a valid HOARD session cookie for the
+// target origin (i.e. the user is logged in in some tab); on any failure it
+// falls back to the same offline queue content.js drains on next page load.
+async function saveBookmark(url, title, note) {
+  if (!url) return;
+
+  const { hoard_server_url } = await chrome.storage.local.get(["hoard_server_url"]);
+  const origin = (hoard_server_url || HOARD_ORIGIN).replace(/\/$/, "");
+
+  const ty = detectKindForSave(url);
+  let domain = "web";
+  try { domain = new URL(url).hostname.replace(/^www\./, ""); } catch {}
+
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const d = new Date();
+
+  const bookmark = {
+    t:      title || "Captured Bookmark",
+    ty,
+    src:    domain,
+    url,
+    mins:   ty === "VID" ? 45 : ty === "PPR" ? 40 : 15,
+    tag:    "saved",
+    coll:   "unsorted",
+    unread: true,
+    ex:     { Source: domain },
+    note:   note || "",
+    source: "Saved via HOARD Extension",
+    when:   `${months[d.getMonth()]} ${d.getDate()}`,
+  };
+
+  try {
+    const res = await fetch(`${origin}/api/bookmarks`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bookmark),
+    });
+    if (res.ok) {
+      showBadge();
+      return;
+    }
+    console.warn("[HOARD Background] Save failed with status", res.status);
+  } catch (err) {
+    console.warn("[HOARD Background] Save request failed, queueing offline:", err);
+  }
+
+  const { [PENDING_KEY]: pending = [] } = await chrome.storage.local.get([PENDING_KEY]);
+  pending.push(bookmark);
+  await chrome.storage.local.set({ [PENDING_KEY]: pending });
+  showBadge("…");
+}
 
 // ─── Context Menus ────────────────────────────────────────────────────────────
 

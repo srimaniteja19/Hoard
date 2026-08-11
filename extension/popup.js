@@ -350,6 +350,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
       // 2. Save to DB via open Hoard tab or backend API
+      const queueOffline = () => {
+        chrome.storage.local.get([PENDING_KEY], (res) => {
+          const pending = res[PENDING_KEY] || [];
+          pending.push(newBookmark);
+          chrome.storage.local.set({ [PENDING_KEY]: pending }, () => {
+            showToast("✓ SAVED — syncs when Hoard opens");
+            chrome.runtime.sendMessage({ action: "bookmark_saved" });
+          });
+        });
+      };
+
       chrome.tabs.query({ url: ["*://*.vercel.app/*", "*://localhost/*"] }, (tabs) => {
         if (tabs && tabs.length > 0) {
           chrome.scripting.executeScript({
@@ -364,25 +375,28 @@ document.addEventListener("DOMContentLoaded", async () => {
                   body: JSON.stringify(bm),
                 });
                 if (res.ok) window.postMessage({ type: "HOARD_BOOKMARKS_UPDATED" }, "*");
+                return res.ok;
               } catch (e) {
                 console.error("[HOARD Popup] fetch failed:", e);
+                return false;
               }
             },
             args: [newBookmark],
-          }, () => {
-            showToast("✓ SAVED TO HOARD");
-            chrome.runtime.sendMessage({ action: "bookmark_saved" });
+          }, (results) => {
+            // executeScript's own failure (no matching frame, injection
+            // blocked, etc.) leaves results undefined — treat that the same
+            // as the injected fetch itself reporting false.
+            const succeeded = results?.[0]?.result === true;
+            if (succeeded) {
+              showToast("✓ SAVED TO HOARD");
+              chrome.runtime.sendMessage({ action: "bookmark_saved" });
+            } else {
+              queueOffline();
+            }
           });
         } else {
           // No Hoard tab open — queue for content script to sync on next load
-          chrome.storage.local.get([PENDING_KEY], (res) => {
-            const pending = res[PENDING_KEY] || [];
-            pending.push(newBookmark);
-            chrome.storage.local.set({ [PENDING_KEY]: pending }, () => {
-              showToast("✓ SAVED — syncs when Hoard opens");
-              chrome.runtime.sendMessage({ action: "bookmark_saved" });
-            });
-          });
+          queueOffline();
         }
       });
     } else {

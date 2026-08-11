@@ -10,7 +10,11 @@ async function drainPending() {
       const pending = res[PENDING_KEY];
       if (!pending || pending.length === 0) { resolve(); return; }
 
-      let anyFailed = false;
+      // Only re-queue the ones that actually failed — a single failure used
+      // to block the whole queue from ever clearing, re-POSTing bookmarks
+      // that had already saved successfully on every subsequent page load.
+      const remaining = [];
+      let syncedCount = 0;
       for (const bm of pending) {
         try {
           const r = await fetch("/api/bookmarks", {
@@ -19,15 +23,20 @@ async function drainPending() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(bm),
           });
-          if (!r.ok) { anyFailed = true; }
+          if (r.ok) syncedCount++;
+          else remaining.push(bm);
         } catch {
-          anyFailed = true;
+          remaining.push(bm);
         }
       }
 
-      if (!anyFailed) {
+      if (remaining.length === 0) {
         chrome.storage.local.remove(PENDING_KEY, () => {
-          console.log(`[HOARD Content] Synced ${pending.length} pending bookmark(s) to DB.`);
+          console.log(`[HOARD Content] Synced ${syncedCount} pending bookmark(s) to DB.`);
+        });
+      } else {
+        chrome.storage.local.set({ [PENDING_KEY]: remaining }, () => {
+          console.log(`[HOARD Content] Synced ${syncedCount}, ${remaining.length} still pending.`);
         });
       }
 
