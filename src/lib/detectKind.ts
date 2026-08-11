@@ -12,12 +12,8 @@ function hostnameOf(url: string): string {
 /**
  * Pass 1: URL-pattern classification. Only returns a kind when the URL
  * itself is a reliable signal (a known streaming host, a repo path, a docs
- * subdomain, ...) — returns null rather than guessing, so callers can fall
- * back to page metadata instead of forcing a wrong kind.
- *
- * Host checks are exact-hostname matches, not substring tests: a `.test()`
- * against the raw URL for "spotify" also matches a marketing page hosted at
- * `xirp.spotify.com`, which is not a music link.
+ * subdomain, an article/publishing site or post slug, ...) — returns null rather than guessing,
+ * so callers can fall back to page metadata instead of forcing a wrong kind.
  */
 export function detectKindFromUrl(url: string): KindType | null {
   const urlLower = url.toLowerCase().trim();
@@ -41,30 +37,71 @@ export function detectKindFromUrl(url: string): KindType | null {
   }
   if (hostname.startsWith("docs.") || hostname.startsWith("developer.") || /\/docs\//.test(urlLower)) return "DOC";
 
+  // Known Article & Publishing Hosts
+  const isPublishingHost =
+    hostname === "lithub.com" ||
+    hostname === "medium.com" ||
+    hostname.endsWith(".medium.com") ||
+    hostname === "substack.com" ||
+    hostname.endsWith(".substack.com") ||
+    hostname === "dev.to" ||
+    hostname === "hashnode.com" ||
+    hostname.endsWith(".hashnode.dev") ||
+    hostname === "wordpress.com" ||
+    hostname.endsWith(".wordpress.com") ||
+    hostname.endsWith(".ghost.io") ||
+    hostname === "theverge.com" ||
+    hostname === "techcrunch.com" ||
+    hostname === "wired.com" ||
+    hostname === "arstechnica.com" ||
+    hostname === "paulgraham.com" ||
+    hostname === "hbr.org" ||
+    hostname === "quantamagazine.org" ||
+    hostname === "aeon.co" ||
+    hostname.startsWith("blog.") ||
+    hostname.startsWith("posts.");
+
+  // Path-based article indicators (/posts/, /blog/, /article/, /story/, /essay/, date paths like /2026/08/)
+  const hasArticlePath =
+    /\/(?:posts?|blogs?|articles?|stories?|essays?|writing|notes|entry|read)\//i.test(urlLower) ||
+    /\/\d{4}\/\d{2}\//.test(urlLower);
+
+  // Check for multi-hyphen slug segment (e.g. /what-we-talk-about-when-we-talk-about-the-weather/)
+  let hasHyphenatedSlug = false;
+  try {
+    const withProto = urlLower.startsWith("http") ? urlLower : `https://${urlLower}`;
+    const pathname = new URL(withProto).pathname;
+    const segments = pathname.split("/").filter(Boolean);
+    const lastSeg = segments[segments.length - 1] || "";
+    // If the last path segment has 2 or more hyphens (3+ words) and isn't a file extension or query
+    if (lastSeg.includes("-") && lastSeg.split("-").length >= 3 && !/\.(html?|php|png|jpg|json|css|js)$/i.test(lastSeg)) {
+      hasHyphenatedSlug = true;
+    }
+  } catch {
+    // ignore
+  }
+
+  if (isPublishingHost || hasArticlePath || hasHyphenatedSlug) {
+    return "ART";
+  }
+
   return null;
 }
 
 /**
  * Pass 2: og:type-informed fallback for anything pass 1 couldn't confidently
- * classify from the URL alone. Defaults to APP rather than ART — an
- * unrecognized site (a SaaS tool, a dashboard, a marketing page) is far more
- * often a "tool/app" than a long-form article, and ART carries specific UI
- * implications (word count, reading time estimate) that actively mislead for
- * a tool.
+ * classify from the URL alone.
  */
 export function detectKindFromMetadata(ogType: string | null | undefined): KindType {
   const t = (ogType || "").toLowerCase().trim();
   if (t.startsWith("video")) return "VID";
   if (t.startsWith("music")) return "PLY";
-  if (t === "article" || t === "book") return "ART";
+  if (t === "article" || t === "book" || t === "blog" || t === "news" || t === "post") return "ART";
   return "APP";
 }
 
 /**
- * Full two-pass classification: URL first, og:type second. `ogType` may be
- * omitted when metadata hasn't been fetched yet (e.g. a live preview while
- * the user is still typing a URL) — the result is then whatever pass 1 found,
- * or APP as the safe default.
+ * Full two-pass classification: URL first, og:type second.
  */
 export function detectKind(url: string, ogType?: string | null): KindType {
   return detectKindFromUrl(url) ?? detectKindFromMetadata(ogType);

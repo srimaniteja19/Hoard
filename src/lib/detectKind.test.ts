@@ -45,7 +45,16 @@ describe("detectKindFromUrl", () => {
     expect(detectKindFromUrl("https://example.com/docs/getting-started")).toBe("DOC");
   });
 
-  it("returns null for an unrecognized domain — no guessing at the URL layer", () => {
+  it("classifies articles and blog posts from publishing hosts, article paths, and multi-word hyphenated slugs", () => {
+    expect(detectKindFromUrl("https://lithub.com/what-we-talk-about-when-we-talk-about-the-weather/")).toBe("ART");
+    expect(detectKindFromUrl("https://alexdebrie.com/posts/dynamodb-single-table-design/")).toBe("ART");
+    expect(detectKindFromUrl("https://medium.com/@user/my-first-post-123")).toBe("ART");
+    expect(detectKindFromUrl("https://myblog.substack.com/p/deep-dive")).toBe("ART");
+    expect(detectKindFromUrl("https://dev.to/author/building-web-apps-in-2026")).toBe("ART");
+    expect(detectKindFromUrl("https://example.com/2026/08/how-to-build-systems")).toBe("ART");
+  });
+
+  it("returns null for an unrecognized domain without article signals", () => {
     expect(detectKindFromUrl("https://portfoliolab.ai")).toBeNull();
   });
 
@@ -55,9 +64,11 @@ describe("detectKindFromUrl", () => {
 });
 
 describe("detectKindFromMetadata", () => {
-  it("maps og:type article/book to ART", () => {
+  it("maps og:type article/book/blog/post to ART", () => {
     expect(detectKindFromMetadata("article")).toBe("ART");
     expect(detectKindFromMetadata("book")).toBe("ART");
+    expect(detectKindFromMetadata("post")).toBe("ART");
+    expect(detectKindFromMetadata("blog")).toBe("ART");
   });
 
   it("maps og:type video.* to VID", () => {
@@ -79,6 +90,7 @@ describe("detectKindFromMetadata", () => {
 describe("detectKind (two-pass)", () => {
   it("prefers the URL-pattern match over metadata", () => {
     expect(detectKind("https://github.com/pgvector/pgvector", "website")).toBe("GIT");
+    expect(detectKind("https://lithub.com/what-we-talk-about-when-we-talk-about-the-weather/", "website")).toBe("ART");
   });
 
   it("falls back to metadata when the URL alone is ambiguous", () => {
