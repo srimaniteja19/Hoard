@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import { Bookmark, KindType } from "@/types";
 import { COLLS, TYPES } from "@/data/initialBookmarks";
+import { formatDuration } from "@/lib/format";
 
 interface CrumbBarProps {
   items: Bookmark[];
@@ -26,10 +27,6 @@ export const CrumbBar: React.FC<CrumbBarProps> = ({ items, coll, ty }) => {
     return (found?.name || "ALL BOOKMARKS").toUpperCase();
   }, [coll, ty]);
 
-  const formatMins = (m: number) => {
-    return m < 60 ? `${m} MIN` : `${Math.floor(m / 60)}H${m % 60 ? ` ${m % 60}M` : ""}`;
-  };
-
   return (
     <div className="crumb">
       <h1>
@@ -49,7 +46,7 @@ export const CrumbBar: React.FC<CrumbBarProps> = ({ items, coll, ty }) => {
             color: totalMins > 600 ? "#fff" : "#000",
           }}
         >
-          <b>{formatMins(totalMins)}</b> QUEUED
+          <b>{formatDuration(totalMins)}</b> QUEUED
         </span>
       </div>
     </div>

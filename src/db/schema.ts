@@ -139,6 +139,16 @@ export const bookmarks = pgTable(
     driftPercent: integer("drift_percent"),
     clusterId: text("cluster_id"),
     clusterTitle: text("cluster_title"),
+    coverSource: varchar("cover_source", { length: 12 }),
+    ogImageKey: text("og_image_key"),
+    ogImageWidth: integer("og_image_width"),
+    ogImageHeight: integer("og_image_height"),
+    ogDominantColor: varchar("og_dominant_color", { length: 9 }),
+    ogLqip: text("og_lqip"),
+    ogStatus: varchar("og_status", { length: 12 }).notNull().default("PENDING"),
+    ogRejectReason: varchar("og_reject_reason", { length: 40 }),
+    faviconKey: text("favicon_key"),
+    excerptSource: varchar("excerpt_source", { length: 16 }),
     deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -151,6 +161,12 @@ export const bookmarks = pgTable(
     index("bookmark_cluster_idx").on(table.clusterId),
   ]
 );
+
+export const favicons = pgTable("favicons", {
+  host: text("host").primaryKey(),
+  faviconKey: text("favicon_key"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
 export const tags = pgTable(
   "tags",

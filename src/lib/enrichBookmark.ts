@@ -6,13 +6,14 @@ import { cleanTitle, isGenericTitle, sanitizeTitleText } from "@/lib/cleanTitle"
 export interface EnrichedBookmarkValues {
   title: string;
   note: string;
+  excerptSource: "user-note" | "og" | null;
   coverImage: string | null;
   coverData: CoverData | null;
 }
 
 /**
  * Server-side auto-enricher for saved bookmarks.
- * Ensures `coverImage`, `title`, `note` (description), and `coverData` are completely
+ * Ensures `coverImage`, `title`, `note` (description), `excerptSource`, and `coverData` are completely
  * populated even if the client/extension/import didn't pass full metadata.
  */
 export async function enrichBookmarkValues(
@@ -35,6 +36,7 @@ export async function enrichBookmarkValues(
 
   let title = inputTitle ? sanitizeTitleText(inputTitle) : "";
   let note = isDefaultNote ? "" : (inputNote || "");
+  let excerptSource: "user-note" | "og" | null = note ? "user-note" : null;
   let coverImage = inputCoverImage || null;
 
   try {
@@ -52,6 +54,7 @@ export async function enrichBookmarkValues(
 
       if (isDefaultNote && meta.description) {
         note = meta.description;
+        excerptSource = "og";
       }
 
       const coverData = meta.html
@@ -61,6 +64,7 @@ export async function enrichBookmarkValues(
       return {
         title: title || cleanTitle(inputTitle, url),
         note,
+        excerptSource,
         coverImage,
         coverData,
       };
@@ -73,6 +77,7 @@ export async function enrichBookmarkValues(
   return {
     title: title || cleanTitle(inputTitle, url),
     note,
+    excerptSource,
     coverImage,
     coverData,
   };

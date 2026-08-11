@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanTitle, extractYouTubeVideoId, extractTitleFromUrl, sanitizeTitleText, isGenericTitle } from "./cleanTitle";
+import { cleanTitle, extractYouTubeVideoId, extractTitleFromUrl, isGenericTitle } from "./cleanTitle";
 
 describe("extractYouTubeVideoId", () => {
   it("extracts ID from standard watch URL", () => {
@@ -63,6 +63,13 @@ describe("cleanTitle", () => {
 
   it("decodes HTML entities in title", () => {
     expect(cleanTitle("Rock &amp; Roll &lsquo;Guide&rsquo;", "https://example.com")).toBe("Rock & Roll 'Guide'");
+  });
+
+  it("preserves acronyms and technical terms verbatim without mangling (LLMs, pgvector, iOS, npm)", () => {
+    expect(cleanTitle("How I Use LLMs To Learn", "https://example.com")).toBe("How I Use LLMs To Learn");
+    expect(cleanTitle("pgvector performance tuning", "https://example.com")).toBe("pgvector performance tuning");
+    expect(cleanTitle("iOS 18 Security Updates", "https://example.com")).toBe("iOS 18 Security Updates");
+    expect(cleanTitle("npm v10 Release Notes", "https://example.com")).toBe("npm v10 Release Notes");
   });
 });
 

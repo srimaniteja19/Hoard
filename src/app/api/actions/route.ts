@@ -76,6 +76,7 @@ export async function POST(req: Request) {
         collectionId,
         unread:       bm.unread ?? true,
         note:         enriched.note,
+        excerptSource: enriched.excerptSource,
         extra:        {
           ...(bm.ex || {}),
           ...(enriched.coverData ? { coverData: enriched.coverData } : {}),

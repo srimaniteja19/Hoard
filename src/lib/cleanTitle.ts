@@ -192,10 +192,9 @@ export function extractTitleFromUrl(rawUrl: string): string {
         .trim();
 
       if (cleanSegment && cleanSegment.length > 2 && !/^\d+$/.test(cleanSegment)) {
-        // Capitalize words nicely
         return cleanSegment
           .split(" ")
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .map((w) => (w.length > 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w))
           .join(" ");
       }
     }

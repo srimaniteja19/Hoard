@@ -47,6 +47,16 @@ function dbToUi(row: typeof bookmarks.$inferSelect, titleMap?: Map<number, strin
     driftPercent: row.driftPercent,
     clusterId: row.clusterId,
     clusterTitle: row.clusterTitle,
+    coverSource: (row.coverSource as Bookmark["coverSource"]) || null,
+    ogImageKey: row.ogImageKey,
+    ogImageWidth: row.ogImageWidth,
+    ogImageHeight: row.ogImageHeight,
+    ogDominantColor: row.ogDominantColor,
+    ogLqip: row.ogLqip,
+    ogStatus: (row.ogStatus as Bookmark["ogStatus"]) || "PENDING",
+    ogRejectReason: row.ogRejectReason,
+    faviconKey: row.faviconKey,
+    excerptSource: (row.excerptSource as Bookmark["excerptSource"]) || (row.note ? "user-note" : null),
   };
 }
 
@@ -128,6 +138,7 @@ export async function GET() {
                 .set({
                   title: enriched.title,
                   note: enriched.note,
+                  excerptSource: enriched.excerptSource,
                   extra: {
                     ...extra,
                     ...(enriched.coverData ? { coverData: enriched.coverData } : {}),
@@ -184,6 +195,7 @@ export async function POST(req: Request) {
       collectionId,
       unread:       body.unread ?? true,
       note:         enriched.note,
+      excerptSource: enriched.excerptSource,
       extra:        {
         ...(body.ex || {}),
         ...(enriched.coverData ? { coverData: enriched.coverData } : {}),

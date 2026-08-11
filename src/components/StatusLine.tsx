@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Bookmark } from "@/types";
+import { formatDuration } from "@/lib/format";
 
 interface StatusLineProps {
   bookmarks: Bookmark[];
@@ -66,7 +67,7 @@ export const StatusLine: React.FC<StatusLineProps> = ({ bookmarks }) => {
     <div className="status-line-bar" role="status">
       <span>{stats.itemCount} ITEMS</span>
       <span className="sep">·</span>
-      <span>{stats.queuedMins} MIN QUEUED</span>
+      <span>{formatDuration(stats.queuedMins)} QUEUED</span>
       <span className="sep">·</span>
       <span>
         {stats.burnDownDays !== null

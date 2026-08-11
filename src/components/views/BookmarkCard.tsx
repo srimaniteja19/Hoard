@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Bookmark } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
-import { Layers, ShieldCheck, AlertTriangle, Zap, Terminal } from "lucide-react";
+import { Layers, ShieldCheck, AlertTriangle, Zap } from "lucide-react";
 
 import { CoverCanvas } from "@/components/covers/CoverCanvas";
-import { RealContentCover } from "@/components/covers/RealContentCover";
 import { calculateSunFadeOpacity } from "@/components/covers/lib/cover-geometry";
+import { formatDuration } from "@/lib/format";
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -32,15 +32,10 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   onOpenDiff,
   onDischarge,
 }) => {
-  const [showFetchLog, setShowFetchLog] = useState(false);
   const typeMeta = TYPES[bookmark.ty] || { name: bookmark.ty, c: "#00F0FF", fg: "#000", verb: "READ" };
   const e = bookmark.ex || {};
   const durationText =
-    e.Runtime || (e.Stars ? `${e.Stars}★` : e.Pages || e.Platform || (e.Words ? `${e.Words}w` : ""));
-
-  const formatMins = (m: number) => {
-    return m < 60 ? `${m} MIN` : `${Math.floor(m / 60)}H${m % 60 ? ` ${m % 60}M` : ""}`;
-  };
+    e.Runtime || (e.Stars ? `${e.Stars}★` : e.Pages || (e.Words ? `${e.Words}w` : ""));
 
   const handleClick = (evt: React.MouseEvent) => {
     if (evt.metaKey || evt.ctrlKey) {
@@ -58,6 +53,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
     <article
       className={`card ${isSelected ? "sel" : ""}`}
       onClick={handleClick}
+      tabIndex={0}
       style={{
         position: "relative",
         ...(sunFadeOpacity < 1 ? { opacity: sunFadeOpacity } : {}),
@@ -69,23 +65,28 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         data-kind={bookmark.ty}
         style={heightPx ? { height: `${heightPx}px` } : undefined}
       >
-        {showFetchLog ? (
-          <RealContentCover bookmark={bookmark} />
-        ) : (
-          <CoverCanvas kind={bookmark.ty} coverData={bookmark.coverData} image={bookmark.coverImage} height={heightPx} />
-        )}
+        <CoverCanvas
+          kind={bookmark.ty}
+          coverData={bookmark.coverData}
+          image={bookmark.coverImage}
+          ogImageKey={bookmark.ogImageKey}
+          ogLqip={bookmark.ogLqip}
+          coverSource={bookmark.coverSource}
+          ogStatus={bookmark.ogStatus}
+          height={heightPx}
+        />
 
         <button
           type="button"
-          className={`flip-btn ${showFetchLog ? "on" : ""}`}
+          className="open-affordance"
           onClick={(evt) => {
             evt.stopPropagation();
-            setShowFetchLog((v) => !v);
+            onOpen(bookmark.id);
           }}
-          title={showFetchLog ? "Show cover" : "Show what HOARD actually fetched"}
-          aria-label={showFetchLog ? "Show cover" : "Show what HOARD actually fetched"}
+          title="Open bookmark"
+          aria-label="Open bookmark"
         >
-          <Terminal size={12} strokeWidth={2.5} />
+          ↗
         </button>
 
         {/* READ Stamp Overlay */}
@@ -170,13 +171,16 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
 
         <div className="ct">{bookmark.t}</div>
         <div className="print-url">{bookmark.url}</div>
-        {bookmark.note && bookmark.note !== "Saved via HOARD Extension" && <p className="cex">{bookmark.note}</p>}
+        {Boolean(bookmark.note && bookmark.note.trim().length > 0 && bookmark.note !== "Saved via HOARD Extension") && (
+          <p className={`cex ${bookmark.excerptSource || "user-note"}`}>{bookmark.note}</p>
+        )}
         
         <div className="cmeta">
+          {e.Platform && <span>{e.Platform} · </span>}
           <span>{bookmark.src}</span>
           <span>·</span>
           <span>
-            {typeMeta.verb} {formatMins(bookmark.mins)}
+            {typeMeta.verb} {formatDuration(bookmark.mins)}
           </span>
         </div>
 
@@ -194,7 +198,8 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
 
           {bookmark.unread && onDischarge && (
             <span
-              className="ctag"
+              className="ctag discharge-btn"
+              tabIndex={0}
               onClick={(e) => {
                 e.stopPropagation();
                 const cardEl = (e.currentTarget as HTMLElement).closest("article");

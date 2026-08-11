@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { KindType } from "@/types";
 import { parseCoverData } from "@/lib/cover-data";
+import { getBlobUrl } from "@/lib/storage/blobUrl";
 import { HatchFallback } from "./HatchFallback";
 import { RepoCover } from "./RepoCover";
 import { ArticleCover } from "./ArticleCover";
@@ -14,22 +15,40 @@ export interface CoverCanvasProps {
   kind: KindType;
   coverData?: unknown;
   image?: string | null;
+  ogImageKey?: string | null;
+  ogLqip?: string | null;
+  coverSource?: string | null;
+  ogStatus?: string | null;
   height?: number;
   className?: string;
   ariaLabel?: string;
 }
 
 /**
- * CoverCanvas — Master cover router component.
- * A real `image` (og:image/favicon fetched at save time) always wins when
- * present, since an actual screenshot of the page beats any synthetic art.
- * Falls back to a kind-specific SVG built from coverData, and finally to
- * HatchFallback when neither is available — or if the image fails to load.
+ * CoverCanvas — Master cover router component (§5.1).
+ * When coverSource === 'og' and ogStatus === 'READY', renders mirrored WebP image
+ * with duotone filter matching bookmark.kind and LQIP placeholder while loading.
+ * Otherwise renders kind-specific SVG data-ink cover.
  */
 export const CoverCanvas: React.FC<CoverCanvasProps> = (props) => {
-  const { kind, coverData, image, height, className = "", ariaLabel } = props;
+  const {
+    kind,
+    coverData,
+    image,
+    ogImageKey,
+    ogLqip,
+    coverSource,
+    ogStatus,
+    height,
+    className = "",
+    ariaLabel,
+  } = props;
   const parsed = parseCoverData(coverData);
   const [imageFailed, setImageFailed] = useState(false);
+
+  const isReadyOg = (coverSource === "og" || (!coverSource && !!ogImageKey)) && (ogStatus === "READY" || !ogStatus) && !!ogImageKey;
+  const resolvedImgUrl = isReadyOg ? getBlobUrl(ogImageKey) : image;
+  const filterStyle = isReadyOg ? `url(#duotone-${kind})` : "none";
 
   const renderInnerCover = () => {
     if (parsed) {
@@ -59,7 +78,7 @@ export const CoverCanvas: React.FC<CoverCanvasProps> = (props) => {
   };
 
   const defaultLabel = `${kind} cover visualization`;
-  const showImage = !!image && !imageFailed;
+  const showImage = !!resolvedImgUrl && !imageFailed;
 
   return (
     <div
@@ -72,15 +91,22 @@ export const CoverCanvas: React.FC<CoverCanvasProps> = (props) => {
         height: height ? `${height}px` : "100%",
         position: "relative",
         overflow: "hidden",
+        ...(ogLqip && showImage ? { backgroundImage: `url(${ogLqip})`, backgroundSize: "cover", backgroundPosition: "center" } : {}),
       }}
     >
       {showImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={image}
+          src={resolvedImgUrl || ""}
           alt=""
           onError={() => setImageFailed(true)}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+            filter: filterStyle,
+          }}
         />
       ) : (
         <>

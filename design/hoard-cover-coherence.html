@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOARD — Cover Coherence & Duotone Palette Reference</title>
+  <style>
+    :root {
+      --bg: #14140F;
+      --fg: #F4F0EA;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 32px;
+    }
+    h1 {
+      font-family: var(--mono);
+      font-size: 24px;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+    p.sub {
+      color: rgba(244, 240, 234, 0.7);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    .card {
+      border: 2px solid var(--fg);
+      background: #1C1C16;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .cover-container {
+      height: 140px;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+    }
+    .cover-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: filter 0.2s ease;
+    }
+    .badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 800;
+      background: #000;
+      color: #fff;
+      padding: 2px 6px;
+      border: 1px solid #fff;
+    }
+    .card-body {
+      padding: 16px;
+    }
+    .title {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .meta {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: rgba(244, 240, 234, 0.6);
+    }
+    .toggle-bar {
+      margin-bottom: 24px;
+      display: flex;
+      gap: 12px;
+    }
+    button.btn {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--fg);
+      color: var(--bg);
+      border: none;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    button.btn:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+
+  <svg style="display:none">
+    <defs>
+      <!-- ART: Amber -->
+      <filter id="duotone-ART" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0 0 0 1 0" result="gray"/>
+        <feComponentTransfer color-interpolation-filters="sRGB">
+          <feFuncR type="table" tableValues="0.102 1.000"/>
+          <feFuncG type="table" tableValues="0.039 0.541"/>
+          <feFuncB type="table" tableValues="0.000 0.000"/>
+        </feComponentTransfer>
+      </filter>
+      <!-- VID: Electric Cyan -->
+      <filter id="duotone-VID" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0 0 0 1 0" result="gray"/>
+        <feComponentTransfer color-interpolation-filters="sRGB">
+          <feFuncR type="table" tableValues="0.039 0.000"/>
+          <feFuncG type="table" tableValues="0.000 0.941"/>
+          <feFuncB type="table" tableValues="0.102 1.000"/>
+        </feComponentTransfer>
+      </filter>
+      <!-- PLY: Magenta Pulse -->
+      <filter id="duotone-PLY" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0 0 0 1 0" result="gray"/>
+        <feComponentTransfer color-interpolation-filters="sRGB">
+          <feFuncR type="table" tableValues="0.102 1.000"/>
+          <feFuncG type="table" tableValues="0.000 0.000"/>
+          <feFuncB type="table" tableValues="0.071 0.533"/>
+        </feComponentTransfer>
+      </filter>
+      <!-- GIT: Phosphor Green -->
+      <filter id="duotone-GIT" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0 0 0 1 0" result="gray"/>
+        <feComponentTransfer color-interpolation-filters="sRGB">
+          <feFuncR type="table" tableValues="0.000 0.000"/>
+          <feFuncG type="table" tableValues="0.102 1.000"/>
+          <feFuncB type="table" tableValues="0.039 0.400"/>
+        </feComponentTransfer>
+      </filter>
+      <!-- APP: Dimmed Slate -->
+      <filter id="duotone-APP" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0 0 0 1 0" result="gray"/>
+        <feComponentTransfer color-interpolation-filters="sRGB">
+          <feFuncR type="table" tableValues="0.051 0.545"/>
+          <feFuncG type="table" tableValues="0.067 0.580"/>
+          <feFuncB type="table" tableValues="0.090 0.620"/>
+        </feComponentTransfer>
+      </filter>
+      <!-- PPR: Academic Ice Teal -->
+      <filter id="duotone-PPR" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0 0 0 1 0" result="gray"/>
+        <feComponentTransfer color-interpolation-filters="sRGB">
+          <feFuncR type="table" tableValues="0.000 0.000"/>
+          <feFuncG type="table" tableValues="0.102 0.898"/>
+          <feFuncB type="table" tableValues="0.094 1.000"/>
+        </feComponentTransfer>
+      </filter>
+      <!-- DOC: Reference Yellow -->
+      <filter id="duotone-DOC" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0.33 0.59 0.11 0 0  0 0 0 1 0" result="gray"/>
+        <feComponentTransfer color-interpolation-filters="sRGB">
+          <feFuncR type="table" tableValues="0.102 1.000"/>
+          <feFuncG type="table" tableValues="0.086 0.902"/>
+          <feFuncB type="table" tableValues="0.000 0.000"/>
+        </feComponentTransfer>
+      </filter>
+    </defs>
+  </svg>
+
+  <h1>HOARD — Cover Coherence Reference</h1>
+  <p class="sub">Unifying real artwork with data-ink covers via SVG feColorMatrix duotone filters (§4)</p>
+
+  <div class="toggle-bar">
+    <button class="btn" onclick="toggleDuotone(true)">Apply Duotone Filters</button>
+    <button class="btn" onclick="toggleDuotone(false)">Raw Source Images</button>
+  </div>
+
+  <div class="grid">
+    <!-- ART -->
+    <div class="card">
+      <div class="cover-container">
+        <img class="cover-img duotone-active" style="filter: url(#duotone-ART)" src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop" alt="ART">
+        <div class="badge">ART</div>
+      </div>
+      <div class="card-body">
+        <div class="title">Single Table Design in DynamoDB</div>
+        <div class="meta">Shadow: #1A0A00 | Highlight: #FF8A00</div>
+      </div>
+    </div>
+
+    <!-- VID -->
+    <div class="card">
+      <div class="cover-container">
+        <img class="cover-img duotone-active" style="filter: url(#duotone-VID)" src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&auto=format&fit=crop" alt="VID">
+        <div class="badge">VID</div>
+      </div>
+      <div class="card-body">
+        <div class="title">Building a Vector DB from Scratch</div>
+        <div class="meta">Shadow: #0A001A | Highlight: #00F0FF</div>
+      </div>
+    </div>
+
+    <!-- PLY -->
+    <div class="card">
+      <div class="cover-container">
+        <img class="cover-img duotone-active" style="filter: url(#duotone-PLY)" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop" alt="PLY">
+        <div class="badge">PLY</div>
+      </div>
+      <div class="card-body">
+        <div class="title">System Design Podcast Episode #42</div>
+        <div class="meta">Shadow: #1A0012 | Highlight: #FF0088</div>
+      </div>
+    </div>
+
+    <!-- GIT -->
+    <div class="card">
+      <div class="cover-container">
+        <img class="cover-img duotone-active" style="filter: url(#duotone-GIT)" src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop" alt="GIT">
+        <div class="badge">GIT</div>
+      </div>
+      <div class="card-body">
+        <div class="title">pgvector / pgvector</div>
+        <div class="meta">Shadow: #001A0A | Highlight: #00FF66</div>
+      </div>
+    </div>
+
+    <!-- APP -->
+    <div class="card">
+      <div class="cover-container">
+        <img class="cover-img duotone-active" style="filter: url(#duotone-APP)" src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop" alt="APP">
+        <div class="badge">APP</div>
+      </div>
+      <div class="card-body">
+        <div class="title">Raycast Extension Developer Tools</div>
+        <div class="meta">Shadow: #0D1117 | Highlight: #8B949E</div>
+      </div>
+    </div>
+
+    <!-- PPR -->
+    <div class="card">
+      <div class="cover-container">
+        <img class="cover-img duotone-active" style="filter: url(#duotone-PPR)" src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=600&auto=format&fit=crop" alt="PPR">
+        <div class="badge">PPR</div>
+      </div>
+      <div class="card-body">
+        <div class="title">Attention Is All You Need</div>
+        <div class="meta">Shadow: #001A18 | Highlight: #00E5FF</div>
+      </div>
+    </div>
+
+    <!-- DOC -->
+    <div class="card">
+      <div class="cover-container">
+        <img class="cover-img duotone-active" style="filter: url(#duotone-DOC)" src="https://images.unsplash.com/photo-1532012197267-da84d127e765?w=600&auto=format&fit=crop" alt="DOC">
+        <div class="badge">DOC</div>
+      </div>
+      <div class="card-body">
+        <div class="title">React 19 Server Components Reference</div>
+        <div class="meta">Shadow: #1A1600 | Highlight: #FFE600</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleDuotone(enable) {
+      document.querySelectorAll('.cover-img').forEach(img => {
+        if (enable) {
+          const kind = img.getAttribute('alt');
+          img.style.filter = `url(#duotone-${kind})`;
+        } else {
+          img.style.filter = 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>

@@ -217,7 +217,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
       coll: selectedColl || (ty === "PLY" ? "listen" : "unsorted"),
       unread: true,
       ex: detected.f,
-      note: detected.n,
+      note: meta?.description || "",
       coverImage: meta?.image ?? undefined,
     });
 

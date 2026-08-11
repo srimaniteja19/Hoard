@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "check:seed": "tsx --env-file=.env.local scripts/check-seed-copy.ts",
     "seed:heavy": "tsx --env-file=.env.local scripts/seed-heavy.ts"
   },
   "dependencies": {
@@ -19,13 +20,15 @@
     "lucide-react": "^0.468.0",
     "next": "^16.3.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@types/d3-force": "^3.0.10",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sharp": "^0.31.1",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "^16.3.0",

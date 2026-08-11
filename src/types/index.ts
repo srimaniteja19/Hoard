@@ -62,6 +62,18 @@ export interface Bookmark {
   // Topic cluster cross-referencing
   clusterId?: string | null;
   clusterTitle?: string | null;
+
+  // OG Cover & Favicon Metadata
+  coverSource?: 'og' | 'generated' | null;
+  ogImageKey?: string | null;
+  ogImageWidth?: number | null;
+  ogImageHeight?: number | null;
+  ogDominantColor?: string | null;
+  ogLqip?: string | null;
+  ogStatus?: 'PENDING' | 'READY' | 'REJECTED' | 'FAILED' | null;
+  ogRejectReason?: string | null;
+  faviconKey?: string | null;
+  excerptSource?: 'og' | 'first-paragraph' | 'user-note' | null;
 }
 
 export interface SearchFilter {
