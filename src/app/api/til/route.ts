@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { tilEntries, tilEntryTags, tags as tagsTable, bookmarks, TilType } from "@/db/schema";
-import { eq, and, desc, lt, inArray } from "drizzle-orm";
+import { eq, and, desc, lt, inArray, isNull } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { createTilSchema } from "@/lib/validations/til";
 import { getLoggedForDate, generateShortHash, getUserTimezone, getTagsForTilEntries } from "@/lib/dal/til";
@@ -22,9 +22,14 @@ export async function GET(req: Request) {
     const type = searchParams.get("type");
     const day = searchParams.get("day");
     const sort = searchParams.get("sort");
-    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
+    const includeSuperseded = searchParams.get("includeSuperseded") === "true";
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
 
     const conditions = [eq(tilEntries.userId, userId)];
+
+    if (!includeSuperseded) {
+      conditions.push(isNull(tilEntries.supersededById));
+    }
 
     if (day) {
       conditions.push(eq(tilEntries.loggedFor, day));

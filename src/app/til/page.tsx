@@ -113,7 +113,10 @@ function TilPageContent() {
         if (selectedTag) params.set("tag", selectedTag);
         if (selectedType) params.set("type", selectedType);
         if (selectedDay) params.set("day", selectedDay);
-        if (viewMode === "archive") params.set("limit", "100");
+        if (viewMode === "archive") {
+          params.set("limit", "100");
+          params.set("includeSuperseded", "true");
+        }
 
         const res = await fetch(`/api/til?${params.toString()}`, { credentials: "include" });
 

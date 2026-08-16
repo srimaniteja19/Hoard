@@ -43,12 +43,15 @@ export const TilHeaderNav: React.FC = () => {
         top: 0,
         zIndex: 100,
         boxShadow: "var(--sh-sm)",
-        flexWrap: "wrap",
-        gap: "10px",
+        flexWrap: "nowrap",
+        gap: "12px",
+        height: "56px",
+        boxSizing: "border-box",
+        overflowX: "auto",
       }}
     >
       {/* Left: Brand / Title & Back Link */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
         <Link
           href="/"
           style={{
@@ -57,13 +60,16 @@ export const TilHeaderNav: React.FC = () => {
             fontWeight: 800,
             color: "var(--ink)",
             textDecoration: "none",
-            background: "var(--bg, #FFFDF8)",
-            border: "1.5px solid var(--ink)",
-            padding: "4px 8px",
-            display: "flex",
+            background: "var(--paper)",
+            border: "var(--bd)",
+            height: "36px",
+            boxSizing: "border-box",
+            padding: "0 10px",
+            display: "inline-flex",
             alignItems: "center",
             gap: "4px",
-            boxShadow: "2px 2px 0 var(--ink)",
+            boxShadow: "var(--sh-sm)",
+            whiteSpace: "nowrap",
           }}
         >
           <ArrowLeft size={13} /> QUEUE
@@ -82,7 +88,7 @@ export const TilHeaderNav: React.FC = () => {
               background: "var(--yel, #FFE600)",
               color: "#000",
               padding: "2px 6px",
-              border: "1px solid var(--ink)",
+              border: "1.5px solid var(--ink)",
             }}
           >
             TIL
@@ -90,8 +96,21 @@ export const TilHeaderNav: React.FC = () => {
         </div>
       </div>
 
-      {/* Center: 4 View Modes Switcher */}
-      <div style={{ display: "flex", alignItems: "center", gap: "4px", background: "rgba(0,0,0,0.04)", padding: "3px", border: "1.5px solid var(--ink)" }}>
+      {/* Center: View Modes Switcher */}
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "2px",
+          background: "var(--paper)",
+          border: "var(--bd)",
+          boxShadow: "var(--sh-sm)",
+          height: "36px",
+          boxSizing: "border-box",
+          padding: "2px",
+          flexShrink: 0,
+        }}
+      >
         {VIEWS.map((v) => {
           const isActive = currentView === v.mode;
           return (
@@ -101,17 +120,19 @@ export const TilHeaderNav: React.FC = () => {
               onClick={() => handleSwitchView(v.mode)}
               style={{
                 fontFamily: "var(--mono)",
-                fontSize: "11px",
+                fontSize: "10px",
                 fontWeight: 900,
-                padding: "4px 10px",
+                padding: "0 8px",
+                height: "100%",
                 border: isActive ? "1.5px solid var(--ink)" : "1px solid transparent",
                 background: isActive ? "var(--yel, #FFE600)" : "transparent",
                 color: isActive ? "#000" : "var(--ink)",
                 cursor: "pointer",
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
-                gap: "5px",
-                boxShadow: isActive ? "1.5px 1.5px 0 var(--ink)" : "none",
+                gap: "4px",
+                boxShadow: isActive ? "1px 1px 0 var(--ink)" : "none",
+                whiteSpace: "nowrap",
               }}
             >
               {v.icon}
@@ -122,22 +143,25 @@ export const TilHeaderNav: React.FC = () => {
       </div>
 
       {/* Right: Quick Links, ThemePicker & User */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
         <Link
           href="/stats"
           style={{
             fontFamily: "var(--mono)",
             fontSize: "11px",
             fontWeight: 800,
-            color: "var(--ink)",
+            color: "#000",
             textDecoration: "none",
-            background: "#00F0FF",
-            border: "1.5px solid var(--ink)",
-            padding: "4px 8px",
-            display: "flex",
+            background: "var(--cyan, #00F0FF)",
+            border: "var(--bd)",
+            height: "36px",
+            boxSizing: "border-box",
+            padding: "0 10px",
+            display: "inline-flex",
             alignItems: "center",
             gap: "4px",
-            boxShadow: "2px 2px 0 var(--ink)",
+            boxShadow: "var(--sh-sm)",
+            whiteSpace: "nowrap",
           }}
         >
           <BarChart2 size={13} /> STATS
