@@ -142,22 +142,26 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           <Link
             href="/session"
             style={{
-              background: "#FFE600",
+              background: "var(--yel, #FFE600)",
               color: "#000",
-              border: "2px solid #000",
-              boxShadow: "2px 2px 0 #000",
-              padding: "5px 12px",
+              border: "var(--bd)",
+              boxShadow: "var(--sh-sm)",
+              height: "36px",
+              boxSizing: "border-box",
+              padding: "0 10px",
               fontWeight: 900,
               fontFamily: "var(--mono)",
-              fontSize: "12px",
+              fontSize: "11px",
               cursor: "pointer",
               display: "inline-flex",
               alignItems: "center",
               gap: "4px",
               textDecoration: "none",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
-            <Zap size={14} fill="#000" /> START SESSION
+            <Zap size={13} fill="#000" /> START SESSION
           </Link>
 
           <div className="grp view-grp">
@@ -188,12 +192,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <button
               className={view === "archive" ? "on" : ""}
               onClick={() => setView("archive")}
-              style={{
-                background: view === "archive" ? "var(--yel, #FFE600)" : undefined,
-                color: view === "archive" ? "#000" : undefined,
-              }}
             >
-              🗄️ ARCHIVE
+              ARCHIVE
             </button>
           </div>
 

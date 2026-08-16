@@ -438,29 +438,34 @@ button, input, textarea {
 
 .bar {
   border-bottom: var(--bd);
-  padding: 13px 18px;
+  padding: 10px 16px;
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   background: var(--cream);
-  flex-wrap: wrap;
 }
 
 .searchbox {
   flex: 1;
-  min-width: 240px;
+  min-width: 180px;
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .searchbox input {
   width: 100%;
   border: var(--bd);
   background: var(--paper);
-  padding: 11px 13px 11px 40px;
-  font-size: 14.5px;
+  padding: 0 12px 0 36px;
+  font-size: 13px;
   font-weight: 500;
   outline: 0;
   box-shadow: var(--sh-sm);
+  height: 36px;
+  box-sizing: border-box;
+  font-family: var(--grot), sans-serif;
+  color: var(--ink);
 }
 
 .searchbox input:focus {
@@ -470,8 +475,9 @@ button, input, textarea {
 
 .searchbox svg {
   position: absolute;
-  left: 13px;
-  top: 13px;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   pointer-events: none;
 }
 
@@ -480,18 +486,28 @@ button, input, textarea {
   border: var(--bd);
   box-shadow: var(--sh-sm);
   background: var(--paper);
+  height: 36px;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .grp button {
   border: 0;
-  border-right: 2px solid #000;
+  border-right: 2px solid var(--ink);
   background: none;
-  padding: 9px 11px;
+  padding: 0 10px;
+  height: 100%;
   cursor: pointer;
   font-family: var(--mono);
   font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: .05em;
+  letter-spacing: .04em;
+  color: var(--ink);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
 .grp button:last-child {
@@ -499,12 +515,13 @@ button, input, textarea {
 }
 
 .grp button.on {
-  background: #000;
+  background: var(--ink);
   color: var(--yel);
 }
 
 .grp button:hover:not(.on) {
   background: var(--yel);
+  color: #000;
 }
 
 .crumb {
@@ -1688,9 +1705,10 @@ input[type=range]::-moz-range-thumb {
 
 .bar-controls-row {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .mobile-timebar-toggle {
@@ -1699,9 +1717,10 @@ input[type=range]::-moz-range-thumb {
 
 .mobile-collapsible-controls {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   width: 100%;
+  flex-wrap: nowrap;
 }
 
 /* ---------------- responsive media queries ---------------- */

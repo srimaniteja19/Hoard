@@ -105,22 +105,25 @@ export const ThemePicker: React.FC = () => {
   const activeThemeMeta = THEMES.find((t) => t.id === currentTheme) || THEMES[0];
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", flexShrink: 0 }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
           fontFamily: "var(--mono)",
-          fontSize: "10px",
+          fontSize: "10.5px",
           fontWeight: 800,
           border: "var(--bd)",
           background: "var(--paper)",
           color: "var(--ink)",
-          padding: "5px 10px",
+          height: "36px",
+          boxSizing: "border-box",
+          padding: "0 10px",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
           gap: "6px",
           boxShadow: "var(--sh-sm)",
+          whiteSpace: "nowrap",
         }}
       >
         <span
