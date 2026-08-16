@@ -232,9 +232,10 @@ export function useBookmarks() {
 
     bookmarks.forEach((b) => {
       if (b.isDeleted) return; // Deleted items only appear in the Archive Vault view
+      if (!b.unread) return; // Read items are archived and appear in the Archive Vault
       // Top level items
       if (!b.parentId) {
-        const kids = (chaptersByParent.get(b.id) || []).filter((k) => !k.isDeleted);
+        const kids = (chaptersByParent.get(b.id) || []).filter((k) => !k.isDeleted && k.unread);
         const fullItem = { ...b, chapters: kids };
 
         if (time < 180 && b.mins > time) {

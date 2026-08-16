@@ -80,26 +80,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [showAllCollections, setShowAllCollections] = useState(false);
   const isColdStart = bookmarks.length > 0 && bookmarks.length < 15;
 
-  const cnt = (cId: string) => bookmarks.filter((x) => inColl(x, cId, collections)).length;
+  const activeBookmarks = useMemo(() => {
+    return bookmarks.filter((x) => !x.isDeleted && x.unread);
+  }, [bookmarks]);
+
+  const cnt = (cId: string) => activeBookmarks.filter((x) => inColl(x, cId, collections)).length;
 
   const typeCounts = useMemo(() => {
     const map: Partial<Record<KindType, number>> = {};
-    bookmarks.forEach((x) => {
+    activeBookmarks.forEach((x) => {
       map[x.ty] = (map[x.ty] || 0) + 1;
     });
     return map;
-  }, [bookmarks]);
+  }, [activeBookmarks]);
 
   // Single grouped aggregate calculation of queued minutes per Kind
   const kindQueuedMinutes = useMemo(() => {
     const map: Record<KindType, number> = {
       ART: 0, VID: 0, PLY: 0, GIT: 0, APP: 0, PPR: 0, DOC: 0,
     };
-    bookmarks.forEach((x) => {
+    activeBookmarks.forEach((x) => {
       map[x.ty] = (map[x.ty] || 0) + (x.mins || 0);
     });
     return map;
-  }, [bookmarks]);
+  }, [activeBookmarks]);
 
   const maxQueuedMinutes = useMemo(() => {
     const vals = Object.values(kindQueuedMinutes);
@@ -108,13 +112,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const tagCounts = useMemo(() => {
     const map: Record<string, number> = {};
-    bookmarks.forEach((x) => {
+    activeBookmarks.forEach((x) => {
       if (x.tag) {
         map[x.tag] = (map[x.tag] || 0) + 1;
       }
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [bookmarks]);
+  }, [activeBookmarks]);
 
   const unreadCount = useMemo(() => {
     return bookmarks.filter((x) => !x.isDeleted && x.unread).length;
@@ -208,7 +212,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <aside className={`side ${isMobileOpen ? "mobile-open" : ""}`}>
         <div className="logo">
           <b>HOARD</b>
-          <span>{bookmarks.length}</span>
+          <span>{unreadCount}</span>
           {onCloseMobile && (
             <button
               className="mobile-side-close"
