@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Bookmark, Collection, KindType } from "@/types";
+import { Bookmark, Collection, KindType, ViewMode } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import { inColl } from "@/hooks/useBookmarks";
 import { sigil } from "@/lib/sigil";
@@ -39,6 +39,8 @@ interface SidebarProps {
   setTag: (t: string | null) => void;
   unreadOnly: boolean;
   setUnreadOnly: (u: boolean) => void;
+  view?: ViewMode;
+  setView?: (v: ViewMode) => void;
   onOpenCapture: () => void;
   onOpenNewFolder: () => void;
   onOpenImport: () => void;
@@ -62,6 +64,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setTag,
   unreadOnly,
   setUnreadOnly,
+  view,
+  setView,
   onOpenCapture,
   onOpenNewFolder,
   onOpenImport,
@@ -113,13 +117,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [bookmarks]);
 
   const unreadCount = useMemo(() => {
-    return bookmarks.filter((x) => x.unread).length;
+    return bookmarks.filter((x) => !x.isDeleted && x.unread).length;
+  }, [bookmarks]);
+
+  const archiveCount = useMemo(() => {
+    return bookmarks.filter((x) => !x.isDeleted && !x.unread).length;
   }, [bookmarks]);
 
   const duplicateCount = useMemo(() => {
     const seen = new Set<string>();
     let dups = 0;
     bookmarks.forEach((b) => {
+      if (b.isDeleted) return;
       const norm = b.url.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
       if (seen.has(norm)) dups++;
       else seen.add(norm);
@@ -393,6 +402,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 {dischargeCount}
               </span>
+            </div>
+
+            <div
+              className={`ci ${view === "archive" ? "on" : ""}`}
+              onClick={() => {
+                if (setView) setView(view === "archive" ? "masonry" : "archive");
+                if (onCloseMobile) onCloseMobile();
+              }}
+              style={{
+                background: view === "archive" ? "var(--yel, #FFE600)" : undefined,
+                color: view === "archive" ? "#000" : undefined,
+                fontWeight: view === "archive" ? 800 : undefined,
+              }}
+            >
+              <span className="ic" style={{ background: "var(--yel, #FFE600)", color: "#000", fontWeight: 800 }}>
+                🗄️
+              </span>
+              Archive Vault
+              <span className="n">{archiveCount}</span>
             </div>
 
             <div className="ci">

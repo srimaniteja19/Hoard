@@ -4,7 +4,7 @@ export type KindType = 'ART' | 'VID' | 'PLY' | 'GIT' | 'APP' | 'PPR' | 'DOC';
 
 export type ContextType = 'all' | 'desk' | 'commute' | 'wind';
 
-export type ViewMode = 'masonry' | 'grid' | 'list' | 'heads';
+export type ViewMode = 'masonry' | 'grid' | 'list' | 'heads' | 'archive';
 
 export type SortMode = 'recent' | 'short' | 'az';
 
@@ -39,6 +39,8 @@ export interface Bookmark {
   when: string;
   createdAt?: string;
   updatedAt?: string;
+  deletedAt?: string | null;
+  isDeleted?: boolean;
   unread: boolean;
   ex: Record<string, string>;
   note: string;

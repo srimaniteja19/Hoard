@@ -123,7 +123,7 @@ export function useBookmarks() {
   const loadData = useCallback(async () => {
     try {
       const [bms, colls] = await Promise.all([
-        apiFetch<Bookmark[]>("/api/bookmarks"),
+        apiFetch<Bookmark[]>("/api/bookmarks?includeDeleted=true"),
         apiFetch<Collection[]>("/api/collections"),
       ]);
       setBookmarks(bms);
@@ -231,9 +231,10 @@ export function useBookmarks() {
     });
 
     bookmarks.forEach((b) => {
+      if (b.isDeleted) return; // Deleted items only appear in the Archive Vault view
       // Top level items
       if (!b.parentId) {
-        const kids = chaptersByParent.get(b.id) || [];
+        const kids = (chaptersByParent.get(b.id) || []).filter((k) => !k.isDeleted);
         const fullItem = { ...b, chapters: kids };
 
         if (time < 180 && b.mins > time) {
@@ -540,6 +541,34 @@ export function useBookmarks() {
     }
   }, []);
 
+  // ── Restore / Purge (Archive & Trash) ────────────────────────────────────
+
+  const restoreBookmark = useCallback(async (id: number) => {
+    setBookmarks((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, isDeleted: false, deletedAt: null, unread: true } : b))
+    );
+    try {
+      await apiFetch(`/api/bookmarks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restore: true, unread: true }),
+      });
+    } catch (e) {
+      console.error("[restoreBookmark]", e);
+    }
+  }, []);
+
+  const purgeBookmark = useCallback(async (id: number) => {
+    setBookmarks((prev) => prev.filter((b) => b.id !== id));
+    try {
+      await apiFetch(`/api/bookmarks/${id}?permanent=true`, {
+        method: "DELETE",
+      });
+    } catch (e) {
+      console.error("[purgeBookmark]", e);
+    }
+  }, []);
+
   // ── Derived ───────────────────────────────────────────────────────────────
 
   const openBookmark = useMemo(
@@ -583,5 +612,7 @@ export function useBookmarks() {
     checkDrift,
     mergeCluster,
     dischargeBookmark,
+    restoreBookmark,
+    purgeBookmark,
   };
 }

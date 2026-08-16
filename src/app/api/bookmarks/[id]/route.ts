@@ -29,6 +29,7 @@ export async function PATCH(req: Request, { params }: Params) {
     if (typeof body.ty        === "string")  updates.type         = body.ty as KindType;
     if (typeof body.mins      === "number")  updates.mins         = body.mins;
 
+    if (body.restore === true || body.deletedAt === null) updates.deletedAt = null;
     if (body.parentId !== undefined)     updates.parentId     = body.parentId;
     if (body.startTimeSec !== undefined) updates.startTimeSec = body.startTimeSec;
     if (body.chapterIndex !== undefined) updates.chapterIndex = body.chapterIndex;
@@ -55,14 +56,22 @@ export async function PATCH(req: Request, { params }: Params) {
 
 export async function DELETE(req: Request, { params }: Params) {
   try {
-    const userId = await requireUserId();
+    const userId = await requireUserId(req);
     const { id } = await params;
     const numId = parseInt(id, 10);
+    const { searchParams } = new URL(req.url);
+    const permanent = searchParams.get("permanent") === "true";
 
-    await db
-      .update(bookmarks)
-      .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(bookmarks.id, numId), eq(bookmarks.userId, userId)));
+    if (permanent) {
+      await db
+        .delete(bookmarks)
+        .where(and(eq(bookmarks.id, numId), eq(bookmarks.userId, userId)));
+    } else {
+      await db
+        .update(bookmarks)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(bookmarks.id, numId), eq(bookmarks.userId, userId)));
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {

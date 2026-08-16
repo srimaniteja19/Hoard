@@ -13,6 +13,7 @@ import { TilRecallView } from "@/components/til/TilRecallView";
 import { TilPressView } from "@/components/til/TilPressView";
 import { TilWallView } from "@/components/til/TilWallView";
 import { TilConstellationView } from "@/components/til/TilConstellationView";
+import { TilArchiveView } from "@/components/til/TilArchiveView";
 import { TilType } from "@/db/schema";
 import { StreakData, HeatmapData } from "@/lib/dal/til";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -112,6 +113,7 @@ function TilPageContent() {
         if (selectedTag) params.set("tag", selectedTag);
         if (selectedType) params.set("type", selectedType);
         if (selectedDay) params.set("day", selectedDay);
+        if (viewMode === "archive") params.set("limit", "100");
 
         const res = await fetch(`/api/til?${params.toString()}`, { credentials: "include" });
 
@@ -383,6 +385,15 @@ function TilPageContent() {
               />
             )}
           </div>
+        ) : viewMode === "archive" ? (
+          /* ARCHIVE VAULT VIEW MODE */
+          <TilArchiveView
+            items={items}
+            onUpdate={handleUpdate}
+            onDelete={handleDelete}
+            onSelectTag={navigateToCodexTopic}
+            onSelectType={(type) => updateUrlFilters(selectedTag, type, selectedDay)}
+          />
         ) : viewMode === "wall" ? (
           /* WALL VIEW MODE */
           <TilWallView />

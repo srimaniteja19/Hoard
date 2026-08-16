@@ -26,6 +26,8 @@ function dbToUi(row: typeof bookmarks.$inferSelect, titleMap?: Map<number, strin
     when:   `${months[d.getMonth()]} ${d.getDate()}`,
     createdAt: d.toISOString(),
     updatedAt: new Date(row.updatedAt).toISOString(),
+    deletedAt: row.deletedAt ? new Date(row.deletedAt).toISOString() : null,
+    isDeleted: Boolean(row.deletedAt),
     unread: row.unread,
     ex:     (() => {
       const raw = (row.extra as Record<string, unknown>) || {};
@@ -100,13 +102,23 @@ async function ensureCollection(userId: string, collId: string): Promise<string>
 
 // ─── GET /api/bookmarks ──────────────────────────────────────────────────────
 
-export async function GET() {
+export async function GET(req?: Request) {
   try {
-    const userId = await requireUserId();
+    const userId = await requireUserId(req);
+    let includeDeleted = false;
+    if (req) {
+      const { searchParams } = new URL(req.url);
+      includeDeleted = searchParams.get("includeDeleted") === "true";
+    }
+
+    const whereClause = includeDeleted
+      ? eq(bookmarks.userId, userId)
+      : and(eq(bookmarks.userId, userId), isNull(bookmarks.deletedAt));
+
     const rows = await db
       .select()
       .from(bookmarks)
-      .where(and(eq(bookmarks.userId, userId), isNull(bookmarks.deletedAt)))
+      .where(whereClause)
       .orderBy(desc(bookmarks.createdAt));
 
     const titleMap = new Map<number, string>();

@@ -185,6 +185,16 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             >
               HEADLINES
             </button>
+            <button
+              className={view === "archive" ? "on" : ""}
+              onClick={() => setView("archive")}
+              style={{
+                background: view === "archive" ? "var(--yel, #FFE600)" : undefined,
+                color: view === "archive" ? "#000" : undefined,
+              }}
+            >
+              🗄️ ARCHIVE
+            </button>
           </div>
 
           <div className="grp sort-grp">

@@ -17,6 +17,7 @@ import { MasonryView } from "@/components/views/MasonryView";
 import { GridView } from "@/components/views/GridView";
 import { ListView } from "@/components/views/ListView";
 import { HeadlinesView } from "@/components/views/HeadlinesView";
+import { ArchiveView } from "@/components/views/ArchiveView";
 import { StatusLine } from "@/components/StatusLine";
 import { ColdStart } from "@/components/ColdStart";
 import { Bookmark } from "@/types";
@@ -72,6 +73,8 @@ export default function Home() {
     addCollection,
     checkDrift,
     dischargeBookmark,
+    restoreBookmark,
+    purgeBookmark,
   } = useBookmarks();
 
   const [captureUrl, setCaptureUrl] = useState("");
@@ -227,6 +230,8 @@ export default function Home() {
         setTag={setTag}
         unreadOnly={unreadOnly}
         setUnreadOnly={setUnreadOnly}
+        view={view}
+        setView={setView}
         onOpenCapture={() => {
           setCaptureUrl("");
           setIsCaptureOpen(true);
@@ -272,7 +277,18 @@ export default function Home() {
         />
 
         <div className={`scroll ${bookmarks.length > 0 && bookmarks.length < 15 ? "cold-start-view" : ""}`}>
-          {bookmarks.length === 0 ? (
+          {view === "archive" ? (
+            <ArchiveView
+              bookmarks={bookmarks}
+              collections={collections}
+              onOpen={(id) => setOpenId(id)}
+              onToggleRead={(id) => toggleReadStatus(id)}
+              onRestore={(id) => restoreBookmark(id)}
+              onPurge={(id) => purgeBookmark(id)}
+              onOpenDiff={handleOpenDiffModal}
+              onDischarge={handleOpenDischargeModal}
+            />
+          ) : bookmarks.length === 0 ? (
             <ColdStart onOpenImport={() => setIsImportOpen(true)} />
           ) : filteredBookmarks.length === 0 ? (
             <div className="empty" style={{ padding: "60px 20px", textAlign: "center" }}>
