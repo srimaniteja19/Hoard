@@ -15,6 +15,13 @@
       "when": 1786991011416,
       "tag": "0001_add_todos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786993291527,
+      "tag": "0002_add_home_edition_cache",
+      "breakpoints": true
     }
   ]
 }

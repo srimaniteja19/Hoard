@@ -367,3 +367,18 @@ export const todoTags = pgTable(
   (table) => [primaryKey({ columns: [table.todoId, table.tagId] })]
 );
 
+// Caches the expensive, non-candidate sections of the home edition (HOME.md
+// §3) for a user's local day, keyed by a content fingerprint rather than
+// explicit invalidation — same pattern as constellation_layouts above: the
+// cache is stale (and recomputed) the moment the fingerprint no longer
+// matches, instead of hooking into every bookmark/todo/TIL write path.
+export const homeEditionCache = pgTable("home_edition_cache", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  cacheKey: text("cache_key").notNull(),
+  cachedDate: date("cached_date").notNull(), // user-local day this was computed for
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+  computedAt: timestamp("computed_at").notNull().defaultNow(),
+});
+
