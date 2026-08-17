@@ -1,29 +1,10 @@
 import { db } from "@/db";
-import { tilEntries, tilEntryTags, tags as tagsTable, users, TilType } from "@/db/schema";
+import { tilEntries, tilEntryTags, tags as tagsTable, TilType } from "@/db/schema";
 import { eq, and, sql, gte, lte, desc, inArray } from "drizzle-orm";
 import crypto from "crypto";
+import { getLoggedForDate, getUserTimezone } from "./shared";
 
-/**
- * Computes YYYY-MM-DD date string in the user's IANA timezone.
- * Defaults to UTC if invalid or missing timezone.
- */
-export function getLoggedForDate(timezone: string = "UTC", dateInput: Date = new Date()): string {
-  const d = isNaN(dateInput.getTime()) ? new Date() : dateInput;
-  try {
-    const formatter = new Intl.DateTimeFormat("en-CA", {
-      timeZone: timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    return formatter.format(d); // Returns YYYY-MM-DD
-  } catch {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-}
+export { getLoggedForDate, getUserTimezone };
 
 /**
  * Generates a unique 4-character hex display hash for a user (e.g. "a3f9").
@@ -44,19 +25,6 @@ export async function generateShortHash(userId: string): Promise<string> {
   }
   // Fallback if 10 collisions in a row
   return crypto.randomBytes(3).toString("hex").slice(0, 4);
-}
-
-/**
- * Returns user's IANA timezone setting from DB (defaults to UTC).
- */
-export async function getUserTimezone(userId: string): Promise<string> {
-  const [row] = await db
-    .select({ timezone: users.timezone })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  return row?.timezone || "UTC";
 }
 
 export type HeatmapData = {

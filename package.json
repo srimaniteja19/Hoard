@@ -10,7 +10,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "check:seed": "tsx --env-file=.env.local scripts/check-seed-copy.ts",
-    "seed:heavy": "tsx --env-file=.env.local scripts/seed-heavy.ts"
+    "seed:heavy": "tsx --env-file=.env.local scripts/seed-heavy.ts",
+    "seed:todos": "tsx --env-file=.env.local scripts/seed-todos.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

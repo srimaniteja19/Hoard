@@ -15,6 +15,7 @@ import {
   real,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { KindType } from "@/types";
 
 export type LinkPreview = {
@@ -46,6 +47,14 @@ export const tilTypeValues = [
 export type TilType = typeof tilTypeValues[number];
 
 export const tilType = pgEnum("til_type", tilTypeValues);
+
+export const todoEnergyValues = ["DEEP", "SHALLOW", "ERRAND"] as const;
+export type TodoEnergy = typeof todoEnergyValues[number];
+export const todoEnergy = pgEnum("todo_energy", todoEnergyValues);
+
+export const todoStateValues = ["OPEN", "DONE", "DROPPED", "GRAVEYARD"] as const;
+export type TodoState = typeof todoStateValues[number];
+export const todoState = pgEnum("todo_state", todoStateValues);
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -278,5 +287,83 @@ export const extensionTokens = pgTable(
     index("ext_token_user_idx").on(table.userId),
     uniqueIndex("ext_token_hash_idx").on(table.tokenHash),
   ]
+);
+
+export const todos = pgTable(
+  "todos",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    note: text("note"),
+
+    energy: todoEnergy("energy").notNull().default("SHALLOW"),
+    estimatedMinutes: integer("estimated_minutes").notNull(),
+    actualMinutes: integer("actual_minutes"), // null until completed and answered
+
+    dueDate: date("due_date"), // null = someday
+    originalDueDate: date("original_due_date"),
+    rolloverCount: integer("rollover_count").notNull().default(0),
+
+    remindAt: timestamp("remind_at", { withTimezone: true }),
+    remindSentAt: timestamp("remind_sent_at", { withTimezone: true }),
+
+    recurrenceRule: varchar("recurrence_rule", { length: 64 }),
+    recurrenceParentId: text("recurrence_parent_id").references(
+      (): AnyPgColumn => todos.id,
+      { onDelete: "set null" }
+    ),
+    seriesPosition: integer("series_position"),
+
+    state: todoState("state").notNull().default("OPEN"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    completedOn: date("completed_on"), // user-local day, computed server-side — see getLoggedForDate
+
+    sortOrder: integer("sort_order").notNull().default(0),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("todo_user_due_idx").on(table.userId, table.dueDate),
+    index("todo_user_done_idx").on(table.userId, table.completedOn),
+    index("todo_reminder_idx")
+      .on(table.remindAt)
+      .where(sql`${table.remindSentAt} IS NULL AND ${table.state} = 'OPEN'`),
+    index("todo_recurrence_parent_idx").on(table.recurrenceParentId),
+  ]
+);
+
+export const todoSubtasks = pgTable(
+  "todo_subtasks",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    todoId: text("todo_id")
+      .notNull()
+      .references(() => todos.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    done: boolean("done").notNull().default(false),
+    position: integer("position").notNull(),
+  },
+  (table) => [index("todo_subtask_todo_idx").on(table.todoId)]
+);
+
+export const todoTags = pgTable(
+  "todo_tags",
+  {
+    todoId: text("todo_id")
+      .notNull()
+      .references(() => todos.id, { onDelete: "cascade" }),
+    tagId: integer("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (table) => [primaryKey({ columns: [table.todoId, table.tagId] })]
 );
 
