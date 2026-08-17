@@ -448,3 +448,29 @@ Recorded here so later phases don't re-derive it.
   bookmark library's `TimeContextBar` context buttons structurally, which is what "mirroring the
   bookmark library's controls" points at, even though todos use `Energy` where bookmarks use
   `ContextType`.
+
+## 17. Phase 5 build notes
+
+- **`rolloverCount` can now only change in one place**: `POST /api/todos/:id/push`. It's not a field
+  `updateTodoSchema` exposes, so the generic `PATCH /api/todos/:id` physically cannot touch it —
+  the "no cron, only explicit pushes" rule from §4 is enforced by the API surface itself, not just
+  by convention. The push endpoint also computes "tomorrow" server-side from the account's
+  timezone, same as everywhere else timezone-sensitive; it never trusts a client-supplied date.
+- `N DAYS OVERDUE` and `MOVED N×` render as separate chips on the same row, per §4's "these are
+  different information and both matter" — overdue-ness is still computed at render time from
+  `dueDate` (client-side, against the browser's local today, same as Phase 4's sectioning);
+  `rolloverCount` is the stored, honest record of pushes.
+- Graveyard **offer**, not force: an inline banner appears on a row once `rolloverCount >= 10`
+  ("Moved N times. Does this still matter?") with a button that moves it — nothing happens
+  automatically. Graveyard items are excluded from `GET /api/todos`'s default query entirely (a new
+  `?graveyard=true` param is required to see them) so they're already out of every default view and
+  count, not just hidden client-side.
+- Restore is just `PATCH /api/todos/:id` with `state: "OPEN"` — no dedicated endpoint needed, since
+  the update schema already allows arbitrary valid state transitions. `rolloverCount` is left
+  untouched on restore, preserving it as a historical record rather than resetting the slate.
+- The spec's full "weekly review" flow (§4's `"14 things here..."` framing, presumably as part of
+  some larger periodic review surface) isn't otherwise described as its own deliverable anywhere in
+  the phase table, so this phase built the minimum that satisfies §4's actual requirements —
+  excluded from defaults, searchable/restorable, surfaced with that exact prompt — as a simple
+  collapsible section at the bottom of `/todos`, rather than inventing a separate "weekly review"
+  page nothing else in the spec asks for.

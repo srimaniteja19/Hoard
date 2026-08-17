@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { parseTodo, ParsedTodo, Energy } from "@/lib/todos/parse";
-import { X, Trash2, Plus } from "lucide-react";
+import { X, Trash2, Plus, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+
+const GRAVEYARD_THRESHOLD = 10;
 
 type Subtask = { id: string; title: string; done: boolean; position: number };
 
@@ -58,6 +60,12 @@ function localDateFromIso(iso: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function daysBetween(fromDateStr: string, toDateStr: string): number {
+  const from = new Date(`${fromDateStr}T00:00:00Z`);
+  const to = new Date(`${toDateStr}T00:00:00Z`);
+  return Math.round((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000));
+}
+
 function formatMinutes(total: number): string {
   if (total < 60) return `${total}m`;
   const h = Math.floor(total / 60);
@@ -93,6 +101,11 @@ function TodosPageContent() {
   const [submitting, setSubmitting] = useState(false);
   const [newSubtaskText, setNewSubtaskText] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [graveyardOpen, setGraveyardOpen] = useState(false);
+  const [graveyardItems, setGraveyardItems] = useState<Todo[]>([]);
+  const [graveyardLoading, setGraveyardLoading] = useState(false);
+  const [graveyardLoaded, setGraveyardLoaded] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -237,6 +250,75 @@ function TodosPageContent() {
       await fetch(`/api/todos/${todoId}/subtasks/${subtaskId}`, { method: "DELETE", credentials: "include" });
     } catch (e) {
       console.error("Failed to delete subtask", e);
+    }
+  }, []);
+
+  // The → action. rolloverCount only ever moves here — TODOS.md §4: no cron,
+  // no background job, only this explicit push.
+  const pushTodo = useCallback(async (todoId: string) => {
+    try {
+      const res = await fetch(`/api/todos/${todoId}/push`, { method: "POST", credentials: "include" });
+      if (res.ok) {
+        const updated = await res.json();
+        setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, ...updated } : t)));
+      }
+    } catch (e) {
+      console.error("Failed to push todo", e);
+    }
+  }, []);
+
+  const moveToGraveyard = useCallback(async (todoId: string) => {
+    setTodos((prev) => prev.filter((t) => t.id !== todoId));
+    try {
+      await fetch(`/api/todos/${todoId}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: "GRAVEYARD" }),
+      });
+      setGraveyardLoaded(false); // next expand re-fetches, picking this up
+    } catch (e) {
+      console.error("Failed to move todo to graveyard", e);
+    }
+  }, []);
+
+  const loadGraveyard = useCallback(async () => {
+    setGraveyardLoading(true);
+    try {
+      const res = await fetch("/api/todos?graveyard=true", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setGraveyardItems(data.items || []);
+        setGraveyardLoaded(true);
+      }
+    } catch (e) {
+      console.error("Failed to load graveyard", e);
+    } finally {
+      setGraveyardLoading(false);
+    }
+  }, []);
+
+  const toggleGraveyard = useCallback(() => {
+    const next = !graveyardOpen;
+    setGraveyardOpen(next);
+    if (next && !graveyardLoaded) loadGraveyard();
+  }, [graveyardOpen, graveyardLoaded, loadGraveyard]);
+
+  const restoreFromGraveyard = useCallback(async (todo: Todo) => {
+    setGraveyardItems((prev) => prev.filter((t) => t.id !== todo.id));
+    try {
+      const res = await fetch(`/api/todos/${todo.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: "OPEN" }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setTodos((prev) => [updated, ...prev]);
+      }
+    } catch (e) {
+      console.error("Failed to restore todo", e);
     }
   }, []);
 
@@ -390,6 +472,79 @@ function TodosPageContent() {
             )}
           </>
         )}
+
+        {/* Graveyard — excluded from every default view and count above;
+            only ever surfaced here, on request, per TODOS.md §4. */}
+        <div style={{ marginTop: "16px", borderTop: "2px solid var(--ink)", paddingTop: "12px" }}>
+          <button
+            onClick={toggleGraveyard}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontFamily: "var(--mono)",
+              fontSize: "12px",
+              fontWeight: 800,
+              opacity: 0.6,
+              padding: 0,
+            }}
+          >
+            {graveyardOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            GRAVEYARD
+          </button>
+
+          {graveyardOpen && (
+            <div style={{ marginTop: "12px" }}>
+              {graveyardLoading ? (
+                <div style={{ fontFamily: "var(--mono)", fontSize: "13px", opacity: 0.6 }}>Loading…</div>
+              ) : graveyardItems.length === 0 ? (
+                <EmptyState text="Nothing here." />
+              ) : (
+                <>
+                  <div style={{ fontFamily: "var(--mono)", fontSize: "13px", marginBottom: "12px" }}>
+                    {graveyardItems.length} thing{graveyardItems.length === 1 ? "" : "s"} here. Do any of them still
+                    matter?
+                  </div>
+                  {graveyardItems.map((todo) => (
+                    <div
+                      key={todo.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        padding: "12px",
+                        marginBottom: "8px",
+                        background: "var(--surface)",
+                        border: "2px solid var(--ink)",
+                        opacity: 0.7,
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>{todo.title}</div>
+                      <Chip label={`MOVED ${todo.rolloverCount}×`} color="var(--orange)" />
+                      <button
+                        onClick={() => restoreFromGraveyard(todo)}
+                        style={{
+                          fontFamily: "var(--mono)",
+                          fontSize: "11px",
+                          fontWeight: 800,
+                          padding: "4px 10px",
+                          border: "2px solid var(--ink)",
+                          background: "var(--lime)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        RESTORE
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -399,8 +554,11 @@ function TodosPageContent() {
       <TodoRow
         key={todo.id}
         todo={todo}
+        today={today}
         onToggleDone={() => toggleDone(todo)}
         onDelete={() => deleteTodo(todo.id)}
+        onPush={() => pushTodo(todo.id)}
+        onMoveToGraveyard={() => moveToGraveyard(todo.id)}
         onToggleSubtask={(s) => toggleSubtask(todo.id, s)}
         onDeleteSubtask={(sId) => deleteSubtask(todo.id, sId)}
         subtaskInput={newSubtaskText[todo.id] || ""}
@@ -468,8 +626,11 @@ function Chip({ label, color }: { label: string; color?: string }) {
 
 function TodoRow({
   todo,
+  today,
   onToggleDone,
   onDelete,
+  onPush,
+  onMoveToGraveyard,
   onToggleSubtask,
   onDeleteSubtask,
   subtaskInput,
@@ -477,8 +638,11 @@ function TodoRow({
   onAddSubtask,
 }: {
   todo: Todo;
+  today: string;
   onToggleDone: () => void;
   onDelete: () => void;
+  onPush: () => void;
+  onMoveToGraveyard: () => void;
   onToggleSubtask: (s: Subtask) => void;
   onDeleteSubtask: (subtaskId: string) => void;
   subtaskInput: string;
@@ -486,6 +650,9 @@ function TodoRow({
   onAddSubtask: () => void;
 }) {
   const isStale = todo.rolloverCount >= 3;
+  const isOverdue = todo.state === "OPEN" && todo.dueDate !== null && todo.dueDate < today;
+  const daysOverdue = isOverdue ? daysBetween(todo.dueDate as string, today) : 0;
+  const offerGraveyard = todo.state === "OPEN" && todo.rolloverCount >= GRAVEYARD_THRESHOLD;
 
   return (
     <div
@@ -522,12 +689,67 @@ function TodoRow({
           <Chip label={`${todo.estimatedMinutes} min`} />
           <Chip label={todo.energy} color={ENERGY_COLOR[todo.energy]} />
           {todo.dueDate && <Chip label={todo.dueDate} />}
+          {isOverdue && (
+            <Chip label={`${daysOverdue} DAY${daysOverdue === 1 ? "" : "S"} OVERDUE`} color="var(--pink)" />
+          )}
           {todo.recurrenceRule && <Chip label={todo.recurrenceRule} />}
           {isStale && <Chip label={`MOVED ${todo.rolloverCount}×`} color="var(--orange)" />}
           {todo.tags.map((t) => (
             <Chip key={t} label={`#${t}`} />
           ))}
+          {todo.state === "OPEN" && (
+            <button
+              onClick={onPush}
+              title="Push to tomorrow"
+              aria-label="Push to tomorrow"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "3px",
+                fontFamily: "var(--mono)",
+                fontSize: "11px",
+                fontWeight: 800,
+                padding: "3px 8px",
+                border: "2px solid var(--ink)",
+                background: "var(--surface)",
+                cursor: "pointer",
+              }}
+            >
+              <ArrowRight size={11} /> TOMORROW
+            </button>
+          )}
         </div>
+
+        {offerGraveyard && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              fontSize: "12px",
+              padding: "6px 8px",
+              marginBottom: "8px",
+              background: "var(--cream)",
+              border: "1px dashed var(--orange)",
+            }}
+          >
+            <span>Moved {todo.rolloverCount} times. Does this still matter?</span>
+            <button
+              onClick={onMoveToGraveyard}
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "11px",
+                fontWeight: 800,
+                padding: "3px 8px",
+                border: "2px solid var(--ink)",
+                background: "var(--orange)",
+                cursor: "pointer",
+              }}
+            >
+              GRAVEYARD IT
+            </button>
+          </div>
+        )}
 
         {todo.subtasks.map((s) => (
           <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 0 4px 8px" }}>

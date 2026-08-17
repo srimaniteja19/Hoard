@@ -54,11 +54,20 @@ async function attachSubtasksAndTags(todoIds: string[]) {
 export async function GET(req: Request) {
   try {
     const userId = await requireUserId(req);
+    const { searchParams } = new URL(req.url);
+    const graveyard = searchParams.get("graveyard") === "true";
 
+    // Graveyard todos are excluded from every default view and count
+    // (TODOS.md §4) — they only ever show up here when explicitly asked for.
     const rows = await db
       .select()
       .from(todos)
-      .where(and(eq(todos.userId, userId), ne(todos.state, "GRAVEYARD")))
+      .where(
+        and(
+          eq(todos.userId, userId),
+          graveyard ? eq(todos.state, "GRAVEYARD") : ne(todos.state, "GRAVEYARD")
+        )
+      )
       .orderBy(sql`${todos.dueDate} IS NULL, ${todos.dueDate} ASC`, asc(todos.sortOrder));
 
     const ids = rows.map((r) => r.id);
