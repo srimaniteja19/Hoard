@@ -1,4 +1,8 @@
+import { db } from "@/db";
+import { todos } from "@/db/schema";
+import { eq, and, isNotNull } from "drizzle-orm";
 import { getLoggedForDate } from "./shared";
+import { calibration, CalibrationResult, CalibrationSample } from "@/lib/todos/calibration";
 
 /**
  * Computes the user-local day a completed todo counts for, exactly as TIL's
@@ -54,4 +58,24 @@ export function zonedTimeToUtc(dateStr: string, hhmm: string, timezone: string):
 
   const offsetMs = asIfUtc - guess;
   return new Date(guess - offsetMs);
+}
+
+/**
+ * Every completed todo with a recorded actualMinutes — the calibration
+ * sample set for this user. A dismissed actual-time prompt leaves
+ * actualMinutes null, which is exactly what excludes that task here
+ * (TODOS.md §6).
+ */
+export async function getCalibrationSamples(userId: string): Promise<CalibrationSample[]> {
+  const rows = await db
+    .select({ estimated: todos.estimatedMinutes, actual: todos.actualMinutes, energy: todos.energy })
+    .from(todos)
+    .where(and(eq(todos.userId, userId), eq(todos.state, "DONE"), isNotNull(todos.actualMinutes)));
+
+  return rows.map((r) => ({ estimated: r.estimated, actual: r.actual as number, energy: r.energy }));
+}
+
+export async function getUserCalibration(userId: string): Promise<CalibrationResult> {
+  const samples = await getCalibrationSamples(userId);
+  return calibration(samples);
 }

@@ -1,7 +1,8 @@
 import { db } from "@/db";
-import { bookmarks, todos, tilEntries, TodoState } from "@/db/schema";
+import { bookmarks, todos, tilEntries, users, TodoState } from "@/db/schema";
 import { and, eq, gte, lte, isNull, desc, asc, sql, inArray } from "drizzle-orm";
 import { getLoggedForDate } from "@/lib/dal/shared";
+import { getUserCalibration } from "@/lib/dal/todos";
 import { confidence, confidenceSql } from "@/lib/til/confidence";
 import { CTX } from "@/data/initialBookmarks";
 import type { ContextType, KindType } from "@/types";
@@ -272,21 +273,34 @@ export async function getDayPlan(userId: string, timezone: string) {
   const freeMinutes = Math.max(0, 24 * 60 - minutesSinceMidnight);
   const today = getLoggedForDate(timezone);
 
-  const dueTodayOpen = await db
-    .select({ estimatedMinutes: todos.estimatedMinutes })
-    .from(todos)
-    .where(and(eq(todos.userId, userId), inArray(todos.state, OPEN_STATES), eq(todos.dueDate, today)))
-    .orderBy(desc(todos.estimatedMinutes));
+  const [dueTodayOpen, [userRow]] = await Promise.all([
+    db
+      .select({ estimatedMinutes: todos.estimatedMinutes, energy: todos.energy })
+      .from(todos)
+      .where(and(eq(todos.userId, userId), inArray(todos.state, OPEN_STATES), eq(todos.dueDate, today)))
+      .orderBy(desc(todos.estimatedMinutes)),
+    db.select({ paddingEnabled: users.todoCalibrationPaddingEnabled }).from(users).where(eq(users.id, userId)).limit(1),
+  ]);
+
+  // Padding — TODOS.md §6: default off, one toggle, only applied once a
+  // multiplier exists (30+ overall samples, 15+ for that energy class).
+  // This is the day plan that actually exists today (HOME.md's); TODOS.md's
+  // own busy_blocks/gap-detection day plan is a later, unbuilt phase.
+  const paddingEnabled = userRow?.paddingEnabled ?? false;
+  const cal = paddingEnabled ? await getUserCalibration(userId) : null;
+  const multiplierFor = (energy: (typeof dueTodayOpen)[number]["energy"]): number =>
+    cal?.byEnergy[energy] ?? 1;
 
   let running = 0;
   let unfittedCount = 0;
   let unfittedMinutes = 0;
   for (const t of dueTodayOpen) {
-    if (running + t.estimatedMinutes <= freeMinutes) {
-      running += t.estimatedMinutes;
+    const padded = Math.round(t.estimatedMinutes * multiplierFor(t.energy));
+    if (running + padded <= freeMinutes) {
+      running += padded;
     } else {
       unfittedCount++;
-      unfittedMinutes += t.estimatedMinutes;
+      unfittedMinutes += padded;
     }
   }
 

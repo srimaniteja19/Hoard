@@ -136,6 +136,9 @@ function TodosPageContent() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
 
+  const [actualTimePromptId, setActualTimePromptId] = useState<string | null>(null);
+  const [actualTimeCustom, setActualTimeCustom] = useState<Record<string, string>>({});
+
   useEffect(() => {
     async function load() {
       try {
@@ -216,9 +219,35 @@ function TodosPageContent() {
           // (TODOS.md §5) — surface it immediately, don't wait on a reload.
           return nextInstance ? [nextInstance, ...next] : next;
         });
+        // Completion never blocks on this — the todo is already DONE above,
+        // this is a dismissible follow-up prompt, not a gate (§6).
+        if (nextState === "DONE") setActualTimePromptId(todo.id);
+        else if (actualTimePromptId === todo.id) setActualTimePromptId(null);
       }
     } catch (e) {
       console.error("Failed to toggle todo", e);
+    }
+  }, [actualTimePromptId]);
+
+  // A dismissed prompt leaves actualMinutes null and that task is excluded
+  // from calibration — dismissing is just closing the prompt, no request.
+  const dismissActualTimePrompt = useCallback((todoId: string) => {
+    setActualTimePromptId((cur) => (cur === todoId ? null : cur));
+  }, []);
+
+  const submitActualTime = useCallback(async (todoId: string, minutes: number) => {
+    if (!Number.isFinite(minutes) || minutes <= 0) return;
+    setActualTimePromptId(null);
+    setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, actualMinutes: minutes } : t)));
+    try {
+      await fetch(`/api/todos/${todoId}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actualMinutes: minutes }),
+      });
+    } catch (e) {
+      console.error("Failed to save actual time", e);
     }
   }, []);
 
@@ -646,6 +675,11 @@ function TodosPageContent() {
           subtaskInput={newSubtaskText[todo.id] || ""}
           onSubtaskInputChange={(v) => setNewSubtaskText((prev) => ({ ...prev, [todo.id]: v }))}
           onAddSubtask={() => addSubtask(todo.id)}
+          showActualTimePrompt={actualTimePromptId === todo.id}
+          actualTimeCustomValue={actualTimeCustom[todo.id] || ""}
+          onActualTimeCustomChange={(v) => setActualTimeCustom((prev) => ({ ...prev, [todo.id]: v }))}
+          onSubmitActualTime={(minutes) => submitActualTime(todo.id, minutes)}
+          onDismissActualTimePrompt={() => dismissActualTimePrompt(todo.id)}
         />
       );
     });
@@ -739,6 +773,11 @@ function TodoRow({
   subtaskInput,
   onSubtaskInputChange,
   onAddSubtask,
+  showActualTimePrompt,
+  actualTimeCustomValue,
+  onActualTimeCustomChange,
+  onSubmitActualTime,
+  onDismissActualTimePrompt,
 }: {
   todo: Todo;
   today: string;
@@ -758,6 +797,11 @@ function TodoRow({
   subtaskInput: string;
   onSubtaskInputChange: (v: string) => void;
   onAddSubtask: () => void;
+  showActualTimePrompt: boolean;
+  actualTimeCustomValue: string;
+  onActualTimeCustomChange: (v: string) => void;
+  onSubmitActualTime: (minutes: number) => void;
+  onDismissActualTimePrompt: () => void;
 }) {
   const isStale = todo.rolloverCount >= 3;
   const isOverdue = todo.state === "OPEN" && todo.dueDate !== null && todo.dueDate < today;
@@ -920,6 +964,63 @@ function TodoRow({
               }}
             >
               GRAVEYARD IT
+            </button>
+          </div>
+        )}
+
+        {showActualTimePrompt && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: "8px",
+              padding: "8px",
+              marginBottom: "8px",
+              background: "var(--cream)",
+              border: "2px solid var(--lime)",
+            }}
+          >
+            <span style={{ fontFamily: "var(--mono)", fontSize: "12px", fontWeight: 700 }}>
+              How long did that actually take? (est. {todo.estimatedMinutes}m)
+            </span>
+            <button onClick={() => onSubmitActualTime(Math.max(1, Math.round(todo.estimatedMinutes / 2)))} style={editButtonStyle()}>
+              HALF
+            </button>
+            <button onClick={() => onSubmitActualTime(todo.estimatedMinutes)} style={editButtonStyle()}>
+              SPOT ON
+            </button>
+            <button onClick={() => onSubmitActualTime(todo.estimatedMinutes * 2)} style={editButtonStyle()}>
+              DOUBLE
+            </button>
+            <input
+              type="number"
+              min={1}
+              placeholder="min"
+              value={actualTimeCustomValue}
+              onChange={(e) => onActualTimeCustomChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  onSubmitActualTime(Number(actualTimeCustomValue));
+                }
+              }}
+              style={{
+                width: "56px",
+                padding: "4px 6px",
+                fontFamily: "var(--mono)",
+                fontSize: "12px",
+                border: "2px solid var(--ink)",
+                background: "var(--paper)",
+                color: "var(--ink)",
+              }}
+            />
+            <button
+              onClick={onDismissActualTimePrompt}
+              aria-label="Dismiss"
+              style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.5, marginLeft: "auto", display: "flex" }}
+            >
+              <X size={14} />
             </button>
           </div>
         )}

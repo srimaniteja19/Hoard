@@ -512,3 +512,32 @@ Recorded here so later phases don't re-derive it.
   the only editable field is the title, and the edit affordance (pencil icon + inline form) only
   appears on rows that are part of a recurrence series. A general editor is still open for whenever
   §7 gets built.
+
+## 19. Phase 7 build notes
+
+- `lib/todos/calibration.ts` is pure and zero-import like the other two `lib/todos/*` modules.
+  Multiplier is the mean of each sample's `actual/estimated` ratio (not a sum-based weighted
+  average) — a simple, defensible reading of "how much longer things take than estimated," and
+  samples with a zero/negative estimate or actual are filtered out before the floor check so they
+  can't corner-case the math. 8 tests, including the floor boundaries at exactly 30/15 samples.
+- **The on-completion prompt is genuinely non-blocking**: `toggleDone` already marks the task DONE
+  and shows the prompt as a separate, dismissible follow-up — dismissing just clears local UI state,
+  no request at all, and `actualMinutes` stays null (excluded from calibration, per §6). Submitting
+  HALF/SPOT ON/DOUBLE/custom is a second, independent `PATCH` with just `{ actualMinutes }`, which
+  `updateTodoSchema` already accepted from Phase 3 — no schema change needed there.
+- **The timer was skipped** — the spec's own sequencing note says "ship the prompt first; the timer
+  can wait," so it does.
+- **"Use the padded figure in the day plan"** — TODOS.md's own day plan (busy_blocks, gap detection)
+  is Phase 8 and doesn't exist yet, so this phase wired padding into the day plan that *does* exist:
+  HOME.md's `getDayPlan` in `lib/home/queries.ts`. When the new `users.todoCalibrationPaddingEnabled`
+  toggle (default off, per §6) is on, each due-today task's `estimatedMinutes` is multiplied by its
+  energy class's calibration multiplier before the greedy-pack comparison against free minutes —
+  same `calibration()` function, same 30/15 sample floors, just consumed from a different call site.
+  Once TODOS.md's own Phase 8 day plan exists, it should read this same toggle and calibration
+  result rather than growing a second copy.
+- **New `GET/PATCH /api/settings`** — there was no user-preference endpoint anywhere in the app
+  before this (not even for `timezone`), so this had to be built from scratch rather than extended.
+  Scoped narrowly to the one field this phase needs; a natural home for future preferences.
+- Settings page gained a "TODO ESTIMATE CALIBRATION" section: current multiplier (overall + per
+  energy class) when available, an honest "N/30 samples, need at least 30" message otherwise, and
+  the padding toggle.

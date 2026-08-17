@@ -4,7 +4,13 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ThemePicker } from "@/components/ThemePicker";
 import { UserMenu } from "@/components/UserMenu";
-import { ArrowLeft, Key, Copy, Check, Trash2, Plus, ShieldCheck, Clock } from "lucide-react";
+import { ArrowLeft, Key, Copy, Check, Trash2, Plus, ShieldCheck, Clock, Gauge } from "lucide-react";
+
+interface CalibrationResult {
+  overall: number | null;
+  byEnergy: Record<"DEEP" | "SHALLOW" | "ERRAND", number | null>;
+  sampleCount: number;
+}
 
 interface ExtensionTokenItem {
   id: string;
@@ -21,6 +27,48 @@ export default function SettingsPage() {
   const [issuedSecretToken, setIssuedSecretToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [issuing, setIssuing] = useState(false);
+
+  const [paddingEnabled, setPaddingEnabled] = useState(false);
+  const [paddingSaving, setPaddingSaving] = useState(false);
+  const [calibrationResult, setCalibrationResult] = useState<CalibrationResult | null>(null);
+
+  useEffect(() => {
+    async function loadCalibrationSettings() {
+      try {
+        const [settingsRes, calRes] = await Promise.all([
+          fetch("/api/settings", { credentials: "include" }),
+          fetch("/api/todos/calibration", { credentials: "include" }),
+        ]);
+        if (settingsRes.ok) {
+          const s = await settingsRes.json();
+          setPaddingEnabled(Boolean(s.todoCalibrationPaddingEnabled));
+        }
+        if (calRes.ok) setCalibrationResult(await calRes.json());
+      } catch (e) {
+        console.error("Failed to load calibration settings", e);
+      }
+    }
+    loadCalibrationSettings();
+  }, []);
+
+  const togglePadding = async () => {
+    const next = !paddingEnabled;
+    setPaddingEnabled(next);
+    setPaddingSaving(true);
+    try {
+      await fetch("/api/settings", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ todoCalibrationPaddingEnabled: next }),
+      });
+    } catch (e) {
+      console.error("Failed to save calibration padding setting", e);
+      setPaddingEnabled(!next);
+    } finally {
+      setPaddingSaving(false);
+    }
+  };
 
   const fetchTokens = async () => {
     try {
@@ -384,6 +432,59 @@ export default function SettingsPage() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Todo estimate calibration — TODOS.md §6 */}
+        <div style={{ marginTop: "32px" }}>
+          <h1 style={{ fontFamily: "var(--mono)", fontSize: "22px", fontWeight: 900, margin: "0 0 16px", color: "var(--ink)" }}>
+            <Gauge size={18} style={{ verticalAlign: "-3px", marginRight: "6px" }} />
+            TODO ESTIMATE CALIBRATION
+          </h1>
+
+          <div
+            style={{
+              background: "var(--paper)",
+              border: "var(--bd)",
+              boxShadow: "var(--sh-sm)",
+              padding: "16px",
+            }}
+          >
+            {calibrationResult && calibrationResult.overall === null ? (
+              <div style={{ fontFamily: "var(--mono)", fontSize: "13px", opacity: 0.7, marginBottom: "12px" }}>
+                {calibrationResult.sampleCount}/30 completed tasks with a recorded actual time. Need at least 30
+                before a multiplier means anything — a multiplier from ten tasks is noise dressed as insight.
+              </div>
+            ) : calibrationResult && calibrationResult.overall !== null ? (
+              <div style={{ fontFamily: "var(--mono)", fontSize: "13px", marginBottom: "12px" }}>
+                <div style={{ marginBottom: "6px" }}>
+                  Your tasks take <b>{calibrationResult.overall}×</b> your estimate on average ({calibrationResult.sampleCount}{" "}
+                  samples).
+                </div>
+                {(["DEEP", "SHALLOW", "ERRAND"] as const).map((energy) => (
+                  <div key={energy} style={{ opacity: 0.7 }}>
+                    {energy}: {calibrationResult.byEnergy[energy] !== null ? `${calibrationResult.byEnergy[energy]}×` : "not enough samples yet"}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={paddingEnabled}
+                onChange={togglePadding}
+                disabled={paddingSaving}
+                style={{ width: "18px", height: "18px" }}
+              />
+              <span style={{ fontFamily: "var(--mono)", fontSize: "13px", fontWeight: 700 }}>
+                Pad new estimates by my calibration multiplier
+              </span>
+            </label>
+            <div style={{ fontFamily: "var(--mono)", fontSize: "11px", opacity: 0.5, marginTop: "6px", paddingLeft: "28px" }}>
+              Default off. When on, today&apos;s free-time calculation on the home page accounts for how long tasks
+              actually take you, not just how long you guessed.
+            </div>
+          </div>
         </div>
       </main>
     </div>

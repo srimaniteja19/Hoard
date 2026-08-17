@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "todo_calibration_padding_enabled" boolean DEFAULT false NOT NULL;
