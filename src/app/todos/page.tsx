@@ -77,6 +77,14 @@ function formatMinutes(total: number): string {
 
 type SeriesStats = { done: number; missed: number; run: number };
 
+type DayPlanResponse = {
+  busy: { start: string; end: string; title: string }[];
+  gaps: { start: string; end: string; minutes: number }[];
+  packed: { id: string; title: string; estimatedMinutes: number; gapIndex: number }[];
+  unfitted: { id: string; title: string; estimatedMinutes: number }[];
+  freeMinutes: number;
+};
+
 /** "standup notes, 47 done, 3 missed, 14-day run" — TODOS.md §5. Computed
  * from the already-fetched list (every non-graveyard instance in the
  * series), not a separate query — same client-side-grouping approach as
@@ -133,6 +141,8 @@ function TodosPageContent() {
   const [graveyardLoading, setGraveyardLoading] = useState(false);
   const [graveyardLoaded, setGraveyardLoaded] = useState(false);
 
+  const [dayPlan, setDayPlan] = useState<DayPlanResponse | null>(null);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
 
@@ -154,6 +164,18 @@ function TodosPageContent() {
       }
     }
     load();
+  }, []);
+
+  useEffect(() => {
+    async function loadDayPlan() {
+      try {
+        const res = await fetch("/api/todos/day-plan", { credentials: "include" });
+        if (res.ok) setDayPlan(await res.json());
+      } catch (e) {
+        console.error("Failed to load day plan", e);
+      }
+    }
+    loadDayPlan();
   }, []);
 
   // "/" focuses the capture bar from anywhere on the page.
@@ -548,6 +570,38 @@ function TodosPageContent() {
             ))}
           </div>
         </div>
+
+        {/* Day plan — TODOS.md §7: busy blocks, gaps, greedy-fill, shortfall warning */}
+        {dayPlan && (
+          <div
+            style={{
+              padding: "12px 16px",
+              marginBottom: "24px",
+              background: "var(--surface)",
+              border: "2px solid var(--ink)",
+              fontFamily: "var(--mono)",
+              fontSize: "12px",
+            }}
+          >
+            <div style={{ fontWeight: 800, marginBottom: "6px" }}>
+              TODAY&apos;S PLAN · {formatMinutes(dayPlan.freeMinutes)} FREE
+            </div>
+            {dayPlan.busy.length > 0 && (
+              <div style={{ opacity: 0.7, marginBottom: "4px" }}>
+                Busy: {dayPlan.busy.map((b) => `${b.title} (${b.start}–${b.end})`).join(", ")}
+              </div>
+            )}
+            {dayPlan.unfitted.length > 0 ? (
+              <div style={{ color: "var(--pink)", fontWeight: 700 }}>
+                {dayPlan.unfitted.length} task{dayPlan.unfitted.length === 1 ? "" : "s"} (
+                {formatMinutes(dayPlan.unfitted.reduce((sum, t) => sum + t.estimatedMinutes, 0))}) won&apos;t fit
+                today. Move them now rather than at midnight.
+              </div>
+            ) : dayPlan.packed.length > 0 ? (
+              <div style={{ opacity: 0.7 }}>Everything due today fits.</div>
+            ) : null}
+          </div>
+        )}
 
         {loading ? (
           <div style={{ fontFamily: "var(--mono)", fontSize: "13px", opacity: 0.6 }}>Loading…</div>

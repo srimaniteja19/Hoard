@@ -1,8 +1,9 @@
 import { db } from "@/db";
-import { bookmarks, todos, tilEntries, users, TodoState } from "@/db/schema";
+import { bookmarks, todos, tilEntries, users, busyBlocks, TodoState } from "@/db/schema";
 import { and, eq, gte, lte, isNull, desc, asc, sql, inArray } from "drizzle-orm";
-import { getLoggedForDate } from "@/lib/dal/shared";
+import { getLoggedForDate, getMinutesSinceMidnight, getLocalDayOfWeek } from "@/lib/dal/shared";
 import { getUserCalibration } from "@/lib/dal/todos";
+import { computeDayPlan } from "@/lib/todos/dayplan";
 import { confidence, confidenceSql } from "@/lib/til/confidence";
 import { CTX } from "@/data/initialBookmarks";
 import type { ContextType, KindType } from "@/types";
@@ -13,19 +14,6 @@ const OPEN_STATES: TodoState[] = ["OPEN"];
 
 function daysAgo(n: number, from: Date = new Date()): Date {
   return new Date(from.getTime() - n * MS_PER_DAY);
-}
-
-/** Minutes since local midnight and minutes remaining in the local day, for a given timezone. */
-function localDayProgress(timezone: string, now: Date = new Date()): { minutesSinceMidnight: number } {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(now);
-  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0") % 24;
-  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
-  return { minutesSinceMidnight: hour * 60 + minute };
 }
 
 // ─── Queue (bookmarks) ────────────────────────────────────────────────────
@@ -269,45 +257,49 @@ export async function getLedger(
 // ─── Day plan (degraded — no busy_blocks table yet, see TODOS.md §7 Phase 8) ──
 
 export async function getDayPlan(userId: string, timezone: string) {
-  const { minutesSinceMidnight } = localDayProgress(timezone);
-  const freeMinutes = Math.max(0, 24 * 60 - minutesSinceMidnight);
+  const minutesSinceMidnight = getMinutesSinceMidnight(timezone);
   const today = getLoggedForDate(timezone);
+  const dayOfWeek = getLocalDayOfWeek(timezone);
 
-  const [dueTodayOpen, [userRow]] = await Promise.all([
+  const [dueTodayOpen, [userRow], busyRows] = await Promise.all([
     db
-      .select({ estimatedMinutes: todos.estimatedMinutes, energy: todos.energy })
+      .select({ id: todos.id, title: todos.title, estimatedMinutes: todos.estimatedMinutes, energy: todos.energy })
       .from(todos)
       .where(and(eq(todos.userId, userId), inArray(todos.state, OPEN_STATES), eq(todos.dueDate, today)))
       .orderBy(desc(todos.estimatedMinutes)),
     db.select({ paddingEnabled: users.todoCalibrationPaddingEnabled }).from(users).where(eq(users.id, userId)).limit(1),
+    db
+      .select({ start: busyBlocks.startTime, end: busyBlocks.endTime, title: busyBlocks.title })
+      .from(busyBlocks)
+      .where(and(eq(busyBlocks.userId, userId), eq(busyBlocks.dayOfWeek, dayOfWeek))),
   ]);
 
   // Padding — TODOS.md §6: default off, one toggle, only applied once a
   // multiplier exists (30+ overall samples, 15+ for that energy class).
-  // This is the day plan that actually exists today (HOME.md's); TODOS.md's
-  // own busy_blocks/gap-detection day plan is a later, unbuilt phase.
   const paddingEnabled = userRow?.paddingEnabled ?? false;
   const cal = paddingEnabled ? await getUserCalibration(userId) : null;
   const multiplierFor = (energy: (typeof dueTodayOpen)[number]["energy"]): number =>
     cal?.byEnergy[energy] ?? 1;
 
-  let running = 0;
-  let unfittedCount = 0;
-  let unfittedMinutes = 0;
-  for (const t of dueTodayOpen) {
-    const padded = Math.round(t.estimatedMinutes * multiplierFor(t.energy));
-    if (running + padded <= freeMinutes) {
-      running += padded;
-    } else {
-      unfittedCount++;
-      unfittedMinutes += padded;
-    }
-  }
+  const paddedTasks = dueTodayOpen.map((t) => ({
+    id: t.id,
+    title: t.title,
+    estimatedMinutes: Math.round(t.estimatedMinutes * multiplierFor(t.energy)),
+  }));
 
-  const blocks: DayBlock[] = [];
+  const plan = computeDayPlan(busyRows, paddedTasks, minutesSinceMidnight);
+
+  const blocks: DayBlock[] = busyRows;
   const nowPercent = Math.round((minutesSinceMidnight / (24 * 60)) * 100);
+  const unfittedMinutes = plan.unfitted.reduce((sum, t) => sum + t.estimatedMinutes, 0);
 
-  return { blocks, nowPercent, freeMinutes, unfittedCount, unfittedMinutes };
+  return {
+    blocks,
+    nowPercent,
+    freeMinutes: plan.freeMinutes,
+    unfittedCount: plan.unfitted.length,
+    unfittedMinutes,
+  };
 }
 
 // ─── Recall ───────────────────────────────────────────────────────────────

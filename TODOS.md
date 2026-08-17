@@ -541,3 +541,36 @@ Recorded here so later phases don't re-derive it.
 - Settings page gained a "TODO ESTIMATE CALIBRATION" section: current multiplier (overall + per
   energy class) when available, an honest "N/30 samples, need at least 30" message otherwise, and
   the padding toggle.
+
+## 20. Phase 8 build notes
+
+- `lib/todos/dayplan.ts`'s `computeDayPlan(busy, tasks, nowMinutes, dayEndMinutes?)` is pure and
+  zero-import, and — the thing this phase is checked hardest on — takes `busy: {start,end,title}[]`
+  as a plain argument rather than querying `busy_blocks` itself. The only DB-touching code is in the
+  two route handlers that call it; a calendar adapter replaces just that query, never the packing
+  function. 9 tests covering gap splitting/merging/clipping-around-now and the greedy-descending
+  fill (largest task first, into the earliest gap that still fits, moving to the next gap once one
+  fills up, reporting genuinely-oversized tasks as unfitted rather than dropping them).
+- **`busy_blocks` is a recurring weekly template**, not calendar-synced (explicitly out of scope):
+  `dayOfWeek` (0=Sun..6=Sat) + `startTime`/`endTime`, filled in once on `/settings` and reused every
+  week. Manageable there with add/delete; no edit endpoint since delete-and-recreate is simpler for
+  something this small.
+- **"The same greedy-descending fill as the bookmark session"** — this doesn't actually exist
+  anywhere in the codebase to mirror. `SessionQueueItem` (in `src/types/index.ts`) has an
+  `allocatedMins` field suggesting a packing algorithm was planned, but `/session` (the actual
+  bookmark session page) just runs a linear countdown timer through unread items — no bin-packing.
+  So `computeDayPlan` implements the standard, well-defined heuristic the name describes
+  (first-fit-decreasing) rather than copying something that isn't there.
+- **Closed the "two day plans" gap flagged in Phase 7's notes.** HOME.md's `getDayPlan` (in
+  `lib/home/queries.ts`) now uses real `busy_blocks` and this same `computeDayPlan()`, instead of the
+  empty-`blocks`-array approximation it shipped with in HOME Phase 1 before `busy_blocks` existed.
+  Both the home edition and `/todos` now read the same weekly template and the same packing
+  function — no duplicated day-plan logic anywhere.
+- Extracted `getMinutesSinceMidnight` and `getLocalDayOfWeek` to `lib/dal/shared.ts` (next to
+  `getLoggedForDate`) since both the home edition and the new `/api/todos/day-plan` route needed the
+  same timezone-correct "what time/day is it for this user right now" logic — this was duplicated
+  inline in `lib/home/queries.ts` before, now there's one definition.
+- `/todos` shows a compact day-plan summary (busy blocks, free minutes, and the exact shortfall copy
+  from §7 — *"N tasks (Xh Ym) won't fit today. Move them now rather than at midnight."*) rather than
+  the full two-column "rail" layout §7 describes visually — that's Phase 7's own visual polish
+  (unbuilt, and `design/hoard-todos.html` still isn't in the repo to build it against).

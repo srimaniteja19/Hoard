@@ -370,6 +370,29 @@ export const todoTags = pgTable(
   (table) => [primaryKey({ columns: [table.todoId, table.tagId] })]
 );
 
+// v1 of the day plan's busy blocks — a recurring weekly template the user
+// fills in manually, not a calendar sync (TODOS.md §7: "do not build
+// calendar integration in this pass"). dayOfWeek is 0=Sun..6=Sat, matching
+// JS Date#getDay().
+export const busyBlocks = pgTable(
+  "busy_blocks",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    dayOfWeek: integer("day_of_week").notNull(),
+    startTime: varchar("start_time", { length: 5 }).notNull(), // "HH:mm"
+    endTime: varchar("end_time", { length: 5 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [index("busy_block_user_day_idx").on(table.userId, table.dayOfWeek)]
+);
+
 // Caches the expensive, non-candidate sections of the home edition (HOME.md
 // §3) for a user's local day, keyed by a content fingerprint rather than
 // explicit invalidation — same pattern as constellation_layouts above: the
