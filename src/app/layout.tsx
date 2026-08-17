@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { PWAProvider } from "@/components/PWAProvider";
+import { TodoReminderProvider } from "@/components/TodoReminderProvider";
 import { DuotoneFilters } from "@/components/covers/DuotoneFilters";
 
 export const metadata: Metadata = {
@@ -41,7 +42,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <DuotoneFilters />
-        <PWAProvider>{children}</PWAProvider>
+        <PWAProvider>
+          <TodoReminderProvider>{children}</TodoReminderProvider>
+        </PWAProvider>
       </body>
     </html>
   );

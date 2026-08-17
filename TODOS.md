@@ -607,3 +607,35 @@ Recorded here so later phases don't re-derive it.
   consistent with how `/stats` already hand-rolls its sparklines, and there's still no visual
   reference (`design/hoard-todo-history.html` isn't in the repo) to build a pixel-accurate version
   against anyway.
+
+## 22. Phase 10 build notes
+
+- **§9's prose calls this "Phase 9" but the phase table lists it as Phase 10** — a small internal
+  inconsistency in the spec itself. Followed the table's numbering, consistent with everything
+  logged here so far.
+- **"No double-fire" rests on the query being atomic, not on client-side dedup.** `GET
+  /api/todos/reminders/due` is a single `UPDATE ... SET remindSentAt = now() WHERE remindAt <= now()
+  AND remindSentAt IS NULL ... RETURNING`, so two overlapping polls (or two open tabs) physically
+  cannot both claim the same row — Postgres's row locking during the update handles that, not
+  application logic. This already had the exact index it needs: `todo_reminder_idx` (on `remindAt`,
+  partial `WHERE remindSentAt IS NULL AND state = 'OPEN'`) was defined all the way back in Phase 1,
+  before reminders had any code behind them.
+- Using `GET` for an endpoint with a write side effect is a minor REST looseness — a "polled query"
+  reads as GET from the client's perspective even though it also claims rows. Noting the tradeoff
+  rather than pretending it isn't one.
+- **`TodoReminderProvider` mounts once at the root layout**, alongside the existing `PWAProvider`,
+  so it polls and can show a toast on every page, not just `/todos` — matching §9's "works
+  everywhere." It also runs (harmlessly) on `/login`, where the endpoint just 401s and the poll
+  silently no-ops; not worth special-casing for one wasted request a minute.
+- **"A badge" was simplified to be the toast stack's own count**, rather than a separate persistent
+  indicator living in a shared header — there isn't one. Every page in this app (`/`, `/til`,
+  `/settings`, `/todos`) builds its own header independently; there's no shared chrome to attach a
+  persistent badge to without a larger restructuring this phase doesn't need. The toast list shows a
+  "N REMINDERS" tally above the stack whenever there's more than one, and disappears once everything
+  is dismissed or auto-expires (15s) — dismissing is purely a client-side "stop showing me this,"
+  since `remindSentAt` was already set the moment the poll claimed it.
+- **Web Push (Phase 11) was not started.** It's marked optional in the phase table, and TODOS.md's
+  own kickoff calls it out as "much more expensive than it looks" — VAPID keys, a
+  `push_subscriptions` table, service worker push handlers, a non-ambush permission flow, a
+  sub-minute-accuracy scheduler, and the iOS-PWA-only caveat all need to land together for it to
+  work at all. Flagging this as its own decision point rather than starting it speculatively.
