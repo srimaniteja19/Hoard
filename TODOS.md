@@ -363,3 +363,60 @@ Recorded here so later phases don't re-derive it.
   now correctly reflects the full current `schema.ts`, but the migration file itself
   (`drizzle/0001_add_todos.sql`) was hand-trimmed to contain only the todos-related DDL, so it's
   safe to run against the already-drifted production database.
+
+---
+
+## 14. Phase 2 build notes
+
+- `parseTodo` in `src/lib/todos/parse.ts` has **zero imports** — not even type-only ones from
+  `@/db/schema` — so there's no ambiguity about it being coupled to React or the DB. `Energy` is
+  redefined locally as `"DEEP" | "SHALLOW" | "ERRAND"`.
+- The one real design decision beyond the spec's token table: due-date and reminder-time tokens
+  only fire when they're **trailing** (the last word(s) of the remaining text) or **preposition-led**
+  (`on`/`by`/`due`/`for` for dates, `at` for times). That's what makes "plan the Monday standup" and
+  "read 3pm article" behave correctly — the word is neither trailing nor introduced by a
+  preposition, so it's read as part of the sentence, not a scheduling directive. Everything else
+  (tags, urgency, energy tokens) matches anywhere in the text with no positional constraint, since
+  the spec didn't call out false-positive risk for those and word-boundary matching is enough.
+- 44 fixtures in `src/lib/todos/__fixtures__/parse.json` (spec asked for ~40), all passing, anchored
+  to a fixed `2024-01-15T12:00:00Z` (a Monday) so weekday/recurrence offsets are deterministic.
+  Covers every token individually, the two spec-mandated false-positive cases, a unicode case
+  (accented tag + emoji, interacting correctly with an errand-token match), and several
+  multi-token interactions worth calling out explicitly: `call`/`book` are simultaneously a
+  minute-verb (infers 10 min) *and* an errand-energy token, and both fire together; an explicit
+  `~Xm` estimate suppresses minute-*inference* but not independent energy-token matching;
+  `"every monday"` doesn't also fire the due-date token for "monday" because recurrence stripping
+  runs before due-date matching.
+
+## 15. Phase 3 build notes
+
+- Full CRUD: `POST/GET /api/todos`, `PATCH/DELETE /api/todos/:id`, `POST /api/todos/:id/subtasks`,
+  `PATCH/DELETE /api/todos/:id/subtasks/:subtaskId`. Validation via a new `src/lib/validations/todos.ts`
+  (Zod) — mirrors `validations/til.ts`'s shape and the same resolve-or-create tag pattern from
+  `api/til/route.ts`.
+  `zod` was already an undeclared transitive dependency (used by `validations/til.ts` without being
+  in `package.json`); added it explicitly now that a second file depends on it directly.
+- **The server re-parses the raw text itself** — the composer's live preview calls `parseTodo()`
+  client-side (instant, no network, matches "the preview is a pure function over the input string"),
+  but `POST /api/todos` only ever accepts `{ text }` and calls the identical `parseTodo()` again
+  server-side to derive every field authoritatively. A stale or tampered client can't submit a
+  precomputed `dueDate`/`estimatedMinutes` that disagrees with what the text actually says.
+- Added `zonedTimeToUtc(dateStr, hhmm, timezone)` to `lib/dal/todos.ts` to convert a parsed
+  `remindAtLocal` ("15:00") into an actual `remindAt` timestamp — the standard guess-and-correct
+  technique (build a UTC instant, see how it reads back in the target timezone, shift by the
+  difference), tested against both a standard-time and daylight-time Pacific case plus a positive-
+  offset zone. A reminder's date is the todo's `dueDate` if it has one, else today.
+- Completion is server-computed and reversible: `PATCH .../:id` with `state: "DONE"` sets
+  `completedAt`/`completedOn` from the user's timezone (never a client-supplied value, per §2);
+  transitioning back off `DONE` clears both. Rollover's `→` push action and recurrence's
+  next-instance-on-completion are deliberately **not** implemented here — those are §4/§5's Phase 5
+  and §5's Phase 6, respectively.
+- `/todos` is a functional-first "core" page per the phase table — flat Open/Done lists, no
+  sectioning (Overdue/Today/This week/... is Phase 4), no time slider or energy chips (also Phase 4),
+  and no newspaper styling (Phase 7, and `design/hoard-todos.html` still isn't in the repo to build
+  that against anyway). Capture bar + live preview chips, checkbox complete/uncomplete, inline
+  subtasks with add/toggle/delete, and a delete action — that's the full "core" scope.
+- **Not manually verified in a browser.** This sandbox has no `DATABASE_URL` and no live Postgres,
+  so there's no way to log in or exercise the actual data flow end-to-end here — verification is
+  typecheck/lint/test/build only. Worth a real click-through pass once this is somewhere with a
+  database.
