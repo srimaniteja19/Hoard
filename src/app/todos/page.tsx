@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { parseTodo, ParsedTodo, Energy } from "@/lib/todos/parse";
-import { X, Trash2, Plus, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Trash2, Plus, ArrowRight, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 
 const GRAVEYARD_THRESHOLD = 10;
 
@@ -20,6 +20,8 @@ type Todo = {
   rolloverCount: number;
   remindAt: string | null;
   recurrenceRule: string | null;
+  recurrenceParentId: string | null;
+  seriesPosition: number | null;
   state: "OPEN" | "DONE" | "DROPPED" | "GRAVEYARD";
   completedAt: string | null;
   tags: string[];
@@ -73,6 +75,30 @@ function formatMinutes(total: number): string {
   return m ? `${h}h ${m}m` : `${h}h`;
 }
 
+type SeriesStats = { done: number; missed: number; run: number };
+
+/** "standup notes, 47 done, 3 missed, 14-day run" — TODOS.md §5. Computed
+ * from the already-fetched list (every non-graveyard instance in the
+ * series), not a separate query — same client-side-grouping approach as
+ * the section computation above. */
+function computeSeriesStats(allTodos: Todo[], rootId: string): SeriesStats {
+  const series = allTodos
+    .filter((t) => t.id === rootId || t.recurrenceParentId === rootId)
+    .sort((a, b) => (a.seriesPosition ?? 0) - (b.seriesPosition ?? 0));
+
+  const done = series.filter((t) => t.state === "DONE").length;
+  const missed = series.filter((t) => t.state === "DROPPED").length;
+
+  let run = 0;
+  for (let i = series.length - 1; i >= 0; i--) {
+    if (series[i].state === "DONE") run++;
+    else if (series[i].state === "OPEN") continue; // the current open instance doesn't break a run
+    else break;
+  }
+
+  return { done, missed, run };
+}
+
 function TodosPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -106,6 +132,9 @@ function TodosPageContent() {
   const [graveyardItems, setGraveyardItems] = useState<Todo[]>([]);
   const [graveyardLoading, setGraveyardLoading] = useState(false);
   const [graveyardLoaded, setGraveyardLoaded] = useState(false);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -180,8 +209,13 @@ function TodosPageContent() {
         body: JSON.stringify({ state: nextState }),
       });
       if (res.ok) {
-        const updated = await res.json();
-        setTodos((prev) => prev.map((t) => (t.id === todo.id ? updated : t)));
+        const { nextInstance, ...updated } = await res.json();
+        setTodos((prev) => {
+          const next = prev.map((t) => (t.id === todo.id ? updated : t));
+          // Recurrence generates exactly one successor on completion
+          // (TODOS.md §5) — surface it immediately, don't wait on a reload.
+          return nextInstance ? [nextInstance, ...next] : next;
+        });
       }
     } catch (e) {
       console.error("Failed to toggle todo", e);
@@ -321,6 +355,44 @@ function TodosPageContent() {
       console.error("Failed to restore todo", e);
     }
   }, []);
+
+  const startEdit = useCallback((todo: Todo) => {
+    setEditingId(todo.id);
+    setEditTitle(todo.title);
+  }, []);
+
+  const cancelEdit = useCallback(() => {
+    setEditingId(null);
+    setEditTitle("");
+  }, []);
+
+  // Recurrence edit scopes — TODOS.md §5: "this one" only touches the
+  // instance being edited; "this and future" also updates the series root's
+  // template fields, so later-generated instances pick up the change. Past
+  // completed instances are never rewritten either way.
+  const saveEdit = useCallback(
+    async (todoId: string, scope: "one" | "future") => {
+      const title = editTitle.trim();
+      if (!title) return;
+      setEditingId(null);
+      setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, title } : t)));
+      try {
+        const res = await fetch(`/api/todos/${todoId}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, applyToFutureInstances: scope === "future" }),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, ...updated } : t)));
+        }
+      } catch (e) {
+        console.error("Failed to save edit", e);
+      }
+    },
+    [editTitle]
+  );
 
   const today = localToday();
   const weekEnd = addDaysToDateStr(today, 7);
@@ -550,22 +622,33 @@ function TodosPageContent() {
   );
 
   function renderRows(list: Todo[]) {
-    return list.map((todo) => (
-      <TodoRow
-        key={todo.id}
-        todo={todo}
-        today={today}
-        onToggleDone={() => toggleDone(todo)}
-        onDelete={() => deleteTodo(todo.id)}
-        onPush={() => pushTodo(todo.id)}
-        onMoveToGraveyard={() => moveToGraveyard(todo.id)}
-        onToggleSubtask={(s) => toggleSubtask(todo.id, s)}
-        onDeleteSubtask={(sId) => deleteSubtask(todo.id, sId)}
-        subtaskInput={newSubtaskText[todo.id] || ""}
-        onSubtaskInputChange={(v) => setNewSubtaskText((prev) => ({ ...prev, [todo.id]: v }))}
-        onAddSubtask={() => addSubtask(todo.id)}
-      />
-    ));
+    return list.map((todo) => {
+      const isRecurring = Boolean(todo.recurrenceRule || todo.recurrenceParentId);
+      const rootId = todo.recurrenceParentId ?? todo.id;
+      return (
+        <TodoRow
+          key={todo.id}
+          todo={todo}
+          today={today}
+          seriesStats={isRecurring ? computeSeriesStats(todos, rootId) : null}
+          isEditing={editingId === todo.id}
+          editTitle={editTitle}
+          onEditTitleChange={setEditTitle}
+          onStartEdit={() => startEdit(todo)}
+          onCancelEdit={cancelEdit}
+          onSaveEdit={(scope) => saveEdit(todo.id, scope)}
+          onToggleDone={() => toggleDone(todo)}
+          onDelete={() => deleteTodo(todo.id)}
+          onPush={() => pushTodo(todo.id)}
+          onMoveToGraveyard={() => moveToGraveyard(todo.id)}
+          onToggleSubtask={(s) => toggleSubtask(todo.id, s)}
+          onDeleteSubtask={(sId) => deleteSubtask(todo.id, sId)}
+          subtaskInput={newSubtaskText[todo.id] || ""}
+          onSubtaskInputChange={(v) => setNewSubtaskText((prev) => ({ ...prev, [todo.id]: v }))}
+          onAddSubtask={() => addSubtask(todo.id)}
+        />
+      );
+    });
   }
 }
 
@@ -624,9 +707,29 @@ function Chip({ label, color }: { label: string; color?: string }) {
   );
 }
 
+function editButtonStyle(): CSSProperties {
+  return {
+    fontFamily: "var(--mono)",
+    fontSize: "10px",
+    fontWeight: 800,
+    padding: "4px 8px",
+    border: "2px solid var(--ink)",
+    background: "var(--surface)",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  };
+}
+
 function TodoRow({
   todo,
   today,
+  seriesStats,
+  isEditing,
+  editTitle,
+  onEditTitleChange,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
   onToggleDone,
   onDelete,
   onPush,
@@ -639,6 +742,13 @@ function TodoRow({
 }: {
   todo: Todo;
   today: string;
+  seriesStats: SeriesStats | null;
+  isEditing: boolean;
+  editTitle: string;
+  onEditTitleChange: (v: string) => void;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (scope: "one" | "future") => void;
   onToggleDone: () => void;
   onDelete: () => void;
   onPush: () => void;
@@ -675,15 +785,78 @@ function TodoRow({
       />
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontWeight: 700,
-            textDecoration: todo.state === "DONE" ? "line-through" : "none",
-            marginBottom: "6px",
-          }}
-        >
-          {todo.title}
-        </div>
+        {isEditing ? (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center", marginBottom: "8px" }}>
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => onEditTitleChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  onSaveEdit("one");
+                } else if (e.key === "Escape") {
+                  onCancelEdit();
+                }
+              }}
+              autoFocus
+              style={{
+                flex: 1,
+                minWidth: "160px",
+                padding: "4px 6px",
+                fontFamily: "var(--mono)",
+                fontSize: "14px",
+                border: "2px solid var(--ink)",
+                background: "var(--paper)",
+                color: "var(--ink)",
+              }}
+            />
+            <button onClick={() => onSaveEdit("one")} style={editButtonStyle()}>
+              THIS ONE
+            </button>
+            <button onClick={() => onSaveEdit("future")} style={editButtonStyle()}>
+              THIS AND FUTURE
+            </button>
+            <button onClick={onCancelEdit} style={editButtonStyle()}>
+              CANCEL
+            </button>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: "8px",
+              marginBottom: "4px",
+            }}
+          >
+            <span
+              style={{
+                fontWeight: 700,
+                textDecoration: todo.state === "DONE" ? "line-through" : "none",
+              }}
+            >
+              {todo.title}
+            </span>
+            {Boolean(todo.recurrenceRule || todo.recurrenceParentId) && (
+              <button
+                onClick={onStartEdit}
+                aria-label="Edit recurring task"
+                style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.5, display: "flex" }}
+              >
+                <Pencil size={12} />
+              </button>
+            )}
+          </div>
+        )}
+
+        {seriesStats && (
+          <div style={{ fontFamily: "var(--mono)", fontSize: "11px", opacity: 0.6, marginBottom: "6px" }}>
+            {seriesStats.done} done · {seriesStats.missed} missed ·{" "}
+            {seriesStats.run}
+            {todo.recurrenceRule === "daily" ? "-day" : ""}-run
+          </div>
+        )}
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: todo.subtasks.length ? "8px" : 0 }}>
           <Chip label={`${todo.estimatedMinutes} min`} />

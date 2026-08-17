@@ -26,6 +26,12 @@ export const updateTodoSchema = z.object({
   state: z.enum(todoStateValues).optional(),
   sortOrder: z.number().int().optional(),
   tags: z.array(z.string().min(1).max(50)).optional(),
+  // "This and future" edit scope (TODOS.md §5): when true, any of
+  // title/note/energy/estimatedMinutes/recurrenceRule present in this same
+  // request are also applied to the series' root/template row, so future
+  // generated instances pick them up. Past completed instances are never
+  // rewritten either way.
+  applyToFutureInstances: z.boolean().optional(),
 });
 export type UpdateTodoInput = z.infer<typeof updateTodoSchema>;
 

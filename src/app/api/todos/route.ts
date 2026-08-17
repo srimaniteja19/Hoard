@@ -133,6 +133,7 @@ export async function POST(req: Request) {
         originalDueDate: dueDate,
         remindAt,
         recurrenceRule: parsed.recurrenceRule,
+        seriesPosition: parsed.recurrenceRule ? 1 : null,
         state: "OPEN",
       })
       .returning();

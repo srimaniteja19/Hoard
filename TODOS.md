@@ -474,3 +474,41 @@ Recorded here so later phases don't re-derive it.
   excluded from defaults, searchable/restorable, surfaced with that exact prompt — as a simple
   collapsible section at the bottom of `/todos`, rather than inventing a separate "weekly review"
   page nothing else in the spec asks for.
+
+## 18. Phase 6 build notes
+
+- **"Rule parsing" in Phase 6's row is a different piece from Phase 2's parser.** Phase 2's
+  `parseTodo()` converts natural-language input into a rule string (`daily`/`weekdays`/`weekly:MON`/
+  `monthly:15`), matching its §3 token table exactly — that table has no "every year" token, so the
+  parser still can't produce `yearly:MM-DD` from NL input. Phase 6 needed the other direction: given
+  a stored rule string, what's the next occurrence? That's `lib/todos/recurrence.ts`'s
+  `nextOccurrence(rule, fromDateStr)` — pure, zero imports (matching `parse.ts`'s discipline), and it
+  *does* support all four documented formats including `yearly:MM-DD`, since the interpreter should
+  be correct for the full rule vocabulary §5 defines even though nothing can generate that one rule
+  from text yet. 15 unit tests, including month/year rollovers and Feb 29 clamping into a non-leap
+  target year.
+- **Template fields come from the series ROOT, not the completed instance.** This is what actually
+  makes "this one" vs "this and future" (§5) mean something: on completion, the successor's title/
+  note/energy/estimatedMinutes/tags are read fresh from the root row, not copied from whatever the
+  just-completed instance's fields happened to be. A "this one" edit only touches that instance and
+  never leaks into the next occurrence; "this and future" (`applyToFutureInstances` on `PATCH
+  /api/todos/:id`) writes the same fields to the root, which is what later instances actually read
+  from. `recurrenceParentId` is flat (every instance points straight at the original root, not at
+  its immediate predecessor), which is what makes computing series stats a single filter instead of
+  walking a chain.
+- **Exactly one successor, generated inside the same `PATCH` that completes the instance** — not a
+  separate call, not a queued job. `POST /api/todos/:id/push` still can't touch `rolloverCount`
+  (Phase 5's guarantee holds); the new row starts at `rolloverCount: 0`.
+- **Series streak is computed client-side from the already-fetched list**, same approach as Phase
+  4's sectioning — `GET /api/todos` already returns every non-graveyard instance regardless of age
+  (a Phase 3 scoping choice, not revisited here), so no new endpoint or query was needed.
+  `missed` counts `DROPPED`-state instances in the series; nothing in the app creates that state yet
+  (there's no "drop" action anywhere), so it's honestly `0` until one exists, not a stand-in for
+  something else. `run` walks backward from the most recent instance counting consecutive `DONE`
+  ones, treating the current `OPEN` instance as not breaking the streak.
+- **No standalone "edit todo" feature was built** — general field editing was never its own phase
+  anywhere in the table (only mentioned as a hover-action label in §7's row anatomy, which is a
+  later, purely visual phase). What Phase 6 actually needed was a way to *exercise* edit scopes, so
+  the only editable field is the title, and the edit affordance (pencil icon + inline form) only
+  appears on rows that are part of a recurrence series. A general editor is still open for whenever
+  §7 gets built.
