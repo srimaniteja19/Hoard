@@ -4,7 +4,23 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ThemePicker } from "@/components/ThemePicker";
 import { UserMenu } from "@/components/UserMenu";
-import { ArrowLeft, Key, Copy, Check, Trash2, Plus, ShieldCheck, Clock } from "lucide-react";
+import { ArrowLeft, Key, Copy, Check, Trash2, Plus, ShieldCheck, Clock, Gauge } from "lucide-react";
+
+interface CalibrationResult {
+  overall: number | null;
+  byEnergy: Record<"DEEP" | "SHALLOW" | "ERRAND", number | null>;
+  sampleCount: number;
+}
+
+interface BusyBlockItem {
+  id: string;
+  title: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+}
+
+const DAY_NAMES = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 interface ExtensionTokenItem {
   id: string;
@@ -21,6 +37,98 @@ export default function SettingsPage() {
   const [issuedSecretToken, setIssuedSecretToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [issuing, setIssuing] = useState(false);
+
+  const [paddingEnabled, setPaddingEnabled] = useState(false);
+  const [paddingSaving, setPaddingSaving] = useState(false);
+  const [calibrationResult, setCalibrationResult] = useState<CalibrationResult | null>(null);
+
+  useEffect(() => {
+    async function loadCalibrationSettings() {
+      try {
+        const [settingsRes, calRes] = await Promise.all([
+          fetch("/api/settings", { credentials: "include" }),
+          fetch("/api/todos/calibration", { credentials: "include" }),
+        ]);
+        if (settingsRes.ok) {
+          const s = await settingsRes.json();
+          setPaddingEnabled(Boolean(s.todoCalibrationPaddingEnabled));
+        }
+        if (calRes.ok) setCalibrationResult(await calRes.json());
+      } catch (e) {
+        console.error("Failed to load calibration settings", e);
+      }
+    }
+    loadCalibrationSettings();
+  }, []);
+
+  const togglePadding = async () => {
+    const next = !paddingEnabled;
+    setPaddingEnabled(next);
+    setPaddingSaving(true);
+    try {
+      await fetch("/api/settings", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ todoCalibrationPaddingEnabled: next }),
+      });
+    } catch (e) {
+      console.error("Failed to save calibration padding setting", e);
+      setPaddingEnabled(!next);
+    } finally {
+      setPaddingSaving(false);
+    }
+  };
+
+  const [busyBlocks, setBusyBlocks] = useState<BusyBlockItem[]>([]);
+  const [newBlock, setNewBlock] = useState({ title: "", dayOfWeek: 1, startTime: "09:00", endTime: "10:00" });
+  const [addingBlock, setAddingBlock] = useState(false);
+
+  useEffect(() => {
+    async function loadBusyBlocks() {
+      try {
+        const res = await fetch("/api/busy-blocks", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          setBusyBlocks(data.items || []);
+        }
+      } catch (e) {
+        console.error("Failed to load busy blocks", e);
+      }
+    }
+    loadBusyBlocks();
+  }, []);
+
+  const addBusyBlock = async () => {
+    if (!newBlock.title.trim() || newBlock.endTime <= newBlock.startTime) return;
+    setAddingBlock(true);
+    try {
+      const res = await fetch("/api/busy-blocks", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newBlock),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setBusyBlocks((prev) => [...prev, created]);
+        setNewBlock((prev) => ({ ...prev, title: "" }));
+      }
+    } catch (e) {
+      console.error("Failed to add busy block", e);
+    } finally {
+      setAddingBlock(false);
+    }
+  };
+
+  const deleteBusyBlock = async (id: string) => {
+    setBusyBlocks((prev) => prev.filter((b) => b.id !== id));
+    try {
+      await fetch(`/api/busy-blocks/${id}`, { method: "DELETE", credentials: "include" });
+    } catch (e) {
+      console.error("Failed to delete busy block", e);
+    }
+  };
 
   const fetchTokens = async () => {
     try {
@@ -384,6 +492,161 @@ export default function SettingsPage() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Todo estimate calibration — TODOS.md §6 */}
+        <div style={{ marginTop: "32px" }}>
+          <h1 style={{ fontFamily: "var(--mono)", fontSize: "22px", fontWeight: 900, margin: "0 0 16px", color: "var(--ink)" }}>
+            <Gauge size={18} style={{ verticalAlign: "-3px", marginRight: "6px" }} />
+            TODO ESTIMATE CALIBRATION
+          </h1>
+
+          <div
+            style={{
+              background: "var(--paper)",
+              border: "var(--bd)",
+              boxShadow: "var(--sh-sm)",
+              padding: "16px",
+            }}
+          >
+            {calibrationResult && calibrationResult.overall === null ? (
+              <div style={{ fontFamily: "var(--mono)", fontSize: "13px", opacity: 0.7, marginBottom: "12px" }}>
+                {calibrationResult.sampleCount}/30 completed tasks with a recorded actual time. Need at least 30
+                before a multiplier means anything — a multiplier from ten tasks is noise dressed as insight.
+              </div>
+            ) : calibrationResult && calibrationResult.overall !== null ? (
+              <div style={{ fontFamily: "var(--mono)", fontSize: "13px", marginBottom: "12px" }}>
+                <div style={{ marginBottom: "6px" }}>
+                  Your tasks take <b>{calibrationResult.overall}×</b> your estimate on average ({calibrationResult.sampleCount}{" "}
+                  samples).
+                </div>
+                {(["DEEP", "SHALLOW", "ERRAND"] as const).map((energy) => (
+                  <div key={energy} style={{ opacity: 0.7 }}>
+                    {energy}: {calibrationResult.byEnergy[energy] !== null ? `${calibrationResult.byEnergy[energy]}×` : "not enough samples yet"}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={paddingEnabled}
+                onChange={togglePadding}
+                disabled={paddingSaving}
+                style={{ width: "18px", height: "18px" }}
+              />
+              <span style={{ fontFamily: "var(--mono)", fontSize: "13px", fontWeight: 700 }}>
+                Pad new estimates by my calibration multiplier
+              </span>
+            </label>
+            <div style={{ fontFamily: "var(--mono)", fontSize: "11px", opacity: 0.5, marginTop: "6px", paddingLeft: "28px" }}>
+              Default off. When on, today&apos;s free-time calculation on the home page accounts for how long tasks
+              actually take you, not just how long you guessed.
+            </div>
+          </div>
+        </div>
+
+        {/* Weekly busy blocks — TODOS.md §7. A manually-filled recurring
+            template, not calendar sync (that's explicitly out of scope). */}
+        <div style={{ marginTop: "32px" }}>
+          <h1 style={{ fontFamily: "var(--mono)", fontSize: "22px", fontWeight: 900, margin: "0 0 16px", color: "var(--ink)" }}>
+            <Clock size={18} style={{ verticalAlign: "-3px", marginRight: "6px" }} />
+            WEEKLY BUSY BLOCKS
+          </h1>
+
+          <div style={{ background: "var(--paper)", border: "var(--bd)", boxShadow: "var(--sh-sm)", padding: "16px" }}>
+            <div style={{ fontFamily: "var(--mono)", fontSize: "11px", opacity: 0.6, marginBottom: "12px" }}>
+              Fills the day plan on /todos. Recurring weekly slots you set once — not synced from a calendar.
+            </div>
+
+            {busyBlocks.length === 0 ? (
+              <div style={{ fontFamily: "var(--mono)", fontSize: "13px", opacity: 0.5, marginBottom: "12px" }}>
+                Nothing blocked out yet.
+              </div>
+            ) : (
+              <div style={{ marginBottom: "12px" }}>
+                {busyBlocks.map((b) => (
+                  <div
+                    key={b.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      padding: "6px 0",
+                      borderBottom: "1px solid var(--ink)",
+                      fontFamily: "var(--mono)",
+                      fontSize: "12px",
+                    }}
+                  >
+                    <span style={{ fontWeight: 800, width: "34px" }}>{DAY_NAMES[b.dayOfWeek]}</span>
+                    <span style={{ flex: 1 }}>{b.title}</span>
+                    <span style={{ opacity: 0.6 }}>
+                      {b.startTime}–{b.endTime}
+                    </span>
+                    <button
+                      onClick={() => deleteBusyBlock(b.id)}
+                      aria-label="Delete busy block"
+                      style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.5, display: "flex" }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+              <select
+                value={newBlock.dayOfWeek}
+                onChange={(e) => setNewBlock((prev) => ({ ...prev, dayOfWeek: Number(e.target.value) }))}
+                style={{ fontFamily: "var(--mono)", fontSize: "12px", padding: "5px", border: "1.5px solid var(--ink)", background: "var(--paper)", color: "var(--ink)" }}
+              >
+                {DAY_NAMES.map((d, i) => (
+                  <option key={d} value={i}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                placeholder="Title (e.g. Standup)"
+                value={newBlock.title}
+                onChange={(e) => setNewBlock((prev) => ({ ...prev, title: e.target.value }))}
+                style={{ fontFamily: "var(--mono)", fontSize: "12px", padding: "5px 8px", border: "1.5px solid var(--ink)", background: "var(--paper)", color: "var(--ink)", flex: 1, minWidth: "120px" }}
+              />
+              <input
+                type="time"
+                value={newBlock.startTime}
+                onChange={(e) => setNewBlock((prev) => ({ ...prev, startTime: e.target.value }))}
+                style={{ fontFamily: "var(--mono)", fontSize: "12px", padding: "5px", border: "1.5px solid var(--ink)", background: "var(--paper)", color: "var(--ink)" }}
+              />
+              <input
+                type="time"
+                value={newBlock.endTime}
+                onChange={(e) => setNewBlock((prev) => ({ ...prev, endTime: e.target.value }))}
+                style={{ fontFamily: "var(--mono)", fontSize: "12px", padding: "5px", border: "1.5px solid var(--ink)", background: "var(--paper)", color: "var(--ink)" }}
+              />
+              <button
+                onClick={addBusyBlock}
+                disabled={addingBlock}
+                style={{
+                  fontFamily: "var(--mono)",
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  padding: "6px 12px",
+                  border: "1.5px solid var(--ink)",
+                  background: "var(--lime)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <Plus size={12} /> ADD
+              </button>
+            </div>
+          </div>
         </div>
       </main>
     </div>

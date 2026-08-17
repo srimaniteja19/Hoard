@@ -29,6 +29,37 @@ export function getLoggedForDate(timezone: string = "UTC", dateInput: Date = new
 }
 
 /**
+ * Minutes since local midnight in the given timezone — the "now" anchor for
+ * any same-day, time-of-day computation (day-plan gaps, free-time-remaining)
+ * that must never be computed from the server's own local clock.
+ */
+export function getMinutesSinceMidnight(timezone: string, now: Date = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0") % 24;
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  return hour * 60 + minute;
+}
+
+const WEEKDAY_SHORT = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+/** 0=Sun..6=Sat in the given timezone — matches JS Date#getDay() and
+ * busy_blocks.dayOfWeek, but computed from the user's actual timezone
+ * rather than the server's. */
+export function getLocalDayOfWeek(timezone: string, now: Date = new Date()): number {
+  const wd = new Intl.DateTimeFormat("en-US", { timeZone: timezone, weekday: "short" })
+    .format(now)
+    .toLowerCase()
+    .slice(0, 3);
+  const idx = WEEKDAY_SHORT.indexOf(wd);
+  return idx === -1 ? now.getUTCDay() : idx;
+}
+
+/**
  * Returns user's IANA timezone setting from DB (defaults to UTC).
  */
 export async function getUserTimezone(userId: string): Promise<string> {

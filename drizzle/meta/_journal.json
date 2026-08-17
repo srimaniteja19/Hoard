@@ -15,6 +15,34 @@
       "when": 1786991011416,
       "tag": "0001_add_todos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786993291527,
+      "tag": "0002_add_home_edition_cache",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786997331873,
+      "tag": "0003_add_todo_calibration_padding_toggle",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786997892527,
+      "tag": "0004_add_busy_blocks",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786998544335,
+      "tag": "0005_add_day_notes_and_rollover_events",
+      "breakpoints": true
     }
   ]
 }

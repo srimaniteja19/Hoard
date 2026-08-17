@@ -1,0 +1,222 @@
+[
+  {
+    "name": "no tokens at all",
+    "input": "Water the plants",
+    "expected": { "title": "Water the plants", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "no tokens, leading verb infers minutes only",
+    "input": "Email the vendor",
+    "expected": { "title": "Email the vendor", "estimatedMinutes": 10, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "every token at once",
+    "input": "Follow up with client ~45m #work #urgent !! every day at 3pm on friday deep",
+    "expected": { "title": "Follow up with client", "estimatedMinutes": 45, "energy": "DEEP", "dueOffsetDays": 4, "remindAtLocal": "15:00", "recurrenceRule": "daily", "tags": ["work", "urgent"], "urgent": true }
+  },
+  {
+    "name": "date word inside title does not set a due date",
+    "input": "plan the Monday standup",
+    "expected": { "title": "plan the Monday standup", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "time-shaped word inside title is not a reminder",
+    "input": "read 3pm article",
+    "expected": { "title": "read 3pm article", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "unicode tag and emoji, plus an errand token",
+    "input": "Buy café pastries ~15m #café 🥐",
+    "expected": { "title": "café pastries 🥐", "estimatedMinutes": 15, "energy": "ERRAND", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": ["café"], "urgent": false }
+  },
+  {
+    "name": "~30m alone",
+    "input": "Tidy the closet ~30m",
+    "expected": { "title": "Tidy the closet", "estimatedMinutes": 30, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "~2h alone, also matches the deep energy token",
+    "input": "Deep clean the garage ~2h",
+    "expected": { "title": "clean the garage", "estimatedMinutes": 120, "energy": "DEEP", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "single tag",
+    "input": "Read the whitepaper #research",
+    "expected": { "title": "Read the whitepaper", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": ["research"], "urgent": false }
+  },
+  {
+    "name": "multiple tags",
+    "input": "Plan the offsite #work #planning",
+    "expected": { "title": "Plan the offsite", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": ["work", "planning"], "urgent": false }
+  },
+  {
+    "name": "single bang",
+    "input": "Take out the trash !",
+    "expected": { "title": "Take out the trash", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": true }
+  },
+  {
+    "name": "double bang, plus leading verb infers minutes",
+    "input": "Reply to the board !!",
+    "expected": { "title": "Reply to the board", "estimatedMinutes": 10, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": true }
+  },
+  {
+    "name": "triple bang",
+    "input": "File taxes !!!",
+    "expected": { "title": "File taxes", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": true }
+  },
+  {
+    "name": "every day",
+    "input": "Log workout every day",
+    "expected": { "title": "Log workout", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": "daily", "tags": [], "urgent": false }
+  },
+  {
+    "name": "every weekday",
+    "input": "Check email every weekday",
+    "expected": { "title": "Check email", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": "weekdays", "tags": [], "urgent": false }
+  },
+  {
+    "name": "every week (uses today's weekday)",
+    "input": "Water plants every week",
+    "expected": { "title": "Water plants", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": "weekly:MON", "tags": [], "urgent": false }
+  },
+  {
+    "name": "every month (uses today's local date)",
+    "input": "Pay rent every month",
+    "expected": { "title": "Pay rent", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": "monthly:15", "tags": [], "urgent": false }
+  },
+  {
+    "name": "every <weekday>, distinct from today",
+    "input": "Team retro every friday",
+    "expected": { "title": "Team retro", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": "weekly:FRI", "tags": [], "urgent": false }
+  },
+  {
+    "name": "due today",
+    "input": "Submit the report today",
+    "expected": { "title": "Submit the report", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": 0, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "due tomorrow, plus call is both a minute-verb and an errand token",
+    "input": "Call the plumber tomorrow",
+    "expected": { "title": "the plumber", "estimatedMinutes": 10, "energy": "ERRAND", "dueOffsetDays": 1, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "due tmrw",
+    "input": "Pack for the trip tmrw",
+    "expected": { "title": "Pack for the trip", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": 1, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "trailing weekday due, not today's weekday",
+    "input": "Submit report friday",
+    "expected": { "title": "Submit report", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": 4, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "next week",
+    "input": "Renew the license next week",
+    "expected": { "title": "Renew the license", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": 7, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "preposition-led due (on)",
+    "input": "Have the car serviced on friday",
+    "expected": { "title": "Have the car serviced", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": 4, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "preposition-led due (due)",
+    "input": "Pay the invoice due tomorrow",
+    "expected": { "title": "Pay the invoice", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": 1, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "trailing reminder time (3pm), plus a two-word errand token",
+    "input": "Pick up dry cleaning 3pm",
+    "expected": { "title": "dry cleaning", "estimatedMinutes": 25, "energy": "ERRAND", "dueOffsetDays": null, "remindAtLocal": "15:00", "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "preposition-led reminder (at HH:mm)",
+    "input": "Doctor appointment at 15:00",
+    "expected": { "title": "Doctor appointment", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": "15:00", "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "trailing reminder time (9:30am)",
+    "input": "Standup 9:30am",
+    "expected": { "title": "Standup", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": "09:30", "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "deep energy token",
+    "input": "Deep dive into the codebase",
+    "expected": { "title": "dive into the codebase", "estimatedMinutes": 25, "energy": "DEEP", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "focus energy token",
+    "input": "Focus time for writing",
+    "expected": { "title": "time for writing", "estimatedMinutes": 25, "energy": "DEEP", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "call: errand token and minute-verb together",
+    "input": "Call the vet",
+    "expected": { "title": "the vet", "estimatedMinutes": 10, "energy": "ERRAND", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "buy: errand token, not a minute-verb",
+    "input": "Buy new headphones",
+    "expected": { "title": "new headphones", "estimatedMinutes": 25, "energy": "ERRAND", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "pick up: two-word errand token",
+    "input": "Pick up the kids from school",
+    "expected": { "title": "the kids from school", "estimatedMinutes": 25, "energy": "ERRAND", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "errand: explicit word",
+    "input": "Drop off the package errand",
+    "expected": { "title": "Drop off the package", "estimatedMinutes": 25, "energy": "ERRAND", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "book: errand token and minute-verb together",
+    "input": "Book the flight",
+    "expected": { "title": "the flight", "estimatedMinutes": 10, "energy": "ERRAND", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "email: minute-verb only, no energy token",
+    "input": "Email the client",
+    "expected": { "title": "Email the client", "estimatedMinutes": 10, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "reply: minute-verb only",
+    "input": "Reply to the recruiter",
+    "expected": { "title": "Reply to the recruiter", "estimatedMinutes": 10, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "text: minute-verb only",
+    "input": "Text the landlord about rent",
+    "expected": { "title": "Text the landlord about rent", "estimatedMinutes": 10, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "explicit estimate overrides minute-verb inference, errand token still applies",
+    "input": "~50m call the dentist",
+    "expected": { "title": "the dentist", "estimatedMinutes": 50, "energy": "ERRAND", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "recurrence word does not also fire due-date on the same weekday",
+    "input": "Team sync every monday",
+    "expected": { "title": "Team sync", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": "weekly:MON", "tags": [], "urgent": false }
+  },
+  {
+    "name": "energy inferred DEEP from a high explicit estimate",
+    "input": "~45m organize the garage",
+    "expected": { "title": "organize the garage", "estimatedMinutes": 45, "energy": "DEEP", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "energy inferred SHALLOW from a low explicit estimate",
+    "input": "~20m water the plants",
+    "expected": { "title": "water the plants", "estimatedMinutes": 20, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": false }
+  },
+  {
+    "name": "urgent bangs combined with a trailing due date",
+    "input": "Renew passport tomorrow !!!",
+    "expected": { "title": "Renew passport", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": 1, "remindAtLocal": null, "recurrenceRule": null, "tags": [], "urgent": true }
+  },
+  {
+    "name": "multiple unicode tags, no emoji",
+    "input": "Plan trip #travel #café",
+    "expected": { "title": "Plan trip", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": null, "tags": ["travel", "café"], "urgent": false }
+  }
+]

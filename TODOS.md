@@ -363,3 +363,279 @@ Recorded here so later phases don't re-derive it.
   now correctly reflects the full current `schema.ts`, but the migration file itself
   (`drizzle/0001_add_todos.sql`) was hand-trimmed to contain only the todos-related DDL, so it's
   safe to run against the already-drifted production database.
+
+---
+
+## 14. Phase 2 build notes
+
+- `parseTodo` in `src/lib/todos/parse.ts` has **zero imports** — not even type-only ones from
+  `@/db/schema` — so there's no ambiguity about it being coupled to React or the DB. `Energy` is
+  redefined locally as `"DEEP" | "SHALLOW" | "ERRAND"`.
+- The one real design decision beyond the spec's token table: due-date and reminder-time tokens
+  only fire when they're **trailing** (the last word(s) of the remaining text) or **preposition-led**
+  (`on`/`by`/`due`/`for` for dates, `at` for times). That's what makes "plan the Monday standup" and
+  "read 3pm article" behave correctly — the word is neither trailing nor introduced by a
+  preposition, so it's read as part of the sentence, not a scheduling directive. Everything else
+  (tags, urgency, energy tokens) matches anywhere in the text with no positional constraint, since
+  the spec didn't call out false-positive risk for those and word-boundary matching is enough.
+- 44 fixtures in `src/lib/todos/__fixtures__/parse.json` (spec asked for ~40), all passing, anchored
+  to a fixed `2024-01-15T12:00:00Z` (a Monday) so weekday/recurrence offsets are deterministic.
+  Covers every token individually, the two spec-mandated false-positive cases, a unicode case
+  (accented tag + emoji, interacting correctly with an errand-token match), and several
+  multi-token interactions worth calling out explicitly: `call`/`book` are simultaneously a
+  minute-verb (infers 10 min) *and* an errand-energy token, and both fire together; an explicit
+  `~Xm` estimate suppresses minute-*inference* but not independent energy-token matching;
+  `"every monday"` doesn't also fire the due-date token for "monday" because recurrence stripping
+  runs before due-date matching.
+
+## 15. Phase 3 build notes
+
+- Full CRUD: `POST/GET /api/todos`, `PATCH/DELETE /api/todos/:id`, `POST /api/todos/:id/subtasks`,
+  `PATCH/DELETE /api/todos/:id/subtasks/:subtaskId`. Validation via a new `src/lib/validations/todos.ts`
+  (Zod) — mirrors `validations/til.ts`'s shape and the same resolve-or-create tag pattern from
+  `api/til/route.ts`.
+  `zod` was already an undeclared transitive dependency (used by `validations/til.ts` without being
+  in `package.json`); added it explicitly now that a second file depends on it directly.
+- **The server re-parses the raw text itself** — the composer's live preview calls `parseTodo()`
+  client-side (instant, no network, matches "the preview is a pure function over the input string"),
+  but `POST /api/todos` only ever accepts `{ text }` and calls the identical `parseTodo()` again
+  server-side to derive every field authoritatively. A stale or tampered client can't submit a
+  precomputed `dueDate`/`estimatedMinutes` that disagrees with what the text actually says.
+- Added `zonedTimeToUtc(dateStr, hhmm, timezone)` to `lib/dal/todos.ts` to convert a parsed
+  `remindAtLocal` ("15:00") into an actual `remindAt` timestamp — the standard guess-and-correct
+  technique (build a UTC instant, see how it reads back in the target timezone, shift by the
+  difference), tested against both a standard-time and daylight-time Pacific case plus a positive-
+  offset zone. A reminder's date is the todo's `dueDate` if it has one, else today.
+- Completion is server-computed and reversible: `PATCH .../:id` with `state: "DONE"` sets
+  `completedAt`/`completedOn` from the user's timezone (never a client-supplied value, per §2);
+  transitioning back off `DONE` clears both. Rollover's `→` push action and recurrence's
+  next-instance-on-completion are deliberately **not** implemented here — those are §4/§5's Phase 5
+  and §5's Phase 6, respectively.
+- `/todos` is a functional-first "core" page per the phase table — flat Open/Done lists, no
+  sectioning (Overdue/Today/This week/... is Phase 4), no time slider or energy chips (also Phase 4),
+  and no newspaper styling (Phase 7, and `design/hoard-todos.html` still isn't in the repo to build
+  that against anyway). Capture bar + live preview chips, checkbox complete/uncomplete, inline
+  subtasks with add/toggle/delete, and a delete action — that's the full "core" scope.
+- **Not manually verified in a browser.** This sandbox has no `DATABASE_URL` and no live Postgres,
+  so there's no way to log in or exercise the actual data flow end-to-end here — verification is
+  typecheck/lint/test/build only. Worth a real click-through pass once this is somewhere with a
+  database.
+
+## 16. Phase 4 build notes
+
+- **§7 says "URL state via nuqs, same as everywhere else"** — but nuqs isn't a dependency anywhere
+  in this codebase (confirmed again during Phase 1's HOME.md exploration too). What "everywhere
+  else" actually does, in `src/app/til/page.tsx`, is read filters straight from
+  `useSearchParams().get(...)` and write them with `useRouter().push(...)`/a hand-built
+  `URLSearchParams`. `/todos` now mirrors that exact pattern instead of introducing nuqs as a new
+  dependency nothing else uses. One deliberate difference from `/til`'s convention: `/todos` uses
+  `router.replace` instead of `router.push` for both the slider and the energy chips, since `push`
+  on every slider-drag tick would flood browser history with one entry per 5-minute step — `replace`
+  still satisfies "survives a refresh and a back button" (the URL is still the source of truth on
+  reload, and navigating away and back returns to the last-set filter state) without that problem.
+- Wrapped the page in `<Suspense>` (same shape as `/til`'s `TilPageContent`/`TilPage` split) —
+  `useSearchParams()` requires it, and the build confirms `/todos` still prerenders statically with
+  it in place.
+- Sections are computed **client-side over the already-fetched list** using the browser's local
+  wall-clock date, not a server-side "as of today" query — matches how the rest of the app's
+  client-heavy pages already do local filtering/grouping over fetched data. The stored `dueDate`
+  itself is still correctly account-timezone-derived at creation time (Phase 3); this is just where
+  the Overdue/Today/This week boundary gets drawn at render time.
+- "This week" = due after today through 7 days out; "Later" = anything beyond that. Not spec'd
+  exactly by §7, so picked to match the same 7-day rolling-window convention used elsewhere
+  (`getTilWallAggregate`, the home edition's ledger window).
+- Energy chips are single-select (ALL/DEEP/SHALLOW/ERRAND), radio-button style — matches the
+  bookmark library's `TimeContextBar` context buttons structurally, which is what "mirroring the
+  bookmark library's controls" points at, even though todos use `Energy` where bookmarks use
+  `ContextType`.
+
+## 17. Phase 5 build notes
+
+- **`rolloverCount` can now only change in one place**: `POST /api/todos/:id/push`. It's not a field
+  `updateTodoSchema` exposes, so the generic `PATCH /api/todos/:id` physically cannot touch it —
+  the "no cron, only explicit pushes" rule from §4 is enforced by the API surface itself, not just
+  by convention. The push endpoint also computes "tomorrow" server-side from the account's
+  timezone, same as everywhere else timezone-sensitive; it never trusts a client-supplied date.
+- `N DAYS OVERDUE` and `MOVED N×` render as separate chips on the same row, per §4's "these are
+  different information and both matter" — overdue-ness is still computed at render time from
+  `dueDate` (client-side, against the browser's local today, same as Phase 4's sectioning);
+  `rolloverCount` is the stored, honest record of pushes.
+- Graveyard **offer**, not force: an inline banner appears on a row once `rolloverCount >= 10`
+  ("Moved N times. Does this still matter?") with a button that moves it — nothing happens
+  automatically. Graveyard items are excluded from `GET /api/todos`'s default query entirely (a new
+  `?graveyard=true` param is required to see them) so they're already out of every default view and
+  count, not just hidden client-side.
+- Restore is just `PATCH /api/todos/:id` with `state: "OPEN"` — no dedicated endpoint needed, since
+  the update schema already allows arbitrary valid state transitions. `rolloverCount` is left
+  untouched on restore, preserving it as a historical record rather than resetting the slate.
+- The spec's full "weekly review" flow (§4's `"14 things here..."` framing, presumably as part of
+  some larger periodic review surface) isn't otherwise described as its own deliverable anywhere in
+  the phase table, so this phase built the minimum that satisfies §4's actual requirements —
+  excluded from defaults, searchable/restorable, surfaced with that exact prompt — as a simple
+  collapsible section at the bottom of `/todos`, rather than inventing a separate "weekly review"
+  page nothing else in the spec asks for.
+
+## 18. Phase 6 build notes
+
+- **"Rule parsing" in Phase 6's row is a different piece from Phase 2's parser.** Phase 2's
+  `parseTodo()` converts natural-language input into a rule string (`daily`/`weekdays`/`weekly:MON`/
+  `monthly:15`), matching its §3 token table exactly — that table has no "every year" token, so the
+  parser still can't produce `yearly:MM-DD` from NL input. Phase 6 needed the other direction: given
+  a stored rule string, what's the next occurrence? That's `lib/todos/recurrence.ts`'s
+  `nextOccurrence(rule, fromDateStr)` — pure, zero imports (matching `parse.ts`'s discipline), and it
+  *does* support all four documented formats including `yearly:MM-DD`, since the interpreter should
+  be correct for the full rule vocabulary §5 defines even though nothing can generate that one rule
+  from text yet. 15 unit tests, including month/year rollovers and Feb 29 clamping into a non-leap
+  target year.
+- **Template fields come from the series ROOT, not the completed instance.** This is what actually
+  makes "this one" vs "this and future" (§5) mean something: on completion, the successor's title/
+  note/energy/estimatedMinutes/tags are read fresh from the root row, not copied from whatever the
+  just-completed instance's fields happened to be. A "this one" edit only touches that instance and
+  never leaks into the next occurrence; "this and future" (`applyToFutureInstances` on `PATCH
+  /api/todos/:id`) writes the same fields to the root, which is what later instances actually read
+  from. `recurrenceParentId` is flat (every instance points straight at the original root, not at
+  its immediate predecessor), which is what makes computing series stats a single filter instead of
+  walking a chain.
+- **Exactly one successor, generated inside the same `PATCH` that completes the instance** — not a
+  separate call, not a queued job. `POST /api/todos/:id/push` still can't touch `rolloverCount`
+  (Phase 5's guarantee holds); the new row starts at `rolloverCount: 0`.
+- **Series streak is computed client-side from the already-fetched list**, same approach as Phase
+  4's sectioning — `GET /api/todos` already returns every non-graveyard instance regardless of age
+  (a Phase 3 scoping choice, not revisited here), so no new endpoint or query was needed.
+  `missed` counts `DROPPED`-state instances in the series; nothing in the app creates that state yet
+  (there's no "drop" action anywhere), so it's honestly `0` until one exists, not a stand-in for
+  something else. `run` walks backward from the most recent instance counting consecutive `DONE`
+  ones, treating the current `OPEN` instance as not breaking the streak.
+- **No standalone "edit todo" feature was built** — general field editing was never its own phase
+  anywhere in the table (only mentioned as a hover-action label in §7's row anatomy, which is a
+  later, purely visual phase). What Phase 6 actually needed was a way to *exercise* edit scopes, so
+  the only editable field is the title, and the edit affordance (pencil icon + inline form) only
+  appears on rows that are part of a recurrence series. A general editor is still open for whenever
+  §7 gets built.
+
+## 19. Phase 7 build notes
+
+- `lib/todos/calibration.ts` is pure and zero-import like the other two `lib/todos/*` modules.
+  Multiplier is the mean of each sample's `actual/estimated` ratio (not a sum-based weighted
+  average) — a simple, defensible reading of "how much longer things take than estimated," and
+  samples with a zero/negative estimate or actual are filtered out before the floor check so they
+  can't corner-case the math. 8 tests, including the floor boundaries at exactly 30/15 samples.
+- **The on-completion prompt is genuinely non-blocking**: `toggleDone` already marks the task DONE
+  and shows the prompt as a separate, dismissible follow-up — dismissing just clears local UI state,
+  no request at all, and `actualMinutes` stays null (excluded from calibration, per §6). Submitting
+  HALF/SPOT ON/DOUBLE/custom is a second, independent `PATCH` with just `{ actualMinutes }`, which
+  `updateTodoSchema` already accepted from Phase 3 — no schema change needed there.
+- **The timer was skipped** — the spec's own sequencing note says "ship the prompt first; the timer
+  can wait," so it does.
+- **"Use the padded figure in the day plan"** — TODOS.md's own day plan (busy_blocks, gap detection)
+  is Phase 8 and doesn't exist yet, so this phase wired padding into the day plan that *does* exist:
+  HOME.md's `getDayPlan` in `lib/home/queries.ts`. When the new `users.todoCalibrationPaddingEnabled`
+  toggle (default off, per §6) is on, each due-today task's `estimatedMinutes` is multiplied by its
+  energy class's calibration multiplier before the greedy-pack comparison against free minutes —
+  same `calibration()` function, same 30/15 sample floors, just consumed from a different call site.
+  Once TODOS.md's own Phase 8 day plan exists, it should read this same toggle and calibration
+  result rather than growing a second copy.
+- **New `GET/PATCH /api/settings`** — there was no user-preference endpoint anywhere in the app
+  before this (not even for `timezone`), so this had to be built from scratch rather than extended.
+  Scoped narrowly to the one field this phase needs; a natural home for future preferences.
+- Settings page gained a "TODO ESTIMATE CALIBRATION" section: current multiplier (overall + per
+  energy class) when available, an honest "N/30 samples, need at least 30" message otherwise, and
+  the padding toggle.
+
+## 20. Phase 8 build notes
+
+- `lib/todos/dayplan.ts`'s `computeDayPlan(busy, tasks, nowMinutes, dayEndMinutes?)` is pure and
+  zero-import, and — the thing this phase is checked hardest on — takes `busy: {start,end,title}[]`
+  as a plain argument rather than querying `busy_blocks` itself. The only DB-touching code is in the
+  two route handlers that call it; a calendar adapter replaces just that query, never the packing
+  function. 9 tests covering gap splitting/merging/clipping-around-now and the greedy-descending
+  fill (largest task first, into the earliest gap that still fits, moving to the next gap once one
+  fills up, reporting genuinely-oversized tasks as unfitted rather than dropping them).
+- **`busy_blocks` is a recurring weekly template**, not calendar-synced (explicitly out of scope):
+  `dayOfWeek` (0=Sun..6=Sat) + `startTime`/`endTime`, filled in once on `/settings` and reused every
+  week. Manageable there with add/delete; no edit endpoint since delete-and-recreate is simpler for
+  something this small.
+- **"The same greedy-descending fill as the bookmark session"** — this doesn't actually exist
+  anywhere in the codebase to mirror. `SessionQueueItem` (in `src/types/index.ts`) has an
+  `allocatedMins` field suggesting a packing algorithm was planned, but `/session` (the actual
+  bookmark session page) just runs a linear countdown timer through unread items — no bin-packing.
+  So `computeDayPlan` implements the standard, well-defined heuristic the name describes
+  (first-fit-decreasing) rather than copying something that isn't there.
+- **Closed the "two day plans" gap flagged in Phase 7's notes.** HOME.md's `getDayPlan` (in
+  `lib/home/queries.ts`) now uses real `busy_blocks` and this same `computeDayPlan()`, instead of the
+  empty-`blocks`-array approximation it shipped with in HOME Phase 1 before `busy_blocks` existed.
+  Both the home edition and `/todos` now read the same weekly template and the same packing
+  function — no duplicated day-plan logic anywhere.
+- Extracted `getMinutesSinceMidnight` and `getLocalDayOfWeek` to `lib/dal/shared.ts` (next to
+  `getLoggedForDate`) since both the home edition and the new `/api/todos/day-plan` route needed the
+  same timezone-correct "what time/day is it for this user right now" logic — this was duplicated
+  inline in `lib/home/queries.ts` before, now there's one definition.
+- `/todos` shows a compact day-plan summary (busy blocks, free minutes, and the exact shortfall copy
+  from §7 — *"N tasks (Xh Ym) won't fit today. Move them now rather than at midnight."*) rather than
+  the full two-column "rail" layout §7 describes visually — that's Phase 7's own visual polish
+  (unbuilt, and `design/hoard-todos.html` still isn't in the repo to build it against).
+
+## 21. Phase 9 build notes
+
+- **"An orange base bar if anything rolled that day" needed a real per-day rollover log**, which
+  didn't exist — `rolloverCount` is only ever a running total on the todo itself, with no record of
+  *which* day each push happened on. Added a small `rollover_events` table (userId, todoId,
+  occurredOn) written once, right after the existing update, in `POST /api/todos/:id/push`. This
+  doesn't change §4's guarantee at all — `rolloverCount` still only moves in that one route — it just
+  gives the history calendar something honest to query instead of guessing.
+- **"Clean sweep" needed a definition the spec doesn't give one for.** Defined it as: completed at
+  least one task that day, and nothing was pushed away that day (`tasks.length > 0 && !rolled`).
+  Documented inline in `getMonthHistory` rather than left implicit, since it's a judgment call, not
+  a spec'd rule.
+- **`getMonthHistory` is genuinely one grouped query for completed tasks, plus one for rollover
+  events** — both filtered by a date range, never per-cell — with day-bucketing done in JS after the
+  fetch, since the calendar needs row-level detail (one bar per task) that a `GROUP BY` alone can't
+  give it. "Cached for the day" was read as *the response is safe to cache briefly*, not literally a
+  24-hour `Cache-Control`, since that would show stale data for the rest of the day right after
+  completing something — matches the existing 5-minute private-cache convention (`/api/til/heatmap`,
+  `/api/todos/calibration`) instead.
+- **The end-of-day note is a new `day_notes` table** (userId + date primary key, one `note` column,
+  capped at 280 chars — "one optional line," not a journal). No trigger prompts it at day close yet
+  (that would need a notification/reminder mechanism this pass doesn't have — see Phase 10); for now
+  it's just editable from the day record whenever the user visits history.
+- **The calibration scatter reuses `getCalibrationSamples`** (already built in Phase 7) rather than
+  adding new sample-gathering logic — `GET /api/todos/calibration?points=true` is the same endpoint
+  with an opt-in raw-points field, capped at the most recent 500 to keep the payload bounded.
+- **`/todos` remains the landing route**; history is one link away (`HISTORY →` in the `/todos`
+  header) and nothing routes there by default, per §8's explicit warning against that.
+- Hand-rolled the calendar grid and the scatter plot in plain SVG/CSS, no charting library —
+  consistent with how `/stats` already hand-rolls its sparklines, and there's still no visual
+  reference (`design/hoard-todo-history.html` isn't in the repo) to build a pixel-accurate version
+  against anyway.
+
+## 22. Phase 10 build notes
+
+- **§9's prose calls this "Phase 9" but the phase table lists it as Phase 10** — a small internal
+  inconsistency in the spec itself. Followed the table's numbering, consistent with everything
+  logged here so far.
+- **"No double-fire" rests on the query being atomic, not on client-side dedup.** `GET
+  /api/todos/reminders/due` is a single `UPDATE ... SET remindSentAt = now() WHERE remindAt <= now()
+  AND remindSentAt IS NULL ... RETURNING`, so two overlapping polls (or two open tabs) physically
+  cannot both claim the same row — Postgres's row locking during the update handles that, not
+  application logic. This already had the exact index it needs: `todo_reminder_idx` (on `remindAt`,
+  partial `WHERE remindSentAt IS NULL AND state = 'OPEN'`) was defined all the way back in Phase 1,
+  before reminders had any code behind them.
+- Using `GET` for an endpoint with a write side effect is a minor REST looseness — a "polled query"
+  reads as GET from the client's perspective even though it also claims rows. Noting the tradeoff
+  rather than pretending it isn't one.
+- **`TodoReminderProvider` mounts once at the root layout**, alongside the existing `PWAProvider`,
+  so it polls and can show a toast on every page, not just `/todos` — matching §9's "works
+  everywhere." It also runs (harmlessly) on `/login`, where the endpoint just 401s and the poll
+  silently no-ops; not worth special-casing for one wasted request a minute.
+- **"A badge" was simplified to be the toast stack's own count**, rather than a separate persistent
+  indicator living in a shared header — there isn't one. Every page in this app (`/`, `/til`,
+  `/settings`, `/todos`) builds its own header independently; there's no shared chrome to attach a
+  persistent badge to without a larger restructuring this phase doesn't need. The toast list shows a
+  "N REMINDERS" tally above the stack whenever there's more than one, and disappears once everything
+  is dismissed or auto-expires (15s) — dismissing is purely a client-side "stop showing me this,"
+  since `remindSentAt` was already set the moment the poll claimed it.
+- **Web Push (Phase 11) was not started.** It's marked optional in the phase table, and TODOS.md's
+  own kickoff calls it out as "much more expensive than it looks" — VAPID keys, a
+  `push_subscriptions` table, service worker push handlers, a non-ambush permission flow, a
+  sub-minute-accuracy scheduler, and the iOS-PWA-only caveat all need to land together for it to
+  work at all. Flagging this as its own decision point rather than starting it speculatively.
