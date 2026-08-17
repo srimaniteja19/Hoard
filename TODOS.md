@@ -420,3 +420,31 @@ Recorded here so later phases don't re-derive it.
   so there's no way to log in or exercise the actual data flow end-to-end here — verification is
   typecheck/lint/test/build only. Worth a real click-through pass once this is somewhere with a
   database.
+
+## 16. Phase 4 build notes
+
+- **§7 says "URL state via nuqs, same as everywhere else"** — but nuqs isn't a dependency anywhere
+  in this codebase (confirmed again during Phase 1's HOME.md exploration too). What "everywhere
+  else" actually does, in `src/app/til/page.tsx`, is read filters straight from
+  `useSearchParams().get(...)` and write them with `useRouter().push(...)`/a hand-built
+  `URLSearchParams`. `/todos` now mirrors that exact pattern instead of introducing nuqs as a new
+  dependency nothing else uses. One deliberate difference from `/til`'s convention: `/todos` uses
+  `router.replace` instead of `router.push` for both the slider and the energy chips, since `push`
+  on every slider-drag tick would flood browser history with one entry per 5-minute step — `replace`
+  still satisfies "survives a refresh and a back button" (the URL is still the source of truth on
+  reload, and navigating away and back returns to the last-set filter state) without that problem.
+- Wrapped the page in `<Suspense>` (same shape as `/til`'s `TilPageContent`/`TilPage` split) —
+  `useSearchParams()` requires it, and the build confirms `/todos` still prerenders statically with
+  it in place.
+- Sections are computed **client-side over the already-fetched list** using the browser's local
+  wall-clock date, not a server-side "as of today" query — matches how the rest of the app's
+  client-heavy pages already do local filtering/grouping over fetched data. The stored `dueDate`
+  itself is still correctly account-timezone-derived at creation time (Phase 3); this is just where
+  the Overdue/Today/This week boundary gets drawn at render time.
+- "This week" = due after today through 7 days out; "Later" = anything beyond that. Not spec'd
+  exactly by §7, so picked to match the same 7-day rolling-window convention used elsewhere
+  (`getTilWallAggregate`, the home edition's ledger window).
+- Energy chips are single-select (ALL/DEEP/SHALLOW/ERRAND), radio-button style — matches the
+  bookmark library's `TimeContextBar` context buttons structurally, which is what "mirroring the
+  bookmark library's controls" points at, even though todos use `Energy` where bookmarks use
+  `ContextType`.

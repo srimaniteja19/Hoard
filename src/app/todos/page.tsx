@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { parseTodo, ParsedTodo } from "@/lib/todos/parse";
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { parseTodo, ParsedTodo, Energy } from "@/lib/todos/parse";
 import { X, Trash2, Plus } from "lucide-react";
 
 type Subtask = { id: string; title: string; done: boolean; position: number };
@@ -10,7 +11,7 @@ type Todo = {
   id: string;
   title: string;
   note: string | null;
-  energy: "DEEP" | "SHALLOW" | "ERRAND";
+  energy: Energy;
   estimatedMinutes: number;
   actualMinutes: number | null;
   dueDate: string | null;
@@ -31,7 +32,61 @@ const ENERGY_COLOR: Record<Todo["energy"], string> = {
 
 const localTz = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-export default function TodosPage() {
+const ENERGY_FILTERS: (Energy | "ALL")[] = ["ALL", "DEEP", "SHALLOW", "ERRAND"];
+
+/** "YYYY-MM-DD" for the browser's local today — sectioning is a client-side
+ * read-time grouping over already-fetched todos, same as everywhere else on
+ * this page; the stored dueDate itself was computed server-side from the
+ * account's timezone at creation time (TODOS.md §2). */
+function localToday(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function addDaysToDateStr(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1, d + days);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+}
+
+/** "YYYY-MM-DD" for an ISO timestamp, in the browser's local time. */
+function localDateFromIso(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatMinutes(total: number): string {
+  if (total < 60) return `${total}m`;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+function TodosPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const time = Number(searchParams.get("time")) || 180;
+  const energyFilterParam = searchParams.get("energy");
+  const energyFilter: Energy | "ALL" =
+    energyFilterParam && (ENERGY_FILTERS as string[]).includes(energyFilterParam)
+      ? (energyFilterParam as Energy | "ALL")
+      : "ALL";
+
+  const updateFilters = useCallback(
+    (nextTime: number, nextEnergy: Energy | "ALL") => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (nextTime === 180) params.delete("time"); else params.set("time", String(nextTime));
+      if (nextEnergy === "ALL") params.delete("energy"); else params.set("energy", nextEnergy);
+      const qs = params.toString();
+      router.replace(qs ? `/todos?${qs}` : "/todos");
+    },
+    [router, searchParams]
+  );
+
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState("");
@@ -185,8 +240,26 @@ export default function TodosPage() {
     }
   }, []);
 
-  const openTodos = todos.filter((t) => t.state === "OPEN");
-  const doneTodos = todos.filter((t) => t.state === "DONE");
+  const today = localToday();
+  const weekEnd = addDaysToDateStr(today, 7);
+
+  const filtered = todos.filter((t) => {
+    if (energyFilter !== "ALL" && t.energy !== energyFilter) return false;
+    if (time < 180 && t.estimatedMinutes > time) return false;
+    return true;
+  });
+
+  const overdue = filtered.filter((t) => t.state === "OPEN" && t.dueDate !== null && t.dueDate < today);
+  const dueToday = filtered.filter((t) => t.state === "OPEN" && t.dueDate === today);
+  const thisWeek = filtered.filter((t) => t.state === "OPEN" && t.dueDate !== null && t.dueDate > today && t.dueDate <= weekEnd);
+  const later = filtered.filter((t) => t.state === "OPEN" && t.dueDate !== null && t.dueDate > weekEnd);
+  const someday = filtered.filter((t) => t.state === "OPEN" && t.dueDate === null);
+  const doneToday = filtered.filter((t) => t.state === "DONE" && t.completedAt !== null && localDateFromIso(t.completedAt) === today);
+
+  const sumMinutes = (list: Todo[]) => list.reduce((sum, t) => sum + t.estimatedMinutes, 0);
+  const sectionTitle = (label: string, list: Todo[]) => `${label} · ${list.length} · ${formatMinutes(sumMinutes(list))}`;
+
+  const totalOpen = todos.filter((t) => t.state === "OPEN").length;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", color: "var(--ink)", fontFamily: "var(--sans, var(--grot))" }}>
@@ -241,51 +314,110 @@ export default function TodosPage() {
           )}
         </div>
 
+        {/* Time slider + energy chips — mirrors the bookmark library's
+            TimeContextBar. URL state via useSearchParams/router.replace,
+            matching the pattern already established in /til rather than
+            introducing nuqs, which isn't used anywhere else in the app. */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "16px",
+            alignItems: "center",
+            padding: "12px 16px",
+            marginBottom: "24px",
+            background: "var(--surface)",
+            border: "2px solid var(--ink)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontFamily: "var(--mono)", fontSize: "12px", fontWeight: 800 }}>
+            <label htmlFor="time-slider">I HAVE</label>
+            <input
+              id="time-slider"
+              type="range"
+              min={5}
+              max={180}
+              step={5}
+              value={time}
+              onChange={(e) => updateFilters(Number(e.target.value), energyFilter)}
+            />
+            <b>{time >= 180 ? "ANY TIME" : formatMinutes(time)}</b>
+          </div>
+
+          <div style={{ display: "flex", gap: "4px" }}>
+            {ENERGY_FILTERS.map((e) => (
+              <button
+                key={e}
+                onClick={() => updateFilters(time, e)}
+                style={{
+                  fontFamily: "var(--mono)",
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  padding: "4px 10px",
+                  border: "2px solid var(--ink)",
+                  cursor: "pointer",
+                  background: energyFilter === e ? (e === "ALL" ? "var(--ink)" : ENERGY_COLOR[e as Energy]) : "var(--surface)",
+                  color: energyFilter === e && e === "ALL" ? "var(--paper)" : "var(--ink)",
+                }}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {loading ? (
           <div style={{ fontFamily: "var(--mono)", fontSize: "13px", opacity: 0.6 }}>Loading…</div>
+        ) : totalOpen === 0 ? (
+          <EmptyState text="Nothing left for today. That's the whole point." />
         ) : (
           <>
-            <Section title={`OPEN (${openTodos.length})`}>
-              {openTodos.length === 0 ? (
-                <EmptyState text="Nothing left for today. That's the whole point." />
-              ) : (
-                openTodos.map((todo) => (
-                  <TodoRow
-                    key={todo.id}
-                    todo={todo}
-                    onToggleDone={() => toggleDone(todo)}
-                    onDelete={() => deleteTodo(todo.id)}
-                    onToggleSubtask={(s) => toggleSubtask(todo.id, s)}
-                    onDeleteSubtask={(sId) => deleteSubtask(todo.id, sId)}
-                    subtaskInput={newSubtaskText[todo.id] || ""}
-                    onSubtaskInputChange={(v) => setNewSubtaskText((prev) => ({ ...prev, [todo.id]: v }))}
-                    onAddSubtask={() => addSubtask(todo.id)}
-                  />
-                ))
-              )}
+            {overdue.length > 0 && (
+              <Section title={sectionTitle("OVERDUE", overdue)}>{renderRows(overdue)}</Section>
+            )}
+            <Section title={sectionTitle("TODAY", dueToday)}>
+              {dueToday.length === 0 ? <EmptyState text="Nothing due today." /> : renderRows(dueToday)}
             </Section>
-
-            {doneTodos.length > 0 && (
-              <Section title={`DONE (${doneTodos.length})`}>
-                {doneTodos.map((todo) => (
-                  <TodoRow
-                    key={todo.id}
-                    todo={todo}
-                    onToggleDone={() => toggleDone(todo)}
-                    onDelete={() => deleteTodo(todo.id)}
-                    onToggleSubtask={(s) => toggleSubtask(todo.id, s)}
-                    onDeleteSubtask={(sId) => deleteSubtask(todo.id, sId)}
-                    subtaskInput={newSubtaskText[todo.id] || ""}
-                    onSubtaskInputChange={(v) => setNewSubtaskText((prev) => ({ ...prev, [todo.id]: v }))}
-                    onAddSubtask={() => addSubtask(todo.id)}
-                  />
-                ))}
-              </Section>
+            {thisWeek.length > 0 && (
+              <Section title={sectionTitle("THIS WEEK", thisWeek)}>{renderRows(thisWeek)}</Section>
+            )}
+            {later.length > 0 && <Section title={sectionTitle("LATER", later)}>{renderRows(later)}</Section>}
+            {someday.length > 0 && (
+              <Section title={sectionTitle("SOMEDAY", someday)}>{renderRows(someday)}</Section>
+            )}
+            {doneToday.length > 0 && (
+              <Section title={sectionTitle("DONE TODAY", doneToday)}>{renderRows(doneToday)}</Section>
             )}
           </>
         )}
       </div>
     </div>
+  );
+
+  function renderRows(list: Todo[]) {
+    return list.map((todo) => (
+      <TodoRow
+        key={todo.id}
+        todo={todo}
+        onToggleDone={() => toggleDone(todo)}
+        onDelete={() => deleteTodo(todo.id)}
+        onToggleSubtask={(s) => toggleSubtask(todo.id, s)}
+        onDeleteSubtask={(sId) => deleteSubtask(todo.id, sId)}
+        subtaskInput={newSubtaskText[todo.id] || ""}
+        onSubtaskInputChange={(v) => setNewSubtaskText((prev) => ({ ...prev, [todo.id]: v }))}
+        onAddSubtask={() => addSubtask(todo.id)}
+      />
+    ));
+  }
+}
+
+export default function TodosPage() {
+  return (
+    <Suspense
+      fallback={<div style={{ padding: "48px", textAlign: "center", fontFamily: "var(--mono)" }}>LOADING TODOS…</div>}
+    >
+      <TodosPageContent />
+    </Suspense>
   );
 }
 
