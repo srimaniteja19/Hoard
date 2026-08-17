@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { todos } from "@/db/schema";
+import { todos, rolloverEvents } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { getLoggedForDate, getUserTimezone } from "@/lib/dal/shared";
@@ -34,7 +34,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     const timezone = await getUserTimezone(userId);
-    const tomorrow = getLoggedForDate(timezone, new Date(Date.now() + 24 * 60 * 60 * 1000));
+    const now = new Date();
+    const today = getLoggedForDate(timezone, now);
+    const tomorrow = getLoggedForDate(timezone, new Date(now.getTime() + 24 * 60 * 60 * 1000));
 
     const [updated] = await db
       .update(todos)
@@ -45,6 +47,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       })
       .where(and(eq(todos.id, id), eq(todos.userId, userId)))
       .returning();
+
+    // The history calendar (§8) needs to know *which* day something rolled
+    // on, not just the running total — this is that trail.
+    await db.insert(rolloverEvents).values({ userId, todoId: id, occurredOn: today });
 
     return NextResponse.json({
       ...updated,

@@ -574,3 +574,36 @@ Recorded here so later phases don't re-derive it.
   from §7 — *"N tasks (Xh Ym) won't fit today. Move them now rather than at midnight."*) rather than
   the full two-column "rail" layout §7 describes visually — that's Phase 7's own visual polish
   (unbuilt, and `design/hoard-todos.html` still isn't in the repo to build it against).
+
+## 21. Phase 9 build notes
+
+- **"An orange base bar if anything rolled that day" needed a real per-day rollover log**, which
+  didn't exist — `rolloverCount` is only ever a running total on the todo itself, with no record of
+  *which* day each push happened on. Added a small `rollover_events` table (userId, todoId,
+  occurredOn) written once, right after the existing update, in `POST /api/todos/:id/push`. This
+  doesn't change §4's guarantee at all — `rolloverCount` still only moves in that one route — it just
+  gives the history calendar something honest to query instead of guessing.
+- **"Clean sweep" needed a definition the spec doesn't give one for.** Defined it as: completed at
+  least one task that day, and nothing was pushed away that day (`tasks.length > 0 && !rolled`).
+  Documented inline in `getMonthHistory` rather than left implicit, since it's a judgment call, not
+  a spec'd rule.
+- **`getMonthHistory` is genuinely one grouped query for completed tasks, plus one for rollover
+  events** — both filtered by a date range, never per-cell — with day-bucketing done in JS after the
+  fetch, since the calendar needs row-level detail (one bar per task) that a `GROUP BY` alone can't
+  give it. "Cached for the day" was read as *the response is safe to cache briefly*, not literally a
+  24-hour `Cache-Control`, since that would show stale data for the rest of the day right after
+  completing something — matches the existing 5-minute private-cache convention (`/api/til/heatmap`,
+  `/api/todos/calibration`) instead.
+- **The end-of-day note is a new `day_notes` table** (userId + date primary key, one `note` column,
+  capped at 280 chars — "one optional line," not a journal). No trigger prompts it at day close yet
+  (that would need a notification/reminder mechanism this pass doesn't have — see Phase 10); for now
+  it's just editable from the day record whenever the user visits history.
+- **The calibration scatter reuses `getCalibrationSamples`** (already built in Phase 7) rather than
+  adding new sample-gathering logic — `GET /api/todos/calibration?points=true` is the same endpoint
+  with an opt-in raw-points field, capped at the most recent 500 to keep the payload bounded.
+- **`/todos` remains the landing route**; history is one link away (`HISTORY →` in the `/todos`
+  header) and nothing routes there by default, per §8's explicit warning against that.
+- Hand-rolled the calendar grid and the scatter plot in plain SVG/CSS, no charting library —
+  consistent with how `/stats` already hand-rolls its sparklines, and there's still no visual
+  reference (`design/hoard-todo-history.html` isn't in the repo) to build a pixel-accurate version
+  against anyway.

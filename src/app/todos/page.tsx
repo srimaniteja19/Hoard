@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { parseTodo, ParsedTodo, Energy } from "@/lib/todos/parse";
 import { X, Trash2, Plus, ArrowRight, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 
@@ -469,9 +470,15 @@ function TodosPageContent() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)", color: "var(--ink)", fontFamily: "var(--sans, var(--grot))" }}>
       <div style={{ maxWidth: "720px", margin: "0 auto", padding: "32px 24px" }}>
-        <h1 style={{ fontFamily: "var(--grot)", fontWeight: 900, fontSize: "28px", marginBottom: "24px" }}>
-          TODOS
-        </h1>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "24px" }}>
+          <h1 style={{ fontFamily: "var(--grot)", fontWeight: 900, fontSize: "28px", margin: 0 }}>TODOS</h1>
+          <Link
+            href="/todos/history"
+            style={{ fontFamily: "var(--mono)", fontSize: "12px", fontWeight: 800, color: "var(--ink)", textDecoration: "none", opacity: 0.6 }}
+          >
+            HISTORY →
+          </Link>
+        </div>
 
         {/* Capture bar */}
         <div style={{ marginBottom: "8px" }}>

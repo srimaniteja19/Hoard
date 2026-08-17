@@ -393,6 +393,44 @@ export const busyBlocks = pgTable(
   (table) => [index("busy_block_user_day_idx").on(table.userId, table.dayOfWeek)]
 );
 
+// One optional line per day, prompted at day close — TODOS.md §8: "six
+// months later this is the most valuable thing on the page."
+export const dayNotes = pgTable(
+  "day_notes",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: date("date").notNull(), // user-local day, "YYYY-MM-DD"
+    note: text("note").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.date] })]
+);
+
+// Records each explicit → push (never a cron — TODOS.md §4) with the day it
+// happened, so the history calendar can honestly answer "did anything roll
+// on day X" after the fact. rolloverCount on the todo itself is the running
+// total; this is the per-day trail that total can't reconstruct on its own.
+export const rolloverEvents = pgTable(
+  "rollover_events",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    todoId: text("todo_id")
+      .notNull()
+      .references(() => todos.id, { onDelete: "cascade" }),
+    occurredOn: date("occurred_on").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("rollover_event_user_day_idx").on(table.userId, table.occurredOn)]
+);
+
 // Caches the expensive, non-candidate sections of the home edition (HOME.md
 // §3) for a user's local day, keyed by a content fingerprint rather than
 // explicit invalidation — same pattern as constellation_layouts above: the
