@@ -5,6 +5,7 @@ import { Bookmark, Collection, KindType } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import Link from "next/link";
 import { Flame } from "lucide-react";
+import { AppNav } from "@/components/AppNav";
 
 import { TilItem } from "@/components/til/TilFeedItem";
 
@@ -177,7 +178,9 @@ export default function AnalyticsPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", minWidth: 0 }}>
-          <div
+          <Link
+            href="/"
+            className="app-wordmark"
             style={{
               fontFamily: "var(--mono)",
               fontWeight: 800,
@@ -189,28 +192,13 @@ export default function AnalyticsPage() {
             }}
           >
             HOARD
-          </div>
+          </Link>
           <span style={{ fontFamily: "var(--mono)", fontSize: "14px", fontWeight: 800 }}>
             ANALYTICS
           </span>
         </div>
 
-        <Link
-          href="/"
-          style={{
-            fontFamily: "var(--mono)",
-            fontSize: "11px",
-            fontWeight: 800,
-            border: "2px solid var(--ink)",
-            background: "#B6FF3C",
-            color: "#000",
-            padding: "6px 14px",
-            textDecoration: "none",
-            boxShadow: "2px 2px 0 var(--ink)",
-          }}
-        >
-          ← BACK TO BOARD
-        </Link>
+        <AppNav />
       </div>
 
       <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gap: "24px" }}>

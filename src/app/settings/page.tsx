@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ThemePicker } from "@/components/ThemePicker";
 import { UserMenu } from "@/components/UserMenu";
-import { ArrowLeft, Key, Copy, Check, Trash2, Plus, ShieldCheck, Clock, Gauge } from "lucide-react";
+import { AppNav } from "@/components/AppNav";
+import { Key, Copy, Check, Trash2, Plus, ShieldCheck, Clock, Gauge } from "lucide-react";
 
 interface CalibrationResult {
   overall: number | null;
@@ -216,48 +217,28 @@ export default function SettingsPage() {
           boxShadow: "var(--sh-sm)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <Link
-            href="/"
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+          <Link href="/" className="app-wordmark">
+            HOARD
+          </Link>
+          <span style={{ fontFamily: "var(--mono)", fontSize: "12px", opacity: 0.5, color: "var(--ink)" }}>/</span>
+          <span
+            className="settings-title-badge"
             style={{
               fontFamily: "var(--mono)",
-              fontSize: "11px",
-              fontWeight: 800,
-              color: "var(--ink)",
-              textDecoration: "none",
-              background: "var(--cream)",
-              border: "1.5px solid var(--ink)",
-              padding: "4px 8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              boxShadow: "2px 2px 0 var(--ink)",
+              fontSize: "12px",
+              fontWeight: 900,
+              background: "var(--cyan)",
+              color: "#000",
+              padding: "2px 6px",
+              border: "1px solid var(--ink)",
             }}
           >
-            <ArrowLeft size={13} /> QUEUE
-          </Link>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "14px", fontWeight: 900, color: "var(--ink)" }}>
-              HOARD
-            </span>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "12px", opacity: 0.5, color: "var(--ink)" }}>/</span>
-            <span
-              className="settings-title-badge"
-              style={{
-                fontFamily: "var(--mono)",
-                fontSize: "12px",
-                fontWeight: 900,
-                background: "var(--cyan)",
-                color: "#000",
-                padding: "2px 6px",
-                border: "1px solid var(--ink)",
-              }}
-            >
-              SETTINGS
-            </span>
-          </div>
+            SETTINGS
+          </span>
         </div>
+
+        <AppNav />
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <ThemePicker />

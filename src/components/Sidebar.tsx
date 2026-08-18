@@ -211,11 +211,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <aside className={`side ${isMobileOpen ? "mobile-open" : ""}`}>
         <div className="logo">
-          <b>HOARD</b>
+          <Link href="/" className="logo-home" onClick={() => onCloseMobile?.()}>
+            <b>HOARD</b>
+          </Link>
           <span>{unreadCount}</span>
           <Link
             href="/"
-            style={{ marginLeft: "8px", fontSize: "10px", fontWeight: 800, color: "inherit", textDecoration: "none" }}
+            style={{
+              marginLeft: "8px",
+              fontSize: "10px",
+              fontWeight: 900,
+              color: "var(--ink)",
+              textDecoration: "none",
+              background: "var(--paper)",
+              border: "2px solid var(--ink)",
+              padding: "4px 8px",
+              boxShadow: "2px 2px 0 var(--ink)",
+            }}
             onClick={() => onCloseMobile?.()}
           >
             HOME
@@ -444,6 +456,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             <Link
+              href="/todos"
+              style={{ textDecoration: "none", color: "inherit" }}
+              onClick={() => {
+                if (onCloseMobile) onCloseMobile();
+              }}
+            >
+              <div
+                className="ci"
+                style={{ marginTop: "10px", background: "#B6FF3C", color: "#000", borderColor: "var(--ink)", fontWeight: "800" }}
+              >
+                <span className="ic" style={{ background: "var(--ink)", color: "#B6FF3C" }}>
+                  ✓
+                </span>
+                TODOS
+              </div>
+            </Link>
+
+            <Link
               href="/til"
               style={{ textDecoration: "none", color: "inherit" }}
               onClick={() => {
@@ -452,7 +482,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <div
                 className="ci"
-                style={{ marginTop: "10px", background: "#FFE600", color: "#000", borderColor: "var(--ink)", fontWeight: "800" }}
+                style={{ marginTop: "6px", background: "#FFE600", color: "#000", borderColor: "var(--ink)", fontWeight: "800" }}
               >
                 <span className="ic" style={{ background: "var(--ink)", color: "#FFE600" }}>
                   💡

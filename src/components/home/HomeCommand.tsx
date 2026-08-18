@@ -15,6 +15,7 @@ import { standfirst } from "@/lib/home/standfirst";
 import type { HomeEdition, LeadCandidate } from "@/lib/home/types";
 import type { ContextType } from "@/types";
 import { HomeCapture } from "@/components/home/HomeCapture";
+import { AppNav } from "@/components/AppNav";
 
 const CONTEXTS: ContextType[] = ["all", "desk", "commute", "wind"];
 
@@ -137,23 +138,14 @@ function HomeCommandContent({ edition }: { edition: HomeEdition }) {
           }}
         >
           <div>
-            <div style={{ fontFamily: "var(--grot)", fontSize: "30px", fontWeight: 900 }}>HOARD</div>
+            <Link href="/" className="app-wordmark" style={{ fontFamily: "var(--grot)", fontSize: "30px", fontWeight: 900 }}>
+              HOARD
+            </Link>
             <div style={{ marginTop: "3px", fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 800 }}>
               {localDate ?? "—"}
             </div>
           </div>
-          <nav aria-label="Primary" style={{ display: "flex", flexWrap: "wrap", gap: "14px" }}>
-            {[
-              ["Library", "/library"],
-              ["Todos", "/todos"],
-              ["TIL", "/til"],
-              ["Stats", "/stats"],
-            ].map(([label, href]) => (
-              <Link key={href} href={href} style={navLinkStyle}>
-                {label}
-              </Link>
-            ))}
-          </nav>
+          <AppNav />
         </header>
 
         <HomeCapture />

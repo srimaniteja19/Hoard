@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, type CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { AppNav } from "@/components/AppNav";
 
 type Energy = "DEEP" | "SHALLOW" | "ERRAND";
 
@@ -164,25 +165,55 @@ export default function TodoHistoryPage() {
 
   return (
     <div className="page-scroll" style={{ background: "var(--cream)", color: "var(--ink)", fontFamily: "var(--grot)" }}>
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "clamp(16px, 4vw, 32px) clamp(12px, 4vw, 24px)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
-          <Link
-            href="/todos"
+      <header
+        className="page-app-header"
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          background: "var(--paper)",
+          borderBottom: "var(--bd)",
+          boxShadow: "var(--sh-sm)",
+          padding: "10px 16px",
+          paddingTop: "max(10px, env(safe-area-inset-top))",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <Link href="/" className="app-wordmark">HOARD</Link>
+          <span style={{ fontFamily: "var(--mono)", fontSize: "12px", opacity: 0.5 }}>/</span>
+          <h1
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
               fontFamily: "var(--mono)",
               fontSize: "12px",
-              fontWeight: 800,
-              color: "var(--ink)",
-              textDecoration: "none",
+              fontWeight: 900,
+              background: "var(--yel, #FFE600)",
+              color: "#000",
+              padding: "2px 6px",
+              border: "1.5px solid var(--ink)",
+              margin: 0,
             }}
           >
-            <ArrowLeft size={14} /> TODAY
-          </Link>
-          <h1 style={{ fontFamily: "var(--grot)", fontWeight: 900, fontSize: "22px", margin: 0 }}>HISTORY</h1>
+            HISTORY
+          </h1>
         </div>
+        <AppNav />
+        <Link
+          href="/todos"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            fontFamily: "var(--mono)",
+            fontSize: "12px",
+            fontWeight: 800,
+            color: "var(--ink)",
+            textDecoration: "none",
+          }}
+        >
+          <ArrowLeft size={14} /> TODAY
+        </Link>
+      </header>
+      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "clamp(16px, 4vw, 32px) clamp(12px, 4vw, 24px)" }}>
 
         {/* Month calendar — TODOS.md §8 */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ThemePicker } from "@/components/ThemePicker";
 import { UserMenu } from "@/components/UserMenu";
-import { ArrowLeft, BarChart2, Layers, BookOpen, RotateCcw, Printer, Grid3x3, Network, Archive } from "lucide-react";
+import { AppNav } from "@/components/AppNav";
+import { Layers, BookOpen, RotateCcw, Printer, Grid3x3, Network, Archive } from "lucide-react";
 
 export type TilViewMode = "stream" | "codex" | "recall" | "press" | "wall" | "constellation" | "archive";
 
@@ -33,49 +34,26 @@ export const TilHeaderNav: React.FC = () => {
   return (
     <header className="til-header-nav">
       <div className="til-header-brand">
-        <Link
-          href="/library"
+        <Link href="/" className="app-wordmark">
+          HOARD
+        </Link>
+        <span className="til-wordmark" style={{ fontFamily: "var(--mono)", fontSize: "12px", opacity: 0.5, color: "var(--ink)" }}>/</span>
+        <span
           style={{
             fontFamily: "var(--mono)",
-            fontSize: "11px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            textDecoration: "none",
-            background: "var(--paper)",
-            border: "var(--bd)",
-            height: "36px",
-            boxSizing: "border-box",
-            padding: "0 10px",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "4px",
-            boxShadow: "var(--sh-sm)",
-            whiteSpace: "nowrap",
+            fontSize: "12px",
+            fontWeight: 900,
+            background: "var(--yel, #FFE600)",
+            color: "#000",
+            padding: "2px 6px",
+            border: "1.5px solid var(--ink)",
           }}
         >
-          <ArrowLeft size={13} /> QUEUE
-        </Link>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span className="til-wordmark" style={{ fontFamily: "var(--mono)", fontSize: "14px", fontWeight: 900, color: "var(--ink)" }}>
-            HOARD
-          </span>
-          <span className="til-wordmark" style={{ fontFamily: "var(--mono)", fontSize: "12px", opacity: 0.5, color: "var(--ink)" }}>/</span>
-          <span
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: "12px",
-              fontWeight: 900,
-              background: "var(--yel, #FFE600)",
-              color: "#000",
-              padding: "2px 6px",
-              border: "1.5px solid var(--ink)",
-            }}
-          >
-            TIL
-          </span>
-        </div>
+          TIL
+        </span>
       </div>
+
+      <AppNav />
 
       <div className="til-view-switcher" role="tablist" aria-label="TIL views">
         {VIEWS.map((v) => {
@@ -114,30 +92,6 @@ export const TilHeaderNav: React.FC = () => {
       </div>
 
       <div className="til-header-actions">
-        <Link
-          href="/stats"
-          className="til-header-stats"
-          style={{
-            fontFamily: "var(--mono)",
-            fontSize: "11px",
-            fontWeight: 800,
-            color: "#000",
-            textDecoration: "none",
-            background: "var(--cyan, #00F0FF)",
-            border: "var(--bd)",
-            height: "36px",
-            boxSizing: "border-box",
-            padding: "0 10px",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "4px",
-            boxShadow: "var(--sh-sm)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          <BarChart2 size={13} /> STATS
-        </Link>
-
         <ThemePicker />
         <UserMenu variant="compact" />
       </div>

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { SortMode, ViewMode } from "@/types";
 import { ThemePicker } from "@/components/ThemePicker";
+import { AppNav } from "@/components/AppNav";
 import { Zap, Search } from "lucide-react";
 import Link from "next/link";
 
@@ -56,9 +57,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <span>☰</span> MENU
           </button>
 
-          <div className="mobile-brand">
+          <Link href="/" className="mobile-brand" aria-label="Home">
             <b>HOARD</b>
-          </div>
+          </Link>
         </div>
 
         <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
@@ -115,6 +116,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </button>
           )}
         </div>
+      </div>
+
+      <div className="app-nav-row">
+        <AppNav />
       </div>
 
       {/* Search box & controls (hidden on mobile unless expanded or on desktop) */}

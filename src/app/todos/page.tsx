@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { parseTodo, ParsedTodo, Energy } from "@/lib/todos/parse";
 import { X, Trash2, Plus, ArrowRight, ChevronDown, ChevronUp, Pencil } from "lucide-react";
+import { AppNav } from "@/components/AppNav";
 
 const GRAVEYARD_THRESHOLD = 10;
 
@@ -476,16 +477,46 @@ function TodosPageContent() {
 
   return (
     <div className="page-scroll" style={{ background: "var(--cream)", color: "var(--ink)", fontFamily: "var(--sans, var(--grot))" }}>
-      <div style={{ maxWidth: "720px", margin: "0 auto", padding: "clamp(16px, 4vw, 32px) clamp(12px, 4vw, 24px)" }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "24px" }}>
-          <h1 style={{ fontFamily: "var(--grot)", fontWeight: 900, fontSize: "28px", margin: 0 }}>TODOS</h1>
-          <Link
-            href="/todos/history"
-            style={{ fontFamily: "var(--mono)", fontSize: "12px", fontWeight: 800, color: "var(--ink)", textDecoration: "none", opacity: 0.6 }}
+      <header
+        className="page-app-header"
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          background: "var(--paper)",
+          borderBottom: "var(--bd)",
+          boxShadow: "var(--sh-sm)",
+          padding: "10px 16px",
+          paddingTop: "max(10px, env(safe-area-inset-top))",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <Link href="/" className="app-wordmark">HOARD</Link>
+          <span style={{ fontFamily: "var(--mono)", fontSize: "12px", opacity: 0.5 }}>/</span>
+          <h1
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "12px",
+              fontWeight: 900,
+              background: "var(--yel, #FFE600)",
+              color: "#000",
+              padding: "2px 6px",
+              border: "1.5px solid var(--ink)",
+              margin: 0,
+            }}
           >
-            HISTORY →
-          </Link>
+            TODOS
+          </h1>
         </div>
+        <AppNav />
+        <Link
+          href="/todos/history"
+          style={{ fontFamily: "var(--mono)", fontSize: "12px", fontWeight: 800, color: "var(--ink)", textDecoration: "none" }}
+        >
+          HISTORY →
+        </Link>
+      </header>
+      <div style={{ maxWidth: "720px", margin: "0 auto", padding: "clamp(16px, 4vw, 32px) clamp(12px, 4vw, 24px)" }}>
 
         {/* Capture bar */}
         <div style={{ marginBottom: "8px" }}>
