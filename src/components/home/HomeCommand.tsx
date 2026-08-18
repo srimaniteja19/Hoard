@@ -15,7 +15,8 @@ import { standfirst } from "@/lib/home/standfirst";
 import type { HomeEdition, LeadCandidate } from "@/lib/home/types";
 import type { ContextType } from "@/types";
 import { HomeCapture } from "@/components/home/HomeCapture";
-import { AppNav } from "@/components/AppNav";
+import { AppPage } from "@/components/chrome/AppPage";
+import { AppLoading } from "@/components/chrome/AppLoading";
 
 const CONTEXTS: ContextType[] = ["all", "desk", "commute", "wind"];
 
@@ -117,36 +118,8 @@ function HomeCommandContent({ edition }: { edition: HomeEdition }) {
   };
 
   return (
-    <div
-      className="page-scroll"
-      style={{
-        background: "var(--cream, var(--paper))",
-        color: "var(--ink)",
-        fontFamily: "var(--sans, var(--grot))",
-      }}
-    >
-      <main style={{ maxWidth: "1100px", margin: "0 auto", padding: "clamp(16px, 4vw, 28px) clamp(12px, 3vw, 24px) 40px" }}>
-        <header
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            gap: "16px",
-            paddingBottom: "16px",
-            borderBottom: "2px solid var(--ink)",
-          }}
-        >
-          <div>
-            <Link href="/" className="app-wordmark" style={{ fontFamily: "var(--grot)", fontSize: "30px", fontWeight: 900 }}>
-              HOARD
-            </Link>
-            <div style={{ marginTop: "3px", fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 800 }}>
-              {localDate ?? "—"}
-            </div>
-          </div>
-          <AppNav />
-        </header>
+    <AppPage width="xl">
+        <div className="home-date">{localDate ?? "—"}</div>
 
         <HomeCapture />
 
@@ -337,15 +310,14 @@ function HomeCommandContent({ edition }: { edition: HomeEdition }) {
             </div>
           )}
         </Link>
-      </main>
-    </div>
+    </AppPage>
   );
 }
 
 export function HomeCommand({ edition }: { edition: HomeEdition }) {
   return (
     <Suspense
-      fallback={<div style={{ padding: "48px", textAlign: "center", fontFamily: "var(--mono)" }}>LOADING HOME…</div>}
+      fallback={<AppLoading label="LOADING HOME…" />}
     >
       <HomeCommandContent edition={edition} />
     </Suspense>

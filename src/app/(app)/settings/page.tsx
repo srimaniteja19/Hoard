@@ -1,10 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { ThemePicker } from "@/components/ThemePicker";
-import { UserMenu } from "@/components/UserMenu";
-import { AppNav } from "@/components/AppNav";
+import { AppPage } from "@/components/chrome/AppPage";
 import { Key, Copy, Check, Trash2, Plus, ShieldCheck, Clock, Gauge } from "lucide-react";
 
 interface CalibrationResult {
@@ -202,51 +199,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="dvh-page settings-page-container" style={{ background: "var(--cream)", color: "var(--ink)" }}>
-      {/* Top Header Navigation Bar */}
-      <header
-        className="page-app-header"
-        style={{
-          background: "var(--paper)",
-          borderBottom: "var(--bd)",
-          padding: "10px 16px",
-          paddingTop: "max(10px, env(safe-area-inset-top))",
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-          boxShadow: "var(--sh-sm)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-          <Link href="/" className="app-wordmark">
-            HOARD
-          </Link>
-          <span style={{ fontFamily: "var(--mono)", fontSize: "12px", opacity: 0.5, color: "var(--ink)" }}>/</span>
-          <span
-            className="settings-title-badge"
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: "12px",
-              fontWeight: 900,
-              background: "var(--cyan)",
-              color: "#000",
-              padding: "2px 6px",
-              border: "1px solid var(--ink)",
-            }}
-          >
-            SETTINGS
-          </span>
-        </div>
-
-        <AppNav />
-
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <ThemePicker />
-          <UserMenu variant="compact" />
-        </div>
-      </header>
-
-      <main style={{ maxWidth: "840px", margin: "0 auto", padding: "28px 16px" }}>
+    <AppPage width="md">
         {/* Section Title */}
         <div style={{ marginBottom: "24px" }}>
           <h1 style={{ fontFamily: "var(--mono)", fontSize: "22px", fontWeight: 900, margin: 0, color: "var(--ink)" }}>
@@ -622,7 +575,6 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </AppPage>
   );
 }

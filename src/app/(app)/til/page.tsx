@@ -14,6 +14,9 @@ import { TilPressView } from "@/components/til/TilPressView";
 import { TilWallView } from "@/components/til/TilWallView";
 import { TilConstellationView } from "@/components/til/TilConstellationView";
 import { TilArchiveView } from "@/components/til/TilArchiveView";
+import { AppPage } from "@/components/chrome/AppPage";
+import { AppLoading } from "@/components/chrome/AppLoading";
+import { ChromeSlot } from "@/components/chrome/slots";
 import { TilType } from "@/db/schema";
 import { StreakData, HeatmapData } from "@/lib/dal/til";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -285,20 +288,14 @@ function TilPageContent() {
     }
   };
 
-  return (
-    <div className="dvh-page" style={{ background: "var(--cream)", color: "var(--ink)" }}>
-      <TilHeaderNav />
+  const wide =
+    viewMode === "codex" || viewMode === "press" || viewMode === "wall" || viewMode === "constellation";
 
-      <main
-        style={{
-          maxWidth:
-            viewMode === "codex" || viewMode === "press" || viewMode === "wall" || viewMode === "constellation"
-              ? "1050px"
-              : "840px",
-          margin: "0 auto",
-          padding: "24px 16px",
-        }}
-      >
+  return (
+    <AppPage width={wide ? "wide" : "md"}>
+      <ChromeSlot name="toolbar">
+        <TilHeaderNav />
+      </ChromeSlot>
         {/* CODEX VIEW MODE */}
         {viewMode === "codex" ? (
           <div>
@@ -452,19 +449,14 @@ function TilPageContent() {
             )}
           </div>
         )}
-      </main>
-    </div>
+    </AppPage>
   );
 }
 
 export default function TilPage() {
   return (
     <Suspense
-      fallback={
-        <div style={{ padding: "48px", textAlign: "center", fontFamily: "var(--mono)" }}>
-          LOADING TIL PAGE...
-        </div>
-      }
+      fallback={<AppLoading label="LOADING TIL PAGE..." />}
     >
       <TilPageContent />
     </Suspense>

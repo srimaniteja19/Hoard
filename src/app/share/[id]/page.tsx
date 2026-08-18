@@ -6,6 +6,8 @@ import { MasonryView } from "@/components/views/MasonryView";
 import { GridView } from "@/components/views/GridView";
 import Link from "next/link";
 import { sigil } from "@/lib/sigil";
+import { AppLoading } from "@/components/chrome/AppLoading";
+import { PublicHeader } from "@/components/chrome/PublicHeader";
 
 interface SharedCollectionData {
   collection: {
@@ -50,21 +52,7 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
   };
 
   if (loading) {
-    return (
-      <div
-        className="dvh-page"
-        style={{
-          display: "grid",
-          placeItems: "center",
-          fontFamily: "var(--mono), monospace",
-          fontWeight: 800,
-          fontSize: "18px",
-          background: "var(--cream)",
-        }}
-      >
-        LOADING SHARED COLLECTION...
-      </div>
-    );
+    return <AppLoading label="LOADING SHARED COLLECTION..." />;
   }
 
   if (error || !data) {
@@ -110,73 +98,22 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="page-scroll" style={{ background: "var(--cream)", color: "var(--ink)", padding: "20px" }}>
-      {/* Top Banner */}
-      <div
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto 20px auto",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "12px",
-          borderBottom: "3px solid var(--ink)",
-          paddingBottom: "16px",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div
-            style={{
-              fontFamily: "var(--mono)",
-              fontWeight: 800,
-              fontSize: "18px",
-              background: "#FFE600",
-              border: "3px solid var(--ink)",
-              boxShadow: "3px 3px 0 var(--ink)",
-              padding: "4px 12px",
-            }}
-          >
-            HOARD
-          </div>
-          <span style={{ fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 800, opacity: 0.7 }}>
-            PUBLIC COLLECTION
-          </span>
-        </div>
-
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button
-            onClick={handleCopyLink}
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: "11px",
-              fontWeight: 800,
-              border: "2px solid var(--ink)",
-              background: copied ? "#B6FF3C" : "#00F0FF",
-              padding: "6px 12px",
-              cursor: "pointer",
-              boxShadow: "2px 2px 0 var(--ink)",
-            }}
-          >
-            {copied ? "✓ LINK COPIED!" : "🔗 COPY SHARE LINK"}
-          </button>
-          <Link
-            href="/"
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: "11px",
-              fontWeight: 800,
-              border: "2px solid var(--ink)",
-              background: "#FF007A",
-              color: "#fff",
-              padding: "6px 12px",
-              textDecoration: "none",
-              boxShadow: "2px 2px 0 var(--ink)",
-            }}
-          >
-            OPEN HOARD APP ↗
-          </Link>
-        </div>
-      </div>
+      <PublicHeader
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className={copied ? "public-header-btn copied" : "public-header-btn"}
+            >
+              {copied ? "LINK COPIED!" : "COPY SHARE LINK"}
+            </button>
+            <Link href="/" className="public-header-btn open">
+              OPEN HOARD APP
+            </Link>
+          </>
+        }
+      />
 
       {/* Collection Header */}
       <div style={{ maxWidth: "1200px", margin: "0 auto 24px auto" }}>

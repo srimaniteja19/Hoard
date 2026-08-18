@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { parseTodo, ParsedTodo, Energy } from "@/lib/todos/parse";
 import { X, Trash2, Plus, ArrowRight, ChevronDown, ChevronUp, Pencil } from "lucide-react";
-import { AppNav } from "@/components/AppNav";
+import { ChromeSlot } from "@/components/chrome/slots";
+import { AppPage } from "@/components/chrome/AppPage";
+import { AppLoading } from "@/components/chrome/AppLoading";
 
 const GRAVEYARD_THRESHOLD = 10;
 
@@ -476,47 +478,12 @@ function TodosPageContent() {
   const totalOpen = todos.filter((t) => t.state === "OPEN").length;
 
   return (
-    <div className="page-scroll" style={{ background: "var(--cream)", color: "var(--ink)", fontFamily: "var(--sans, var(--grot))" }}>
-      <header
-        className="page-app-header"
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-          background: "var(--paper)",
-          borderBottom: "var(--bd)",
-          boxShadow: "var(--sh-sm)",
-          padding: "10px 16px",
-          paddingTop: "max(10px, env(safe-area-inset-top))",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <Link href="/" className="app-wordmark">HOARD</Link>
-          <span style={{ fontFamily: "var(--mono)", fontSize: "12px", opacity: 0.5 }}>/</span>
-          <h1
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: "12px",
-              fontWeight: 900,
-              background: "var(--yel, #FFE600)",
-              color: "#000",
-              padding: "2px 6px",
-              border: "1.5px solid var(--ink)",
-              margin: 0,
-            }}
-          >
-            TODOS
-          </h1>
-        </div>
-        <AppNav />
-        <Link
-          href="/todos/history"
-          style={{ fontFamily: "var(--mono)", fontSize: "12px", fontWeight: 800, color: "var(--ink)", textDecoration: "none" }}
-        >
+    <AppPage width="sm">
+      <ChromeSlot name="trailing">
+        <Link href="/todos/history" className="app-header-link">
           HISTORY →
         </Link>
-      </header>
-      <div style={{ maxWidth: "720px", margin: "0 auto", padding: "clamp(16px, 4vw, 32px) clamp(12px, 4vw, 24px)" }}>
+      </ChromeSlot>
 
         {/* Capture bar */}
         <div style={{ marginBottom: "8px" }}>
@@ -767,8 +734,7 @@ function TodosPageContent() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </AppPage>
   );
 
   function renderRows(list: Todo[]) {
@@ -810,7 +776,7 @@ function TodosPageContent() {
 export default function TodosPage() {
   return (
     <Suspense
-      fallback={<div style={{ padding: "48px", textAlign: "center", fontFamily: "var(--mono)" }}>LOADING TODOS…</div>}
+      fallback={<AppLoading label="LOADING TODOS…" />}
     >
       <TodosPageContent />
     </Suspense>
