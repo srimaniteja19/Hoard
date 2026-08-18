@@ -25,7 +25,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
 
-  const handleSignInSubmit = async (e: React.SubmitEvent) => {
+  const handleSignInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setOauthNotice(null);
@@ -47,7 +47,7 @@ export default function LoginPage() {
       if (res.error) {
         setErrorMessage(res.error.message || "Failed to sign in. Please check your credentials.");
       } else {
-        router.push("/");
+        window.location.href = "/";
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Sign in error";
@@ -57,7 +57,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleSignUpSubmit = async (e: React.SubmitEvent) => {
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setOauthNotice(null);
@@ -97,7 +97,7 @@ export default function LoginPage() {
           setErrorMessage(errorText);
         }
       } else {
-        router.push("/");
+        window.location.href = "/";
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Registration error";

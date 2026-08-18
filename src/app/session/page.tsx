@@ -1,19 +1,30 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { CoverCanvas } from "@/components/covers/CoverCanvas";
 import { TYPES } from "@/data/initialBookmarks";
 import Link from "next/link";
 import { Zap, CheckCircle2, ArrowRight, X, Play, Pause } from "lucide-react";
 
-export default function SessionPage() {
+function SessionPageContent() {
   const router = useRouter();
   const { bookmarks, toggleReadStatus } = useBookmarks();
   const unreadItems = bookmarks.filter((b) => b.unread);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const searchParams = useSearchParams();
+  const requestedId = searchParams.get("id");
+  const requestedIndex = requestedId
+    ? unreadItems.findIndex((b) => String(b.id) === requestedId)
+    : -1;
+  const [currentIndex, setCurrentIndex] = useState(() => (requestedIndex >= 0 ? requestedIndex : 0));
+  const [usedRequested, setUsedRequested] = useState(false);
+  if (!usedRequested && unreadItems.length > 0) {
+    const idx = requestedId ? unreadItems.findIndex((b) => String(b.id) === requestedId) : -1;
+    if (idx >= 0) setCurrentIndex(idx);
+    setUsedRequested(true);
+  }
   const currentItem = unreadItems[currentIndex] || unreadItems[0];
 
   const [timeLeftSec, setTimeLeftSec] = useState<number>(1500); // 25 min default
@@ -44,7 +55,7 @@ export default function SessionPage() {
     if (currentIndex < unreadItems.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     }
-  }, [currentItem, currentIndex, unreadItems.length, toggleReadStatus]);
+  }, [currentItem, currentIndex, unreadItems.length, setCurrentIndex, toggleReadStatus]);
 
   // Keyboard shortcut listener (Space: pause/resume, Esc: exit, N: mark finished)
   useEffect(() => {
@@ -56,7 +67,7 @@ export default function SessionPage() {
         setIsRunning((prev) => !prev);
       } else if (e.code === "Escape") {
         e.preventDefault();
-        router.push("/");
+        router.push("/library");
       } else if (e.key === "n" || e.key === "N" || e.code === "Enter") {
         e.preventDefault();
         handleMarkFinished();
@@ -96,7 +107,7 @@ export default function SessionPage() {
           All queued items have been read. Great focus work!
         </p>
         <Link
-          href="/"
+          href="/library"
           style={{
             background: "#00F0FF",
             color: "#000",
@@ -157,7 +168,7 @@ export default function SessionPage() {
             [SPACE] PAUSE · [N] NEXT · [ESC] EXIT
           </span>
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/library")}
             style={{
               background: "transparent",
               border: "1px solid #444",
@@ -347,5 +358,13 @@ export default function SessionPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function SessionPage() {
+  return (
+    <Suspense>
+      <SessionPageContent />
+    </Suspense>
   );
 }

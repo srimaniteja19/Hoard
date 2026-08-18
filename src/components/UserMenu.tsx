@@ -98,7 +98,10 @@ export const UserMenu: React.FC = () => {
         </Link>
 
         <button
-          onClick={() => signOut()}
+          onClick={async () => {
+            await signOut();
+            window.location.href = "/login";
+          }}
           style={{
             flex: 1,
             border: "2px solid #000",

@@ -213,6 +213,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="logo">
           <b>HOARD</b>
           <span>{unreadCount}</span>
+          <Link
+            href="/"
+            style={{ marginLeft: "8px", fontSize: "10px", fontWeight: 800, color: "inherit", textDecoration: "none" }}
+            onClick={() => onCloseMobile?.()}
+          >
+            HOME
+          </Link>
           {onCloseMobile && (
             <button
               className="mobile-side-close"
