@@ -53,7 +53,7 @@ export const TilHeaderNav: React.FC = () => {
       {/* Left: Brand / Title & Back Link */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
         <Link
-          href="/"
+          href="/library"
           style={{
             fontFamily: "var(--mono)",
             fontSize: "11px",
