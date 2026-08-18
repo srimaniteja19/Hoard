@@ -420,14 +420,13 @@ export function TilWallView() {
             max={WALL_ZOOM_MAX}
             value={zoom}
             onChange={(e) => scheduleZoomUpdate(clampWallZoom(Number(e.target.value)))}
-            style={{ width: 190 }}
+            className="wall-zoom-slider"
             aria-label="Wall zoom"
           />
-          <span style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 800, minWidth: 132 }}>
+          <span style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 800 }}>
             {zoom}px · {mode.toUpperCase()}
           </span>
-          <span style={{ flex: 1 }} />
-          <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.13em", opacity: 0.6 }}>
+          <span className="wall-zoom-meta" style={{ fontFamily: "var(--mono)", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.13em", opacity: 0.6 }}>
             {days.length} DAYS · {totalEntries} ENTRIES · {activeDays} ACTIVE
           </span>
         </div>

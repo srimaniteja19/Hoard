@@ -286,15 +286,7 @@ function TilPageContent() {
   };
 
   return (
-    <div
-      style={{
-        height: "100vh",
-        overflowY: "auto",
-        WebkitOverflowScrolling: "touch",
-        background: "var(--bg, #FFFDF8)",
-        color: "var(--ink)",
-      }}
-    >
+    <div className="dvh-page" style={{ background: "var(--cream)", color: "var(--ink)" }}>
       <TilHeaderNav />
 
       <main

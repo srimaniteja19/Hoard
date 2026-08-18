@@ -53,6 +53,7 @@ export function TilConstellationView() {
   const [settled, setSettled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [expandedHub, setExpandedHub] = useState<string | null>(null);
 
   const workerRef = useRef<Worker | null>(null);
@@ -261,7 +262,7 @@ export function TilConstellationView() {
     quadtreeRef.current = buildQuadtree(quadPoints, { x0: 0, y0: 0, x1: VIEW_WIDTH, y1: VIEW_HEIGHT });
   }, [renderMode, graph, positions, hoveredId, themeTick]);
 
-  const canvasToViewCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const canvasToViewCoords = (e: { clientX: number; clientY: number; currentTarget: HTMLCanvasElement }) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * VIEW_WIDTH;
     const y = ((e.clientY - rect.top) / rect.height) * VIEW_HEIGHT;
@@ -277,7 +278,11 @@ export function TilConstellationView() {
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const { x, y } = canvasToViewCoords(e);
     const found = quadtreeRef.current?.findAt(x, y);
-    if (!found) return;
+    if (!found) {
+      setPinnedId(null);
+      return;
+    }
+    setPinnedId(found.id);
     const node = nodesById.get(found.id);
     if (node && isHub(node)) handleHubClick(node);
   };
@@ -316,7 +321,10 @@ export function TilConstellationView() {
           style={{ cursor: "pointer" }}
           onMouseEnter={() => setHoveredId(node.id)}
           onMouseLeave={() => setHoveredId((h) => (h === node.id ? null : h))}
-          onClick={() => handleHubClick(node)}
+          onClick={() => {
+            setPinnedId(node.id);
+            handleHubClick(node);
+          }}
         >
           <circle cx={pos.x} cy={pos.y} r={node.radius} fill="var(--constellation-hub)" stroke="var(--constellation-bg)" strokeWidth={2} />
           <text x={pos.x} y={pos.y + 3.5} textAnchor="middle" fontFamily="var(--mono)" fontSize={10.5} fontWeight={800} fill="var(--constellation-bg)">
@@ -337,6 +345,7 @@ export function TilConstellationView() {
         style={{ cursor: "pointer" }}
         onMouseEnter={() => setHoveredId(node.id)}
         onMouseLeave={() => setHoveredId((h) => (h === node.id ? null : h))}
+        onClick={() => setPinnedId(node.id)}
       >
         <circle
           cx={pos.x}
@@ -352,8 +361,9 @@ export function TilConstellationView() {
     );
   };
 
-  const hoveredNode = hoveredId ? nodesById.get(hoveredId) : null;
-  const hoveredPos = hoveredId ? positions[hoveredId] : null;
+  const activeId = hoveredId ?? pinnedId;
+  const hoveredNode = activeId ? nodesById.get(activeId) : null;
+  const hoveredPos = activeId ? positions[activeId] : null;
 
   return (
     <div>
@@ -376,17 +386,7 @@ export function TilConstellationView() {
           ← ALL TOPICS
         </button>
       )}
-      <div
-        ref={containerRef}
-        style={{
-          position: "relative",
-          border: "var(--bd)",
-          background: "var(--constellation-bg)",
-          boxShadow: "var(--sh)",
-          height: 520,
-          overflow: "hidden",
-        }}
-      >
+      <div className="constellation-stage" ref={containerRef}>
         {loading ? (
           <div
             style={{
@@ -455,6 +455,7 @@ export function TilConstellationView() {
             )}
 
             <div
+              className="constellation-legend"
               style={{
                 position: "absolute",
                 left: 12,
@@ -480,6 +481,7 @@ export function TilConstellationView() {
 
             {renderMode === "hubs" && (
               <div
+                className="constellation-legend"
                 style={{
                   position: "absolute",
                   right: 12,

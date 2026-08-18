@@ -205,6 +205,7 @@ export default function Home() {
           display: "grid",
           placeItems: "center",
           height: "100vh",
+          height: "100dvh",
           fontFamily: "var(--mono), monospace",
           fontWeight: 800,
           fontSize: "18px",
@@ -299,8 +300,8 @@ export default function Home() {
                   fontWeight: 800,
                   fontSize: "18px",
                   background: "#FFE600",
-                  border: "3px solid #000",
-                  boxShadow: "4px 4px 0 #000",
+                  border: "3px solid var(--ink)",
+                  boxShadow: "4px 4px 0 var(--ink)",
                   padding: "6px 16px",
                   marginBottom: "12px",
                 }}
@@ -449,12 +450,8 @@ export default function Home() {
       {/* Discharge receipt — running log printed from real state, newest first. */}
       {dischargeReceiptLines.length > 0 && (
         <div
+          className="discharge-receipt"
           style={{
-            position: "fixed",
-            left: 12,
-            bottom: 12,
-            zIndex: 998,
-            maxWidth: 360,
             fontFamily: "var(--mono)",
             fontSize: "10.5px",
             fontWeight: 700,

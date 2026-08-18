@@ -30,7 +30,7 @@ export const TilOnThisDay: React.FC<TilOnThisDayProps> = ({ data }) => {
         borderLeft: "6px solid #FFE600",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
         <span
           style={{
             fontFamily: "var(--mono)",

@@ -93,10 +93,12 @@ export const TilPressView: React.FC<TilPressViewProps> = ({
             style={{
               background: "var(--paper)",
               border: "1.5px solid var(--ink)",
-              padding: "4px 8px",
+              padding: "8px 10px",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
+              minHeight: "36px",
+              minWidth: "36px",
             }}
             title="Previous Month"
           >
@@ -126,10 +128,12 @@ export const TilPressView: React.FC<TilPressViewProps> = ({
             style={{
               background: "var(--paper)",
               border: "1.5px solid var(--ink)",
-              padding: "4px 8px",
+              padding: "8px 10px",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
+              minHeight: "36px",
+              minWidth: "36px",
             }}
             title="Next Month"
           >
@@ -160,7 +164,7 @@ export const TilPressView: React.FC<TilPressViewProps> = ({
         </label>
 
         {/* Right: Actions (COPY MARKDOWN & PRINT) */}
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
           <button
             type="button"
             onClick={handleCopyMarkdown}
@@ -201,7 +205,7 @@ export const TilPressView: React.FC<TilPressViewProps> = ({
               gap: "6px",
             }}
           >
-            <Printer size={13} /> PRINT ZINE (⌘P)
+            <Printer size={13} /> PRINT ZINE <span className="kbd-hint">(⌘P)</span>
           </button>
         </div>
       </div>
@@ -255,13 +259,7 @@ export const TilPressView: React.FC<TilPressViewProps> = ({
             NO TIL ENTRIES RECORDED FOR {formatMonthLabel(month)}.
           </div>
         ) : (
-          <div
-            style={{
-              columnCount: 2,
-              columnGap: "36px",
-              columnRule: "1.5px solid var(--ink)",
-            }}
-          >
+          <div className="til-press-columns">
             {entries.map((item, index) => {
               const num = index + 1;
               const dateStr = item.loggedFor || item.createdAt.split("T")[0];

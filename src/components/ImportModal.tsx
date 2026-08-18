@@ -178,7 +178,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           <button onClick={onClose}>✕</button>
         </header>
 
-        <div style={{ padding: "16px 0", fontFamily: "var(--mono)" }}>
+        <div className="sheet-body" style={{ fontFamily: "var(--mono)" }}>
           <p style={{ fontSize: "12px", marginBottom: "12px", opacity: 0.9 }}>
             Upload your bookmarks from <b>Chrome, Firefox, Edge, Pocket, Raindrop, or plain URL lists</b> (.html, .json, .txt).
           </p>
@@ -194,12 +194,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           <div
             onClick={() => fileInputRef.current?.click()}
             style={{
-              border: "3px dashed #000",
-              background: "#FFFDF8",
+              border: "3px dashed var(--ink)",
+              background: "var(--paper)",
               padding: "24px",
               textAlign: "center",
               cursor: "pointer",
-              boxShadow: "3px 3px 0 #000",
+              boxShadow: "3px 3px 0 var(--ink)",
               marginBottom: "16px",
             }}
           >
@@ -215,13 +215,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           {parsedItems.length > 0 && (
             <div
               style={{
-                border: "2px solid #000",
+                border: "2px solid var(--ink)",
                 background: "#B6FF3C",
                 padding: "10px",
                 fontWeight: "800",
                 fontSize: "12px",
                 marginBottom: "16px",
-                boxShadow: "2px 2px 0 #000",
+                boxShadow: "2px 2px 0 var(--ink)",
               }}
             >
               PARSED {parsedItems.length} BOOKMARKS READY TO IMPORT
@@ -231,7 +231,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           {statusMsg && (
             <div
               style={{
-                border: "2px solid #000",
+                border: "2px solid var(--ink)",
                 background: statusMsg.startsWith("✓") ? "#B6FF3C" : statusMsg.startsWith("❌") ? "#FF007A" : "#FFE600",
                 color: statusMsg.startsWith("❌") ? "#fff" : "#000",
                 padding: "8px 12px",

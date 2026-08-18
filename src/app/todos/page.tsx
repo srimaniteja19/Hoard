@@ -476,7 +476,7 @@ function TodosPageContent() {
 
   return (
     <div className="page-scroll" style={{ background: "var(--cream)", color: "var(--ink)", fontFamily: "var(--sans, var(--grot))" }}>
-      <div style={{ maxWidth: "720px", margin: "0 auto", padding: "32px 24px" }}>
+      <div style={{ maxWidth: "720px", margin: "0 auto", padding: "clamp(16px, 4vw, 32px) clamp(12px, 4vw, 24px)" }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "24px" }}>
           <h1 style={{ fontFamily: "var(--grot)", fontWeight: 900, fontSize: "28px", margin: 0 }}>TODOS</h1>
           <Link
@@ -915,7 +915,8 @@ function TodoRow({
         type="checkbox"
         checked={todo.state === "DONE"}
         onChange={onToggleDone}
-        style={{ width: "20px", height: "20px", marginTop: "2px", flexShrink: 0 }}
+        className="icon-hit"
+        style={{ width: "22px", height: "22px", marginTop: "2px", flexShrink: 0, accentColor: "var(--ink)" }}
       />
 
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -984,7 +985,8 @@ function TodoRow({
               <button
                 onClick={onStartEdit}
                 aria-label="Edit task"
-                style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.5, display: "flex" }}
+                className="icon-hit"
+                style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.5 }}
               >
                 <Pencil size={12} />
               </button>
@@ -1169,7 +1171,8 @@ function TodoRow({
 
       <button
         onClick={onDelete}
-        style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.5, alignSelf: "flex-start", display: "flex" }}
+        className="icon-hit"
+        style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.5, alignSelf: "flex-start" }}
         aria-label="Delete todo"
       >
         <Trash2 size={16} />

@@ -41,8 +41,8 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
               {x.ty}
             </span>
             <span className="ht">{x.t}</span>
-            <span className="hm">{x.src}</span>
-            <span className="hm" style={{ textAlign: "right" }}>
+            <span className="hm hsrc">{x.src}</span>
+            <span className="hm hdur" style={{ textAlign: "right" }}>
               {formatMins(x.mins)}
             </span>
           </div>

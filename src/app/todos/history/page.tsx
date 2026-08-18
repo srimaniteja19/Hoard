@@ -164,7 +164,7 @@ export default function TodoHistoryPage() {
 
   return (
     <div className="page-scroll" style={{ background: "var(--cream)", color: "var(--ink)", fontFamily: "var(--grot)" }}>
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "32px 24px" }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "clamp(16px, 4vw, 32px) clamp(12px, 4vw, 24px)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
           <Link
             href="/todos"
@@ -283,9 +283,9 @@ export default function TodoHistoryPage() {
                       const over = actual !== null && actual > t.estimatedMinutes;
                       const under = actual !== null && actual < t.estimatedMinutes;
                       return (
-                        <div key={t.id} style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono)", fontSize: "12px", padding: "4px 0", borderBottom: "1px solid var(--ink)" }}>
-                          <span>{t.title}</span>
-                          <span style={{ color: over ? "var(--pink)" : under ? "var(--lime)" : "inherit", opacity: actual === null ? 0.4 : 1 }}>
+                        <div key={t.id} style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontFamily: "var(--mono)", fontSize: "12px", padding: "4px 0", borderBottom: "1px solid var(--ink)", flexWrap: "wrap" }}>
+                          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 140px" }}>{t.title}</span>
+                          <span style={{ color: over ? "var(--pink)" : under ? "var(--lime)" : "inherit", opacity: actual === null ? 0.4 : 1, flexShrink: 0 }}>
                             {t.estimatedMinutes}m est · {actual !== null ? `${actual}m actual` : "no actual recorded"}
                           </span>
                         </div>
@@ -362,8 +362,12 @@ function navButtonStyle(): CSSProperties {
     background: "var(--surface)",
     border: "2px solid var(--ink)",
     cursor: "pointer",
-    padding: "4px 8px",
+    padding: "8px 12px",
     display: "flex",
+    minWidth: "44px",
+    minHeight: "44px",
+    alignItems: "center",
+    justifyContent: "center",
   };
 }
 
@@ -373,7 +377,14 @@ function CalibrationScatter({ points }: { points: { estimated: number; actual: n
   const scale = (v: number) => (v / max) * size;
 
   return (
-    <svg width={size + 20} height={size + 20} role="img" aria-label="Estimate vs actual scatter plot">
+    <svg
+      width={size + 20}
+      height={size + 20}
+      viewBox={`0 0 ${size + 20} ${size + 20}`}
+      style={{ maxWidth: "100%", height: "auto" }}
+      role="img"
+      aria-label="Estimate vs actual scatter plot"
+    >
       <g transform="translate(10,10)">
         <line x1={0} y1={size} x2={size} y2={0} stroke="var(--ink)" strokeWidth={1} strokeDasharray="3,3" opacity={0.4} />
         <line x1={0} y1={size} x2={size} y2={size} stroke="var(--ink)" strokeWidth={1} opacity={0.4} />

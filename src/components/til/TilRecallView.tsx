@@ -304,6 +304,8 @@ export const TilRecallView: React.FC<TilRecallViewProps> = ({
               marginBottom: "16px",
               paddingBottom: "8px",
               borderBottom: "1px solid var(--ink)",
+              flexWrap: "wrap",
+              gap: "8px",
             }}
           >
             <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
@@ -440,7 +442,7 @@ export const TilRecallView: React.FC<TilRecallViewProps> = ({
                 RATE YOUR RECALL (PRESS 1, 2, OR 3):
               </div>
 
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div className="recall-rate-row">
                 <button
                   type="button"
                   onClick={() => handleRate("FORGOT")}

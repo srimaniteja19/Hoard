@@ -197,7 +197,7 @@ function HomeCommandContent({ edition }: { edition: HomeEdition }) {
         fontFamily: "var(--sans, var(--grot))",
       }}
     >
-      <main style={{ maxWidth: "1100px", margin: "0 auto", padding: "28px 24px 40px" }}>
+      <main style={{ maxWidth: "1100px", margin: "0 auto", padding: "clamp(16px, 4vw, 28px) clamp(12px, 3vw, 24px) 40px" }}>
         <header
           style={{
             display: "flex",
@@ -282,7 +282,7 @@ function HomeCommandContent({ edition }: { edition: HomeEdition }) {
         <section
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
             gap: "24px",
             padding: "24px",
             background: "var(--surface)",
@@ -383,7 +383,7 @@ function HomeCommandContent({ edition }: { edition: HomeEdition }) {
           aria-label="Hoard overview"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(240px, 100%), 1fr))",
             borderTop: "2px solid var(--ink)",
             borderLeft: "2px solid var(--ink)",
             marginTop: "24px",
@@ -503,7 +503,6 @@ function Rail({
       style={{
         display: "flex",
         flexDirection: "column",
-        minHeight: "300px",
         padding: "18px",
         background: "var(--surface)",
         borderRight: "2px solid var(--ink)",
@@ -511,7 +510,7 @@ function Rail({
       }}
     >
       <div style={eyebrowStyle}>{title}</div>
-      <div style={{ marginTop: "10px", fontFamily: "var(--grot)", fontSize: "64px", fontWeight: 900, lineHeight: 0.9 }}>
+      <div className="home-rail-numeral">
         {numeral}
       </div>
       <div style={{ marginTop: "6px", fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 800 }}>{sub}</div>

@@ -95,8 +95,8 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
           <div
             style={{
               display: "flex",
-              border: "2px solid #000",
-              background: "#FFFDF8",
+              border: "2px solid var(--ink)",
+              background: "var(--paper)",
               marginBottom: "14px",
             }}
           >
@@ -129,7 +129,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
                 fontSize: "12px",
                 background: isSmart ? "#FFE600" : "transparent",
                 border: "none",
-                borderLeft: "2px solid #000",
+                borderLeft: "2px solid var(--ink)",
                 cursor: "pointer",
                 fontFamily: "var(--mono)",
               }}
@@ -142,7 +142,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
             <span className="flbl">NAME</span>
             <input
               className="urlin"
-              style={{ border: "2px solid #000", marginTop: "4px" }}
+              style={{ border: "2px solid var(--ink)", marginTop: "4px" }}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={isSmart ? "e.g. Unread TS Repos, ArXiv Papers..." : "e.g. Design Systems, Web3, Ideas..."}
@@ -157,7 +157,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
               <span className="flbl">SAVED QUERY GRAMMAR</span>
               <input
                 className="urlin"
-                style={{ border: "2px solid #000", marginTop: "4px", background: "#FFE60022" }}
+                style={{ border: "2px solid var(--ink)", marginTop: "4px", background: "#FFE60022" }}
                 value={queryText}
                 onChange={(e) => setQueryText(e.target.value)}
                 placeholder="e.g. is:repo lang:ts under:10m or #ai is:unread"
@@ -177,9 +177,9 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
                   key={icon}
                   onClick={() => setIc(icon)}
                   style={{
-                    border: "2px solid #000",
-                    background: ic === icon ? "#FFE600" : "#FFFDF8",
-                    boxShadow: ic === icon ? "3px 3px 0 #000" : "none",
+                    border: "2px solid var(--ink)",
+                    background: ic === icon ? "#FFE600" : "var(--paper)",
+                    boxShadow: ic === icon ? "3px 3px 0 var(--ink)" : "none",
                     padding: "6px 10px",
                     fontSize: "14px",
                     fontWeight: "bold",
@@ -201,11 +201,11 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
                   key={color}
                   onClick={() => setC(color)}
                   style={{
-                    border: "2px solid #000",
+                    border: "2px solid var(--ink)",
                     background: color,
-                    width: "28px",
-                    height: "28px",
-                    boxShadow: c === color ? "3px 3px 0 #000" : "none",
+                    width: "36px",
+                    height: "36px",
+                    boxShadow: c === color ? "3px 3px 0 var(--ink)" : "none",
                     transform: c === color ? "scale(1.1)" : "none",
                     cursor: "pointer",
                   }}
@@ -221,7 +221,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
               onChange={(e) => setParentId(e.target.value)}
               style={{
                 width: "100%",
-                border: "2px solid #000",
+                border: "2px solid var(--ink)",
                 background: "#F4F0EA",
                 padding: "8px 10px",
                 fontFamily: "var(--mono)",
@@ -240,7 +240,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
             </select>
           </div>
 
-          <div className="sfoot" style={{ padding: "16px 0 0", borderTop: "2px solid #000", marginTop: "16px" }}>
+          <div className="sfoot" style={{ padding: "16px 0 0", borderTop: "2px solid var(--ink)", marginTop: "16px" }}>
             <button type="button" onClick={onClose}>
               CANCEL
             </button>

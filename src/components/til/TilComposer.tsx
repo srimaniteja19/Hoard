@@ -214,6 +214,7 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
               <button
                 key={t}
                 type="button"
+                className="til-type-chip"
                 onClick={() => setType(t)}
                 style={{
                   fontFamily: "var(--mono)",
@@ -235,9 +236,7 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
           })}
         </div>
 
-        <div style={{ fontFamily: "var(--mono)", fontSize: "10px", opacity: 0.6, color: "var(--ink)" }}>
-          ⌘↵ to commit
-        </div>
+        <div className="kbd-hint">⌘↵ to commit</div>
       </div>
 
       {/* Main Body Textarea */}
@@ -325,7 +324,7 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
           placeholder="https://..."
           style={{
             flex: 1,
-            minWidth: "200px",
+            minWidth: "min(200px, 100%)",
             fontFamily: "var(--mono)",
             fontSize: "12px",
             background: "transparent",
@@ -337,12 +336,13 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
         />
 
         {linkUrl.trim() && (
-          <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "4px", alignItems: "center", flexWrap: "wrap" }}>
             <span style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 800 }}>DENSITY:</span>
             {(["inline", "card", "quote", "full"] as const).map((d) => (
               <button
                 key={d}
                 type="button"
+                className="til-density-chip"
                 onClick={() => setLinkDensity(d)}
                 style={{
                   fontFamily: "var(--mono)",
@@ -384,11 +384,9 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
             }}
           >
             #{t}
-            <X
-              size={10}
-              style={{ cursor: "pointer" }}
-              onClick={() => handleRemoveTag(t)}
-            />
+            <button type="button" className="filter-clear-btn" aria-label={`Remove tag ${t}`} onClick={() => handleRemoveTag(t)}>
+              <X size={12} />
+            </button>
           </span>
         ))}
 

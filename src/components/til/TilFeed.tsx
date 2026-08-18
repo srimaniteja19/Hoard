@@ -104,7 +104,9 @@ export const TilFeed: React.FC<TilFeedProps> = ({
               }}
             >
               DAY: {selectedDay}
-              <X size={11} style={{ cursor: "pointer" }} onClick={onClearDayFilter} />
+              <button type="button" className="filter-clear-btn" aria-label="Clear day filter" onClick={onClearDayFilter}>
+                <X size={14} />
+              </button>
             </span>
           )}
 
@@ -124,7 +126,9 @@ export const TilFeed: React.FC<TilFeedProps> = ({
               }}
             >
               TYPE: {selectedType}
-              <X size={11} style={{ cursor: "pointer" }} onClick={onClearTypeFilter} />
+              <button type="button" className="filter-clear-btn" aria-label="Clear type filter" onClick={onClearTypeFilter}>
+                <X size={14} />
+              </button>
             </span>
           )}
 
@@ -143,7 +147,9 @@ export const TilFeed: React.FC<TilFeedProps> = ({
               }}
             >
               TAG: #{selectedTag}
-              <X size={11} style={{ cursor: "pointer" }} onClick={onClearTagFilter} />
+              <button type="button" className="filter-clear-btn" aria-label="Clear tag filter" onClick={onClearTagFilter}>
+                <X size={14} />
+              </button>
             </span>
           )}
         </div>
@@ -174,16 +180,12 @@ export const TilFeed: React.FC<TilFeedProps> = ({
             <div key={dayStr} style={{ marginBottom: "24px", position: "relative" }}>
               {/* Day Spine Header */}
               <div
+                className="til-feed-day-header"
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: "10px",
                   marginBottom: "12px",
-                  position: "sticky",
-                  top: "60px",
-                  zIndex: 5,
-                  background: "var(--bg, #FFFDF8)",
-                  padding: "4px 0",
                 }}
               >
                 <div

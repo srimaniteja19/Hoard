@@ -142,9 +142,11 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
           padding: "8px 12px",
           borderBottom: "1px solid var(--ink)",
           background: "rgba(0,0,0,0.03)",
+          flexWrap: "wrap",
+          gap: "8px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", minWidth: 0 }}>
           <button
             onClick={() => onSelectType && onSelectType(item.type)}
             style={{
@@ -257,6 +259,8 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
             <>
               <button
                 onClick={() => setIsEditing(true)}
+                className="icon-hit"
+                aria-label="Edit TIL"
                 style={{
                   background: "transparent",
                   border: "none",
@@ -306,6 +310,8 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
               ) : (
                 <button
                   onClick={() => setConfirmDelete(true)}
+                  className="icon-hit"
+                  aria-label="Delete TIL"
                   style={{
                     background: "transparent",
                     border: "none",
