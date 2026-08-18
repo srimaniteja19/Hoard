@@ -190,8 +190,8 @@ function HomeCommandContent({ edition }: { edition: HomeEdition }) {
 
   return (
     <div
+      className="page-scroll"
       style={{
-        minHeight: "100vh",
         background: "var(--cream, var(--paper))",
         color: "var(--ink)",
         fontFamily: "var(--sans, var(--grot))",

@@ -123,10 +123,12 @@ export default function LoginPage() {
 
   return (
     <div
+      className="page-scroll"
       style={{
-        display: "grid",
-        placeItems: "center",
-        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "safe center",
         background: "var(--cream)",
         padding: "20px",
       }}

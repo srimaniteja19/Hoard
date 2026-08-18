@@ -165,6 +165,14 @@ body {
   overflow: hidden;
 }
 
+/* Library/session panes depend on the body lock above. Document-style
+   routes (home, todos, login, share) scroll in this child instead. */
+.page-scroll {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 button, input, textarea {
   font-family: inherit;
   color: inherit;

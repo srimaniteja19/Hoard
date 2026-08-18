@@ -475,7 +475,7 @@ function TodosPageContent() {
   const totalOpen = todos.filter((t) => t.state === "OPEN").length;
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--cream)", color: "var(--ink)", fontFamily: "var(--sans, var(--grot))" }}>
+    <div className="page-scroll" style={{ background: "var(--cream)", color: "var(--ink)", fontFamily: "var(--sans, var(--grot))" }}>
       <div style={{ maxWidth: "720px", margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "24px" }}>
           <h1 style={{ fontFamily: "var(--grot)", fontWeight: 900, fontSize: "28px", margin: 0 }}>TODOS</h1>

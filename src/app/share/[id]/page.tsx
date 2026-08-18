@@ -109,7 +109,7 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
   const totalMins = bookmarks.reduce((acc, b) => acc + b.mins, 0);
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--cream)", color: "var(--ink)", padding: "20px" }}>
+    <div className="page-scroll" style={{ background: "var(--cream)", color: "var(--ink)", padding: "20px" }}>
       {/* Top Banner */}
       <div
         style={{

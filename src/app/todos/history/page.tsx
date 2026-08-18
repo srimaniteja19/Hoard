@@ -163,7 +163,7 @@ export default function TodoHistoryPage() {
   const today = todayDateStr();
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--cream)", color: "var(--ink)", fontFamily: "var(--grot)" }}>
+    <div className="page-scroll" style={{ background: "var(--cream)", color: "var(--ink)", fontFamily: "var(--grot)" }}>
       <div style={{ maxWidth: "900px", margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
           <Link

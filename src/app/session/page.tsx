@@ -87,14 +87,14 @@ function SessionPageContent() {
   if (!currentItem) {
     return (
       <div
+        className="page-scroll"
         style={{
-          minHeight: "100vh",
           background: "#0d0d0d",
           color: "#fff",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "safe center",
           padding: "24px",
           fontFamily: "var(--mono)",
         }}
@@ -128,8 +128,8 @@ function SessionPageContent() {
 
   return (
     <div
+      className="page-scroll"
       style={{
-        minHeight: "100vh",
         background: "#0d0d0d",
         color: "#fff",
         display: "flex",
