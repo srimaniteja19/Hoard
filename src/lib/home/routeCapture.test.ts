@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fixtures from "./__fixtures__/route-capture.json";
-import { routeCapture } from "./routeCapture";
+import { canCommitCapture, routeCapture } from "./routeCapture";
 
 const TODAY = new Date("2024-01-15T12:00:00Z");
 const TZ = "UTC";
@@ -45,6 +45,22 @@ describe("routeCapture — preview shape", () => {
       text: null,
       chips: [],
       parsed: null,
+      command: null,
+      tilType: null,
     });
+  });
+});
+
+describe("canCommitCapture", () => {
+  it("refuses empty slash commands and unknown tokens", () => {
+    expect(canCommitCapture(routeCapture("/todo ", TODAY, TZ))).toBe(false);
+    expect(canCommitCapture(routeCapture("/til ", TODAY, TZ))).toBe(false);
+    expect(canCommitCapture(routeCapture("/nope hi", TODAY, TZ))).toBe(false);
+  });
+
+  it("accepts a locked command with a payload", () => {
+    expect(canCommitCapture(routeCapture("/todo water the plants", TODAY, TZ))).toBe(true);
+    expect(canCommitCapture(routeCapture("/til redis is single-threaded", TODAY, TZ))).toBe(true);
+    expect(canCommitCapture(routeCapture("/bookmark https://example.com", TODAY, TZ))).toBe(true);
   });
 });

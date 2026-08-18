@@ -4,19 +4,17 @@ import {
   Suspense,
   useCallback,
   useEffect,
-  useMemo,
-  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { routeCapture } from "@/lib/home/routeCapture";
 import { filterCandidates, rankCandidates } from "@/lib/home/score";
 import { standfirst } from "@/lib/home/standfirst";
 import type { HomeEdition, LeadCandidate } from "@/lib/home/types";
 import type { ContextType } from "@/types";
+import { HomeCapture } from "@/components/home/HomeCapture";
 
 const CONTEXTS: ContextType[] = ["all", "desk", "commute", "wind"];
 
@@ -51,18 +49,6 @@ function HomeCommandContent({ edition }: { edition: HomeEdition }) {
   const [lastLedId, setLastLedId] = useState<string | null>(null);
   const [lastLedIdLoaded, setLastLedIdLoaded] = useState(false);
   const [localDate, setLocalDate] = useState<string | null>(null);
-  const [input, setInput] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const preview = useMemo(
-    () =>
-      routeCapture(
-        input,
-        new Date(),
-        Intl.DateTimeFormat().resolvedOptions().timeZone
-      ),
-    [input]
-  );
 
   useEffect(() => {
     let storedLastLedId: string | null = null;
@@ -85,65 +71,6 @@ function HomeCommandContent({ edition }: { edition: HomeEdition }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalDate(formatted);
   }, []);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const activeTag = document.activeElement?.tagName;
-      if (
-        event.key === "/" &&
-        activeTag !== "INPUT" &&
-        activeTag !== "TEXTAREA"
-      ) {
-        event.preventDefault();
-        inputRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  async function commit() {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const previewNow = routeCapture(input, new Date(), tz);
-    if (!previewNow.destination || submitting) return;
-    const snapshot = input;
-    setInput("");
-    setSubmitting(true);
-    try {
-      let res: Response;
-      if (previewNow.destination === "queue") {
-        res = await fetch("/api/bookmarks", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            url: previewNow.url,
-            ty: previewNow.kind,
-            src: "Home capture",
-          }),
-        });
-      } else if (previewNow.destination === "record") {
-        res = await fetch("/api/til", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "FACT", body: previewNow.body }),
-        });
-      } else {
-        res = await fetch("/api/todos", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: previewNow.text }),
-        });
-      }
-      if (!res.ok) setInput(snapshot);
-    } catch {
-      setInput(snapshot);
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   const updateFilters = useCallback(
     (nextTime: number, nextCtx: ContextType) => {
@@ -229,55 +156,7 @@ function HomeCommandContent({ edition }: { edition: HomeEdition }) {
           </nav>
         </header>
 
-        <section style={{ margin: "24px 0" }}>
-          <label
-            htmlFor="home-capture"
-            style={{ display: "block", marginBottom: "6px", fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 900 }}
-          >
-            CAPTURE
-          </label>
-          <input
-            ref={inputRef}
-            id="home-capture"
-            type="text"
-            aria-label="Capture a link, learning, or task"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                commit();
-              }
-            }}
-            placeholder="https://…  or  til …  or  call the vet tomorrow ~10m"
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "14px 16px",
-              fontFamily: "var(--mono)",
-              fontSize: "16px",
-              color: "var(--ink)",
-              background: "var(--yel)",
-              border: "var(--bd)",
-              boxShadow: "var(--sh)",
-              outline: "none",
-            }}
-          />
-          <div
-            style={{
-              minHeight: "28px",
-              marginTop: "8px",
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "6px",
-              alignItems: "center",
-            }}
-          >
-            {preview.chips.map((chip, index) => (
-              <Chip key={`${chip.label}-${index}`} label={chip.label} />
-            ))}
-          </div>
-        </section>
+        <HomeCapture />
 
         <section
           style={{
@@ -533,24 +412,6 @@ function Rail({
         see all →
       </Link>
     </article>
-  );
-}
-
-function Chip({ label }: { label: string }) {
-  return (
-    <span
-      style={{
-        fontFamily: "var(--mono)",
-        fontSize: "11px",
-        fontWeight: 800,
-        padding: "3px 8px",
-        border: "2px solid var(--ink)",
-        background: "var(--surface)",
-        color: "var(--ink)",
-      }}
-    >
-      {label}
-    </span>
   );
 }
 
