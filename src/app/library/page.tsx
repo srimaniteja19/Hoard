@@ -201,11 +201,10 @@ export default function Home() {
   if (!isLoaded) {
     return (
       <div
+        className="dvh-page"
         style={{
           display: "grid",
           placeItems: "center",
-          height: "100vh",
-          height: "100dvh",
           fontFamily: "var(--mono), monospace",
           fontWeight: 800,
           fontSize: "18px",
