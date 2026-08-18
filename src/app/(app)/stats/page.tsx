@@ -5,7 +5,8 @@ import { Bookmark, Collection, KindType } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import Link from "next/link";
 import { Flame } from "lucide-react";
-import { AppNav } from "@/components/AppNav";
+import { AppPage } from "@/components/chrome/AppPage";
+import { AppLoading } from "@/components/chrome/AppLoading";
 
 import { TilItem } from "@/components/til/TilFeedItem";
 
@@ -121,21 +122,7 @@ export default function AnalyticsPage() {
   }, [bookmarks, collections, tilItems]);
 
   if (loading) {
-    return (
-      <div
-        className="dvh-page"
-        style={{
-          display: "grid",
-          placeItems: "center",
-          fontFamily: "var(--mono), monospace",
-          fontWeight: 800,
-          fontSize: "18px",
-          background: "var(--cream)",
-        }}
-      >
-        COMPUTING HOARD ANALYTICS...
-      </div>
-    );
+    return <AppLoading label="COMPUTING HOARD ANALYTICS..." />;
   }
 
   const formatHours = (m: number) => {
@@ -157,49 +144,8 @@ export default function AnalyticsPage() {
     .join(" ");
 
   return (
-    <div
-      className="dvh-page stats-page-container"
-      style={{
-        background: "var(--cream)",
-        color: "var(--ink)",
-        padding: "20px",
-      }}
-    >
-      {/* Top Bar */}
-      <div
-        className="page-app-header"
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto 24px auto",
-          borderBottom: "3px solid var(--ink)",
-          paddingBottom: "16px",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", minWidth: 0 }}>
-          <Link
-            href="/"
-            className="app-wordmark"
-            style={{
-              fontFamily: "var(--mono)",
-              fontWeight: 800,
-              fontSize: "18px",
-              background: "#FFE600",
-              border: "3px solid var(--ink)",
-              boxShadow: "3px 3px 0 var(--ink)",
-              padding: "4px 12px",
-            }}
-          >
-            HOARD
-          </Link>
-          <span style={{ fontFamily: "var(--mono)", fontSize: "14px", fontWeight: 800 }}>
-            ANALYTICS
-          </span>
-        </div>
-
-        <AppNav />
-      </div>
-
-      <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gap: "24px" }}>
+    <AppPage width="full">
+      <div style={{ display: "grid", gap: "24px" }}>
         {/* Metric Cards Row */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
           <div
@@ -524,6 +470,6 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
-    </div>
+    </AppPage>
   );
 }

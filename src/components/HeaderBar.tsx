@@ -2,8 +2,6 @@
 
 import React, { useState } from "react";
 import { SortMode, ViewMode } from "@/types";
-import { ThemePicker } from "@/components/ThemePicker";
-import { AppNav } from "@/components/AppNav";
 import { Zap, Search } from "lucide-react";
 import Link from "next/link";
 
@@ -16,7 +14,6 @@ interface HeaderBarProps {
   setSort: (s: SortMode) => void;
   onOpenCaptureWithUrl: (url: string) => void;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
-  onToggleMobileSidebar?: () => void;
   onOpenCapture?: () => void;
 }
 
@@ -29,7 +26,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   setSort,
   onOpenCaptureWithUrl,
   searchInputRef,
-  onToggleMobileSidebar,
   onOpenCapture,
 }) => {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -46,45 +42,30 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
   return (
     <div className="bar">
-      {/* Mobile Top Header Strip */}
       <div className="mobile-header-strip">
-        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-          <button
-            className="mobile-menu-btn"
-            onClick={onToggleMobileSidebar}
-            aria-label="Open navigation menu"
-          >
-            <span>☰</span> MENU
-          </button>
-
-          <Link href="/" className="mobile-brand" aria-label="Home">
-            <b>HOARD</b>
-          </Link>
-        </div>
+        <button
+          onClick={() => setShowMobileFilters(!showMobileFilters)}
+          className="mobile-find-btn"
+          style={{
+            background: showMobileFilters ? "var(--lime)" : "var(--paper)",
+            border: "2px solid var(--ink)",
+            color: "var(--ink)",
+            padding: "5px 7px",
+            fontWeight: 800,
+            fontSize: "11px",
+            fontFamily: "var(--mono)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "2px",
+            boxShadow: "2px 2px 0 var(--ink)",
+          }}
+          title="Search & View Settings"
+        >
+          <Search size={13} /> {showMobileFilters ? "✕" : "FIND"}
+        </button>
 
         <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
-          <button
-            onClick={() => setShowMobileFilters(!showMobileFilters)}
-            className="mobile-find-btn"
-            style={{
-              background: showMobileFilters ? "var(--lime)" : "var(--paper)",
-              border: "2px solid var(--ink)",
-              color: "var(--ink)",
-              padding: "5px 7px",
-              fontWeight: 800,
-              fontSize: "11px",
-              fontFamily: "var(--mono)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "2px",
-              boxShadow: "2px 2px 0 var(--ink)",
-            }}
-            title="Search & View Settings"
-          >
-            <Search size={13} /> {showMobileFilters ? "✕" : "FIND"}
-          </button>
-
           <Link
             href="/session"
             style={{
@@ -118,11 +99,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </div>
       </div>
 
-      <div className="app-nav-row">
-        <AppNav />
-      </div>
-
-      {/* Search box & controls (hidden on mobile unless expanded or on desktop) */}
       <div className={`mobile-collapsible-controls ${showMobileFilters ? "open" : ""}`}>
         <div className="searchbox">
           <svg
@@ -146,68 +122,39 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </div>
 
         <div className="bar-controls-row">
-          <Link
-            href="/session"
-            className="desktop-start-session-btn"
-          >
+          <Link href="/session" className="desktop-start-session-btn">
             <Zap size={13} fill="#000" /> START SESSION
           </Link>
 
           <div className="grp view-grp">
-            <button
-              className={view === "masonry" ? "on" : ""}
-              onClick={() => setView("masonry")}
-            >
+            <button className={view === "masonry" ? "on" : ""} onClick={() => setView("masonry")}>
               MASONRY
             </button>
-            <button
-              className={view === "grid" ? "on" : ""}
-              onClick={() => setView("grid")}
-            >
+            <button className={view === "grid" ? "on" : ""} onClick={() => setView("grid")}>
               GRID
             </button>
-            <button
-              className={view === "list" ? "on" : ""}
-              onClick={() => setView("list")}
-            >
+            <button className={view === "list" ? "on" : ""} onClick={() => setView("list")}>
               LIST
             </button>
-            <button
-              className={view === "heads" ? "on" : ""}
-              onClick={() => setView("heads")}
-            >
+            <button className={view === "heads" ? "on" : ""} onClick={() => setView("heads")}>
               HEADLINES
             </button>
-            <button
-              className={view === "archive" ? "on" : ""}
-              onClick={() => setView("archive")}
-            >
+            <button className={view === "archive" ? "on" : ""} onClick={() => setView("archive")}>
               ARCHIVE
             </button>
           </div>
 
           <div className="grp sort-grp">
-            <button
-              className={sort === "recent" ? "on" : ""}
-              onClick={() => setSort("recent")}
-            >
+            <button className={sort === "recent" ? "on" : ""} onClick={() => setSort("recent")}>
               RECENT
             </button>
-            <button
-              className={sort === "short" ? "on" : ""}
-              onClick={() => setSort("short")}
-            >
+            <button className={sort === "short" ? "on" : ""} onClick={() => setSort("short")}>
               SHORTEST
             </button>
-            <button
-              className={sort === "az" ? "on" : ""}
-              onClick={() => setSort("az")}
-            >
+            <button className={sort === "az" ? "on" : ""} onClick={() => setSort("az")}>
               A–Z
             </button>
           </div>
-
-          <ThemePicker />
         </div>
       </div>
     </div>

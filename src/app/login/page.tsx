@@ -144,18 +144,7 @@ export default function LoginPage() {
       >
         {/* Brand Badge Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-          <span
-            style={{
-              fontFamily: "var(--mono)",
-              fontWeight: 800,
-              fontSize: "22px",
-              letterSpacing: "-.06em",
-              background: "var(--yel)",
-              border: "3px solid var(--ink)",
-              boxShadow: "3px 3px 0 var(--ink)",
-              padding: "4px 12px",
-            }}
-          >
+          <span className="brand-stamp">
             HOARD
           </span>
           <span

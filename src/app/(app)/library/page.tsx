@@ -20,6 +20,9 @@ import { HeadlinesView } from "@/components/views/HeadlinesView";
 import { ArchiveView } from "@/components/views/ArchiveView";
 import { StatusLine } from "@/components/StatusLine";
 import { ColdStart } from "@/components/ColdStart";
+import { AppLoading } from "@/components/chrome/AppLoading";
+import { AppPage } from "@/components/chrome/AppPage";
+import { ChromeSlot } from "@/components/chrome/slots";
 import { Bookmark } from "@/types";
 import { TilType } from "@/db/schema";
 import { useReducedMotion } from "@/lib/useReducedMotion";
@@ -199,25 +202,40 @@ export default function Home() {
   }, [setIsCaptureOpen, setIsNewFolderOpen, setOpenId, setIsDiffOpen]);
 
   if (!isLoaded) {
-    return (
-      <div
-        className="dvh-page"
-        style={{
-          display: "grid",
-          placeItems: "center",
-          fontFamily: "var(--mono), monospace",
-          fontWeight: 800,
-          fontSize: "18px",
-          background: "var(--cream)",
-        }}
-      >
-        LOADING HOARD...
-      </div>
-    );
+    return <AppLoading />;
   }
 
   return (
+    <AppPage variant="flush">
     <div className="app-container">
+      <ChromeSlot name="leading">
+        <button
+          className="mobile-menu-btn"
+          onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+          aria-label="Open navigation menu"
+        >
+          <span>☰</span> MENU
+        </button>
+      </ChromeSlot>
+      <ChromeSlot name="toolbar">
+        <HeaderBar
+          query={query}
+          setQuery={setQuery}
+          view={view}
+          setView={setView}
+          sort={sort}
+          setSort={setSort}
+          onOpenCaptureWithUrl={handleOpenCaptureWithUrl}
+          searchInputRef={searchInputRef}
+          onOpenCapture={() => {
+            setCaptureUrl("");
+            setIsCaptureOpen(true);
+          }}
+        />
+      </ChromeSlot>
+      <ChromeSlot name="footer">
+        <StatusLine bookmarks={bookmarks} />
+      </ChromeSlot>
       {/* Sidebar */}
       <Sidebar
         bookmarks={bookmarks}
@@ -247,22 +265,6 @@ export default function Home() {
 
       {/* Main Content Area */}
       <main className="main">
-        <HeaderBar
-          query={query}
-          setQuery={setQuery}
-          view={view}
-          setView={setView}
-          sort={sort}
-          setSort={setSort}
-          onOpenCaptureWithUrl={handleOpenCaptureWithUrl}
-          searchInputRef={searchInputRef}
-          onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-          onOpenCapture={() => {
-            setCaptureUrl("");
-            setIsCaptureOpen(true);
-          }}
-        />
-
         <CrumbBar
           items={filteredBookmarks}
           coll={coll}
@@ -371,7 +373,6 @@ export default function Home() {
           onSelectBookmark={(id) => setOpenId(id)}
         />
 
-        <StatusLine bookmarks={bookmarks} />
       </main>
 
       {/* Save Link Modal */}
@@ -467,5 +468,6 @@ export default function Home() {
         </div>
       )}
     </div>
+    </AppPage>
   );
 }

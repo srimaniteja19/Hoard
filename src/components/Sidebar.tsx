@@ -5,7 +5,6 @@ import { Bookmark, Collection, KindType, ViewMode } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import { inColl } from "@/hooks/useBookmarks";
 import { sigil } from "@/lib/sigil";
-import { UserMenu } from "@/components/UserMenu";
 import { usePWA } from "@/components/PWAProvider";
 import Link from "next/link";
 import {
@@ -215,23 +214,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <b>HOARD</b>
           </Link>
           <span>{unreadCount}</span>
-          <Link
-            href="/"
-            style={{
-              marginLeft: "8px",
-              fontSize: "10px",
-              fontWeight: 900,
-              color: "var(--ink)",
-              textDecoration: "none",
-              background: "var(--paper)",
-              border: "2px solid var(--ink)",
-              padding: "4px 8px",
-              boxShadow: "2px 2px 0 var(--ink)",
-            }}
-            onClick={() => onCloseMobile?.()}
-          >
-            HOME
-          </Link>
           {onCloseMobile && (
             <button
               className="mobile-side-close"
@@ -554,7 +536,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
         </div>
-        <UserMenu />
       </aside>
     </>
   );
