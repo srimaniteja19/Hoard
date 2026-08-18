@@ -51,26 +51,9 @@ export const TilCodexView: React.FC<TilCodexViewProps> = ({
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        background: "var(--paper)",
-        border: "var(--bd)",
-        boxShadow: "var(--sh)",
-        minHeight: "650px",
-      }}
-    >
+    <div className="til-codex">
       {/* Left Pane: Topic Index (~230px) */}
-      <div
-        style={{
-          width: "240px",
-          borderRight: "1.5px solid var(--ink)",
-          background: "rgba(0,0,0,0.02)",
-          display: "flex",
-          flexDirection: "column",
-          flexShrink: 0,
-        }}
-      >
+      <div className="til-codex-index">
         <div
           style={{
             padding: "12px 14px",
@@ -167,7 +150,7 @@ export const TilCodexView: React.FC<TilCodexViewProps> = ({
       </div>
 
       {/* Right Pane: Topic Page */}
-      <div style={{ flex: 1, padding: "24px", overflowY: "auto" }}>
+      <div className="til-codex-page">
         {!activeTopic ? (
           <div
             style={{

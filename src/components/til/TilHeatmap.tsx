@@ -72,14 +72,7 @@ export const TilHeatmap: React.FC<TilHeatmapProps> = ({
         overflowX: "auto",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "10px",
-        }}
-      >
+      <div className="til-heatmap-head">
         <span
           style={{
             fontFamily: "var(--mono)",
@@ -91,7 +84,7 @@ export const TilHeatmap: React.FC<TilHeatmapProps> = ({
           26-WEEK LEARNING HEATMAP
         </span>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", fontFamily: "var(--mono)", fontSize: "9px" }}>
+        <div className="til-heatmap-legend" style={{ display: "flex", alignItems: "center", gap: "8px", fontFamily: "var(--mono)", fontSize: "9px", flexShrink: 0 }}>
           <span>Less</span>
           <span style={{ width: "10px", height: "10px", background: "rgba(0,0,0,0.05)", border: "1px solid var(--ink)" }} />
           <span style={{ width: "10px", height: "10px", background: "#B6FF3C", border: "1px solid var(--ink)" }} />
@@ -110,13 +103,14 @@ export const TilHeatmap: React.FC<TilHeatmapProps> = ({
               return (
                 <div
                   key={day.dateStr}
+                  className="til-heatmap-cell"
                   onClick={() => onSelectDay(isSelected ? null : day.dateStr)}
                   title={`${day.dateStr}: ${day.count} ${day.count === 1 ? "entry" : "entries"}`}
                   style={{
                     width: "12px",
                     height: "12px",
                     background: getCellColor(day.count, isSelected),
-                    border: isSelected ? "2px solid #000" : "1px solid var(--ink)",
+                    border: isSelected ? "2px solid var(--ink)" : "1px solid var(--ink)",
                     cursor: "pointer",
                     transform: isSelected ? "scale(1.2)" : "none",
                     zIndex: isSelected ? 2 : 1,

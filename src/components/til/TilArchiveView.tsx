@@ -709,7 +709,7 @@ export const TilArchiveView: React.FC<TilArchiveViewProps> = ({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fill, minmax(min(360px, 100%), 1fr))",
           gap: "16px",
         }}
       >
@@ -778,6 +778,7 @@ export const TilArchiveView: React.FC<TilArchiveViewProps> = ({
                     justifyContent: "space-between",
                     alignItems: "center",
                     gap: "6px",
+                    flexWrap: "wrap",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>

@@ -123,10 +123,12 @@ export default function LoginPage() {
 
   return (
     <div
+      className="page-scroll"
       style={{
-        display: "grid",
-        placeItems: "center",
-        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "safe center",
         background: "var(--cream)",
         padding: "20px",
       }}
@@ -135,8 +137,8 @@ export default function LoginPage() {
         style={{
           width: "min(480px, 94vw)",
           background: "var(--paper)",
-          border: "4px solid #000",
-          boxShadow: "10px 10px 0 #000",
+          border: "4px solid var(--ink)",
+          boxShadow: "10px 10px 0 var(--ink)",
           padding: "28px 24px",
         }}
       >
@@ -149,8 +151,8 @@ export default function LoginPage() {
               fontSize: "22px",
               letterSpacing: "-.06em",
               background: "var(--yel)",
-              border: "3px solid #000",
-              boxShadow: "3px 3px 0 #000",
+              border: "3px solid var(--ink)",
+              boxShadow: "3px 3px 0 var(--ink)",
               padding: "4px 12px",
             }}
           >
@@ -161,7 +163,7 @@ export default function LoginPage() {
               fontFamily: "var(--mono)",
               fontSize: "10px",
               fontWeight: 800,
-              border: "2px solid #000",
+              border: "2px solid var(--ink)",
               background: "var(--lime)",
               padding: "3px 7px",
             }}
@@ -175,8 +177,8 @@ export default function LoginPage() {
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
-            border: "3px solid #000",
-            boxShadow: "4px 4px 0 #000",
+            border: "3px solid var(--ink)",
+            boxShadow: "4px 4px 0 var(--ink)",
             marginBottom: "20px",
           }}
         >
@@ -190,9 +192,9 @@ export default function LoginPage() {
             }}
             style={{
               border: 0,
-              borderRight: "2px solid #000",
-              background: tab === "signin" ? "#000" : "#FFFDF8",
-              color: tab === "signin" ? "var(--yel)" : "#000",
+              borderRight: "2px solid var(--ink)",
+              background: tab === "signin" ? "var(--ink)" : "var(--paper)",
+              color: tab === "signin" ? "var(--yel)" : "var(--ink)",
               padding: "10px",
               fontFamily: "var(--mono)",
               fontSize: "12px",
@@ -212,8 +214,8 @@ export default function LoginPage() {
             }}
             style={{
               border: 0,
-              background: tab === "signup" ? "#000" : "#FFFDF8",
-              color: tab === "signup" ? "var(--yel)" : "#000",
+              background: tab === "signup" ? "var(--ink)" : "var(--paper)",
+              color: tab === "signup" ? "var(--yel)" : "var(--ink)",
               padding: "10px",
               fontFamily: "var(--mono)",
               fontSize: "12px",
@@ -229,7 +231,7 @@ export default function LoginPage() {
         {oauthNotice && (
           <div
             style={{
-              border: "2px solid #000",
+              border: "2px solid var(--ink)",
               background: "#FFE600",
               color: "#000",
               padding: "12px",
@@ -247,7 +249,7 @@ export default function LoginPage() {
         {errorMessage && (
           <div
             style={{
-              border: "2px solid #000",
+              border: "2px solid var(--ink)",
               background: "#FF007A",
               color: "#fff",
               padding: "12px",
@@ -265,7 +267,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={switchToSignInWithEmail}
                 style={{
-                  border: "2px solid #000",
+                  border: "2px solid var(--ink)",
                   background: "#FFE600",
                   color: "#000",
                   padding: "6px 10px",
@@ -306,13 +308,13 @@ export default function LoginPage() {
                 placeholder="name@example.com"
                 style={{
                   width: "100%",
-                  border: "3px solid #000",
+                  border: "3px solid var(--ink)",
                   padding: "10px 12px",
                   fontFamily: "var(--mono)",
                   fontSize: "13px",
                   fontWeight: 600,
                   outline: "none",
-                  background: "#F4F0EA",
+                  background: "var(--cream)",
                 }}
               />
             </div>
@@ -338,13 +340,13 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 style={{
                   width: "100%",
-                  border: "3px solid #000",
+                  border: "3px solid var(--ink)",
                   padding: "10px 12px",
                   fontFamily: "var(--mono)",
                   fontSize: "13px",
                   fontWeight: 600,
                   outline: "none",
-                  background: "#F4F0EA",
+                  background: "var(--cream)",
                 }}
               />
             </div>
@@ -354,9 +356,9 @@ export default function LoginPage() {
               disabled={isLoading}
               style={{
                 width: "100%",
-                border: "3px solid #000",
+                border: "3px solid var(--ink)",
                 background: "#00F0FF",
-                boxShadow: "4px 4px 0 #000",
+                boxShadow: "4px 4px 0 var(--ink)",
                 padding: "12px",
                 fontFamily: "var(--mono)",
                 fontSize: "13px",
@@ -394,13 +396,13 @@ export default function LoginPage() {
                 placeholder="e.g. Maniteja"
                 style={{
                   width: "100%",
-                  border: "3px solid #000",
+                  border: "3px solid var(--ink)",
                   padding: "10px 12px",
                   fontFamily: "var(--mono)",
                   fontSize: "13px",
                   fontWeight: 600,
                   outline: "none",
-                  background: "#F4F0EA",
+                  background: "var(--cream)",
                 }}
               />
             </div>
@@ -426,13 +428,13 @@ export default function LoginPage() {
                 placeholder="name@example.com"
                 style={{
                   width: "100%",
-                  border: "3px solid #000",
+                  border: "3px solid var(--ink)",
                   padding: "10px 12px",
                   fontFamily: "var(--mono)",
                   fontSize: "13px",
                   fontWeight: 600,
                   outline: "none",
-                  background: "#F4F0EA",
+                  background: "var(--cream)",
                 }}
               />
             </div>
@@ -458,13 +460,13 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 style={{
                   width: "100%",
-                  border: "3px solid #000",
+                  border: "3px solid var(--ink)",
                   padding: "10px 12px",
                   fontFamily: "var(--mono)",
                   fontSize: "13px",
                   fontWeight: 600,
                   outline: "none",
-                  background: "#F4F0EA",
+                  background: "var(--cream)",
                 }}
               />
             </div>
@@ -490,13 +492,13 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 style={{
                   width: "100%",
-                  border: "3px solid #000",
+                  border: "3px solid var(--ink)",
                   padding: "10px 12px",
                   fontFamily: "var(--mono)",
                   fontSize: "13px",
                   fontWeight: 600,
                   outline: "none",
-                  background: "#F4F0EA",
+                  background: "var(--cream)",
                 }}
               />
             </div>
@@ -506,9 +508,9 @@ export default function LoginPage() {
               disabled={isLoading}
               style={{
                 width: "100%",
-                border: "3px solid #000",
+                border: "3px solid var(--ink)",
                 background: "#B6FF3C",
-                boxShadow: "4px 4px 0 #000",
+                boxShadow: "4px 4px 0 var(--ink)",
                 padding: "12px",
                 fontFamily: "var(--mono)",
                 fontSize: "13px",
@@ -524,11 +526,11 @@ export default function LoginPage() {
 
         {/* Divider */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "20px 0 16px" }}>
-          <div style={{ flex: 1, height: "2px", background: "#000" }} />
+          <div style={{ flex: 1, height: "2px", background: "var(--ink)" }} />
           <span style={{ fontFamily: "var(--mono)", fontSize: "9.5px", fontWeight: 800, letterSpacing: ".1em" }}>
             OR SOCIAL OAUTH
           </span>
-          <div style={{ flex: 1, height: "2px", background: "#000" }} />
+          <div style={{ flex: 1, height: "2px", background: "var(--ink)" }} />
         </div>
 
         {/* OAuth Buttons (Paused - Not Yet Implemented) */}
@@ -537,7 +539,7 @@ export default function LoginPage() {
             type="button"
             onClick={() => handleOAuthClick("GitHub")}
             style={{
-              border: "2px solid #000",
+              border: "2px solid var(--ink)",
               background: "#EAEAEA",
               color: "#666",
               padding: "10px 6px",
@@ -560,7 +562,7 @@ export default function LoginPage() {
             type="button"
             onClick={() => handleOAuthClick("Google")}
             style={{
-              border: "2px solid #000",
+              border: "2px solid var(--ink)",
               background: "#EAEAEA",
               color: "#666",
               padding: "10px 6px",
@@ -585,10 +587,12 @@ export default function LoginPage() {
           style={{
             marginTop: "24px",
             paddingTop: "16px",
-            borderTop: "2px solid #000",
+            borderTop: "2px solid var(--ink)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexWrap: "wrap",
+            gap: "8px",
           }}
         >
           <span style={{ fontFamily: "var(--mono)", fontSize: "11px", opacity: 0.6 }}>
@@ -600,7 +604,7 @@ export default function LoginPage() {
               fontFamily: "var(--mono)",
               fontSize: "11px",
               fontWeight: 800,
-              color: "#000",
+              color: "var(--ink)",
               textDecoration: "underline",
             }}
           >

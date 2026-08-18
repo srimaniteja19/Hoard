@@ -135,7 +135,8 @@ export const ThemePicker: React.FC = () => {
             border: "1px solid var(--ink)",
           }}
         />
-        <span>THEME: {activeThemeMeta.badge}</span>
+        <span className="theme-picker-prefix">THEME: </span>
+        <span>{activeThemeMeta.badge}</span>
         <span style={{ fontSize: "8px" }}>{isOpen ? "▲" : "▼"}</span>
       </button>
 

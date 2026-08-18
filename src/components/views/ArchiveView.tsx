@@ -612,24 +612,9 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({
       </div>
 
       {/* ─── Main Vault Grid & Reader Layout ───────────────────────────────── */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: activeReaderBookmark ? "1fr 1fr" : "1fr",
-          gap: "20px",
-          alignItems: "start",
-        }}
-      >
+      <div className={`archive-vault${activeReaderBookmark ? " has-reader" : ""}`}>
         {/* Bookmarks List */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: activeReaderBookmark
-              ? "1fr"
-              : "repeat(auto-fill, minmax(320px, 1fr))",
-            gap: "14px",
-          }}
-        >
+        <div className="archive-vault-list">
           {filteredItems.length === 0 ? (
             <div
               style={{
@@ -1037,6 +1022,7 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({
         {/* ─── Integrated Interactive Reader Drawer ────────────────────────── */}
         {activeReaderBookmark && (
           <div
+            className="archive-reader"
             style={{
               background: "var(--paper)",
               border: "var(--bd)",
@@ -1045,10 +1031,6 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({
               display: "flex",
               flexDirection: "column",
               gap: "16px",
-              position: "sticky",
-              top: "20px",
-              maxHeight: "calc(100vh - 80px)",
-              overflowY: "auto",
             }}
           >
             <div

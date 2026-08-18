@@ -31,5 +31,14 @@
   { "name": "www only routes at start", "input": "share www.example.com with the team", "expected": { "destination": "agenda" } },
   { "name": "learned colon", "input": "learned: queues need backpressure", "expected": { "destination": "record", "body": "queues need backpressure" } },
   { "name": "agenda reminder and tags", "input": "Review draft at 3pm #work #writing", "expected": { "destination": "agenda", "chips": [{ "label": "25 min" }, { "label": "SHALLOW" }, { "label": "⏰ 15:00" }, { "label": "#work" }, { "label": "#writing" }] } },
-  { "name": "long record preview", "input": "til abcdefghijklmnopqrstuvwxyz 1234567890 EXTRA", "expected": { "destination": "record", "chips": [{ "label": "RECORD" }, { "label": "abcdefghijklmnopqrstuvwxyz 1234567890 EX" }] } }
+  { "name": "long record preview", "input": "til abcdefghijklmnopqrstuvwxyz 1234567890 EXTRA", "expected": { "destination": "record", "chips": [{ "label": "RECORD" }, { "label": "abcdefghijklmnopqrstuvwxyz 1234567890 EX" }] } },
+  { "name": "slash palette only", "input": "/to", "expected": { "destination": null, "command": null, "chips": [{ "label": "COMMANDS" }, { "label": "/to" }] } },
+  { "name": "slash bookmark", "input": "/bookmark https://example.com/post", "expected": { "destination": "queue", "command": "bookmark", "kind": "ART", "host": "example.com" } },
+  { "name": "slash bm alias without scheme", "input": "/bm example.com", "expected": { "destination": "queue", "command": "bookmark", "url": "https://example.com", "host": "example.com" } },
+  { "name": "slash til body", "input": "/til redis is single-threaded", "expected": { "destination": "record", "command": "til", "tilType": "FACT", "body": "redis is single-threaded" } },
+  { "name": "slash til quote type", "input": "/til quote clocks drift", "expected": { "destination": "record", "command": "til", "tilType": "QUOTE", "body": "clocks drift" } },
+  { "name": "slash quote alias", "input": "/quote clocks drift", "expected": { "destination": "record", "command": "quote", "tilType": "QUOTE", "body": "clocks drift" } },
+  { "name": "slash todo strips command", "input": "/todo Call the vet tomorrow ~10m", "expected": { "destination": "agenda", "command": "todo", "text": "Call the vet tomorrow ~10m", "chips": [{ "label": "/TODO" }, { "label": "10 min" }, { "label": "ERRAND" }, { "label": "+1d" }] } },
+  { "name": "slash unknown", "input": "/nope hello", "expected": { "destination": null, "chips": [{ "label": "UNKNOWN" }, { "label": "/nope" }] } },
+  { "name": "slash empty todo stays uncommitted", "input": "/todo ", "expected": { "destination": "agenda", "command": "todo", "text": null } }
 ]

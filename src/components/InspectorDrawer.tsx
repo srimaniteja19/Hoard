@@ -224,21 +224,22 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
 
           {/* CHAPTERS & SECTIONS BREAKDOWN */}
           <div className="fld" style={{ marginTop: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
               <span className="flbl">CHAPTERS & SECTIONS</span>
               {onAddChapter && (
                 <button
                   onClick={() => setShowAddChap(!showAddChap)}
                   style={{
                     background: "#B6FF3C",
-                    border: "1px solid #000",
-                    padding: "2px 6px",
+                    border: "1px solid var(--ink)",
+                    padding: "8px 10px",
                     fontSize: "10px",
                     fontWeight: 800,
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
                     gap: "2px",
+                    minHeight: "36px",
                   }}
                 >
                   <Plus size={12} /> ADD CHAPTER
@@ -253,27 +254,25 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                   <div
                     key={chap.id}
                     style={{
-                      border: "1.5px solid #000",
-                      background: chap.unread ? "#FFF" : "#F0F0F0",
+                      border: "1.5px solid var(--ink)",
+                      background: chap.unread ? "var(--paper)" : "var(--cream)",
                       padding: "8px 10px",
                       fontSize: "11px",
                       fontFamily: "var(--mono)",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
                     }}
+                    className="inspector-chapter-row"
                   >
                     <div>
                       <div style={{ fontWeight: 800 }}>⚡ {chap.t}</div>
                       <div style={{ fontSize: "10px", color: "#666" }}>{chap.mins} min chapter</div>
                     </div>
 
-                    <div style={{ display: "flex", gap: "6px" }}>
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                       <button
                         onClick={() => window.open(chap.url, "_blank")}
                         style={{
                           background: "#00F0FF",
-                          border: "1px solid #000",
+                          border: "1px solid var(--ink)",
                           padding: "2px 6px",
                           fontSize: "9px",
                           fontWeight: 800,
@@ -287,7 +286,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                         style={{
                           background: chap.unread ? "#FF007A" : "#B6FF3C",
                           color: chap.unread ? "#fff" : "#000",
-                          border: "1px solid #000",
+                          border: "1px solid var(--ink)",
                           padding: "2px 6px",
                           fontSize: "9px",
                           fontWeight: 800,
@@ -308,23 +307,23 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
 
             {/* Add Chapter Form */}
             {showAddChap && (
-              <form onSubmit={handleCreateChapter} style={{ marginTop: "10px", background: "#FFFDF8", border: "2px solid #000", padding: "10px" }}>
+              <form onSubmit={handleCreateChapter} style={{ marginTop: "10px", background: "var(--paper)", border: "2px solid var(--ink)", padding: "10px" }}>
                 <input
                   type="text"
                   placeholder="Chapter title (e.g. Chapter 3: Self-Attention)"
                   value={chapTitle}
                   onChange={(e) => setChapTitle(e.target.value)}
-                  style={{ width: "100%", padding: "6px", fontSize: "11px", fontFamily: "var(--mono)", border: "1.5px solid #000", marginBottom: "8px" }}
+                  style={{ width: "100%", padding: "6px", fontSize: "11px", fontFamily: "var(--mono)", border: "1.5px solid var(--ink)", marginBottom: "8px" }}
                   required
                 />
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
+                <div className="inspector-chapter-form" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
                   <div>
                     <label style={{ fontSize: "9px", fontWeight: 800 }}>ESTIMATED MINS</label>
                     <input
                       type="number"
                       value={chapMins}
                       onChange={(e) => setChapMins(Number(e.target.value))}
-                      style={{ width: "100%", padding: "4px", fontSize: "11px", fontFamily: "var(--mono)", border: "1.5px solid #000" }}
+                      style={{ width: "100%", padding: "4px", fontSize: "11px", fontFamily: "var(--mono)", border: "1.5px solid var(--ink)" }}
                     />
                   </div>
                   <div>
@@ -334,13 +333,13 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                       value={chapSec}
                       onChange={(e) => setChapSec(Number(e.target.value))}
                       placeholder="e.g. 1420 for ?t=1420"
-                      style={{ width: "100%", padding: "4px", fontSize: "11px", fontFamily: "var(--mono)", border: "1.5px solid #000" }}
+                      style={{ width: "100%", padding: "4px", fontSize: "11px", fontFamily: "var(--mono)", border: "1.5px solid var(--ink)" }}
                     />
                   </div>
                 </div>
                 <button
                   type="submit"
-                  style={{ background: "#B6FF3C", border: "2px solid #000", padding: "4px 12px", fontWeight: 800, fontSize: "11px", cursor: "pointer", width: "100%" }}
+                  style={{ background: "#B6FF3C", border: "2px solid var(--ink)", padding: "4px 12px", fontWeight: 800, fontSize: "11px", cursor: "pointer", width: "100%" }}
                 >
                   SAVE CHAPTER ITEM
                 </button>
@@ -357,7 +356,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                   STATUS: {bookmark.driftStatus === "changed" ? "⚡ DRIFT DETECTED" : bookmark.driftStatus === "404_preserved" ? "🛡️ 404 PRESERVED" : "CLEAN"}
                 </span>
                 {bookmark.driftPercent ? (
-                  <span style={{ fontSize: "10px", fontWeight: 800, background: "#FFE600", color: "#000", padding: "1px 5px", border: "1px solid #000" }}>
+                  <span style={{ fontSize: "10px", fontWeight: 800, background: "#FFE600", color: "#000", padding: "1px 5px", border: "1px solid var(--ink)" }}>
                     {bookmark.driftPercent}% CHANGE
                   </span>
                 ) : null}
@@ -369,7 +368,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                     onClick={() => onCheckDrift(bookmark.id)}
                     style={{
                       background: "#FFE600",
-                      border: "1.5px solid #000",
+                      border: "1.5px solid var(--ink)",
                       padding: "4px 10px",
                       fontSize: "10px",
                       fontWeight: 800,
@@ -385,7 +384,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                     onClick={() => onOpenDiff(bookmark)}
                     style={{
                       background: "#00F0FF",
-                      border: "1.5px solid #000",
+                      border: "1.5px solid var(--ink)",
                       padding: "4px 10px",
                       fontSize: "10px",
                       fontWeight: 800,
@@ -419,7 +418,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                     value={bookmark.ty}
                     onChange={(e) => onChangeKind && onChangeKind(bookmark.id, e.target.value as KindType)}
                     style={{
-                      border: "1.5px solid #000",
+                      border: "1.5px solid var(--ink)",
                       background: typeMeta.c,
                       color: typeMeta.fg,
                       padding: "2px 6px",
@@ -473,7 +472,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                 onChange={(e) => onChangeCollection(bookmark.id, e.target.value)}
                 style={{
                   width: "100%",
-                  border: "2px solid #000",
+                  border: "2px solid var(--ink)",
                   background: "#FFE600",
                   padding: "6px 8px",
                   fontFamily: "var(--mono)",
@@ -530,7 +529,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
           </div>
 
           {/* 💡 OUTCOME LEDGER / BOOKMARK BACKLINKS */}
-          <div className="fld" style={{ marginTop: "16px", background: "var(--paper)", border: "2px solid #000", padding: "12px" }}>
+          <div className="fld" style={{ marginTop: "16px", background: "var(--paper)", border: "2px solid var(--ink)", padding: "12px" }}>
             <span className="flbl" style={{ marginBottom: "8px", display: "flex", alignItems: "center", gap: "4px" }}>
               <Lightbulb size={13} fill="#FFE600" color="#000" /> OUTCOME LEDGER ({dischargedTils.length} TILS CAME OUT OF THIS)
             </span>
@@ -550,17 +549,17 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                     style={{
                       textDecoration: "none",
                       color: "inherit",
-                      background: "#FFFDF8",
-                      border: "1.5px solid #000",
+                      background: "var(--paper)",
+                      border: "1.5px solid var(--ink)",
                       padding: "6px 8px",
                       fontFamily: "var(--mono)",
                       fontSize: "11px",
                       display: "block",
-                      boxShadow: "2px 2px 0 #000",
+                      boxShadow: "2px 2px 0 var(--ink)",
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, marginBottom: "2px" }}>
-                      <span style={{ background: "#00F0FF", color: "#000", padding: "0 4px", fontSize: "9px", border: "1px solid #000" }}>
+                      <span style={{ background: "#00F0FF", color: "#000", padding: "0 4px", fontSize: "9px", border: "1px solid var(--ink)" }}>
                         {til.type}
                       </span>
                       <span>#{til.shortHash}</span>

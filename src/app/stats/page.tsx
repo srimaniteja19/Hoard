@@ -5,6 +5,7 @@ import { Bookmark, Collection, KindType } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import Link from "next/link";
 import { Flame } from "lucide-react";
+import { AppNav } from "@/components/AppNav";
 
 import { TilItem } from "@/components/til/TilFeedItem";
 
@@ -126,6 +127,8 @@ export default function AnalyticsPage() {
           display: "grid",
           placeItems: "center",
           height: "100vh",
+          height: "100dvh",
+          height: "100dvh",
           fontFamily: "var(--mono), monospace",
           fontWeight: 800,
           fontSize: "18px",
@@ -157,11 +160,8 @@ export default function AnalyticsPage() {
 
   return (
     <div
-      className="stats-page-container"
+      className="dvh-page stats-page-container"
       style={{
-        height: "100vh",
-        overflowY: "auto",
-        WebkitOverflowScrolling: "touch",
         background: "var(--cream)",
         color: "var(--ink)",
         padding: "20px",
@@ -169,51 +169,36 @@ export default function AnalyticsPage() {
     >
       {/* Top Bar */}
       <div
+        className="page-app-header"
         style={{
           maxWidth: "1200px",
           margin: "0 auto 24px auto",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          borderBottom: "3px solid #000",
+          borderBottom: "3px solid var(--ink)",
           paddingBottom: "16px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", minWidth: 0 }}>
+          <Link
+            href="/"
+            className="app-wordmark"
             style={{
               fontFamily: "var(--mono)",
               fontWeight: 800,
               fontSize: "18px",
               background: "#FFE600",
-              border: "3px solid #000",
-              boxShadow: "3px 3px 0 #000",
+              border: "3px solid var(--ink)",
+              boxShadow: "3px 3px 0 var(--ink)",
               padding: "4px 12px",
             }}
           >
             HOARD
-          </div>
+          </Link>
           <span style={{ fontFamily: "var(--mono)", fontSize: "14px", fontWeight: 800 }}>
-            📊 READING & CONTENT ANALYTICS
+            ANALYTICS
           </span>
         </div>
 
-        <Link
-          href="/"
-          style={{
-            fontFamily: "var(--mono)",
-            fontSize: "11px",
-            fontWeight: 800,
-            border: "2px solid #000",
-            background: "#B6FF3C",
-            color: "#000",
-            padding: "6px 14px",
-            textDecoration: "none",
-            boxShadow: "2px 2px 0 #000",
-          }}
-        >
-          ← BACK TO BOARD
-        </Link>
+        <AppNav />
       </div>
 
       <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gap: "24px" }}>
@@ -221,9 +206,9 @@ export default function AnalyticsPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
           <div
             style={{
-              border: "3px solid #000",
-              background: "#FFFDF8",
-              boxShadow: "4px 4px 0 #000",
+              border: "3px solid var(--ink)",
+              background: "var(--paper)",
+              boxShadow: "4px 4px 0 var(--ink)",
               padding: "16px",
               fontFamily: "var(--mono)",
             }}
@@ -235,9 +220,9 @@ export default function AnalyticsPage() {
 
           <div
             style={{
-              border: "3px solid #000",
+              border: "3px solid var(--ink)",
               background: "#B6FF3C",
-              boxShadow: "4px 4px 0 #000",
+              boxShadow: "4px 4px 0 var(--ink)",
               padding: "16px",
               fontFamily: "var(--mono)",
             }}
@@ -249,10 +234,10 @@ export default function AnalyticsPage() {
 
           <div
             style={{
-              border: "3px solid #000",
+              border: "3px solid var(--ink)",
               background: "#FF007A",
               color: "#fff",
-              boxShadow: "4px 4px 0 #000",
+              boxShadow: "4px 4px 0 var(--ink)",
               padding: "16px",
               fontFamily: "var(--mono)",
             }}
@@ -264,9 +249,9 @@ export default function AnalyticsPage() {
 
           <div
             style={{
-              border: "3px solid #000",
+              border: "3px solid var(--ink)",
               background: "#FFE600",
-              boxShadow: "4px 4px 0 #000",
+              boxShadow: "4px 4px 0 var(--ink)",
               padding: "16px",
               fontFamily: "var(--mono)",
             }}
@@ -280,9 +265,9 @@ export default function AnalyticsPage() {
         {/* 💡 TIL GAINS LEDGER & DISCHARGE RATE CARD */}
         <div
           style={{
-            border: "4px solid #000",
+            border: "4px solid var(--ink)",
             background: "#00F0FF",
-            boxShadow: "6px 6px 0 #000",
+            boxShadow: "6px 6px 0 var(--ink)",
             padding: "24px",
             fontFamily: "var(--mono)",
             marginBottom: "32px",
@@ -299,10 +284,10 @@ export default function AnalyticsPage() {
                 fontWeight: 800,
                 color: "#000",
                 background: "#FFE600",
-                border: "2px solid #000",
+                border: "2px solid var(--ink)",
                 padding: "5px 10px",
                 textDecoration: "none",
-                boxShadow: "2px 2px 0 #000",
+                boxShadow: "2px 2px 0 var(--ink)",
               }}
             >
               OPEN TIL ARCHIVE →
@@ -310,7 +295,7 @@ export default function AnalyticsPage() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
-            <div style={{ background: "#FFFDF8", border: "2px solid #000", padding: "14px" }}>
+            <div style={{ background: "var(--paper)", border: "2px solid var(--ink)", padding: "14px" }}>
               <div style={{ fontSize: "10px", fontWeight: 800, color: "#666" }}>DISCHARGE RATE</div>
               <div style={{ fontSize: "36px", fontWeight: 900, color: "#000", margin: "4px 0" }}>
                 {stats.dischargeRate}%
@@ -320,7 +305,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            <div style={{ background: "#FFFDF8", border: "2px solid #000", padding: "14px" }}>
+            <div style={{ background: "var(--paper)", border: "2px solid var(--ink)", padding: "14px" }}>
               <div style={{ fontSize: "10px", fontWeight: 800, color: "#666" }}>TOTAL EXTRACTED GAINS</div>
               <div style={{ fontSize: "36px", fontWeight: 900, color: "#000", margin: "4px 0" }}>
                 {stats.totalTil} TILs
@@ -335,14 +320,14 @@ export default function AnalyticsPage() {
         {/* ⚡ QUEUE BURN-DOWN & BACKLOG VELOCITY CARD */}
         <div
           style={{
-            border: "4px solid #000",
+            border: "4px solid var(--ink)",
             background: "#FFE600",
-            boxShadow: "6px 6px 0 #000",
+            boxShadow: "6px 6px 0 var(--ink)",
             padding: "24px",
             fontFamily: "var(--mono)",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <Flame size={28} color="#000" />
               <h2 style={{ fontSize: "20px", fontWeight: 900, textTransform: "uppercase", margin: 0 }}>
@@ -351,9 +336,9 @@ export default function AnalyticsPage() {
             </div>
             <span
               style={{
-                background: "#000",
+                background: "var(--ink)",
                 color: "#FFE600",
-                border: "2px solid #000",
+                border: "2px solid var(--ink)",
                 padding: "4px 12px",
                 fontWeight: 900,
                 fontSize: "12px",
@@ -372,8 +357,8 @@ export default function AnalyticsPage() {
           </div>
 
           {/* SVG Queue Depth Sparkline Chart */}
-          <div style={{ background: "#FFFDF8", border: "3px solid #000", padding: "16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontWeight: 800, marginBottom: "10px" }}>
+          <div style={{ background: "var(--paper)", border: "3px solid var(--ink)", padding: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontWeight: 800, marginBottom: "10px", flexWrap: "wrap", gap: "6px" }}>
               <span>📉 QUEUE DEPTH OVER TIME (PAST 8 WEEKS)</span>
               <span>CURRENT BACKLOG: {stats.unread} ITEMS</span>
             </div>
@@ -416,9 +401,9 @@ export default function AnalyticsPage() {
         {/* Read Ratio & Hours Progress Bar */}
         <div
           style={{
-            border: "3px solid #000",
-            background: "#FFFDF8",
-            boxShadow: "5px 5px 0 #000",
+            border: "3px solid var(--ink)",
+            background: "var(--paper)",
+            boxShadow: "5px 5px 0 var(--ink)",
             padding: "20px",
             fontFamily: "var(--mono)",
           }}
@@ -429,7 +414,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Progress Bar Container */}
-          <div style={{ width: "100%", height: "24px", border: "2px solid #000", background: "#FF007A", display: "flex" }}>
+          <div style={{ width: "100%", height: "24px", border: "2px solid var(--ink)", background: "#FF007A", display: "flex" }}>
             <div
               style={{
                 width: `${stats.readPercent}%`,
@@ -449,9 +434,9 @@ export default function AnalyticsPage() {
         {/* Content Type Breakdown */}
         <div
           style={{
-            border: "3px solid #000",
-            background: "#FFFDF8",
-            boxShadow: "5px 5px 0 #000",
+            border: "3px solid var(--ink)",
+            background: "var(--paper)",
+            boxShadow: "5px 5px 0 var(--ink)",
             padding: "20px",
             fontFamily: "var(--mono)",
           }}
@@ -467,8 +452,8 @@ export default function AnalyticsPage() {
               const meta = TYPES[k];
 
               return (
-                <div key={k} style={{ display: "grid", gridTemplateColumns: "100px 1fr 60px", alignItems: "center", gap: "12px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 800, fontSize: "12px" }}>
+                <div key={k} className="kind-breakdown-row">
+                  <div className="kind-breakdown-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 800, fontSize: "12px" }}>
                     <span
                       style={{
                         background: meta.c,
@@ -483,7 +468,7 @@ export default function AnalyticsPage() {
                     {meta.name}
                   </div>
 
-                  <div style={{ height: "16px", border: "2px solid #000", background: "#f0f0f0", overflow: "hidden" }}>
+                  <div className="kind-breakdown-bar" style={{ height: "16px", border: "2px solid var(--ink)", background: "var(--cream)", overflow: "hidden" }}>
                     <div
                       style={{
                         width: `${pct}%`,
@@ -493,7 +478,7 @@ export default function AnalyticsPage() {
                     />
                   </div>
 
-                  <div style={{ fontWeight: 800, fontSize: "12px", textAlign: "right" }}>
+                  <div className="kind-breakdown-count" style={{ fontWeight: 800, fontSize: "12px", textAlign: "right" }}>
                     {count} ({pct}%)
                   </div>
                 </div>
@@ -505,9 +490,9 @@ export default function AnalyticsPage() {
         {/* Top Collections Breakdown */}
         <div
           style={{
-            border: "3px solid #000",
-            background: "#FFFDF8",
-            boxShadow: "5px 5px 0 #000",
+            border: "3px solid var(--ink)",
+            background: "var(--paper)",
+            boxShadow: "5px 5px 0 var(--ink)",
             padding: "20px",
             fontFamily: "var(--mono)",
           }}
@@ -521,7 +506,7 @@ export default function AnalyticsPage() {
               <div
                 key={c.name}
                 style={{
-                  border: "2px solid #000",
+                  border: "2px solid var(--ink)",
                   padding: "10px",
                   background: "var(--cream)",
                   display: "flex",
@@ -533,7 +518,7 @@ export default function AnalyticsPage() {
                   <span style={{ background: c.color, border: "1px solid #000", padding: "2px 6px" }}>{c.icon}</span>
                   {c.name}
                 </div>
-                <span style={{ fontWeight: 800, fontSize: "14px", background: "#000", color: "#FFE600", padding: "1px 6px" }}>
+                <span style={{ fontWeight: 800, fontSize: "14px", background: "var(--ink)", color: "var(--yel)", padding: "1px 6px" }}>
                   {c.count}
                 </span>
               </div>

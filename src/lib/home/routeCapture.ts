@@ -1,6 +1,8 @@
 import { detectKindFromUrl } from "@/lib/detectKind";
 import { parseTodo, type ParsedTodo } from "@/lib/todos/parse";
 import type { KindType } from "@/types";
+import type { TilType } from "@/db/schema";
+import { parseSlash } from "@/lib/home/slashCommands";
 
 export type CaptureDestination = "queue" | "record" | "agenda";
 
@@ -15,7 +17,16 @@ export type CapturePreview = {
   text: string | null;
   chips: CaptureChip[];
   parsed: ParsedTodo | null;
+  command: string | null;
+  tilType: TilType | null;
 };
+
+function normalizeCaptureInput(input: string): string {
+  const leading = input.trimStart();
+  if (!leading.startsWith("/")) return input.trim();
+  const trimmed = leading.trimEnd();
+  return leading !== leading.trimEnd() ? `${trimmed} ` : trimmed;
+}
 
 function emptyPreview(): CapturePreview {
   return {
@@ -27,10 +38,12 @@ function emptyPreview(): CapturePreview {
     text: null,
     chips: [],
     parsed: null,
+    command: null,
+    tilType: null,
   };
 }
 
-function queuePreview(trimmed: string): CapturePreview {
+function queuePreview(trimmed: string, command: string | null = null): CapturePreview {
   const url = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   const kind = detectKindFromUrl(url) ?? "ART";
   const minutes = kind === "VID" ? 45 : kind === "PPR" ? 40 : 12;
@@ -48,7 +61,9 @@ function queuePreview(trimmed: string): CapturePreview {
     url,
     kind,
     host,
+    command,
     chips: [
+      ...(command ? [{ label: `/${command.toUpperCase()}` }] : []),
       { label: kind },
       ...(host ? [{ label: host }] : []),
       { label: `${minutes} min` },
@@ -56,7 +71,11 @@ function queuePreview(trimmed: string): CapturePreview {
   };
 }
 
-function recordPreview(trimmed: string): CapturePreview {
+function recordPreview(
+  trimmed: string,
+  command: string | null = null,
+  tilType: TilType | null = null,
+): CapturePreview {
   const body = /^\s*(?:til|learned)\b/i.test(trimmed)
     ? trimmed.replace(/^\s*(?:til|learned)\b[\s:;,.!?—–-]*/i, "")
     : trimmed;
@@ -65,7 +84,13 @@ function recordPreview(trimmed: string): CapturePreview {
     ...emptyPreview(),
     destination: "record",
     body,
-    chips: [{ label: "RECORD" }, { label: body.slice(0, 40) }],
+    command,
+    tilType,
+    chips: [
+      { label: "RECORD" },
+      ...(tilType ? [{ label: tilType }] : []),
+      { label: body.slice(0, 40) },
+    ],
   };
 }
 
@@ -77,9 +102,11 @@ function agendaPreview(
   trimmed: string,
   today: Date,
   tz: string,
+  command: string | null = null,
 ): CapturePreview {
   const parsed = parseTodo(trimmed, today, tz);
   const chips: CaptureChip[] = [
+    ...(command ? [{ label: `/${command.toUpperCase()}` }] : []),
     { label: `${parsed.estimatedMinutes} min` },
     { label: parsed.energy },
   ];
@@ -115,7 +142,75 @@ function agendaPreview(
     text: trimmed,
     chips,
     parsed,
+    command,
   };
+}
+
+function slashPreview(
+  input: string,
+  today: Date,
+  tz: string,
+): CapturePreview | null {
+  const slash = parseSlash(input);
+  if (slash.kind === "none") return null;
+
+  if (slash.kind === "palette") {
+    return {
+      ...emptyPreview(),
+      chips: slash.query
+        ? [{ label: "COMMANDS" }, { label: `/${slash.query}` }]
+        : [{ label: "COMMANDS" }],
+    };
+  }
+
+  if (slash.kind === "unknown") {
+    return {
+      ...emptyPreview(),
+      chips: [{ label: "UNKNOWN" }, { label: `/${slash.token}` }],
+    };
+  }
+
+  const command = slash.entry.name;
+  const dest = slash.entry.destination;
+
+  if (dest === "queue") {
+    if (!slash.rest) {
+      return {
+        ...emptyPreview(),
+        destination: "queue",
+        command,
+        chips: [{ label: "QUEUE" }, { label: `/${command.toUpperCase()}` }],
+      };
+    }
+    return queuePreview(slash.rest, command);
+  }
+
+  if (dest === "record") {
+    if (!slash.rest) {
+      return {
+        ...emptyPreview(),
+        destination: "record",
+        command,
+        tilType: slash.tilType,
+        chips: [
+          { label: "RECORD" },
+          { label: `/${command.toUpperCase()}` },
+          ...(slash.tilType ? [{ label: slash.tilType }] : []),
+        ],
+      };
+    }
+    return recordPreview(slash.rest, command, slash.tilType);
+  }
+
+  if (!slash.rest) {
+    return {
+      ...emptyPreview(),
+      destination: "agenda",
+      command,
+      chips: [{ label: "AGENDA" }, { label: `/${command.toUpperCase()}` }],
+    };
+  }
+  return agendaPreview(slash.rest, today, tz, command);
 }
 
 export function routeCapture(
@@ -123,9 +218,13 @@ export function routeCapture(
   today: Date,
   tz: string,
 ): CapturePreview {
-  const trimmed = input.trim();
+  const trimmed = normalizeCaptureInput(input);
 
   if (!trimmed) return emptyPreview();
+
+  const fromSlash = slashPreview(trimmed, today, tz);
+  if (fromSlash) return fromSlash;
+
   if (/^(?:https?:\/\/|www\.)/i.test(trimmed)) {
     return queuePreview(trimmed);
   }
@@ -137,4 +236,11 @@ export function routeCapture(
     return recordPreview(trimmed);
   }
   return agendaPreview(trimmed, today, tz);
+}
+
+export function canCommitCapture(preview: CapturePreview): boolean {
+  if (!preview.destination) return false;
+  if (preview.destination === "queue") return Boolean(preview.url && preview.host);
+  if (preview.destination === "record") return Boolean(preview.body?.trim());
+  return Boolean(preview.text?.trim());
 }

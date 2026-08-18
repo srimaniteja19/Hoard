@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, type CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { AppNav } from "@/components/AppNav";
 
 type Energy = "DEEP" | "SHALLOW" | "ERRAND";
 
@@ -163,26 +164,56 @@ export default function TodoHistoryPage() {
   const today = todayDateStr();
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--cream)", color: "var(--ink)", fontFamily: "var(--grot)" }}>
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
-          <Link
-            href="/todos"
+    <div className="page-scroll" style={{ background: "var(--cream)", color: "var(--ink)", fontFamily: "var(--grot)" }}>
+      <header
+        className="page-app-header"
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          background: "var(--paper)",
+          borderBottom: "var(--bd)",
+          boxShadow: "var(--sh-sm)",
+          padding: "10px 16px",
+          paddingTop: "max(10px, env(safe-area-inset-top))",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <Link href="/" className="app-wordmark">HOARD</Link>
+          <span style={{ fontFamily: "var(--mono)", fontSize: "12px", opacity: 0.5 }}>/</span>
+          <h1
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
               fontFamily: "var(--mono)",
               fontSize: "12px",
-              fontWeight: 800,
-              color: "var(--ink)",
-              textDecoration: "none",
+              fontWeight: 900,
+              background: "var(--yel, #FFE600)",
+              color: "#000",
+              padding: "2px 6px",
+              border: "1.5px solid var(--ink)",
+              margin: 0,
             }}
           >
-            <ArrowLeft size={14} /> TODAY
-          </Link>
-          <h1 style={{ fontFamily: "var(--grot)", fontWeight: 900, fontSize: "22px", margin: 0 }}>HISTORY</h1>
+            HISTORY
+          </h1>
         </div>
+        <AppNav />
+        <Link
+          href="/todos"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            fontFamily: "var(--mono)",
+            fontSize: "12px",
+            fontWeight: 800,
+            color: "var(--ink)",
+            textDecoration: "none",
+          }}
+        >
+          <ArrowLeft size={14} /> TODAY
+        </Link>
+      </header>
+      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "clamp(16px, 4vw, 32px) clamp(12px, 4vw, 24px)" }}>
 
         {/* Month calendar — TODOS.md §8 */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
@@ -283,9 +314,9 @@ export default function TodoHistoryPage() {
                       const over = actual !== null && actual > t.estimatedMinutes;
                       const under = actual !== null && actual < t.estimatedMinutes;
                       return (
-                        <div key={t.id} style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono)", fontSize: "12px", padding: "4px 0", borderBottom: "1px solid var(--ink)" }}>
-                          <span>{t.title}</span>
-                          <span style={{ color: over ? "var(--pink)" : under ? "var(--lime)" : "inherit", opacity: actual === null ? 0.4 : 1 }}>
+                        <div key={t.id} style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontFamily: "var(--mono)", fontSize: "12px", padding: "4px 0", borderBottom: "1px solid var(--ink)", flexWrap: "wrap" }}>
+                          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 140px" }}>{t.title}</span>
+                          <span style={{ color: over ? "var(--pink)" : under ? "var(--lime)" : "inherit", opacity: actual === null ? 0.4 : 1, flexShrink: 0 }}>
                             {t.estimatedMinutes}m est · {actual !== null ? `${actual}m actual` : "no actual recorded"}
                           </span>
                         </div>
@@ -362,8 +393,12 @@ function navButtonStyle(): CSSProperties {
     background: "var(--surface)",
     border: "2px solid var(--ink)",
     cursor: "pointer",
-    padding: "4px 8px",
+    padding: "8px 12px",
     display: "flex",
+    minWidth: "44px",
+    minHeight: "44px",
+    alignItems: "center",
+    justifyContent: "center",
   };
 }
 
@@ -373,7 +408,14 @@ function CalibrationScatter({ points }: { points: { estimated: number; actual: n
   const scale = (v: number) => (v / max) * size;
 
   return (
-    <svg width={size + 20} height={size + 20} role="img" aria-label="Estimate vs actual scatter plot">
+    <svg
+      width={size + 20}
+      height={size + 20}
+      viewBox={`0 0 ${size + 20} ${size + 20}`}
+      style={{ maxWidth: "100%", height: "auto" }}
+      role="img"
+      aria-label="Estimate vs actual scatter plot"
+    >
       <g transform="translate(10,10)">
         <line x1={0} y1={size} x2={size} y2={0} stroke="var(--ink)" strokeWidth={1} strokeDasharray="3,3" opacity={0.4} />
         <line x1={0} y1={size} x2={size} y2={size} stroke="var(--ink)" strokeWidth={1} opacity={0.4} />

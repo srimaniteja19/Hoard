@@ -41,9 +41,9 @@ export function DiffViewerModal({
           width: "100%",
           maxWidth: "800px",
           maxHeight: "85vh",
-          background: "#FFFDF8",
-          border: "4px solid #000",
-          boxShadow: "10px 10px 0 #000",
+          background: "var(--paper)",
+          border: "4px solid var(--ink)",
+          boxShadow: "10px 10px 0 var(--ink)",
           display: "flex",
           flexDirection: "column",
           fontFamily: "var(--mono), monospace",
@@ -55,15 +55,17 @@ export function DiffViewerModal({
         <div
           style={{
             padding: "16px 20px",
-            borderBottom: "3px solid #000",
+            borderBottom: "3px solid var(--ink)",
             background: is404 ? "#FF007A" : isChanged ? "#FFE600" : "#00F0FF",
             color: is404 ? "#fff" : "#000",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexWrap: "wrap",
+            gap: "8px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 800, fontSize: "15px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 800, fontSize: "15px", minWidth: 0 }}>
             {is404 ? (
               <>
                 <ShieldCheck size={20} /> 🛡️ PRESERVED ARCHIVED COPY (ORIGINAL LINK 404)
@@ -81,10 +83,12 @@ export function DiffViewerModal({
 
           <button
             onClick={onClose}
+            className="icon-hit"
+            aria-label="Close viewer"
             style={{
               background: "#000",
               color: "#fff",
-              border: "2px solid #000",
+              border: "2px solid var(--ink)",
               padding: "4px 8px",
               cursor: "pointer",
               fontWeight: 800,
@@ -95,7 +99,7 @@ export function DiffViewerModal({
         </div>
 
         {/* Info Subheader */}
-        <div style={{ padding: "16px 20px", borderBottom: "2px solid #000", background: "var(--cream)" }}>
+        <div style={{ padding: "16px 20px", borderBottom: "2px solid var(--ink)", background: "var(--cream)" }}>
           <div style={{ fontWeight: 800, fontSize: "16px", marginBottom: "4px" }}>{bookmark.t}</div>
           <div style={{ fontSize: "11px", color: "#555" }}>
             URL: <a href={bookmark.url} target="_blank" rel="noreferrer" style={{ color: "#000", fontWeight: 700 }}>{bookmark.url}</a>
@@ -132,13 +136,11 @@ export function DiffViewerModal({
 
         {/* Footer Actions */}
         <div
+          className="modal-footer-actions"
           style={{
             padding: "14px 20px",
-            borderTop: "3px solid #000",
-            background: "#FFFDF8",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+            borderTop: "3px solid var(--ink)",
+            background: "var(--paper)",
           }}
         >
           <div style={{ fontSize: "11px", fontWeight: 700, color: "#555" }}>
@@ -153,8 +155,8 @@ export function DiffViewerModal({
                 }}
                 style={{
                   background: "#FFE600",
-                  border: "2px solid #000",
-                  boxShadow: "2px 2px 0 #000",
+                  border: "2px solid var(--ink)",
+                  boxShadow: "2px 2px 0 var(--ink)",
                   padding: "6px 14px",
                   fontWeight: 800,
                   fontSize: "12px",
@@ -169,8 +171,8 @@ export function DiffViewerModal({
               onClick={onClose}
               style={{
                 background: "#B6FF3C",
-                border: "2px solid #000",
-                boxShadow: "2px 2px 0 #000",
+                border: "2px solid var(--ink)",
+                boxShadow: "2px 2px 0 var(--ink)",
                 padding: "6px 16px",
                 fontWeight: 800,
                 fontSize: "12px",

@@ -56,6 +56,7 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
           display: "grid",
           placeItems: "center",
           height: "100vh",
+          height: "100dvh",
           fontFamily: "var(--mono), monospace",
           fontWeight: 800,
           fontSize: "18px",
@@ -75,8 +76,8 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
             display: "inline-block",
             background: "#FF007A",
             color: "#fff",
-            border: "3px solid #000",
-            boxShadow: "4px 4px 0 #000",
+            border: "3px solid var(--ink)",
+            boxShadow: "4px 4px 0 var(--ink)",
             padding: "10px 20px",
             fontWeight: 800,
             fontSize: "18px",
@@ -92,11 +93,11 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
             display: "inline-block",
             background: "#FFE600",
             color: "#000",
-            border: "2px solid #000",
+            border: "2px solid var(--ink)",
             padding: "8px 16px",
             fontWeight: 800,
             textDecoration: "none",
-            boxShadow: "2px 2px 0 #000",
+            boxShadow: "2px 2px 0 var(--ink)",
           }}
         >
           ← GO TO HOARD HOME
@@ -109,7 +110,7 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
   const totalMins = bookmarks.reduce((acc, b) => acc + b.mins, 0);
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--cream)", color: "var(--ink)", padding: "20px" }}>
+    <div className="page-scroll" style={{ background: "var(--cream)", color: "var(--ink)", padding: "20px" }}>
       {/* Top Banner */}
       <div
         style={{
@@ -120,7 +121,7 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
           alignItems: "center",
           flexWrap: "wrap",
           gap: "12px",
-          borderBottom: "3px solid #000",
+          borderBottom: "3px solid var(--ink)",
           paddingBottom: "16px",
         }}
       >
@@ -131,8 +132,8 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
               fontWeight: 800,
               fontSize: "18px",
               background: "#FFE600",
-              border: "3px solid #000",
-              boxShadow: "3px 3px 0 #000",
+              border: "3px solid var(--ink)",
+              boxShadow: "3px 3px 0 var(--ink)",
               padding: "4px 12px",
             }}
           >
@@ -150,11 +151,11 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
               fontFamily: "var(--mono)",
               fontSize: "11px",
               fontWeight: 800,
-              border: "2px solid #000",
+              border: "2px solid var(--ink)",
               background: copied ? "#B6FF3C" : "#00F0FF",
               padding: "6px 12px",
               cursor: "pointer",
-              boxShadow: "2px 2px 0 #000",
+              boxShadow: "2px 2px 0 var(--ink)",
             }}
           >
             {copied ? "✓ LINK COPIED!" : "🔗 COPY SHARE LINK"}
@@ -165,12 +166,12 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
               fontFamily: "var(--mono)",
               fontSize: "11px",
               fontWeight: 800,
-              border: "2px solid #000",
+              border: "2px solid var(--ink)",
               background: "#FF007A",
               color: "#fff",
               padding: "6px 12px",
               textDecoration: "none",
-              boxShadow: "2px 2px 0 #000",
+              boxShadow: "2px 2px 0 var(--ink)",
             }}
           >
             OPEN HOARD APP ↗
@@ -182,9 +183,9 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
       <div style={{ maxWidth: "1200px", margin: "0 auto 24px auto" }}>
         <div
           style={{
-            border: "3px solid #000",
-            background: "#FFFDF8",
-            boxShadow: "5px 5px 0 #000",
+            border: "3px solid var(--ink)",
+            background: "var(--paper)",
+            boxShadow: "5px 5px 0 var(--ink)",
             padding: "20px",
           }}
         >
@@ -194,21 +195,21 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
                 width: "36px",
                 height: "36px",
                 display: "block",
-                border: "2px solid #000",
+                border: "2px solid var(--ink)",
                 overflow: "hidden",
               }}
               dangerouslySetInnerHTML={{ __html: sigil(collection.name, 36).svg }}
             />
-            <h1 style={{ fontSize: "28px", fontWeight: 800, margin: 0, textTransform: "uppercase" }}>
+            <h1 style={{ fontSize: "clamp(20px, 6vw, 28px)", fontWeight: 800, margin: 0, textTransform: "uppercase", overflowWrap: "anywhere" }}>
               {collection.name}
             </h1>
           </div>
 
-          <div style={{ display: "flex", gap: "12px", fontFamily: "var(--mono)", fontSize: "12px" }}>
-            <span style={{ border: "1.5px solid #000", background: "#FFE600", padding: "2px 8px", fontWeight: 800 }}>
+          <div style={{ display: "flex", gap: "12px", fontFamily: "var(--mono)", fontSize: "12px", flexWrap: "wrap" }}>
+            <span style={{ border: "1.5px solid var(--ink)", background: "var(--yel)", padding: "2px 8px", fontWeight: 800 }}>
               <b>{bookmarks.length}</b> BOOKMARKS
             </span>
-            <span style={{ border: "1.5px solid #000", background: "#B6FF3C", padding: "2px 8px", fontWeight: 800 }}>
+            <span style={{ border: "1.5px solid var(--ink)", background: "var(--lime)", padding: "2px 8px", fontWeight: 800 }}>
               <b>{Math.floor(totalMins / 60)}H {totalMins % 60}M</b> TOTAL CONTENT
             </span>
           </div>
@@ -222,7 +223,7 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
               fontFamily: "var(--mono)",
               fontSize: "10px",
               fontWeight: 800,
-              border: "2px solid #000",
+              border: "2px solid var(--ink)",
               background: view === "masonry" ? "#000" : "#fff",
               color: view === "masonry" ? "#FFE600" : "#000",
               padding: "4px 10px",
@@ -237,7 +238,7 @@ export default function ShareCollectionPage({ params }: { params: Promise<{ id: 
               fontFamily: "var(--mono)",
               fontSize: "10px",
               fontWeight: 800,
-              border: "2px solid #000",
+              border: "2px solid var(--ink)",
               background: view === "grid" ? "#000" : "#fff",
               color: view === "grid" ? "#FFE600" : "#000",
               padding: "4px 10px",

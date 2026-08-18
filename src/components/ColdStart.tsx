@@ -28,7 +28,7 @@ export const ColdStart: React.FC<ColdStartProps> = ({ onOpenImport, onLoadSample
           height: "56px",
           borderRadius: "50%",
           background: "var(--cyan)",
-          border: "2px solid #000",
+          border: "2px solid var(--ink)",
           display: "grid",
           placeItems: "center",
           margin: "0 auto 20px",
@@ -50,7 +50,7 @@ export const ColdStart: React.FC<ColdStartProps> = ({ onOpenImport, onLoadSample
           onClick={onOpenImport}
           style={{
             background: "var(--paper)",
-            border: "2px solid #000",
+            border: "2px solid var(--ink)",
             boxShadow: "var(--sh-sm)",
             padding: "16px 12px",
             cursor: "pointer",
@@ -74,7 +74,7 @@ export const ColdStart: React.FC<ColdStartProps> = ({ onOpenImport, onLoadSample
           rel="noopener noreferrer"
           style={{
             background: "var(--paper)",
-            border: "2px solid #000",
+            border: "2px solid var(--ink)",
             boxShadow: "var(--sh-sm)",
             padding: "16px 12px",
             cursor: "pointer",
@@ -100,7 +100,7 @@ export const ColdStart: React.FC<ColdStartProps> = ({ onOpenImport, onLoadSample
             style={{
               background: "var(--yel)",
               color: "#000",
-              border: "2px solid #000",
+              border: "2px solid var(--ink)",
               boxShadow: "var(--sh-sm)",
               padding: "16px 12px",
               cursor: "pointer",

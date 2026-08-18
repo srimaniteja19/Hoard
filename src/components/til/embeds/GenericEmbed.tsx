@@ -120,8 +120,8 @@ export const GenericEmbed: React.FC<GenericEmbedProps> = ({ preview, density }) 
               width: "90px",
               height: "65px",
               objectFit: "cover",
-              border: "2px solid #000",
-              boxShadow: "2px 2px 0 #000",
+              border: "2px solid var(--ink)",
+              boxShadow: "2px 2px 0 var(--ink)",
               flexShrink: 0,
               borderRadius: "2px",
             }}

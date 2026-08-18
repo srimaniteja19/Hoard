@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { SortMode, ViewMode } from "@/types";
 import { ThemePicker } from "@/components/ThemePicker";
+import { AppNav } from "@/components/AppNav";
 import { Zap, Search } from "lucide-react";
 import Link from "next/link";
 
@@ -56,17 +57,19 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <span>☰</span> MENU
           </button>
 
-          <div className="mobile-brand">
+          <Link href="/" className="mobile-brand" aria-label="Home">
             <b>HOARD</b>
-          </div>
+          </Link>
         </div>
 
         <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
           <button
             onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className="mobile-find-btn"
             style={{
-              background: showMobileFilters ? "#B6FF3C" : "#FFFDF8",
-              border: "2px solid #000",
+              background: showMobileFilters ? "var(--lime)" : "var(--paper)",
+              border: "2px solid var(--ink)",
+              color: "var(--ink)",
               padding: "5px 7px",
               fontWeight: 800,
               fontSize: "11px",
@@ -75,7 +78,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               display: "flex",
               alignItems: "center",
               gap: "2px",
-              boxShadow: "2px 2px 0 #000",
+              boxShadow: "2px 2px 0 var(--ink)",
             }}
             title="Search & View Settings"
           >
@@ -87,7 +90,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             style={{
               background: "#FFE600",
               color: "#000",
-              border: "2px solid #000",
+              border: "2px solid var(--ink)",
               padding: "5px 7px",
               fontWeight: 900,
               fontSize: "11px",
@@ -96,7 +99,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               display: "flex",
               alignItems: "center",
               gap: "2px",
-              boxShadow: "2px 2px 0 #000",
+              boxShadow: "2px 2px 0 var(--ink)",
               textDecoration: "none",
             }}
           >
@@ -115,6 +118,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </div>
       </div>
 
+      <div className="app-nav-row">
+        <AppNav />
+      </div>
+
       {/* Search box & controls (hidden on mobile unless expanded or on desktop) */}
       <div className={`mobile-collapsible-controls ${showMobileFilters ? "open" : ""}`}>
         <div className="searchbox">
@@ -123,7 +130,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             height="16"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#000"
+            stroke="currentColor"
             strokeWidth="3"
           >
             <circle cx="11" cy="11" r="7" />
@@ -141,25 +148,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         <div className="bar-controls-row">
           <Link
             href="/session"
-            style={{
-              background: "var(--yel, #FFE600)",
-              color: "#000",
-              border: "var(--bd)",
-              boxShadow: "var(--sh-sm)",
-              height: "36px",
-              boxSizing: "border-box",
-              padding: "0 10px",
-              fontWeight: 900,
-              fontFamily: "var(--mono)",
-              fontSize: "11px",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              textDecoration: "none",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
+            className="desktop-start-session-btn"
           >
             <Zap size={13} fill="#000" /> START SESSION
           </Link>

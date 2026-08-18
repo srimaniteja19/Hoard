@@ -295,9 +295,9 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
         {duplicateMatch && (
           <div
             style={{
-              border: "3px solid #000",
+              border: "3px solid var(--ink)",
               background: "#FFE600",
-              boxShadow: "3px 3px 0 #000",
+              boxShadow: "3px 3px 0 var(--ink)",
               padding: "10px 12px",
               margin: "10px 0",
               fontFamily: "var(--mono)",
@@ -305,7 +305,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
               fontWeight: 800,
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
               <span>⚠️ DUPLICATE DETECTED: Saved on {duplicateMatch.when}</span>
               {onSelectExisting && (
                 <button
@@ -314,13 +314,14 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
                     onClose();
                   }}
                   style={{
-                    border: "2px solid #000",
-                    background: "#000",
+                    border: "2px solid var(--ink)",
+                    background: "var(--ink)",
                     color: "#FFE600",
-                    padding: "3px 8px",
+                    padding: "8px 10px",
                     fontSize: "10px",
                     fontWeight: 800,
                     cursor: "pointer",
+                    minHeight: "36px",
                   }}
                 >
                   OPEN EXISTING ↗
@@ -355,7 +356,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
                     value={effectiveKind}
                     onChange={(e) => setManualKind(e.target.value as KindType)}
                     style={{
-                      border: "2px solid #000",
+                      border: "2px solid var(--ink)",
                       background: TYPES[effectiveKind].c,
                       color: TYPES[effectiveKind].fg,
                       padding: "3px 8px",
@@ -364,7 +365,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
                       fontWeight: "900",
                       cursor: "pointer",
                       outline: "none",
-                      boxShadow: "2px 2px 0 #000",
+                      boxShadow: "2px 2px 0 var(--ink)",
                     }}
                   >
                     <option value="ART">ART — Article / Post</option>
@@ -381,7 +382,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
                       type="button"
                       onClick={() => setManualKind(null)}
                       style={{
-                        border: "1.5px solid #000",
+                        border: "1.5px solid var(--ink)",
                         background: "#FFE600",
                         color: "#000",
                         fontSize: "10px",
@@ -414,7 +415,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
                     value={selectedColl}
                     onChange={(e) => setSelectedColl(e.target.value)}
                     style={{
-                      border: "2px solid #000",
+                      border: "2px solid var(--ink)",
                       background: "#FFE600",
                       padding: "4px 8px",
                       fontFamily: "var(--mono)",

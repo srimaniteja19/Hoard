@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ThemePicker } from "@/components/ThemePicker";
 import { UserMenu } from "@/components/UserMenu";
-import { ArrowLeft, Key, Copy, Check, Trash2, Plus, ShieldCheck, Clock, Gauge } from "lucide-react";
+import { AppNav } from "@/components/AppNav";
+import { Key, Copy, Check, Trash2, Plus, ShieldCheck, Clock, Gauge } from "lucide-react";
 
 interface CalibrationResult {
   overall: number | null;
@@ -201,76 +202,47 @@ export default function SettingsPage() {
   };
 
   return (
-    <div
-      className="settings-page-container"
-      style={{
-        height: "100vh",
-        overflowY: "auto",
-        WebkitOverflowScrolling: "touch",
-        background: "var(--bg, #FFFDF8)",
-        color: "var(--ink)",
-      }}
-    >
+    <div className="dvh-page settings-page-container" style={{ background: "var(--cream)", color: "var(--ink)" }}>
       {/* Top Header Navigation Bar */}
       <header
+        className="page-app-header"
         style={{
           background: "var(--paper)",
           borderBottom: "var(--bd)",
           padding: "10px 16px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          paddingTop: "max(10px, env(safe-area-inset-top))",
           position: "sticky",
           top: 0,
           zIndex: 100,
           boxShadow: "var(--sh-sm)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <Link
-            href="/"
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+          <Link href="/" className="app-wordmark">
+            HOARD
+          </Link>
+          <span style={{ fontFamily: "var(--mono)", fontSize: "12px", opacity: 0.5, color: "var(--ink)" }}>/</span>
+          <span
+            className="settings-title-badge"
             style={{
               fontFamily: "var(--mono)",
-              fontSize: "11px",
-              fontWeight: 800,
-              color: "var(--ink)",
-              textDecoration: "none",
-              background: "var(--bg, #FFFDF8)",
-              border: "1.5px solid var(--ink)",
-              padding: "4px 8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              boxShadow: "2px 2px 0 var(--ink)",
+              fontSize: "12px",
+              fontWeight: 900,
+              background: "var(--cyan)",
+              color: "#000",
+              padding: "2px 6px",
+              border: "1px solid var(--ink)",
             }}
           >
-            <ArrowLeft size={13} /> QUEUE
-          </Link>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "14px", fontWeight: 900, color: "var(--ink)" }}>
-              HOARD
-            </span>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "12px", opacity: 0.5, color: "var(--ink)" }}>/</span>
-            <span
-              style={{
-                fontFamily: "var(--mono)",
-                fontSize: "12px",
-                fontWeight: 900,
-                background: "#00F0FF",
-                color: "#000",
-                padding: "2px 6px",
-                border: "1px solid var(--ink)",
-              }}
-            >
-              SETTINGS & EXTENSION TOKENS
-            </span>
-          </div>
+            SETTINGS
+          </span>
         </div>
+
+        <AppNav />
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <ThemePicker />
-          <UserMenu />
+          <UserMenu variant="compact" />
         </div>
       </header>
 
@@ -290,8 +262,8 @@ export default function SettingsPage() {
           <div
             style={{
               background: "#FFE600",
-              border: "3px solid #000",
-              boxShadow: "4px 4px 0 #000",
+              border: "3px solid var(--ink)",
+              boxShadow: "4px 4px 0 var(--ink)",
               padding: "16px",
               marginBottom: "24px",
             }}
@@ -300,7 +272,7 @@ export default function SettingsPage() {
               🔑 NEW EXTENSION TOKEN ISSUED (COPY NOW — WON&apos;T BE SHOWN AGAIN)
             </div>
 
-            <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px" }}>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px", flexWrap: "wrap" }}>
               <input
                 type="text"
                 readOnly
@@ -312,7 +284,7 @@ export default function SettingsPage() {
                   fontWeight: 800,
                   background: "#000",
                   color: "#00F0FF",
-                  border: "2px solid #000",
+                  border: "2px solid var(--ink)",
                   padding: "8px 12px",
                   outline: "none",
                 }}
@@ -326,13 +298,15 @@ export default function SettingsPage() {
                   fontWeight: 900,
                   background: copied ? "#B6FF3C" : "#00F0FF",
                   color: "#000",
-                  border: "2px solid #000",
+                  border: "2px solid var(--ink)",
                   padding: "8px 14px",
                   cursor: "pointer",
-                  boxShadow: "2px 2px 0 #000",
+                  boxShadow: "2px 2px 0 var(--ink)",
                   display: "flex",
                   alignItems: "center",
                   gap: "4px",
+                  flexShrink: 0,
+                  minHeight: "44px",
                 }}
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? "COPIED!" : "COPY TOKEN"}
@@ -429,7 +403,7 @@ export default function SettingsPage() {
                 <div
                   key={t.id}
                   style={{
-                    background: "var(--bg, #FFFDF8)",
+                    background: "var(--cream)",
                     border: "1.5px solid var(--ink)",
                     padding: "12px 14px",
                     display: "flex",

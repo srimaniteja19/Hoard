@@ -87,14 +87,14 @@ function SessionPageContent() {
   if (!currentItem) {
     return (
       <div
+        className="page-scroll"
         style={{
-          minHeight: "100vh",
           background: "#0d0d0d",
           color: "#fff",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "safe center",
           padding: "24px",
           fontFamily: "var(--mono)",
         }}
@@ -128,8 +128,8 @@ function SessionPageContent() {
 
   return (
     <div
+      className="page-scroll"
       style={{
-        minHeight: "100vh",
         background: "#0d0d0d",
         color: "#fff",
         display: "flex",
@@ -139,10 +139,8 @@ function SessionPageContent() {
     >
       {/* Top Header Bar */}
       <header
+        className="page-app-header"
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
           padding: "16px 24px",
           borderBottom: "2px solid #222",
           background: "#141414",
@@ -164,7 +162,7 @@ function SessionPageContent() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <span style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "#888" }}>
+          <span className="session-kbd-hints">
             [SPACE] PAUSE · [N] NEXT · [ESC] EXIT
           </span>
           <button
@@ -205,11 +203,8 @@ function SessionPageContent() {
         {/* Giant Timer Display */}
         <div style={{ textAlign: "center", marginBottom: "32px" }}>
           <div
+            className="session-timer"
             style={{
-              fontFamily: "var(--mono)",
-              fontSize: "72px",
-              fontWeight: 900,
-              letterSpacing: "-0.04em",
               color: timeLeftSec <= 60 ? "#FF007A" : "#fff",
             }}
           >
@@ -273,7 +268,7 @@ function SessionPageContent() {
             </span>
           </div>
 
-          <h2 style={{ fontSize: "24px", fontWeight: 900, lineHeight: 1.3, marginBottom: "12px" }}>
+          <h2 style={{ fontSize: "clamp(18px, 5vw, 24px)", fontWeight: 900, lineHeight: 1.3, marginBottom: "12px", overflowWrap: "anywhere" }}>
             {currentItem.t}
           </h2>
 
@@ -310,7 +305,7 @@ function SessionPageContent() {
         </div>
 
         {/* Action Controls */}
-        <div style={{ display: "flex", gap: "16px", width: "100%" }}>
+        <div className="session-actions">
           <button
             onClick={handleMarkFinished}
             style={{
@@ -330,7 +325,7 @@ function SessionPageContent() {
               boxShadow: "4px 4px 0 #fff",
             }}
           >
-            <CheckCircle2 size={18} /> MARK FINISHED & NEXT [N]
+            <CheckCircle2 size={18} /> MARK FINISHED
           </button>
 
           <button
