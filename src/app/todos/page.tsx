@@ -69,6 +69,10 @@ function daysBetween(fromDateStr: string, toDateStr: string): number {
   return Math.round((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000));
 }
 
+function formatRemindAt(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
 function formatMinutes(total: number): string {
   if (total < 60) return `${total}m`;
   const h = Math.floor(total / 60);
@@ -141,6 +145,7 @@ function TodosPageContent() {
   const [graveyardItems, setGraveyardItems] = useState<Todo[]>([]);
   const [graveyardLoading, setGraveyardLoading] = useState(false);
   const [graveyardLoaded, setGraveyardLoaded] = useState(false);
+  const [graveyardQuery, setGraveyardQuery] = useState("");
 
   const [dayPlan, setDayPlan] = useState<DayPlanResponse | null>(null);
 
@@ -368,10 +373,12 @@ function TodosPageContent() {
     }
   }, []);
 
-  const loadGraveyard = useCallback(async () => {
+  const loadGraveyard = useCallback(async (q = "") => {
     setGraveyardLoading(true);
     try {
-      const res = await fetch("/api/todos?graveyard=true", { credentials: "include" });
+      const params = new URLSearchParams({ graveyard: "true" });
+      if (q.trim()) params.set("q", q.trim());
+      const res = await fetch(`/api/todos?${params}`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setGraveyardItems(data.items || []);
@@ -387,8 +394,8 @@ function TodosPageContent() {
   const toggleGraveyard = useCallback(() => {
     const next = !graveyardOpen;
     setGraveyardOpen(next);
-    if (next && !graveyardLoaded) loadGraveyard();
-  }, [graveyardOpen, graveyardLoaded, loadGraveyard]);
+    if (next && !graveyardLoaded) loadGraveyard(graveyardQuery);
+  }, [graveyardOpen, graveyardLoaded, loadGraveyard, graveyardQuery]);
 
   const restoreFromGraveyard = useCallback(async (todo: Todo) => {
     setGraveyardItems((prev) => prev.filter((t) => t.id !== todo.id));
@@ -660,10 +667,32 @@ function TodosPageContent() {
 
           {graveyardOpen && (
             <div style={{ marginTop: "12px" }}>
+              <input
+                type="search"
+                value={graveyardQuery}
+                onChange={(e) => setGraveyardQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    loadGraveyard(graveyardQuery);
+                  }
+                }}
+                placeholder="Search graveyard…"
+                style={{
+                  width: "100%",
+                  marginBottom: "12px",
+                  padding: "6px 8px",
+                  fontFamily: "var(--mono)",
+                  fontSize: "12px",
+                  border: "2px solid var(--ink)",
+                  background: "var(--paper)",
+                  color: "var(--ink)",
+                }}
+              />
               {graveyardLoading ? (
                 <div style={{ fontFamily: "var(--mono)", fontSize: "13px", opacity: 0.6 }}>Loading…</div>
               ) : graveyardItems.length === 0 ? (
-                <EmptyState text="Nothing here." />
+                <EmptyState text={graveyardQuery.trim() ? "No matches." : "Nothing here."} />
               ) : (
                 <>
                   <div style={{ fontFamily: "var(--mono)", fontSize: "13px", marginBottom: "12px" }}>
@@ -916,12 +945,20 @@ function TodoRow({
                 color: "var(--ink)",
               }}
             />
-            <button onClick={() => onSaveEdit("one")} style={editButtonStyle()}>
-              THIS ONE
-            </button>
-            <button onClick={() => onSaveEdit("future")} style={editButtonStyle()}>
-              THIS AND FUTURE
-            </button>
+            {seriesStats ? (
+              <>
+                <button onClick={() => onSaveEdit("one")} style={editButtonStyle()}>
+                  THIS ONE
+                </button>
+                <button onClick={() => onSaveEdit("future")} style={editButtonStyle()}>
+                  THIS AND FUTURE
+                </button>
+              </>
+            ) : (
+              <button onClick={() => onSaveEdit("one")} style={editButtonStyle()}>
+                SAVE
+              </button>
+            )}
             <button onClick={onCancelEdit} style={editButtonStyle()}>
               CANCEL
             </button>
@@ -943,10 +980,10 @@ function TodoRow({
             >
               {todo.title}
             </span>
-            {Boolean(todo.recurrenceRule || todo.recurrenceParentId) && (
+            {todo.state === "OPEN" && (
               <button
                 onClick={onStartEdit}
-                aria-label="Edit recurring task"
+                aria-label="Edit task"
                 style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.5, display: "flex" }}
               >
                 <Pencil size={12} />
@@ -970,6 +1007,7 @@ function TodoRow({
           {isOverdue && (
             <Chip label={`${daysOverdue} DAY${daysOverdue === 1 ? "" : "S"} OVERDUE`} color="var(--pink)" />
           )}
+          {todo.remindAt && <Chip label={`⏰ ${formatRemindAt(todo.remindAt)}`} />}
           {todo.recurrenceRule && <Chip label={todo.recurrenceRule} />}
           {isStale && <Chip label={`MOVED ${todo.rolloverCount}×`} color="var(--orange)" />}
           {todo.tags.map((t) => (

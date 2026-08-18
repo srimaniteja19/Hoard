@@ -5,6 +5,7 @@ import { eq, and, asc } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { updateTodoSchema } from "@/lib/validations/todos";
 import { getLoggedForDate, getUserTimezone } from "@/lib/dal/shared";
+import { remindAtOnDate, serializeTodoTimestamps, attachSubtasksAndTags } from "@/lib/dal/todos";
 import { nextOccurrence } from "@/lib/todos/recurrence";
 import crypto from "crypto";
 
@@ -49,6 +50,15 @@ async function generateSuccessorIfRecurring(
   const newId = crypto.randomUUID();
   const seriesPosition = (completedInstance.seriesPosition ?? 1) + 1;
 
+  // Reminder is a template field: same local time on the next due date,
+  // remindSentAt left null so it can fire again. Read from the root so a
+  // "this one" reminder edit on the completed instance doesn't leak.
+  let remindAt: Date | null = null;
+  if (root.remindAt) {
+    const timezone = await getUserTimezone(userId);
+    remindAt = remindAtOnDate(root.remindAt, nextDue, timezone);
+  }
+
   const [inserted] = await db
     .insert(todos)
     .values({
@@ -60,6 +70,7 @@ async function generateSuccessorIfRecurring(
       estimatedMinutes: root.estimatedMinutes,
       dueDate: nextDue,
       originalDueDate: nextDue,
+      remindAt,
       rolloverCount: 0,
       recurrenceRule: root.recurrenceRule,
       recurrenceParentId: rootId,
@@ -90,6 +101,36 @@ async function generateSuccessorIfRecurring(
 //     estimatedMinutes/recurrenceRule to the series' root row too — see §5.
 //
 // Rollover (the → push action) is Phase 5, handled by POST .../push.
+
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const userId = await requireUserId(req);
+    const { id } = await params;
+
+    const [row] = await db
+      .select()
+      .from(todos)
+      .where(and(eq(todos.id, id), eq(todos.userId, userId)))
+      .limit(1);
+
+    if (!row) {
+      return NextResponse.json({ error: "Todo not found" }, { status: 404 });
+    }
+
+    const { subtasksByTodo, tagsByTodo } = await attachSubtasksAndTags([id]);
+    return NextResponse.json({
+      ...serializeTodoTimestamps(row),
+      subtasks: subtasksByTodo.get(id) || [],
+      tags: tagsByTodo.get(id) || [],
+    });
+  } catch (e) {
+    if (e instanceof AuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    console.error("[GET /api/todos/[id]]", e);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -155,6 +196,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         if (data.energy !== undefined) rootPayload.energy = data.energy;
         if (data.estimatedMinutes !== undefined) rootPayload.estimatedMinutes = data.estimatedMinutes;
         if (data.recurrenceRule !== undefined) rootPayload.recurrenceRule = data.recurrenceRule;
+        if (data.remindAt !== undefined) rootPayload.remindAt = data.remindAt ? new Date(data.remindAt) : null;
         await db.update(todos).set(rootPayload).where(and(eq(todos.id, rootId), eq(todos.userId, userId)));
       }
     }
@@ -187,6 +229,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         await db.insert(todoTags).values({ todoId: id, tagId }).onConflictDoNothing();
         tagNames.push(tagName);
       }
+
+      // "This and future" — tags are a template field (§5). Copy the set
+      // we just wrote onto the root so later instances pick them up.
+      if (data.applyToFutureInstances && (existing.recurrenceRule || existing.recurrenceParentId)) {
+        const rootId = existing.recurrenceParentId ?? existing.id;
+        if (rootId !== id) {
+          await db.delete(todoTags).where(eq(todoTags.todoId, rootId));
+          const instanceTagRows = await db.select({ tagId: todoTags.tagId }).from(todoTags).where(eq(todoTags.todoId, id));
+          if (instanceTagRows.length > 0) {
+            await db.insert(todoTags).values(instanceTagRows.map((r) => ({ todoId: rootId, tagId: r.tagId }))).onConflictDoNothing();
+          }
+        }
+      }
     } else {
       tagNames = await resolveTagNames(id);
     }
@@ -200,22 +255,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const nextInstance = completingNow ? await generateSuccessorIfRecurring(userId, updated) : null;
 
     return NextResponse.json({
-      ...updated,
-      remindAt: updated.remindAt ? updated.remindAt.toISOString() : null,
-      remindSentAt: updated.remindSentAt ? updated.remindSentAt.toISOString() : null,
-      completedAt: updated.completedAt ? updated.completedAt.toISOString() : null,
-      createdAt: updated.createdAt.toISOString(),
-      updatedAt: updated.updatedAt.toISOString(),
+      ...serializeTodoTimestamps(updated),
       subtasks,
       tags: tagNames,
       nextInstance: nextInstance
         ? {
-            ...nextInstance,
-            remindAt: null,
-            remindSentAt: null,
-            completedAt: null,
-            createdAt: nextInstance.createdAt.toISOString(),
-            updatedAt: nextInstance.updatedAt.toISOString(),
+            ...serializeTodoTimestamps(nextInstance),
             subtasks: [],
           }
         : null,

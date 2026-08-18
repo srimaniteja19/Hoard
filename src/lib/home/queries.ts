@@ -1,8 +1,8 @@
 import { db } from "@/db";
-import { bookmarks, todos, tilEntries, users, busyBlocks, TodoState } from "@/db/schema";
+import { bookmarks, todos, tilEntries, busyBlocks, TodoState } from "@/db/schema";
 import { and, eq, gte, lte, isNull, desc, asc, sql, inArray } from "drizzle-orm";
 import { getLoggedForDate, getMinutesSinceMidnight, getLocalDayOfWeek } from "@/lib/dal/shared";
-import { getUserCalibration } from "@/lib/dal/todos";
+import { withCalibrationPadding } from "@/lib/dal/todos";
 import { computeDayPlan } from "@/lib/todos/dayplan";
 import { confidence, confidenceSql } from "@/lib/til/confidence";
 import { CTX } from "@/data/initialBookmarks";
@@ -254,20 +254,19 @@ export async function getLedger(
   return { tookOnHours, clearedHours, learnedCount, netHours, ratio, dischargeRate, estimateError };
 }
 
-// ─── Day plan (degraded — no busy_blocks table yet, see TODOS.md §7 Phase 8) ──
+// ─── Day plan ──────────────────────────────────────────────────────────────
 
 export async function getDayPlan(userId: string, timezone: string) {
   const minutesSinceMidnight = getMinutesSinceMidnight(timezone);
   const today = getLoggedForDate(timezone);
   const dayOfWeek = getLocalDayOfWeek(timezone);
 
-  const [dueTodayOpen, [userRow], busyRows] = await Promise.all([
+  const [dueOpen, busyRows] = await Promise.all([
     db
       .select({ id: todos.id, title: todos.title, estimatedMinutes: todos.estimatedMinutes, energy: todos.energy })
       .from(todos)
-      .where(and(eq(todos.userId, userId), inArray(todos.state, OPEN_STATES), eq(todos.dueDate, today)))
+      .where(and(eq(todos.userId, userId), inArray(todos.state, OPEN_STATES), lte(todos.dueDate, today)))
       .orderBy(desc(todos.estimatedMinutes)),
-    db.select({ paddingEnabled: users.todoCalibrationPaddingEnabled }).from(users).where(eq(users.id, userId)).limit(1),
     db
       .select({ start: busyBlocks.startTime, end: busyBlocks.endTime, title: busyBlocks.title })
       .from(busyBlocks)
@@ -276,16 +275,8 @@ export async function getDayPlan(userId: string, timezone: string) {
 
   // Padding — TODOS.md §6: default off, one toggle, only applied once a
   // multiplier exists (30+ overall samples, 15+ for that energy class).
-  const paddingEnabled = userRow?.paddingEnabled ?? false;
-  const cal = paddingEnabled ? await getUserCalibration(userId) : null;
-  const multiplierFor = (energy: (typeof dueTodayOpen)[number]["energy"]): number =>
-    cal?.byEnergy[energy] ?? 1;
-
-  const paddedTasks = dueTodayOpen.map((t) => ({
-    id: t.id,
-    title: t.title,
-    estimatedMinutes: Math.round(t.estimatedMinutes * multiplierFor(t.energy)),
-  }));
+  // Overdue open tasks are packed too — they're work that belongs to today.
+  const paddedTasks = await withCalibrationPadding(userId, dueOpen);
 
   const plan = computeDayPlan(busyRows, paddedTasks, minutesSinceMidnight);
 

@@ -4,6 +4,7 @@ import { todos, rolloverEvents } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { getLoggedForDate, getUserTimezone } from "@/lib/dal/shared";
+import { remindAtOnDate, serializeTodoTimestamps } from "@/lib/dal/todos";
 
 // ─── POST /api/todos/:id/push ───────────────────────────────────────────────
 // The → action — TODOS.md §4/§7. Pushes an OPEN todo's dueDate to tomorrow
@@ -14,6 +15,9 @@ import { getLoggedForDate, getUserTimezone } from "@/lib/dal/shared";
 // expose it as a field, so the generic PATCH /api/todos/:id can't touch it.
 // That's what keeps rolloverCount an honest record of explicit pushes: there
 // is no other code path, cron or otherwise, that can move it.
+//
+// A reminder moves with the due date (same local time, tomorrow) and
+// remindSentAt is cleared so it can fire again on the new day.
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,7 +25,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
 
     const existing = await db
-      .select({ id: todos.id, state: todos.state })
+      .select()
       .from(todos)
       .where(and(eq(todos.id, id), eq(todos.userId, userId)))
       .limit(1);
@@ -38,11 +42,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const today = getLoggedForDate(timezone, now);
     const tomorrow = getLoggedForDate(timezone, new Date(now.getTime() + 24 * 60 * 60 * 1000));
 
+    const remindAt = existing[0].remindAt ? remindAtOnDate(existing[0].remindAt, tomorrow, timezone) : null;
+
     const [updated] = await db
       .update(todos)
       .set({
         dueDate: tomorrow,
         rolloverCount: sql`${todos.rolloverCount} + 1`,
+        ...(existing[0].remindAt
+          ? { remindAt, remindSentAt: null }
+          : {}),
         updatedAt: new Date(),
       })
       .where(and(eq(todos.id, id), eq(todos.userId, userId)))
@@ -52,14 +61,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // on, not just the running total — this is that trail.
     await db.insert(rolloverEvents).values({ userId, todoId: id, occurredOn: today });
 
-    return NextResponse.json({
-      ...updated,
-      remindAt: updated.remindAt ? updated.remindAt.toISOString() : null,
-      remindSentAt: updated.remindSentAt ? updated.remindSentAt.toISOString() : null,
-      completedAt: updated.completedAt ? updated.completedAt.toISOString() : null,
-      createdAt: updated.createdAt.toISOString(),
-      updatedAt: updated.updatedAt.toISOString(),
-    });
+    return NextResponse.json(serializeTodoTimestamps(updated));
   } catch (e) {
     if (e instanceof AuthError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

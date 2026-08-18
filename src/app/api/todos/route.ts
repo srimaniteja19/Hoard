@@ -1,48 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { todos, todoSubtasks, todoTags, tags as tagsTable } from "@/db/schema";
-import { eq, and, ne, inArray, asc, sql } from "drizzle-orm";
+import { todos, todoTags, tags as tagsTable } from "@/db/schema";
+import { eq, and, ne, asc, sql, ilike } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { createTodoSchema } from "@/lib/validations/todos";
 import { getLoggedForDate, getUserTimezone } from "@/lib/dal/shared";
-import { zonedTimeToUtc } from "@/lib/dal/todos";
+import { zonedTimeToUtc, attachSubtasksAndTags, serializeTodoTimestamps } from "@/lib/dal/todos";
 import { parseTodo } from "@/lib/todos/parse";
 
 function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-}
-
-async function attachSubtasksAndTags(todoIds: string[]) {
-  if (todoIds.length === 0) return { subtasksByTodo: new Map(), tagsByTodo: new Map() };
-
-  const [subtaskRows, tagRows] = await Promise.all([
-    db
-      .select()
-      .from(todoSubtasks)
-      .where(inArray(todoSubtasks.todoId, todoIds))
-      .orderBy(asc(todoSubtasks.position)),
-    db
-      .select({ todoId: todoTags.todoId, tagName: tagsTable.name })
-      .from(todoTags)
-      .innerJoin(tagsTable, eq(todoTags.tagId, tagsTable.id))
-      .where(inArray(todoTags.todoId, todoIds)),
-  ]);
-
-  const subtasksByTodo = new Map<string, typeof subtaskRows>();
-  for (const s of subtaskRows) {
-    const list = subtasksByTodo.get(s.todoId) || [];
-    list.push(s);
-    subtasksByTodo.set(s.todoId, list);
-  }
-
-  const tagsByTodo = new Map<string, string[]>();
-  for (const t of tagRows) {
-    const list = tagsByTodo.get(t.todoId) || [];
-    list.push(t.tagName);
-    tagsByTodo.set(t.todoId, list);
-  }
-
-  return { subtasksByTodo, tagsByTodo };
 }
 
 // ─── GET /api/todos ─────────────────────────────────────────────────────────
@@ -50,36 +17,38 @@ async function attachSubtasksAndTags(todoIds: string[]) {
 // slider, and energy-chip filtering are TODOS.md Phase 4. This returns every
 // non-terminal-but-hidden todo (everything except GRAVEYARD) so the client
 // can group and filter it.
+//
+// `?q=` searches titles. Combined with `?graveyard=true` that's how
+// graveyard tasks "stay searchable" (TODOS.md §4) without appearing in
+// default views.
 
 export async function GET(req: Request) {
   try {
     const userId = await requireUserId(req);
     const { searchParams } = new URL(req.url);
     const graveyard = searchParams.get("graveyard") === "true";
+    const q = searchParams.get("q")?.trim().slice(0, 100) ?? "";
+    const search = q ? q.replace(/[%_]/g, "") : "";
 
     // Graveyard todos are excluded from every default view and count
     // (TODOS.md §4) — they only ever show up here when explicitly asked for.
+    const conditions = [
+      eq(todos.userId, userId),
+      graveyard ? eq(todos.state, "GRAVEYARD") : ne(todos.state, "GRAVEYARD"),
+    ];
+    if (search) conditions.push(ilike(todos.title, `%${search}%`));
+
     const rows = await db
       .select()
       .from(todos)
-      .where(
-        and(
-          eq(todos.userId, userId),
-          graveyard ? eq(todos.state, "GRAVEYARD") : ne(todos.state, "GRAVEYARD")
-        )
-      )
+      .where(and(...conditions))
       .orderBy(sql`${todos.dueDate} IS NULL, ${todos.dueDate} ASC`, asc(todos.sortOrder));
 
     const ids = rows.map((r) => r.id);
     const { subtasksByTodo, tagsByTodo } = await attachSubtasksAndTags(ids);
 
     const items = rows.map((t) => ({
-      ...t,
-      remindAt: t.remindAt ? t.remindAt.toISOString() : null,
-      remindSentAt: t.remindSentAt ? t.remindSentAt.toISOString() : null,
-      completedAt: t.completedAt ? t.completedAt.toISOString() : null,
-      createdAt: t.createdAt.toISOString(),
-      updatedAt: t.updatedAt.toISOString(),
+      ...serializeTodoTimestamps(t),
       subtasks: subtasksByTodo.get(t.id) || [],
       tags: tagsByTodo.get(t.id) || [],
     }));
@@ -163,12 +132,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
       {
-        ...inserted,
-        remindAt: inserted.remindAt ? inserted.remindAt.toISOString() : null,
-        remindSentAt: null,
-        completedAt: null,
-        createdAt: inserted.createdAt.toISOString(),
-        updatedAt: inserted.updatedAt.toISOString(),
+        ...serializeTodoTimestamps(inserted),
         subtasks: [],
         tags: createdTagNames,
         matched: parsed.matched,
