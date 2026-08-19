@@ -170,6 +170,7 @@ export function HomeCapture({
       }
       if (event.key === "Enter") {
         event.preventDefault();
+        event.stopPropagation();
         if (canCommitCapture(preview)) commit();
         else completeSelected();
         return;
@@ -187,6 +188,7 @@ export function HomeCapture({
 
     if (event.key === "Enter") {
       event.preventDefault();
+      event.stopPropagation();
       commit();
       return;
     }
