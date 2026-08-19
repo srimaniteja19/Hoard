@@ -5,43 +5,14 @@ import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { ChromeSlot } from "@/components/chrome/slots";
 import { AppPage } from "@/components/chrome/AppPage";
-
-type Energy = "DEEP" | "SHALLOW" | "ERRAND";
+import type { Energy } from "@/lib/todos/parse";
+import type { MonthHistoryDay, DayRecord } from "@/lib/dal/todos";
+import type { CalibrationWithPoints, CalibrationSample } from "@/lib/todos/calibration";
 
 const ENERGY_COLOR: Record<Energy, string> = {
   DEEP: "#7C4DFF",
   SHALLOW: "#00F0FF",
   ERRAND: "#FFE600",
-};
-
-type MonthHistoryTask = {
-  id: string;
-  title: string;
-  estimatedMinutes: number;
-  actualMinutes: number | null;
-  energy: Energy;
-  completedOn: string;
-};
-
-type MonthHistoryDay = {
-  date: string;
-  tasks: MonthHistoryTask[];
-  rolled: boolean;
-  cleanSweep: boolean;
-};
-
-type DayRecord = {
-  date: string;
-  completed: MonthHistoryTask[];
-  rolled: { id: string; title: string }[];
-  note: string | null;
-};
-
-type CalibrationPoints = {
-  overall: number | null;
-  byEnergy: Record<Energy, number | null>;
-  sampleCount: number;
-  points: { estimated: number; actual: number; energy: Energy }[];
 };
 
 const DOW = ["S", "M", "T", "W", "T", "F", "S"];
@@ -76,7 +47,7 @@ export default function TodoHistoryPage() {
   const [noteDraft, setNoteDraft] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
 
-  const [calibration, setCalibration] = useState<CalibrationPoints | null>(null);
+  const [calibration, setCalibration] = useState<CalibrationWithPoints | null>(null);
 
   useEffect(() => {
     async function loadMonth() {
@@ -358,7 +329,7 @@ function navButtonStyle(): CSSProperties {
   };
 }
 
-function CalibrationScatter({ points }: { points: { estimated: number; actual: number; energy: Energy }[] }) {
+function CalibrationScatter({ points }: { points: CalibrationSample[] }) {
   const size = 260;
   const max = Math.max(30, ...points.map((p) => Math.max(p.estimated, p.actual))) * 1.1;
   const scale = (v: number) => (v / max) * size;

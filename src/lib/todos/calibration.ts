@@ -20,6 +20,11 @@ export type CalibrationResult = {
   sampleCount: number;
 };
 
+/** CalibrationResult plus the raw estimate/actual pairs behind it — what
+ * GET /api/todos/calibration?points=true returns for the history page's
+ * scatter plot (TODOS.md §8). */
+export type CalibrationWithPoints = CalibrationResult & { points: CalibrationSample[] };
+
 const OVERALL_MIN_SAMPLES = 30;
 const PER_ENERGY_MIN_SAMPLES = 15;
 const ENERGIES: Energy[] = ["DEEP", "SHALLOW", "ERRAND"];
