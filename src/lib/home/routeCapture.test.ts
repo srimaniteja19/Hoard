@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fixtures from "./__fixtures__/route-capture.json";
-import { canCommitCapture, routeCapture } from "./routeCapture";
+import { buildCaptureRequest, canCommitCapture, routeCapture } from "./routeCapture";
 
 const TODAY = new Date("2024-01-15T12:00:00Z");
 const TZ = "UTC";
@@ -63,5 +63,44 @@ describe("canCommitCapture", () => {
     expect(canCommitCapture(routeCapture("/todo water the plants", TODAY, TZ))).toBe(true);
     expect(canCommitCapture(routeCapture("/til redis is single-threaded", TODAY, TZ))).toBe(true);
     expect(canCommitCapture(routeCapture("/bookmark https://example.com", TODAY, TZ))).toBe(true);
+  });
+});
+
+describe("buildCaptureRequest", () => {
+  it("builds a bookmark POST for a queue destination", () => {
+    const preview = routeCapture("https://example.com/article", TODAY, TZ);
+    expect(buildCaptureRequest(preview)).toEqual({
+      url: "/api/bookmarks",
+      body: { url: preview.url, ty: preview.kind, src: "Home capture" },
+    });
+  });
+
+  it("builds a TIL POST for a record destination, defaulting tilType to FACT", () => {
+    const preview = routeCapture("til redis is single-threaded", TODAY, TZ);
+    expect(preview.tilType).toBeNull();
+    expect(buildCaptureRequest(preview)).toEqual({
+      url: "/api/til",
+      body: { type: "FACT", body: preview.body },
+    });
+  });
+
+  it("keeps an explicit tilType from a locked /til command", () => {
+    const preview = routeCapture("/quote redis is single-threaded", TODAY, TZ);
+    expect(buildCaptureRequest(preview)).toEqual({
+      url: "/api/til",
+      body: { type: preview.tilType, body: preview.body },
+    });
+  });
+
+  it("builds a todo POST for an agenda destination", () => {
+    const preview = routeCapture("water the plants", TODAY, TZ);
+    expect(buildCaptureRequest(preview)).toEqual({
+      url: "/api/todos",
+      body: { text: preview.text },
+    });
+  });
+
+  it("returns null for an empty capture with no destination", () => {
+    expect(buildCaptureRequest(routeCapture("", TODAY, TZ))).toBeNull();
   });
 });

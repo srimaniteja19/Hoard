@@ -249,3 +249,25 @@ export function canCommitCapture(preview: CapturePreview): boolean {
   if (preview.destination === "record") return Boolean(preview.body?.trim());
   return Boolean(preview.text?.trim());
 }
+
+export type CaptureRequest = { url: string; body: Record<string, unknown> };
+
+/**
+ * What committing a capture actually sends — each destination has its own
+ * endpoint and payload shape (a bookmark's url/kind, a TIL's type/body, a
+ * todo's raw text for the server to re-parse). Null only when the preview
+ * has no destination yet; callers gate on canCommitCapture() first, so this
+ * is a defensive total function rather than a case that's expected to fire.
+ */
+export function buildCaptureRequest(preview: CapturePreview): CaptureRequest | null {
+  switch (preview.destination) {
+    case "queue":
+      return { url: "/api/bookmarks", body: { url: preview.url, ty: preview.kind, src: "Home capture" } };
+    case "record":
+      return { url: "/api/til", body: { type: preview.tilType ?? "FACT", body: preview.body } };
+    case "agenda":
+      return { url: "/api/todos", body: { text: preview.text } };
+    default:
+      return null;
+  }
+}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
+  buildCaptureRequest,
   canCommitCapture,
   routeCapture,
   type CaptureDestination,
@@ -117,41 +118,19 @@ export function HomeCapture({
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const previewNow = routeCapture(input, new Date(), tz);
     if (!canCommitCapture(previewNow) || submitting || !previewNow.destination) return;
+    const request = buildCaptureRequest(previewNow);
+    if (!request) return;
     const snapshot = input;
     const dest = previewNow.destination;
     setInput("");
     setSubmitting(true);
     try {
-      let res: Response;
-      if (previewNow.destination === "queue") {
-        res = await fetch("/api/bookmarks", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            url: previewNow.url,
-            ty: previewNow.kind,
-            src: "Home capture",
-          }),
-        });
-      } else if (previewNow.destination === "record") {
-        res = await fetch("/api/til", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: previewNow.tilType ?? "FACT",
-            body: previewNow.body,
-          }),
-        });
-      } else {
-        res = await fetch("/api/todos", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: previewNow.text }),
-        });
-      }
+      const res = await fetch(request.url, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request.body),
+      });
       if (!res.ok) {
         setInput(snapshot);
       } else {
