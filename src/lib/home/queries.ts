@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { bookmarks, todos, tilEntries, busyBlocks, TodoState } from "@/db/schema";
 import { and, eq, gte, lte, isNull, desc, asc, sql, inArray } from "drizzle-orm";
 import { getLoggedForDate, getMinutesSinceMidnight, getLocalDayOfWeek } from "@/lib/dal/shared";
-import { withCalibrationPadding } from "@/lib/dal/todos";
+import { withCalibrationPadding, getCalibrationSamples } from "@/lib/dal/todos";
 import { computeDayPlan } from "@/lib/todos/dayplan";
 import { confidence, confidenceSql } from "@/lib/til/confidence";
 import { CTX } from "@/data/initialBookmarks";
@@ -231,19 +231,20 @@ export async function getLedger(
   const netHours = Math.round((clearedHours - tookOnHours) * 10) / 10;
   const ratio = tookOnHours > 0 ? Math.round((clearedHours / tookOnHours) * 100) / 100 : null;
 
-  // Calibration error, all-time — below the same 30-sample floor TODOS.md §6
-  // sets for the (not-yet-built) lib/todos/calibration.ts, so this can be
-  // swapped for that module directly once it exists.
-  const allCompletedWithActual = await db
-    .select({ estimatedMinutes: todos.estimatedMinutes, actualMinutes: todos.actualMinutes })
-    .from(todos)
-    .where(and(eq(todos.userId, userId), eq(todos.state, "DONE"), sql`${todos.actualMinutes} IS NOT NULL`));
+  // Calibration error, all-time, below the same 30-sample floor
+  // lib/todos/calibration.ts uses — a mean *absolute* percentage error
+  // ("how far off, regardless of direction"), a different question from
+  // calibration()'s signed multiplier ("pad estimates by this much"), so
+  // it keeps its own formula here. The sample set is identical to
+  // calibration()'s, though, so it's fetched via the same DAL helper
+  // rather than re-querying it.
+  const allCompletedWithActual = await getCalibrationSamples(userId);
 
   const estimateError =
     allCompletedWithActual.length >= 30
       ? Math.round(
           (allCompletedWithActual.reduce(
-            (sum, t) => sum + Math.abs(t.estimatedMinutes - (t.actualMinutes as number)) / t.estimatedMinutes,
+            (sum, t) => sum + Math.abs(t.estimated - t.actual) / t.estimated,
             0
           ) /
             allCompletedWithActual.length) *
