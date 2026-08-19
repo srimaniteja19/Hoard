@@ -109,6 +109,7 @@ export function useBookmarks() {
   const [view, setView]           = useState<ViewMode>("masonry");
   const [sort, setSort]           = useState<SortMode>("recent");
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [neverOpenedOnly, setNeverOpenedOnly] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [openId, setOpenId]       = useState<number | null>(null);
   
@@ -259,6 +260,7 @@ export function useBookmarks() {
       if (ty && x.ty !== ty)               return false;
       if (tag && x.tag !== tag)            return false;
       if (unreadOnly && !x.unread)         return false;
+      if (neverOpenedOnly && !(x.itemType === "REFERENCE" && (x.useCount ?? 0) === 0)) return false;
       if (f.ty && x.ty !== f.ty)           return false;
       if (f.tag && !x.tag.toLowerCase().startsWith(f.tag)) return false;
       if (f.unread && !x.unread)           return false;
@@ -275,8 +277,16 @@ export function useBookmarks() {
 
     if (sort === "short") return [...list].sort((a, b) => a.mins - b.mins);
     if (sort === "az")    return [...list].sort((a, b) => a.t.localeCompare(b.t));
+    if (sort === "mostUsed") return [...list].sort((a, b) => (b.useCount ?? 0) - (a.useCount ?? 0));
+    if (sort === "recentlyUsed") {
+      return [...list].sort((a, b) => {
+        const at = a.lastUsedAt ? new Date(a.lastUsedAt).getTime() : -Infinity;
+        const bt = b.lastUsedAt ? new Date(b.lastUsedAt).getTime() : -Infinity;
+        return bt - at;
+      });
+    }
     return list;
-  }, [bookmarks, collections, query, coll, ty, tag, time, ctx, sort, unreadOnly, activeSmartColl]);
+  }, [bookmarks, collections, query, coll, ty, tag, time, ctx, sort, unreadOnly, neverOpenedOnly, activeSmartColl]);
 
   // ── Selection ─────────────────────────────────────────────────────────────
 
@@ -362,6 +372,15 @@ export function useBookmarks() {
       );
     }
   }, [bookmarks]);
+
+  // Fire-and-forget: records a "use" (LIBRARY.md §2) without blocking the
+  // open action or touching local state — useCount/lastUsedAt aren't
+  // rendered anywhere yet.
+  const recordBookmarkUse = useCallback((id: number) => {
+    apiFetch(`/api/bookmarks/${id}/use`, { method: "POST" }).catch((e) => {
+      console.error("[recordBookmarkUse]", e);
+    });
+  }, []);
 
   const updateNote = useCallback(async (id: number, note: string) => {
     setBookmarks((prev) =>
@@ -591,6 +610,7 @@ export function useBookmarks() {
     view,      setView,
     sort,      setSort,
     unreadOnly, setUnreadOnly,
+    neverOpenedOnly, setNeverOpenedOnly,
     selectedIds,
     toggleSelect,
     clearSelection,
@@ -604,6 +624,7 @@ export function useBookmarks() {
     addBookmark,
     addChapter,
     toggleReadStatus,
+    recordBookmarkUse,
     updateNote,
     changeBookmarkCollection,
     changeBookmarkKind,

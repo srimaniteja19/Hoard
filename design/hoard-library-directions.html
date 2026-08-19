@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HOARD — reference library</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#F4F0EA;--paper:#FFFDF8;--panel:#26262B;--panelink:#EFEDE6;
+  --yel:#FFE600;--pink:#FF007A;--cyan:#00F0FF;--lime:#B6FF3C;--orange:#FF6B00;--violet:#7C4DFF;--mint:#00E58A;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;--grot:"Space Grotesk",system-ui,sans-serif;
+  --bd:3px solid #000;--sh:5px 5px 0 #000;--sh-sm:3px 3px 0 #000;--sh-lg:8px 8px 0 #000;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:#000;font-family:var(--grot);font-size:14px;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(#0000001a 1px,transparent 1px);background-size:22px 22px}
+button,input{font-family:inherit;color:inherit}
+::selection{background:var(--yel)}
+.wrap{max-width:1180px;margin:0 auto;padding:32px 22px 110px}
+h1{font-family:var(--mono);font-weight:800;font-size:clamp(24px,4.4vw,40px);letter-spacing:-.07em;margin:0;
+  text-transform:uppercase;background:var(--yel);border:var(--bd);box-shadow:6px 6px 0 #000;display:inline-block;padding:5px 14px;line-height:1}
+.dek{font-size:15px;line-height:1.6;max-width:70ch;margin:20px 0 6px}
+
+.rail{position:sticky;top:0;z-index:40;background:var(--cream);display:flex;overflow-x:auto;
+  border-top:var(--bd);border-bottom:var(--bd);margin:26px 0 26px;box-shadow:var(--sh-sm)}
+.tab{appearance:none;background:var(--paper);border:0;border-right:2px solid #000;padding:13px 16px 11px;
+  cursor:pointer;text-align:left;min-width:170px;flex:1 0 auto;color:#000}
+.tab .num{font-family:var(--mono);font-size:9.5px;font-weight:800;letter-spacing:.12em;display:block;margin-bottom:5px;opacity:.5}
+.tab .nm{font-family:var(--mono);font-weight:800;font-size:13.5px;letter-spacing:-.02em;display:block}
+.tab .sub{font-size:10px;font-family:var(--mono);font-weight:700;margin-top:3px;display:block;opacity:.55}
+.tab:hover{background:var(--yel)}
+.tab.on{background:#000;color:var(--yel)}
+.tab.on .sub{opacity:.7}
+
+.panel{display:none}
+.panel.on{display:block}
+.spec{display:grid;grid-template-columns:1.3fr 1fr;gap:26px;margin-bottom:22px;align-items:start}
+.spec h2{font-size:20px;font-weight:800;letter-spacing:-.025em;margin:0 0 8px;font-family:var(--mono)}
+.spec p{margin:0;font-size:14px;line-height:1.6;color:#242424;max-width:58ch}
+.meta{display:grid;gap:9px;margin:0}
+.mr{display:grid;grid-template-columns:76px 1fr;gap:11px;font-size:12px;line-height:1.5;align-items:baseline}
+.mr dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;opacity:.5}
+.mr dd{margin:0}
+.frame{border:var(--bd);background:var(--paper);box-shadow:var(--sh-lg);overflow:hidden}
+.note{font-family:var(--mono);font-size:11.5px;line-height:1.7;border-left:5px solid var(--pink);
+  background:var(--paper);border-top:2px solid #000;border-right:2px solid #000;border-bottom:2px solid #000;padding:11px 13px;margin-top:14px}
+
+/* ============ shared card bits ============ */
+.chd{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.11em;padding:10px 13px;
+  border-bottom:var(--bd);background:#000;color:var(--yel);display:flex;justify-content:space-between;align-items:center}
+.ch2{padding:12px 16px;border-bottom:var(--bd);background:var(--cream);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* ============ 01 USAGE-SORTED LIBRARY ============ */
+.u-toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:12px 16px;border-bottom:var(--bd);background:var(--cream)}
+.u-seg{display:flex;border:2px solid #000;background:var(--paper)}
+.u-seg button{border:0;border-right:2px solid #000;background:none;padding:6px 11px;font-family:var(--mono);
+  font-size:9.5px;font-weight:800;cursor:pointer}
+.u-seg button:last-child{border-right:0}
+.u-seg button.on{background:#000;color:var(--yel)}
+.u-list{padding:12px 14px}
+.u-row{display:grid;grid-template-columns:52px 1fr auto;gap:13px;align-items:center;border:2px solid #000;
+  background:var(--paper);padding:0;margin-bottom:8px;cursor:pointer;transition:.1s}
+.u-row:hover{transform:translate(-2px,-2px);box-shadow:3px 3px 0 #000}
+.u-heat{align-self:stretch;display:grid;place-items:center;border-right:2px solid #000;font-family:var(--mono);
+  font-size:8px;font-weight:800;writing-mode:vertical-rl;transform:rotate(180deg);padding:8px 0}
+.u-mid{padding:10px 0}
+.u-t{font-size:14.5px;font-weight:700;letter-spacing:-.02em}
+.u-m{font-family:var(--mono);font-size:9px;font-weight:800;opacity:.5;margin-top:5px;letter-spacing:.04em}
+.u-r{padding-right:12px;text-align:right}
+.u-uses{font-family:var(--mono);font-size:15px;font-weight:800;letter-spacing:-.03em}
+.u-last{font-family:var(--mono);font-size:8.5px;font-weight:800;opacity:.5;margin-top:2px}
+.u-never{border-left:4px solid var(--orange)}
+
+/* ============ 02 HEALTH ============ */
+.h-summary{display:flex;gap:0;border-bottom:var(--bd)}
+.h-stat{flex:1;padding:16px;border-right:2px solid #000;text-align:center}
+.h-stat:last-child{border-right:0}
+.h-stat b{font-family:var(--mono);font-weight:800;font-size:30px;letter-spacing:-.05em;display:block}
+.h-stat span{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.08em;opacity:.5}
+.h-stat.bad{background:var(--pink);color:#fff}
+.h-stat.bad span{opacity:.85}
+.h-list{padding:12px 14px}
+.h-row{display:grid;grid-template-columns:26px 1fr auto;gap:11px;align-items:center;border:2px solid #000;
+  background:var(--paper);padding:10px 12px;margin-bottom:8px}
+.h-icon{font-size:15px;text-align:center}
+.h-t{font-size:14px;font-weight:700;letter-spacing:-.02em}
+.h-issue{font-family:var(--mono);font-size:9px;font-weight:800;margin-top:4px;letter-spacing:.04em}
+.h-badge{font-family:var(--mono);font-size:9px;font-weight:800;border:2px solid #000;padding:3px 8px;white-space:nowrap}
+.h-badge.dead{background:var(--pink);color:#fff}
+.h-badge.stale{background:var(--orange)}
+.h-badge.drift{background:var(--yel)}
+.h-diff{grid-column:1/-1;font-family:var(--mono);font-size:10.5px;line-height:1.7;background:var(--cream);
+  border:2px solid #000;padding:8px 10px;margin-top:8px}
+.h-diff del{background:#FFD0D8;text-decoration:line-through}
+.h-diff ins{background:var(--lime);text-decoration:none}
+
+/* ============ 03 NOTE-FORWARD CARD ============ */
+.n-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:14px}
+.n-card{border:var(--bd);background:var(--paper);box-shadow:var(--sh-sm)}
+.n-top{display:flex;gap:8px;align-items:center;padding:10px 13px;border-bottom:2px solid #000}
+.n-badge{font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:.09em;border:2px solid #000;padding:1px 6px}
+.n-t{font-size:14px;font-weight:700;letter-spacing:-.02em;margin-left:auto;text-align:right}
+.n-note{padding:12px 13px;font-size:14px;line-height:1.55;border-left:5px solid var(--yel);margin:11px 13px;
+  background:#FFFBEE;font-weight:500}
+.n-note::before{content:"YOUR NOTE";display:block;font-family:var(--mono);font-size:8px;font-weight:800;
+  letter-spacing:.12em;opacity:.5;margin-bottom:5px}
+.n-src{padding:0 13px 12px;font-family:var(--mono);font-size:9px;font-weight:800;opacity:.5;letter-spacing:.04em}
+.n-snip{margin:0 13px 13px;background:#1B1B1F;color:#D8E8FF;border:2px solid #000;padding:9px 10px;
+  font-family:var(--mono);font-size:11.5px;position:relative}
+.n-snip button{position:absolute;right:7px;top:7px;border:2px solid #444;background:#111;color:#9AD;
+  font-family:var(--mono);font-size:8px;font-weight:800;padding:2px 6px;cursor:pointer}
+.n-snip button:hover{background:var(--lime);color:#000;border-color:#000}
+
+/* ============ 04 SITUATIONS ============ */
+.sit-row{display:flex;gap:12px;overflow-x:auto;padding:16px}
+.sit{border:var(--bd);background:var(--paper);box-shadow:var(--sh-sm);min-width:230px;flex:0 0 auto;cursor:pointer}
+.sit:hover{transform:translate(-2px,-2px);box-shadow:var(--sh)}
+.sit-hd{padding:11px 13px;border-bottom:2px solid #000;background:var(--lime)}
+.sit-hd b{font-family:var(--mono);font-weight:800;font-size:13px;letter-spacing:-.02em;display:block}
+.sit-hd span{font-family:var(--mono);font-size:8.5px;font-weight:800;opacity:.6;letter-spacing:.06em}
+.sit-items{padding:9px 13px}
+.sit-i{font-size:12px;font-weight:600;padding:5px 0;border-bottom:1px dashed #0002;line-height:1.3}
+.sit-i:last-child{border-bottom:0}
+.sit-q{font-family:var(--mono);font-size:8.5px;font-weight:800;opacity:.4;padding:8px 13px 11px;border-top:2px dashed #0003}
+
+/* ============ 05 RETRIEVAL / CMDK ============ */
+.k-shell{background:#141317;color:#EDEBF2;padding:0}
+.k-in{display:flex;align-items:center;gap:11px;padding:15px 16px;border-bottom:2px solid #35333d}
+.k-in .c{color:var(--pink);font-family:var(--mono);font-size:18px;font-weight:800}
+.k-in input{flex:1;background:none;border:0;outline:0;color:#EDEBF2;font-family:var(--mono);font-size:16px}
+.k-in input::placeholder{opacity:.35}
+.k-list{padding:8px}
+.k-row{display:grid;grid-template-columns:28px 1fr auto;gap:11px;align-items:center;padding:9px 10px;border-radius:0;cursor:pointer}
+.k-row.sel{background:#232129}
+.k-badge{font-family:var(--mono);font-size:8px;font-weight:800;background:#000;border:1.5px solid #4A4756;padding:1px 4px;color:#9AD}
+.k-t{font-size:13.5px;font-weight:600}
+.k-t mark{background:var(--yel);color:#000;border-radius:1px}
+.k-m{font-family:var(--mono);font-size:9px;opacity:.45;margin-top:3px}
+.k-uses{font-family:var(--mono);font-size:9px;font-weight:800;color:#8FE0A8}
+.k-foot{display:flex;gap:14px;padding:9px 16px;border-top:2px solid #35333d;font-family:var(--mono);font-size:9px;opacity:.4}
+
+/* ============ 06 LEDGER REWORK ============ */
+.l-ledger{background:var(--panel);color:var(--panelink);padding:18px 20px}
+.l-hd{font-family:var(--mono);font-size:9.5px;font-weight:800;letter-spacing:.14em;color:var(--yel);margin-bottom:12px}
+.l-beam{display:flex;height:40px;border:2px solid #fff}
+.l-beam i{display:grid;place-items:center;font-family:var(--mono);font-size:9.5px;font-weight:800;
+  border-right:2px solid #fff;overflow:hidden;white-space:nowrap;color:#000}
+.l-beam i:last-child{border-right:0}
+.l-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:15px}
+.l-r{border-top:2px solid #4A4756;padding-top:9px}
+.l-r b{font-family:var(--mono);font-weight:800;font-size:24px;letter-spacing:-.04em;display:block}
+.l-r span{font-family:var(--mono);font-size:8.5px;font-weight:800;opacity:.55;letter-spacing:.06em}
+.l-verdict{font-size:13px;line-height:1.55;margin-top:15px;padding-top:13px;border-top:2px solid #4A4756;max-width:60ch}
+.l-verdict b{background:var(--yel);color:#000;padding:0 5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>The reference library</h1>
+  <p class="dek">Six pieces of the reframe, each on the same fixture set so you can compare the ideas rather than the content. None of these require the others — pick what earns its place.</p>
+
+  <nav class="rail" id="rail"></nav>
+  <section class="spec" id="spec"></section>
+  <div class="frame" id="stage"></div>
+  <p class="note" id="note"></p>
+</div>
+
+<script>
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const TC={ai:"#7C4DFF",data:"#00F0FF",systems:"#FF6B00",infra:"#00E58A",design:"#FFE600",craft:"#B6FF3C"};
+
+/* shared item pool */
+const ITEMS=[
+ {t:"pgvector/pgvector",k:"GIT",src:"github.com",tag:"ai",uses:41,last:"2h ago",note:"HNSW build time scales with ef_construction, not row count — the config that actually matters when you're tuning this.",status:"live"},
+ {t:"shadcn-ui/ui",k:"GIT",src:"github.com",tag:"design",uses:38,last:"1d ago",note:"Copy components, don't install them. Every project starts by grabbing button, input, dialog from here.",status:"live"},
+ {t:"Single-table design in DynamoDB",k:"ART",src:"alexdebrie.com",tag:"data",uses:2,last:"31d ago",note:"The access-pattern table near the end is the part worth re-reading before any new table design.",status:"live"},
+ {t:"colinhacks/zod",k:"GIT",src:"github.com",tag:"craft",uses:29,last:"3h ago",note:"",status:"live"},
+ {t:"kubernetes/website — probes",k:"DOC",src:"kubernetes.io",tag:"infra",uses:0,last:"never",note:"",status:"stale"},
+ {t:"old-team/legacy-auth-service",k:"GIT",src:"github.com",tag:"infra",uses:0,last:"never",note:"",status:"archived"},
+ {t:"Use the index, Luke",k:"ART",src:"use-the-index-luke.com",tag:"data",uses:14,last:"9d ago",note:"The clearest explanation of composite index column order that exists. Send this instead of re-explaining it.",status:"live"},
+ {t:"Raycast",k:"APP",src:"raycast.com",tag:"craft",uses:0,last:"never",note:"",status:"dead"},
+ {t:"aws-sqs-fifo-dedup-window",k:"SNIP",src:"snippet",tag:"infra",uses:6,last:"12d ago",note:"5 minute dedup window, hardcoded. Not configurable. Every retry backoff needs to respect this.",code:"// FIFO dedup window\nconst DEDUP_WINDOW_SEC = 300; // hardcoded by AWS, not configurable"},
+ {t:"Excalidraw",k:"APP",src:"excalidraw.com",tag:"design",uses:22,last:"6h ago",note:"",status:"live"},
+ {t:"Attention is all you need",k:"PPR",src:"arxiv.org",tag:"ai",uses:8,last:"18d ago",note:"§3.2 on scaled dot-product — the part I go back to before writing anything about retrieval.",status:"live"},
+ {t:"docs.claude.com — prompt caching",k:"DOC",src:"docs.claude.com",tag:"ai",uses:17,last:"1d ago",note:"",status:"live"}
+];
+
+const DIRS=[
+ {n:"01",name:"Usage sort",sub:"Most-reached-for first",
+  h:"Sort by use, not by date saved",
+  p:"The primary ordering becomes lastUsedAt and useCount instead of createdAt. A repo you've opened forty times outranks one saved yesterday. Never-opened items get an orange left edge — not a scolding, just a visible fact — and a toggle isolates them: \"41 items saved, never opened.\" That's the honest signal in a library, where \"unread\" was the honest signal in a queue.",
+  best:"Makes the library reorder itself around what you actually reach for. Zero manual curation.",
+  cost:"Needs use tracking wired into every surface that opens an item — the app, the extension, and any copy action on a snippet.",
+  sig:"The heat column on the left — a use-frequency indicator, not a date."},
+ {n:"02",name:"Health",sub:"Rot detection replaces debt",
+  h:"A library's failure mode is being wrong, not unread",
+  p:"Dead links serve your archived copy with a PRESERVED badge. Archived or abandoned repos are flagged from data you already fetch. Content drift diffs the archived text against a re-fetch and shows exactly what changed. The top-line number becomes a health score — 138 items, 6 need attention — the honest analogue of a debt count for something you keep forever.",
+  best:"Solves the real problem: consulting a reference and it being stale or gone, silently.",
+  cost:"Content-drift diffing needs a scheduled re-fetch and a real diff algorithm tuned to ignore ad rotation and cosmetic changes.",
+  sig:"The inline diff — struck red for what changed, lime for what replaced it."},
+ {n:"03",name:"Note-forward",sub:"Your words are the artifact",
+  h:"The annotation outranks the link",
+  p:"Your note renders at full size in a yellow rule, unclamped, and is the primary search target — not metadata clamped to two lines under the title. And a saved item can BE a snippet rather than a link to one: a command, a config block, a regex, with a copy button. A lot of reference material was never a page in the first place.",
+  best:"Matches what you actually go back for — not the article, but why you kept it.",
+  cost:"Needs a real snippet type in the schema and prompts a note at save time, which adds friction to capture that has to stay optional.",
+  sig:"The dark-terminal snippet card with a one-click copy — visually distinct from every link card on purpose."},
+ {n:"04",name:"Situations",sub:"Organise by task, not topic",
+  h:"You arrive with a job, not a subject",
+  p:"Horizontal shelves for a task rather than a topic: \"setting up a new machine,\" \"debugging Postgres performance.\" Cheap version — these are saved searches, not manual folders, so a situation is a query (#postgres kind:doc used:>3) that populates itself and never needs maintenance.",
+  best:"Matches how you actually approach the library — with a problem, not a category.",
+  cost:"Needs the query grammar to be expressive enough to define a situation well, and someone has to write the first handful.",
+  sig:"The query line at the bottom of each shelf — visible, so you know it's alive, not a hand-picked list."},
+ {n:"05",name:"Retrieval",sub:"⌘K over browsing",
+  h:"Search-first, ranked by use",
+  p:"Full-text over archived body text, not just titles — you'll remember a phrase from inside a doc, not what it's called. Results rank by useCount so your most-consulted references surface before something saved once and forgotten. One global hotkey, reachable from the extension too.",
+  best:"For a library you consult under time pressure, typing three words beats browsing every time.",
+  cost:"Full-text over archived bodies needs a real search index — Postgres FTS is enough at this scale, no need for anything heavier yet.",
+  sig:"Usage count sitting right next to every result, in green, so ranking is visibly explained."},
+ {n:"06",name:"Ledger, reworked",sub:"Usage and rot replace debt",
+  h:"The honest bar for a library that never empties",
+  p:"The home page beam stops being TOOK ON vs CLEARED — that's a queue's argument. For a library it becomes SAVED · USED · WENT STALE, and the verdict sentence follows: your best sources by return-rate, and how much has quietly rotted. Different argument, same visual language.",
+  best:"Keeps the home page's voice consistent while making an argument that's actually true for this data.",
+  cost:"WENT STALE depends on Health (02) existing first — this is a downstream view, not a standalone build.",
+  sig:"The verdict line naming your single best source by actual return rate."}
+];
+
+/* ============ 01 usage sort ============ */
+function d1(){
+  const rows=[...ITEMS].sort((a,b)=>b.uses-a.uses).map(x=>`
+    <div class="u-row ${x.uses===0?'u-never':''}">
+      <span class="u-heat" style="background:${TC[x.tag]}">${x.k}</span>
+      <div class="u-mid"><div class="u-t">${esc(x.t)}</div>
+        <div class="u-m">${x.src} · #${x.tag}${x.uses===0?' · NEVER OPENED':''}</div></div>
+      <div class="u-r"><div class="u-uses">${x.uses}×</div><div class="u-last">${x.last}</div></div>
+    </div>`).join("");
+  return `<div class="u-toolbar">
+      <div class="u-seg"><button class="on">MOST USED</button><button>RECENTLY USED</button><button>RECENTLY SAVED</button></div>
+      <div class="u-seg"><button>ALL</button><button>NEVER OPENED · 3</button></div>
+    </div><div class="u-list">${rows}</div>`;
+}
+
+/* ============ 02 health ============ */
+function d2(){
+  return `<div class="h-summary">
+      <div class="h-stat"><b>138</b><span>ITEMS</span></div>
+      <div class="h-stat bad"><b>6</b><span>NEED ATTENTION</span></div>
+      <div class="h-stat"><b>96%</b><span>HEALTHY</span></div>
+    </div>
+    <div class="h-list">
+      <div class="h-row"><span class="h-icon">✕</span>
+        <div><div class="h-t">Raycast</div><div class="h-issue">raycast.com/blog/window-management</div></div>
+        <span class="h-badge dead">404 · SINCE 6D AGO</span></div>
+      <div class="h-row"><span class="h-icon">🗄</span>
+        <div><div class="h-t">old-team/legacy-auth-service</div><div class="h-issue">github.com/old-team/legacy-auth-service</div></div>
+        <span class="h-badge stale">ARCHIVED 4 MO AGO</span></div>
+      <div class="h-row"><span class="h-icon">≈</span>
+        <div><div class="h-t">kubernetes.io — liveness vs readiness probes</div>
+          <div class="h-issue">CONTENT CHANGED SINCE YOU SAVED IT</div></div>
+        <span class="h-badge drift">DRIFT DETECTED</span>
+        <div class="h-diff"><del>Liveness probes restart the pod after 3 consecutive failures.</del><br>
+          <ins>Liveness probes restart the pod after failureThreshold consecutive failures (default 3).</ins></div>
+      </div>
+    </div>`;
+}
+
+/* ============ 03 note-forward ============ */
+function d3(){
+  const cards=ITEMS.filter(x=>x.note||x.code).map(x=>x.code?`
+    <div class="n-card"><div class="n-top"><span class="n-badge" style="background:#B6FF3C">SNIP</span><span class="n-t">${esc(x.t)}</span></div>
+      <div class="n-snip"><button>COPY</button>${esc(x.code)}</div>
+      <div class="n-src" style="padding-top:0">${esc(x.note)}</div></div>`
+    :`<div class="n-card"><div class="n-top"><span class="n-badge" style="background:${TC[x.tag]}">${x.k}</span><span class="n-t">${esc(x.t)}</span></div>
+      <div class="n-note">${esc(x.note)}</div>
+      <div class="n-src">${x.src} · USED ${x.uses}× · LAST ${x.last}</div></div>`).join("");
+  return `<div class="n-grid">${cards}</div>`;
+}
+
+/* ============ 04 situations ============ */
+function d4(){
+  const SITS=[
+    {n:"Setting up a new machine",q:"#tools kind:app OR kind:doc",items:["Raycast","Excalidraw","Warp","dotfiles repo"]},
+    {n:"Debugging Postgres performance",q:"#data #infra used:>3",items:["Use the index, Luke","pgvector/pgvector","EXPLAIN ANALYZE cheatsheet"]},
+    {n:"Starting a Next.js project",q:"#craft kind:repo OR kind:snip",items:["shadcn-ui/ui","colinhacks/zod","aws-sqs-fifo-dedup-window"]},
+    {n:"Writing about retrieval",q:"#ai used:>5",items:["Attention is all you need","pgvector/pgvector","docs.claude.com — prompt caching"]}
+  ];
+  return `<div class="sit-row">${SITS.map(s=>`
+    <div class="sit"><div class="sit-hd"><b>${s.n}</b><span>${s.items.length} ITEMS · LIVE QUERY</span></div>
+      <div class="sit-items">${s.items.map(i=>`<div class="sit-i">${i}</div>`).join("")}</div>
+      <div class="sit-q">${s.q}</div></div>`).join("")}</div>`;
+}
+
+/* ============ 05 retrieval ============ */
+function d5(){
+  const rows=[...ITEMS].sort((a,b)=>b.uses-a.uses).slice(0,6).map((x,i)=>`
+    <div class="k-row ${i===0?'sel':''}"><span class="k-badge">${x.k}</span>
+      <div><div class="k-t">${x.t.replace(/pgvector/i,'<mark>pgvector</mark>')}</div>
+        <div class="k-m">${x.src} · #${x.tag}</div></div>
+      <span class="k-uses">${x.uses}×</span></div>`).join("");
+  return `<div class="k-shell">
+    <div class="k-in"><span class="c">⌘K</span><input value="pgvector" readonly></div>
+    <div class="k-list">${rows}</div>
+    <div class="k-foot"><span>↑↓ NAVIGATE</span><span>↵ OPEN</span><span>RANKED BY USE COUNT</span></div>
+  </div>`;
+}
+
+/* ============ 06 ledger ============ */
+function d6(){
+  return `<div class="l-ledger">
+    <div class="l-hd">THE LIBRARY · ROLLING 30 DAYS</div>
+    <div class="l-beam">
+      <i style="flex:9;background:var(--cyan)">SAVED 9</i>
+      <i style="flex:31;background:var(--lime)">USED 31×</i>
+      <i style="flex:4;background:var(--pink);color:#fff">STALE 4</i>
+    </div>
+    <div class="l-row">
+      <div class="l-r"><b>138</b><span>TOTAL ITEMS</span></div>
+      <div class="l-r"><b>96%</b><span>HEALTHY</span></div>
+      <div class="l-r"><b>41</b><span>NEVER OPENED</span></div>
+    </div>
+    <p class="l-verdict"><b>pgvector/pgvector</b> is your most-returned-to reference this month at 41 uses. Four items have gone stale since you saved them — worth five minutes in Health.</p>
+  </div>`;
+}
+
+const R=[d1,d2,d3,d4,d5,d6];
+const rail=document.getElementById('rail'),spec=document.getElementById('spec'),stage=document.getElementById('stage');
+rail.innerHTML=DIRS.map((d,i)=>`<button class="tab${i===0?' on':''}" data-i="${i}">
+  <span class="num">${d.n}</span><span class="nm">${d.name}</span><span class="sub">${d.sub}</span></button>`).join("");
+function show(i){
+  const d=DIRS[i];
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('on',j===i));
+  spec.innerHTML=`<div><h2>${d.h}</h2><p>${d.p}</p></div>
+    <dl class="meta">
+      <div class="mr"><dt>Best at</dt><dd>${d.best}</dd></div>
+      <div class="mr"><dt>Costs you</dt><dd>${d.cost}</dd></div>
+      <div class="mr"><dt>Signature</dt><dd>${d.sig}</dd></div>
+    </dl>`;
+  stage.innerHTML=R[i]();
+}
+rail.addEventListener('click',e=>{const t=e.target.closest('.tab');if(t)show(+t.dataset.i)});
+show(0);
+</script>
+</body>
+</html>

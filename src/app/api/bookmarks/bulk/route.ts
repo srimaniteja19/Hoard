@@ -4,21 +4,29 @@ import { bookmarks } from "@/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 
-// ─── PATCH /api/bookmarks/bulk  (mark read) ──────────────────────────────────
-// Body: { ids: number[], unread: boolean }
+// ─── PATCH /api/bookmarks/bulk  (mark read / confirm item-type guesses) ──────
+// Body: { ids: number[], unread?: boolean, itemTypeGuessed?: boolean }
 
 export async function PATCH(req: Request) {
   try {
     const userId = await requireUserId();
-    const { ids, unread } = await req.json() as { ids: number[]; unread: boolean };
+    const { ids, unread, itemTypeGuessed } = await req.json() as {
+      ids: number[];
+      unread?: boolean;
+      itemTypeGuessed?: boolean;
+    };
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json({ error: "ids required" }, { status: 400 });
     }
 
+    const updates: Partial<typeof bookmarks.$inferInsert> = { updatedAt: new Date() };
+    if (typeof unread === "boolean") updates.unread = unread;
+    if (typeof itemTypeGuessed === "boolean") updates.itemTypeGuessed = itemTypeGuessed;
+
     await db
       .update(bookmarks)
-      .set({ unread, updatedAt: new Date() })
+      .set(updates)
       .where(and(eq(bookmarks.userId, userId), inArray(bookmarks.id, ids)));
 
     return NextResponse.json({ ok: true });

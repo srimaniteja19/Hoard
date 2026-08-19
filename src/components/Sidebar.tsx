@@ -38,6 +38,8 @@ interface SidebarProps {
   setTag: (t: string | null) => void;
   unreadOnly: boolean;
   setUnreadOnly: (u: boolean) => void;
+  neverOpenedOnly: boolean;
+  setNeverOpenedOnly: (u: boolean) => void;
   view?: ViewMode;
   setView?: (v: ViewMode) => void;
   onOpenCapture: () => void;
@@ -63,6 +65,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setTag,
   unreadOnly,
   setUnreadOnly,
+  neverOpenedOnly,
+  setNeverOpenedOnly,
   view,
   setView,
   onOpenCapture,
@@ -127,6 +131,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return bookmarks.filter((x) => !x.isDeleted && !x.unread).length;
   }, [bookmarks]);
 
+  const neverOpenedCount = useMemo(() => {
+    return bookmarks.filter((x) => !x.isDeleted && x.itemType === "REFERENCE" && (x.useCount ?? 0) === 0).length;
+  }, [bookmarks]);
+
   const duplicateCount = useMemo(() => {
     const seen = new Set<string>();
     let dups = 0;
@@ -157,6 +165,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const handleSelectUnread = () => {
     setUnreadOnly(!unreadOnly);
+    if (onCloseMobile) onCloseMobile();
+  };
+
+  const handleSelectNeverOpened = () => {
+    setNeverOpenedOnly(!neverOpenedOnly);
     if (onCloseMobile) onCloseMobile();
   };
 
@@ -397,6 +410,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 {unreadCount}
               </span>
+            </div>
+
+            <div
+              className={`ci ${neverOpenedOnly ? "on" : ""}`}
+              onClick={handleSelectNeverOpened}
+            >
+              <span className="ic" style={{ background: "var(--orange, #FF6B00)" }}></span>
+              Never opened
+              <span className="n">{neverOpenedCount}</span>
             </div>
 
             <div className="ci" id="til-gains-counter" title="Bookmarks discharged into TIL entries this session">

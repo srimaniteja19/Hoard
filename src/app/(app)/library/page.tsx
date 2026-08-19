@@ -5,6 +5,7 @@ import { useBookmarks } from "@/hooks/useBookmarks";
 import { Sidebar } from "@/components/Sidebar";
 import { HeaderBar } from "@/components/HeaderBar";
 import { CrumbBar } from "@/components/CrumbBar";
+import { ItemTypeReviewBanner } from "@/components/ItemTypeReviewBanner";
 import { TimeContextBar } from "@/components/TimeContextBar";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { InspectorDrawer } from "@/components/InspectorDrawer";
@@ -52,6 +53,8 @@ export default function Home() {
     setSort,
     unreadOnly,
     setUnreadOnly,
+    neverOpenedOnly,
+    setNeverOpenedOnly,
     selectedIds,
     toggleSelect,
     clearSelection,
@@ -68,6 +71,7 @@ export default function Home() {
     addBookmark,
     addChapter,
     toggleReadStatus,
+    recordBookmarkUse,
     updateNote,
     changeBookmarkCollection,
     changeBookmarkKind,
@@ -248,6 +252,8 @@ export default function Home() {
         setTag={setTag}
         unreadOnly={unreadOnly}
         setUnreadOnly={setUnreadOnly}
+        neverOpenedOnly={neverOpenedOnly}
+        setNeverOpenedOnly={setNeverOpenedOnly}
         view={view}
         setView={setView}
         onOpenCapture={() => {
@@ -265,6 +271,8 @@ export default function Home() {
 
       {/* Main Content Area */}
       <main className="main">
+        <ItemTypeReviewBanner guessedCount={bookmarks.filter((b) => b.itemTypeGuessed).length} />
+
         <CrumbBar
           items={filteredBookmarks}
           coll={coll}
@@ -289,6 +297,7 @@ export default function Home() {
               onPurge={(id) => purgeBookmark(id)}
               onOpenDiff={handleOpenDiffModal}
               onDischarge={handleOpenDischargeModal}
+              onRecordUse={recordBookmarkUse}
             />
           ) : bookmarks.length === 0 ? (
             <ColdStart onOpenImport={() => setIsImportOpen(true)} />
@@ -371,6 +380,7 @@ export default function Home() {
           onCheckDrift={checkDrift}
           onOpenDiff={handleOpenDiffModal}
           onSelectBookmark={(id) => setOpenId(id)}
+          onRecordUse={recordBookmarkUse}
         />
 
       </main>
@@ -407,6 +417,7 @@ export default function Home() {
         onClose={() => setIsDiffOpen(false)}
         bookmark={diffBookmark}
         onRecheckDrift={checkDrift}
+        onRecordUse={recordBookmarkUse}
       />
 
       {/* 💡 Discharge: turn a queued bookmark into the TIL entry it produced */}

@@ -13,10 +13,13 @@ import {
   date,
   primaryKey,
   real,
+  customType,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { KindType } from "@/types";
+
+const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
 
 export type LinkPreview = {
   provider: "YOUTUBE" | "VIMEO" | "SPOTIFY" | "GITHUB" | "ARXIV" | "X" | "GENERIC";
@@ -55,6 +58,10 @@ export const todoEnergy = pgEnum("todo_energy", todoEnergyValues);
 export const todoStateValues = ["OPEN", "DONE", "DROPPED", "GRAVEYARD"] as const;
 export type TodoState = typeof todoStateValues[number];
 export const todoState = pgEnum("todo_state", todoStateValues);
+
+export const itemTypeValues = ["REFERENCE", "QUEUED"] as const;
+export type ItemType = typeof itemTypeValues[number];
+export const itemType = pgEnum("bookmark_item_type", itemTypeValues);
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -140,12 +147,19 @@ export const bookmarks = pgTable(
       .notNull()
       .references(() => collections.id),
     unread: boolean("unread").notNull().default(true),
+    itemType: itemType("item_type").notNull().default("REFERENCE"),
+    itemTypeGuessed: boolean("item_type_guessed").notNull().default(false),
+    useCount: integer("use_count").notNull().default(0),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     note: text("note").notNull().default(""),
     extra: jsonb("extra").$type<Record<string, unknown>>().notNull().default({}),
     parentId: integer("parent_id"),
     startTimeSec: integer("start_time_sec"),
     chapterIndex: integer("chapter_index"),
     archivedText: text("archived_text"),
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      sql`bookmark_search_vector_immutable(title, archived_text)`
+    ),
     lastFetchedAt: timestamp("last_fetched_at"),
     driftStatus: text("drift_status"),
     driftPercent: integer("drift_percent"),
@@ -169,6 +183,9 @@ export const bookmarks = pgTable(
     uniqueIndex("user_url_idx").on(table.userId, table.url),
     index("user_created_idx").on(table.userId, table.createdAt, table.id),
     index("user_unread_idx").on(table.userId, table.unread),
+    index("user_use_count_idx").on(table.userId, table.useCount),
+    index("user_last_used_idx").on(table.userId, table.lastUsedAt),
+    index("bookmark_search_vector_idx").using("gin", table.searchVector),
     index("bookmark_parent_idx").on(table.parentId),
     index("bookmark_cluster_idx").on(table.clusterId),
   ]

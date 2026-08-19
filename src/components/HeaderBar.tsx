@@ -146,7 +146,13 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
           <div className="grp sort-grp">
             <button className={sort === "recent" ? "on" : ""} onClick={() => setSort("recent")}>
-              RECENT
+              RECENTLY SAVED
+            </button>
+            <button className={sort === "mostUsed" ? "on" : ""} onClick={() => setSort("mostUsed")}>
+              MOST USED
+            </button>
+            <button className={sort === "recentlyUsed" ? "on" : ""} onClick={() => setSort("recentlyUsed")}>
+              RECENTLY USED
             </button>
             <button className={sort === "short" ? "on" : ""} onClick={() => setSort("short")}>
               SHORTEST

@@ -3,6 +3,7 @@ import "./globals.css";
 import { PWAProvider } from "@/components/PWAProvider";
 import { TodoReminderProvider } from "@/components/TodoReminderProvider";
 import { DuotoneFilters } from "@/components/covers/DuotoneFilters";
+import { CommandPalette } from "@/components/library/CommandPalette";
 
 export const metadata: Metadata = {
   title: "HOARD — Bookmark Manager",
@@ -45,6 +46,7 @@ export default function RootLayout({
         <PWAProvider>
           <TodoReminderProvider>{children}</TodoReminderProvider>
         </PWAProvider>
+        <CommandPalette />
       </body>
     </html>
   );

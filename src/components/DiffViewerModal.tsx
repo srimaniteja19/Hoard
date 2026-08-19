@@ -8,6 +8,7 @@ interface DiffViewerModalProps {
   onClose: () => void;
   bookmark: Bookmark | null;
   onRecheckDrift?: (id: number) => Promise<void>;
+  onRecordUse?: (id: number) => void;
 }
 
 export function DiffViewerModal({
@@ -15,6 +16,7 @@ export function DiffViewerModal({
   onClose,
   bookmark,
   onRecheckDrift,
+  onRecordUse,
 }: DiffViewerModalProps) {
   if (!isOpen || !bookmark) return null;
 
@@ -102,7 +104,7 @@ export function DiffViewerModal({
         <div style={{ padding: "16px 20px", borderBottom: "2px solid var(--ink)", background: "var(--cream)" }}>
           <div style={{ fontWeight: 800, fontSize: "16px", marginBottom: "4px" }}>{bookmark.t}</div>
           <div style={{ fontSize: "11px", color: "#555" }}>
-            URL: <a href={bookmark.url} target="_blank" rel="noreferrer" style={{ color: "#000", fontWeight: 700 }}>{bookmark.url}</a>
+            URL: <a href={bookmark.url} target="_blank" rel="noreferrer" onClick={() => onRecordUse?.(bookmark.id)} style={{ color: "#000", fontWeight: 700 }}>{bookmark.url}</a>
           </div>
           {bookmark.lastFetchedAt && (
             <div style={{ fontSize: "10px", color: "#666", marginTop: "4px" }}>

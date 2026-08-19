@@ -3,10 +3,11 @@ import { db } from "@/db";
 import { bookmarks, collections } from "@/db/schema";
 import { eq, isNull, and, desc } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
-import { Bookmark, KindType } from "@/types";
+import { Bookmark, ItemType, KindType } from "@/types";
 import { parseCoverData } from "@/lib/cover-data";
 import { cleanTitle } from "@/lib/cleanTitle";
 import { enrichBookmarkValues } from "@/lib/enrichBookmark";
+import { inferItemType } from "@/lib/library/inferItemType";
 
 // ─── Shape mapper ────────────────────────────────────────────────────────────
 
@@ -29,6 +30,10 @@ function dbToUi(row: typeof bookmarks.$inferSelect, titleMap?: Map<number, strin
     deletedAt: row.deletedAt ? new Date(row.deletedAt).toISOString() : null,
     isDeleted: Boolean(row.deletedAt),
     unread: row.unread,
+    itemType: row.itemType as ItemType,
+    itemTypeGuessed: row.itemTypeGuessed,
+    useCount: row.useCount,
+    lastUsedAt: row.lastUsedAt ? new Date(row.lastUsedAt).toISOString() : null,
     ex:     (() => {
       const raw = (row.extra as Record<string, unknown>) || {};
       // Omit 'coverData'/'coverImage' — structured fields, not display strings
@@ -106,14 +111,18 @@ export async function GET(req?: Request) {
   try {
     const userId = await requireUserId(req);
     let includeDeleted = false;
+    let onlyGuessed = false;
     if (req) {
       const { searchParams } = new URL(req.url);
       includeDeleted = searchParams.get("includeDeleted") === "true";
+      onlyGuessed = searchParams.get("itemTypeGuessed") === "true";
     }
 
-    const whereClause = includeDeleted
-      ? eq(bookmarks.userId, userId)
-      : and(eq(bookmarks.userId, userId), isNull(bookmarks.deletedAt));
+    const whereClause = and(
+      eq(bookmarks.userId, userId),
+      includeDeleted ? undefined : isNull(bookmarks.deletedAt),
+      onlyGuessed ? eq(bookmarks.itemTypeGuessed, true) : undefined
+    );
 
     const rows = await db
       .select()
@@ -188,6 +197,7 @@ export async function POST(req: Request) {
     );
 
     const kind: KindType = body.ty || "ART";
+    const guessedItemType = inferItemType(kind);
     const enriched = await enrichBookmarkValues(
       body.url,
       kind,
@@ -206,6 +216,8 @@ export async function POST(req: Request) {
       tag:          body.tag    || "general",
       collectionId,
       unread:       body.unread ?? true,
+      itemType:     guessedItemType,
+      itemTypeGuessed: true,
       note:         enriched.note,
       excerptSource: enriched.excerptSource,
       extra:        {

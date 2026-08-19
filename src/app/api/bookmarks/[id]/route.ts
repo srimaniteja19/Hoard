@@ -21,6 +21,8 @@ export async function PATCH(req: Request, { params }: Params) {
     };
 
     if (typeof body.unread    === "boolean") updates.unread       = body.unread;
+    if (body.itemType === "REFERENCE" || body.itemType === "QUEUED") updates.itemType = body.itemType;
+    if (typeof body.itemTypeGuessed === "boolean") updates.itemTypeGuessed = body.itemTypeGuessed;
     if (typeof body.note      === "string")  updates.note         = body.note;
     if (typeof body.coll      === "string")  updates.collectionId = body.coll;
     if (typeof body.title     === "string")  updates.title        = body.title;

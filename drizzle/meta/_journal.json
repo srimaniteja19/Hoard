@@ -43,6 +43,13 @@
       "when": 1786998544335,
       "tag": "0005_add_day_notes_and_rollover_events",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787172974081,
+      "tag": "0006_add_bookmark_item_type_and_usage",
+      "breakpoints": true
     }
   ]
 }

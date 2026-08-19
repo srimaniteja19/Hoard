@@ -38,6 +38,7 @@ interface ArchiveViewProps {
   onPurge: (id: number) => void;
   onOpenDiff?: (bookmark: Bookmark) => void;
   onDischarge?: (bookmark: Bookmark, sourceRect: DOMRect) => void;
+  onRecordUse?: (id: number) => void;
 }
 
 export const ArchiveView: React.FC<ArchiveViewProps> = ({
@@ -49,6 +50,7 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({
   onPurge,
   onOpenDiff,
   onDischarge,
+  onRecordUse,
 }) => {
   const [subFilter, setSubFilter] = useState<ArchiveSubFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -1118,6 +1120,7 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({
                 href={activeReaderBookmark.url}
                 target="_blank"
                 rel="noreferrer"
+                onClick={() => onRecordUse?.(activeReaderBookmark.id)}
                 style={{
                   fontFamily: "var(--mono)",
                   fontSize: "10px",

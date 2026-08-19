@@ -8,6 +8,7 @@ import { getLoggedForDate, generateShortHash, getUserTimezone, getTagsForTilEntr
 import { fetchLinkPreview } from "@/lib/til/previewRegistry";
 import { confidence, confidenceSql } from "@/lib/til/confidence";
 import { checkSupersessionCycle } from "@/lib/til/supersession";
+import { recordUse } from "@/lib/library/recordUse";
 import crypto from "crypto";
 
 // ─── GET /api/til ────────────────────────────────────────────────────────────
@@ -217,6 +218,9 @@ export async function POST(req: Request) {
           .where(and(eq(bookmarks.id, data.dischargesBookmarkId), eq(bookmarks.userId, userId))),
       ]);
       inserted = insertedRows[0];
+      // A TIL entry citing this bookmark is itself a "use" (LIBRARY.md §2) —
+      // doesn't need the same atomicity as the batch above, this is informational.
+      await recordUse(data.dischargesBookmarkId, userId);
     } else {
       const [row] = await db.insert(tilEntries).values(insertValues).returning();
       inserted = row;

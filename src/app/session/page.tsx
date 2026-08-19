@@ -10,7 +10,7 @@ import { Zap, CheckCircle2, ArrowRight, X, Play, Pause } from "lucide-react";
 
 function SessionPageContent() {
   const router = useRouter();
-  const { bookmarks, toggleReadStatus } = useBookmarks();
+  const { bookmarks, toggleReadStatus, recordBookmarkUse } = useBookmarks();
   const unreadItems = bookmarks.filter((b) => b.unread);
 
   const searchParams = useSearchParams();
@@ -276,6 +276,7 @@ function SessionPageContent() {
             href={currentItem.url}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => recordBookmarkUse(currentItem.id)}
             style={{
               color: "#00F0FF",
               fontFamily: "var(--mono)",

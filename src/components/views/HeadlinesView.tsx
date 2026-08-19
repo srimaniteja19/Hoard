@@ -24,6 +24,7 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
     <div className="heads">
       {items.map((x) => {
         const isSel = selectedIds.has(x.id);
+        const neverOpened = x.itemType === "REFERENCE" && (x.useCount ?? 0) === 0;
 
         return (
           <div
@@ -36,12 +37,16 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
                 onOpen(x.id);
               }
             }}
+            style={neverOpened ? { borderLeft: "3px solid var(--orange)" } : undefined}
           >
             <span className="hb" data-kind={x.ty}>
               {x.ty}
             </span>
             <span className="ht">{x.t}</span>
             <span className="hm hsrc">{x.src}</span>
+            <span className="hm huses" style={{ textAlign: "right" }}>
+              {x.useCount ?? 0}×
+            </span>
             <span className="hm hdur" style={{ textAlign: "right" }}>
               {formatMins(x.mins)}
             </span>

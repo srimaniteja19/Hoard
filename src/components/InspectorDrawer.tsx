@@ -20,6 +20,7 @@ interface InspectorDrawerProps {
   onCheckDrift?: (id: number) => Promise<void>;
   onOpenDiff?: (b: Bookmark) => void;
   onSelectBookmark?: (id: number) => void;
+  onRecordUse?: (id: number) => void;
 }
 
 export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
@@ -35,6 +36,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
   onCheckDrift,
   onOpenDiff,
   onSelectBookmark,
+  onRecordUse,
 }) => {
   const [noteVal, setNoteVal] = useState("");
   const [permCopy, setPermCopy] = useState(true);
@@ -163,7 +165,10 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
           <div className="iacts">
             <button
               className="p1"
-              onClick={() => window.open(bookmark.url, "_blank")}
+              onClick={() => {
+                window.open(bookmark.url, "_blank");
+                onRecordUse?.(bookmark.id);
+              }}
             >
               OPEN ↗
             </button>
@@ -269,7 +274,10 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
 
                     <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                       <button
-                        onClick={() => window.open(chap.url, "_blank")}
+                        onClick={() => {
+                          window.open(chap.url, "_blank");
+                          onRecordUse?.(chap.id);
+                        }}
                         style={{
                           background: "#00F0FF",
                           border: "1px solid var(--ink)",

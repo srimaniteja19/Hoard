@@ -3,6 +3,7 @@
 import React from "react";
 import { Bookmark } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
+import { formatRelativeTime } from "@/lib/library/formatRelativeTime";
 
 interface ListViewProps {
   items: Bookmark[];
@@ -41,6 +42,7 @@ export const ListView: React.FC<ListViewProps> = ({
         const isSel = selectedIds.has(x.id);
         const fits = currentTimeLimit < 180 && x.mins <= currentTimeLimit;
         const metaBits = getMetaBits(x);
+        const neverOpened = x.itemType === "REFERENCE" && (x.useCount ?? 0) === 0;
 
         return (
           <div
@@ -53,6 +55,7 @@ export const ListView: React.FC<ListViewProps> = ({
                 onOpen(x.id);
               }
             }}
+            style={neverOpened ? { borderLeft: "3px solid var(--orange)" } : undefined}
           >
             <div className="swatch" data-kind={x.ty}>
               {x.ty}
@@ -74,6 +77,10 @@ export const ListView: React.FC<ListViewProps> = ({
                 <span>#{x.tag}</span>
                 <span style={{ opacity: 0.4 }}>·</span>
                 <span>{x.when}</span>
+                <span style={{ opacity: 0.4 }}>·</span>
+                <span>
+                  {x.useCount ?? 0}× · {formatRelativeTime(x.lastUsedAt)}
+                </span>
               </div>
             </div>
 

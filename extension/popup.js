@@ -2,6 +2,15 @@
 
 const DEFAULT_SERVER_URL = "https://hoard-ten.vercel.app";
 const PENDING_KEY = "hoard_pending_sync";
+const KIND_COLOR = {
+  ART: { bg: "#00F0FF", fg: "#000" },
+  VID: { bg: "#FF007A", fg: "#fff" },
+  PLY: { bg: "#7C4DFF", fg: "#fff" },
+  GIT: { bg: "#B6FF3C", fg: "#000" },
+  APP: { bg: "#FFE600", fg: "#000" },
+  PPR: { bg: "#FF6B00", fg: "#000" },
+  DOC: { bg: "#00E58A", fg: "#000" },
+};
 
 // Content Kind Auto-Detection
 function detectUrlMeta(u) {
@@ -475,6 +484,17 @@ document.addEventListener("DOMContentLoaded", async () => {
           } else {
             window.open(item.url, "_blank");
           }
+
+          // Local cache items carry a Date.now() id, not the real DB id — resolve
+          // by URL server-side instead (LIBRARY.md §2). Fire-and-forget, must
+          // never block or interrupt the tab open.
+          const serverUrl = (serverUrlInput?.value || DEFAULT_SERVER_URL).replace(/\/$/, "");
+          fetch(`${serverUrl}/api/bookmarks/use-by-url`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: item.url }),
+          }).catch((e) => console.warn("[HOARD] recordUse failed:", e));
         });
 
         hoardList.appendChild(el);
@@ -482,10 +502,85 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Ranked full-text search (LIBRARY.md §4/§5) — reuses the same
+  // /api/library/search endpoint the web app's ⌘K palette calls. Falls back
+  // to the local-cache substring filter on failure (offline, not logged in)
+  // or an empty query.
+  let searchDebounce = null;
+  function renderRankedSearchResults(query, filter) {
+    const serverUrl = (serverUrlInput?.value || DEFAULT_SERVER_URL).replace(/\/$/, "");
+    fetch(`${serverUrl}/api/library/search?q=${encodeURIComponent(query)}`, { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
+      .then((results) => {
+        const filtered = filter === "all" ? results : results.filter((r) => r.ty === filter);
+
+        if (filtered.length === 0) {
+          hoardList.innerHTML = `<div style="text-align: center; padding: 20px; font-family: var(--mono); font-size: 11px; opacity: .7;">NO MATCHING BOOKMARKS</div>`;
+          return;
+        }
+
+        hoardList.innerHTML = "";
+        filtered.forEach((r) => {
+          const el = document.createElement("div");
+          el.className = "hoard-item";
+          const color = KIND_COLOR[r.ty] || KIND_COLOR.APP;
+
+          el.innerHTML = `
+            <div style="flex: 1; overflow: hidden;">
+              <div class="hoard-item-title" style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${r.title}</div>
+              <div class="hoard-item-meta">
+                <span style="background: ${color.bg}; color: ${color.fg}; padding: 1px 4px; border: 1px solid #000; font-weight: 800;">${r.ty}</span>
+                <span style="margin-left: 4px;">${r.src}</span> · <span>#${r.tag}</span>
+                · <span style="font-weight: 800;">${r.useCount}×</span>
+              </div>
+            </div>
+            <div class="hoard-item-actions">
+              <button class="icon-btn copy-btn" title="Copy URL">📋</button>
+              <button class="icon-btn open-btn" title="Open Link">↗</button>
+            </div>
+          `;
+
+          el.querySelector(".copy-btn").addEventListener("click", () => {
+            navigator.clipboard.writeText(r.url);
+            showToast("✓ COPIED LINK");
+          });
+
+          el.querySelector(".open-btn").addEventListener("click", () => {
+            if (typeof chrome !== "undefined" && chrome.tabs) {
+              chrome.tabs.create({ url: r.url });
+            } else {
+              window.open(r.url, "_blank");
+            }
+            fetch(`${serverUrl}/api/bookmarks/${r.id}/use`, {
+              method: "POST",
+              credentials: "include",
+            }).catch((e) => console.warn("[HOARD] recordUse failed:", e));
+          });
+
+          hoardList.appendChild(el);
+        });
+      })
+      .catch((e) => {
+        console.warn("[HOARD] ranked search failed, falling back to local cache:", e);
+        renderHoardList(query, filter);
+      });
+  }
+
   // Search Filter Input
   searchInHoard.addEventListener("input", (e) => {
+    const query = e.target.value;
     const activeFilter = document.querySelector(".filter-chip.active")?.getAttribute("data-filter") || "all";
-    renderHoardList(e.target.value, activeFilter);
+
+    if (searchDebounce) clearTimeout(searchDebounce);
+
+    if (!query.trim()) {
+      renderHoardList(query, activeFilter);
+      return;
+    }
+
+    searchDebounce = setTimeout(() => {
+      renderRankedSearchResults(query.trim(), activeFilter);
+    }, 200);
   });
 
   // Filter Chips in Search Tab
@@ -494,7 +589,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       filterChips.forEach((c) => c.classList.remove("active"));
       chip.classList.add("active");
       const filter = chip.getAttribute("data-filter");
-      renderHoardList(searchInHoard.value, filter);
+      const query = searchInHoard.value.trim();
+      if (query) {
+        renderRankedSearchResults(query, filter);
+      } else {
+        renderHoardList(searchInHoard.value, filter);
+      }
     });
   });
 

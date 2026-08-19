@@ -22,6 +22,7 @@ import { tilEntries, tilEntryTags, tags as tagsTable, bookmarks, tilTypeValues }
 import { eq, and } from "drizzle-orm";
 import { requireUserId } from "@/lib/session";
 import { generateShortHash, getUserTimezone, getLoggedForDate } from "@/lib/dal/til";
+import { recordUse } from "@/lib/library/recordUse";
 
 const dischargeSchema = z.object({
   bookmarkId: z.number().int().positive(),
@@ -85,6 +86,10 @@ export async function dischargeBookmarkAction(input: DischargeInput): Promise<Di
   ]);
 
   const inserted = insertedRows[0];
+
+  // A TIL entry citing this bookmark is itself a "use" (LIBRARY.md §2) —
+  // doesn't need the same atomicity as the batch above, this is informational.
+  await recordUse(data.bookmarkId, userId);
 
   const tagNames: string[] = [];
   for (const rawTag of data.tags) {

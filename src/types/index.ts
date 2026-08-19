@@ -2,11 +2,13 @@ import { CoverData } from "@/lib/cover-data";
 
 export type KindType = 'ART' | 'VID' | 'PLY' | 'GIT' | 'APP' | 'PPR' | 'DOC';
 
+export type ItemType = 'REFERENCE' | 'QUEUED';
+
 export type ContextType = 'all' | 'desk' | 'commute' | 'wind';
 
 export type ViewMode = 'masonry' | 'grid' | 'list' | 'heads' | 'archive';
 
-export type SortMode = 'recent' | 'short' | 'az';
+export type SortMode = 'recent' | 'short' | 'az' | 'mostUsed' | 'recentlyUsed';
 
 export interface KindMeta {
   name: string;
@@ -42,6 +44,10 @@ export interface Bookmark {
   deletedAt?: string | null;
   isDeleted?: boolean;
   unread: boolean;
+  itemType?: ItemType;
+  itemTypeGuessed?: boolean;
+  useCount?: number;
+  lastUsedAt?: string | null; // ISO string, same convention as lastFetchedAt
   ex: Record<string, string>;
   note: string;
   source?: string;

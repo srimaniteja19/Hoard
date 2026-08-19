@@ -6,6 +6,7 @@ import { requireUserId, AuthError } from "@/lib/session";
 import { KindType } from "@/types";
 import { cleanTitle } from "@/lib/cleanTitle";
 import { detectKind } from "@/lib/detectKind";
+import { inferItemType } from "@/lib/library/inferItemType";
 
 interface ImportBookmarkPayload {
   t?: string;
@@ -111,6 +112,8 @@ export async function POST(req: Request) {
         tag: item.tag || "imported",
         collectionId: targetCollId,
         unread: item.unread ?? true,
+        itemType: inferItemType(type),
+        itemTypeGuessed: true,
         note: item.note || "Imported into HOARD",
         extra: item.ex || { Source: source },
       });

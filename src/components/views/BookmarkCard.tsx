@@ -8,6 +8,7 @@ import { Layers, ShieldCheck, AlertTriangle, Zap } from "lucide-react";
 import { CoverCanvas } from "@/components/covers/CoverCanvas";
 import { calculateSunFadeOpacity } from "@/components/covers/lib/cover-geometry";
 import { formatDuration } from "@/lib/format";
+import { formatRelativeTime } from "@/lib/library/formatRelativeTime";
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -48,6 +49,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   const is404 = bookmark.driftStatus === "404_preserved";
   const isChanged = bookmark.driftStatus === "changed";
   const sunFadeOpacity = calculateSunFadeOpacity(bookmark.lastFetchedAt || bookmark.when);
+  const neverOpened = bookmark.itemType === "REFERENCE" && (bookmark.useCount ?? 0) === 0;
 
   return (
     <article
@@ -58,6 +60,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         position: "relative",
         ...(sunFadeOpacity < 1 ? { opacity: sunFadeOpacity } : {}),
         ...(cardWidthPx ? { width: `${cardWidthPx}px`, minWidth: `${cardWidthPx}px`, flexShrink: 0 } : {}),
+        ...(neverOpened ? { borderLeft: "4px solid var(--orange)" } : {}),
       }}
     >
       <div
@@ -181,6 +184,10 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
           <span>·</span>
           <span>
             {typeMeta.verb} {formatDuration(bookmark.mins)}
+          </span>
+          <span>·</span>
+          <span>
+            {bookmark.useCount ?? 0}× · {formatRelativeTime(bookmark.lastUsedAt)}
           </span>
         </div>
 
