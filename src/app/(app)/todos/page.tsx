@@ -1,46 +1,27 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef, Suspense, type CSSProperties } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect, Suspense, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { parseTodo, ParsedTodo, Energy } from "@/lib/todos/parse";
+import { Todo, Subtask } from "@/lib/todos/types";
+import { sectionTodos, computeSeriesStats, SeriesStats } from "@/lib/todos/sections";
+import { deriveTodoFlags } from "@/lib/todos/rowState";
+import { useTodos } from "@/hooks/useTodos";
 import { X, Trash2, Plus, ArrowRight, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 import { ChromeSlot } from "@/components/chrome/slots";
 import { AppPage } from "@/components/chrome/AppPage";
 import { AppLoading } from "@/components/chrome/AppLoading";
 
-const GRAVEYARD_THRESHOLD = 10;
+const localTz = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-type Subtask = { id: string; title: string; done: boolean; position: number };
-
-type Todo = {
-  id: string;
-  title: string;
-  note: string | null;
-  energy: Energy;
-  estimatedMinutes: number;
-  actualMinutes: number | null;
-  dueDate: string | null;
-  rolloverCount: number;
-  remindAt: string | null;
-  recurrenceRule: string | null;
-  recurrenceParentId: string | null;
-  seriesPosition: number | null;
-  state: "OPEN" | "DONE" | "DROPPED" | "GRAVEYARD";
-  completedAt: string | null;
-  tags: string[];
-  subtasks: Subtask[];
-};
+const ENERGY_FILTERS: (Energy | "ALL")[] = ["ALL", "DEEP", "SHALLOW", "ERRAND"];
 
 const ENERGY_COLOR: Record<Todo["energy"], string> = {
   DEEP: "#7C4DFF",
   SHALLOW: "#00F0FF",
   ERRAND: "#FFE600",
 };
-
-const localTz = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-const ENERGY_FILTERS: (Energy | "ALL")[] = ["ALL", "DEEP", "SHALLOW", "ERRAND"];
 
 /** "YYYY-MM-DD" for the browser's local today — sectioning is a client-side
  * read-time grouping over already-fetched todos, same as everywhere else on
@@ -54,24 +35,6 @@ function localToday(): string {
   return `${y}-${m}-${day}`;
 }
 
-function addDaysToDateStr(dateStr: string, days: number): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const dt = new Date(y, m - 1, d + days);
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
-}
-
-/** "YYYY-MM-DD" for an ISO timestamp, in the browser's local time. */
-function localDateFromIso(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function daysBetween(fromDateStr: string, toDateStr: string): number {
-  const from = new Date(`${fromDateStr}T00:00:00Z`);
-  const to = new Date(`${toDateStr}T00:00:00Z`);
-  return Math.round((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000));
-}
-
 function formatRemindAt(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
@@ -81,38 +44,6 @@ function formatMinutes(total: number): string {
   const h = Math.floor(total / 60);
   const m = total % 60;
   return m ? `${h}h ${m}m` : `${h}h`;
-}
-
-type SeriesStats = { done: number; missed: number; run: number };
-
-type DayPlanResponse = {
-  busy: { start: string; end: string; title: string }[];
-  gaps: { start: string; end: string; minutes: number }[];
-  packed: { id: string; title: string; estimatedMinutes: number; gapIndex: number }[];
-  unfitted: { id: string; title: string; estimatedMinutes: number }[];
-  freeMinutes: number;
-};
-
-/** "standup notes, 47 done, 3 missed, 14-day run" — TODOS.md §5. Computed
- * from the already-fetched list (every non-graveyard instance in the
- * series), not a separate query — same client-side-grouping approach as
- * the section computation above. */
-function computeSeriesStats(allTodos: Todo[], rootId: string): SeriesStats {
-  const series = allTodos
-    .filter((t) => t.id === rootId || t.recurrenceParentId === rootId)
-    .sort((a, b) => (a.seriesPosition ?? 0) - (b.seriesPosition ?? 0));
-
-  const done = series.filter((t) => t.state === "DONE").length;
-  const missed = series.filter((t) => t.state === "DROPPED").length;
-
-  let run = 0;
-  for (let i = series.length - 1; i >= 0; i--) {
-    if (series[i].state === "DONE") run++;
-    else if (series[i].state === "OPEN") continue; // the current open instance doesn't break a run
-    else break;
-  }
-
-  return { done, missed, run };
 }
 
 function TodosPageContent() {
@@ -137,55 +68,13 @@ function TodosPageContent() {
     [router, searchParams]
   );
 
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { todos, loading, dayPlan, graveyard, editing, actualTimePrompt, actions } = useTodos();
+
   const [input, setInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [newSubtaskText, setNewSubtaskText] = useState<Record<string, string>>({});
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const [graveyardOpen, setGraveyardOpen] = useState(false);
-  const [graveyardItems, setGraveyardItems] = useState<Todo[]>([]);
-  const [graveyardLoading, setGraveyardLoading] = useState(false);
-  const [graveyardLoaded, setGraveyardLoaded] = useState(false);
-  const [graveyardQuery, setGraveyardQuery] = useState("");
-
-  const [dayPlan, setDayPlan] = useState<DayPlanResponse | null>(null);
-
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-
-  const [actualTimePromptId, setActualTimePromptId] = useState<string | null>(null);
   const [actualTimeCustom, setActualTimeCustom] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch("/api/todos", { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
-          setTodos(data.items || []);
-        }
-      } catch (e) {
-        console.error("Failed to load todos", e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
-
-  useEffect(() => {
-    async function loadDayPlan() {
-      try {
-        const res = await fetch("/api/todos/day-plan", { credentials: "include" });
-        if (res.ok) setDayPlan(await res.json());
-      } catch (e) {
-        console.error("Failed to load day plan", e);
-      }
-    }
-    loadDayPlan();
-  }, []);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // "/" focuses the capture bar from anywhere on the page.
   useEffect(() => {
@@ -206,276 +95,27 @@ function TodosPageContent() {
     return parseTodo(input, new Date(), localTz());
   }, [input]);
 
-  const commit = useCallback(async () => {
+  const commit = async () => {
     const text = input.trim();
     if (!text || submitting) return;
     setSubmitting(true);
     setInput("");
-    try {
-      const res = await fetch("/api/todos", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-      if (res.ok) {
-        const created = await res.json();
-        setTodos((prev) => [created, ...prev]);
-      } else {
-        setInput(text); // restore on failure so nothing is silently lost
-      }
-    } catch (e) {
-      console.error("Failed to create todo", e);
-      setInput(text);
-    } finally {
-      setSubmitting(false);
-    }
-  }, [input, submitting]);
+    const ok = await actions.createTodo(text);
+    if (!ok) setInput(text); // restore on failure so nothing is silently lost
+    setSubmitting(false);
+  };
 
-  const toggleDone = useCallback(async (todo: Todo) => {
-    const nextState = todo.state === "DONE" ? "OPEN" : "DONE";
-    setTodos((prev) => prev.map((t) => (t.id === todo.id ? { ...t, state: nextState } : t)));
-    try {
-      const res = await fetch(`/api/todos/${todo.id}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state: nextState }),
-      });
-      if (res.ok) {
-        const { nextInstance, ...updated } = await res.json();
-        setTodos((prev) => {
-          const next = prev.map((t) => (t.id === todo.id ? updated : t));
-          // Recurrence generates exactly one successor on completion
-          // (TODOS.md §5) — surface it immediately, don't wait on a reload.
-          return nextInstance ? [nextInstance, ...next] : next;
-        });
-        // Completion never blocks on this — the todo is already DONE above,
-        // this is a dismissible follow-up prompt, not a gate (§6).
-        if (nextState === "DONE") setActualTimePromptId(todo.id);
-        else if (actualTimePromptId === todo.id) setActualTimePromptId(null);
-      }
-    } catch (e) {
-      console.error("Failed to toggle todo", e);
-    }
-  }, [actualTimePromptId]);
-
-  // A dismissed prompt leaves actualMinutes null and that task is excluded
-  // from calibration — dismissing is just closing the prompt, no request.
-  const dismissActualTimePrompt = useCallback((todoId: string) => {
-    setActualTimePromptId((cur) => (cur === todoId ? null : cur));
-  }, []);
-
-  const submitActualTime = useCallback(async (todoId: string, minutes: number) => {
-    if (!Number.isFinite(minutes) || minutes <= 0) return;
-    setActualTimePromptId(null);
-    setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, actualMinutes: minutes } : t)));
-    try {
-      await fetch(`/api/todos/${todoId}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ actualMinutes: minutes }),
-      });
-    } catch (e) {
-      console.error("Failed to save actual time", e);
-    }
-  }, []);
-
-  const deleteTodo = useCallback(async (id: string) => {
-    const prevTodos = todos;
-    setTodos((prev) => prev.filter((t) => t.id !== id));
-    try {
-      const res = await fetch(`/api/todos/${id}`, { method: "DELETE", credentials: "include" });
-      if (!res.ok) setTodos(prevTodos);
-    } catch (e) {
-      console.error("Failed to delete todo", e);
-      setTodos(prevTodos);
-    }
-  }, [todos]);
-
-  const addSubtask = useCallback(async (todoId: string) => {
-    const title = (newSubtaskText[todoId] || "").trim();
-    if (!title) return;
+  const addSubtask = (todoId: string) => {
+    const title = newSubtaskText[todoId] || "";
     setNewSubtaskText((prev) => ({ ...prev, [todoId]: "" }));
-    try {
-      const res = await fetch(`/api/todos/${todoId}/subtasks`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
-      });
-      if (res.ok) {
-        const subtask = await res.json();
-        setTodos((prev) =>
-          prev.map((t) => (t.id === todoId ? { ...t, subtasks: [...t.subtasks, subtask] } : t))
-        );
-      }
-    } catch (e) {
-      console.error("Failed to add subtask", e);
-    }
-  }, [newSubtaskText]);
-
-  const toggleSubtask = useCallback(async (todoId: string, subtask: Subtask) => {
-    setTodos((prev) =>
-      prev.map((t) =>
-        t.id === todoId
-          ? { ...t, subtasks: t.subtasks.map((s) => (s.id === subtask.id ? { ...s, done: !s.done } : s)) }
-          : t
-      )
-    );
-    try {
-      await fetch(`/api/todos/${todoId}/subtasks/${subtask.id}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ done: !subtask.done }),
-      });
-    } catch (e) {
-      console.error("Failed to toggle subtask", e);
-    }
-  }, []);
-
-  const deleteSubtask = useCallback(async (todoId: string, subtaskId: string) => {
-    setTodos((prev) =>
-      prev.map((t) => (t.id === todoId ? { ...t, subtasks: t.subtasks.filter((s) => s.id !== subtaskId) } : t))
-    );
-    try {
-      await fetch(`/api/todos/${todoId}/subtasks/${subtaskId}`, { method: "DELETE", credentials: "include" });
-    } catch (e) {
-      console.error("Failed to delete subtask", e);
-    }
-  }, []);
-
-  // The → action. rolloverCount only ever moves here — TODOS.md §4: no cron,
-  // no background job, only this explicit push.
-  const pushTodo = useCallback(async (todoId: string) => {
-    try {
-      const res = await fetch(`/api/todos/${todoId}/push`, { method: "POST", credentials: "include" });
-      if (res.ok) {
-        const updated = await res.json();
-        setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, ...updated } : t)));
-      }
-    } catch (e) {
-      console.error("Failed to push todo", e);
-    }
-  }, []);
-
-  const moveToGraveyard = useCallback(async (todoId: string) => {
-    setTodos((prev) => prev.filter((t) => t.id !== todoId));
-    try {
-      await fetch(`/api/todos/${todoId}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state: "GRAVEYARD" }),
-      });
-      setGraveyardLoaded(false); // next expand re-fetches, picking this up
-    } catch (e) {
-      console.error("Failed to move todo to graveyard", e);
-    }
-  }, []);
-
-  const loadGraveyard = useCallback(async (q = "") => {
-    setGraveyardLoading(true);
-    try {
-      const params = new URLSearchParams({ graveyard: "true" });
-      if (q.trim()) params.set("q", q.trim());
-      const res = await fetch(`/api/todos?${params}`, { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        setGraveyardItems(data.items || []);
-        setGraveyardLoaded(true);
-      }
-    } catch (e) {
-      console.error("Failed to load graveyard", e);
-    } finally {
-      setGraveyardLoading(false);
-    }
-  }, []);
-
-  const toggleGraveyard = useCallback(() => {
-    const next = !graveyardOpen;
-    setGraveyardOpen(next);
-    if (next && !graveyardLoaded) loadGraveyard(graveyardQuery);
-  }, [graveyardOpen, graveyardLoaded, loadGraveyard, graveyardQuery]);
-
-  const restoreFromGraveyard = useCallback(async (todo: Todo) => {
-    setGraveyardItems((prev) => prev.filter((t) => t.id !== todo.id));
-    try {
-      const res = await fetch(`/api/todos/${todo.id}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state: "OPEN" }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setTodos((prev) => [updated, ...prev]);
-      }
-    } catch (e) {
-      console.error("Failed to restore todo", e);
-    }
-  }, []);
-
-  const startEdit = useCallback((todo: Todo) => {
-    setEditingId(todo.id);
-    setEditTitle(todo.title);
-  }, []);
-
-  const cancelEdit = useCallback(() => {
-    setEditingId(null);
-    setEditTitle("");
-  }, []);
-
-  // Recurrence edit scopes — TODOS.md §5: "this one" only touches the
-  // instance being edited; "this and future" also updates the series root's
-  // template fields, so later-generated instances pick up the change. Past
-  // completed instances are never rewritten either way.
-  const saveEdit = useCallback(
-    async (todoId: string, scope: "one" | "future") => {
-      const title = editTitle.trim();
-      if (!title) return;
-      setEditingId(null);
-      setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, title } : t)));
-      try {
-        const res = await fetch(`/api/todos/${todoId}`, {
-          method: "PATCH",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, applyToFutureInstances: scope === "future" }),
-        });
-        if (res.ok) {
-          const updated = await res.json();
-          setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, ...updated } : t)));
-        }
-      } catch (e) {
-        console.error("Failed to save edit", e);
-      }
-    },
-    [editTitle]
-  );
+    actions.addSubtask(todoId, title);
+  };
 
   const today = localToday();
-  const weekEnd = addDaysToDateStr(today, 7);
-
-  const filtered = todos.filter((t) => {
-    if (energyFilter !== "ALL" && t.energy !== energyFilter) return false;
-    if (time < 180 && t.estimatedMinutes > time) return false;
-    return true;
-  });
-
-  const overdue = filtered.filter((t) => t.state === "OPEN" && t.dueDate !== null && t.dueDate < today);
-  const dueToday = filtered.filter((t) => t.state === "OPEN" && t.dueDate === today);
-  const thisWeek = filtered.filter((t) => t.state === "OPEN" && t.dueDate !== null && t.dueDate > today && t.dueDate <= weekEnd);
-  const later = filtered.filter((t) => t.state === "OPEN" && t.dueDate !== null && t.dueDate > weekEnd);
-  const someday = filtered.filter((t) => t.state === "OPEN" && t.dueDate === null);
-  const doneToday = filtered.filter((t) => t.state === "DONE" && t.completedAt !== null && localDateFromIso(t.completedAt) === today);
+  const sections = sectionTodos(todos, { today, time, energyFilter });
 
   const sumMinutes = (list: Todo[]) => list.reduce((sum, t) => sum + t.estimatedMinutes, 0);
   const sectionTitle = (label: string, list: Todo[]) => `${label} · ${list.length} · ${formatMinutes(sumMinutes(list))}`;
-
-  const totalOpen = todos.filter((t) => t.state === "OPEN").length;
 
   return (
     <AppPage width="sm">
@@ -617,25 +257,25 @@ function TodosPageContent() {
 
         {loading ? (
           <div style={{ fontFamily: "var(--mono)", fontSize: "13px", opacity: 0.6 }}>Loading…</div>
-        ) : totalOpen === 0 ? (
+        ) : sections.totalOpen === 0 ? (
           <EmptyState text="Nothing left for today. That's the whole point." />
         ) : (
           <>
-            {overdue.length > 0 && (
-              <Section title={sectionTitle("OVERDUE", overdue)}>{renderRows(overdue)}</Section>
+            {sections.overdue.length > 0 && (
+              <Section title={sectionTitle("OVERDUE", sections.overdue)}>{renderRows(sections.overdue)}</Section>
             )}
-            <Section title={sectionTitle("TODAY", dueToday)}>
-              {dueToday.length === 0 ? <EmptyState text="Nothing due today." /> : renderRows(dueToday)}
+            <Section title={sectionTitle("TODAY", sections.dueToday)}>
+              {sections.dueToday.length === 0 ? <EmptyState text="Nothing due today." /> : renderRows(sections.dueToday)}
             </Section>
-            {thisWeek.length > 0 && (
-              <Section title={sectionTitle("THIS WEEK", thisWeek)}>{renderRows(thisWeek)}</Section>
+            {sections.thisWeek.length > 0 && (
+              <Section title={sectionTitle("THIS WEEK", sections.thisWeek)}>{renderRows(sections.thisWeek)}</Section>
             )}
-            {later.length > 0 && <Section title={sectionTitle("LATER", later)}>{renderRows(later)}</Section>}
-            {someday.length > 0 && (
-              <Section title={sectionTitle("SOMEDAY", someday)}>{renderRows(someday)}</Section>
+            {sections.later.length > 0 && <Section title={sectionTitle("LATER", sections.later)}>{renderRows(sections.later)}</Section>}
+            {sections.someday.length > 0 && (
+              <Section title={sectionTitle("SOMEDAY", sections.someday)}>{renderRows(sections.someday)}</Section>
             )}
-            {doneToday.length > 0 && (
-              <Section title={sectionTitle("DONE TODAY", doneToday)}>{renderRows(doneToday)}</Section>
+            {sections.doneToday.length > 0 && (
+              <Section title={sectionTitle("DONE TODAY", sections.doneToday)}>{renderRows(sections.doneToday)}</Section>
             )}
           </>
         )}
@@ -644,7 +284,7 @@ function TodosPageContent() {
             only ever surfaced here, on request, per TODOS.md §4. */}
         <div style={{ marginTop: "16px", borderTop: "2px solid var(--ink)", paddingTop: "12px" }}>
           <button
-            onClick={toggleGraveyard}
+            onClick={actions.toggleGraveyard}
             style={{
               display: "flex",
               alignItems: "center",
@@ -659,20 +299,20 @@ function TodosPageContent() {
               padding: 0,
             }}
           >
-            {graveyardOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {graveyard.open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             GRAVEYARD
           </button>
 
-          {graveyardOpen && (
+          {graveyard.open && (
             <div style={{ marginTop: "12px" }}>
               <input
                 type="search"
-                value={graveyardQuery}
-                onChange={(e) => setGraveyardQuery(e.target.value)}
+                value={graveyard.query}
+                onChange={(e) => actions.changeGraveyardQuery(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    loadGraveyard(graveyardQuery);
+                    actions.searchGraveyard();
                   }
                 }}
                 placeholder="Search graveyard…"
@@ -687,17 +327,17 @@ function TodosPageContent() {
                   color: "var(--ink)",
                 }}
               />
-              {graveyardLoading ? (
+              {graveyard.loading ? (
                 <div style={{ fontFamily: "var(--mono)", fontSize: "13px", opacity: 0.6 }}>Loading…</div>
-              ) : graveyardItems.length === 0 ? (
-                <EmptyState text={graveyardQuery.trim() ? "No matches." : "Nothing here."} />
+              ) : graveyard.items.length === 0 ? (
+                <EmptyState text={graveyard.query.trim() ? "No matches." : "Nothing here."} />
               ) : (
                 <>
                   <div style={{ fontFamily: "var(--mono)", fontSize: "13px", marginBottom: "12px" }}>
-                    {graveyardItems.length} thing{graveyardItems.length === 1 ? "" : "s"} here. Do any of them still
+                    {graveyard.items.length} thing{graveyard.items.length === 1 ? "" : "s"} here. Do any of them still
                     matter?
                   </div>
-                  {graveyardItems.map((todo) => (
+                  {graveyard.items.map((todo) => (
                     <div
                       key={todo.id}
                       style={{
@@ -714,7 +354,7 @@ function TodosPageContent() {
                       <div style={{ flex: 1, minWidth: 0 }}>{todo.title}</div>
                       <Chip label={`MOVED ${todo.rolloverCount}×`} color="var(--orange)" />
                       <button
-                        onClick={() => restoreFromGraveyard(todo)}
+                        onClick={() => actions.restoreFromGraveyard(todo)}
                         style={{
                           fontFamily: "var(--mono)",
                           fontSize: "11px",
@@ -747,26 +387,26 @@ function TodosPageContent() {
           todo={todo}
           today={today}
           seriesStats={isRecurring ? computeSeriesStats(todos, rootId) : null}
-          isEditing={editingId === todo.id}
-          editTitle={editTitle}
-          onEditTitleChange={setEditTitle}
-          onStartEdit={() => startEdit(todo)}
-          onCancelEdit={cancelEdit}
-          onSaveEdit={(scope) => saveEdit(todo.id, scope)}
-          onToggleDone={() => toggleDone(todo)}
-          onDelete={() => deleteTodo(todo.id)}
-          onPush={() => pushTodo(todo.id)}
-          onMoveToGraveyard={() => moveToGraveyard(todo.id)}
-          onToggleSubtask={(s) => toggleSubtask(todo.id, s)}
-          onDeleteSubtask={(sId) => deleteSubtask(todo.id, sId)}
+          isEditing={editing.id === todo.id}
+          editTitle={editing.title}
+          onEditTitleChange={actions.changeEditTitle}
+          onStartEdit={() => actions.startEdit(todo)}
+          onCancelEdit={actions.cancelEdit}
+          onSaveEdit={(scope) => actions.saveEdit(todo.id, scope)}
+          onToggleDone={() => actions.toggleDone(todo)}
+          onDelete={() => actions.deleteTodo(todo.id)}
+          onPush={() => actions.pushTodo(todo.id)}
+          onMoveToGraveyard={() => actions.moveToGraveyard(todo.id)}
+          onToggleSubtask={(s) => actions.toggleSubtask(todo.id, s)}
+          onDeleteSubtask={(sId) => actions.deleteSubtask(todo.id, sId)}
           subtaskInput={newSubtaskText[todo.id] || ""}
           onSubtaskInputChange={(v) => setNewSubtaskText((prev) => ({ ...prev, [todo.id]: v }))}
           onAddSubtask={() => addSubtask(todo.id)}
-          showActualTimePrompt={actualTimePromptId === todo.id}
+          showActualTimePrompt={actualTimePrompt.id === todo.id}
           actualTimeCustomValue={actualTimeCustom[todo.id] || ""}
           onActualTimeCustomChange={(v) => setActualTimeCustom((prev) => ({ ...prev, [todo.id]: v }))}
-          onSubmitActualTime={(minutes) => submitActualTime(todo.id, minutes)}
-          onDismissActualTimePrompt={() => dismissActualTimePrompt(todo.id)}
+          onSubmitActualTime={(minutes) => actions.submitActualTime(todo.id, minutes)}
+          onDismissActualTimePrompt={() => actions.dismissActualTimePrompt(todo.id)}
         />
       );
     });
@@ -890,10 +530,7 @@ function TodoRow({
   onSubmitActualTime: (minutes: number) => void;
   onDismissActualTimePrompt: () => void;
 }) {
-  const isStale = todo.rolloverCount >= 3;
-  const isOverdue = todo.state === "OPEN" && todo.dueDate !== null && todo.dueDate < today;
-  const daysOverdue = isOverdue ? daysBetween(todo.dueDate as string, today) : 0;
-  const offerGraveyard = todo.state === "OPEN" && todo.rolloverCount >= GRAVEYARD_THRESHOLD;
+  const { isStale, isOverdue, daysOverdue, offerGraveyard } = deriveTodoFlags(todo, today);
 
   return (
     <div
