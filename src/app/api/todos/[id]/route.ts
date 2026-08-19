@@ -5,8 +5,8 @@ import { eq, and, asc } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { updateTodoSchema } from "@/lib/validations/todos";
 import { getLoggedForDate, getUserTimezone } from "@/lib/dal/shared";
-import { remindAtOnDate, serializeTodoTimestamps, attachSubtasksAndTags } from "@/lib/dal/todos";
-import { nextOccurrence } from "@/lib/todos/recurrence";
+import { remindAtOnDate, serializeTodoTimestamps, attachSubtasksAndTags, upsertTagsForTodo } from "@/lib/dal/todos";
+import { buildSuccessorFields } from "@/lib/todos/recurrence";
 import crypto from "crypto";
 
 async function resolveTagNames(todoId: string): Promise<string[]> {
@@ -39,16 +39,10 @@ async function generateSuccessorIfRecurring(
       ? [completedInstance]
       : await db.select().from(todos).where(and(eq(todos.id, rootId), eq(todos.userId, userId))).limit(1);
 
-  if (!root || !root.recurrenceRule) return null;
+  if (!root) return null;
 
-  const anchor = completedInstance.dueDate ?? completedInstance.completedOn ?? completedInstance.originalDueDate;
-  if (!anchor) return null;
-
-  const nextDue = nextOccurrence(root.recurrenceRule, anchor);
-  if (!nextDue) return null;
-
-  const newId = crypto.randomUUID();
-  const seriesPosition = (completedInstance.seriesPosition ?? 1) + 1;
+  const fields = buildSuccessorFields(root, completedInstance);
+  if (!fields) return null;
 
   // Reminder is a template field: same local time on the next due date,
   // remindSentAt left null so it can fire again. Read from the root so a
@@ -56,25 +50,18 @@ async function generateSuccessorIfRecurring(
   let remindAt: Date | null = null;
   if (root.remindAt) {
     const timezone = await getUserTimezone(userId);
-    remindAt = remindAtOnDate(root.remindAt, nextDue, timezone);
+    remindAt = remindAtOnDate(root.remindAt, fields.dueDate, timezone);
   }
 
+  const newId = crypto.randomUUID();
   const [inserted] = await db
     .insert(todos)
     .values({
       id: newId,
       userId,
-      title: root.title,
-      note: root.note,
-      energy: root.energy,
-      estimatedMinutes: root.estimatedMinutes,
-      dueDate: nextDue,
-      originalDueDate: nextDue,
+      ...fields,
       remindAt,
       rolloverCount: 0,
-      recurrenceRule: root.recurrenceRule,
-      recurrenceParentId: rootId,
-      seriesPosition,
       state: "OPEN",
     })
     .returning();
@@ -185,20 +172,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
     }
 
+    // "This and future" eligibility, computed once — both the scalar-field
+    // propagation below and the tag propagation further down need the same
+    // rootId and the same "is there even a root to propagate to" check.
+    const rootId = existing.recurrenceParentId ?? existing.id;
+    const propagateToRoot = Boolean(
+      data.applyToFutureInstances && (existing.recurrenceRule || existing.recurrenceParentId) && rootId !== id
+    );
+
     // "This and future": apply the same template fields to the series root,
     // before completion reads it for successor generation below.
-    if (data.applyToFutureInstances && (existing.recurrenceRule || existing.recurrenceParentId)) {
-      const rootId = existing.recurrenceParentId ?? existing.id;
-      if (rootId !== id) {
-        const rootPayload: Partial<typeof todos.$inferInsert> = { updatedAt: new Date() };
-        if (data.title !== undefined) rootPayload.title = data.title;
-        if (data.note !== undefined) rootPayload.note = data.note;
-        if (data.energy !== undefined) rootPayload.energy = data.energy;
-        if (data.estimatedMinutes !== undefined) rootPayload.estimatedMinutes = data.estimatedMinutes;
-        if (data.recurrenceRule !== undefined) rootPayload.recurrenceRule = data.recurrenceRule;
-        if (data.remindAt !== undefined) rootPayload.remindAt = data.remindAt ? new Date(data.remindAt) : null;
-        await db.update(todos).set(rootPayload).where(and(eq(todos.id, rootId), eq(todos.userId, userId)));
-      }
+    if (propagateToRoot) {
+      const rootPayload: Partial<typeof todos.$inferInsert> = { updatedAt: new Date() };
+      if (data.title !== undefined) rootPayload.title = data.title;
+      if (data.note !== undefined) rootPayload.note = data.note;
+      if (data.energy !== undefined) rootPayload.energy = data.energy;
+      if (data.estimatedMinutes !== undefined) rootPayload.estimatedMinutes = data.estimatedMinutes;
+      if (data.recurrenceRule !== undefined) rootPayload.recurrenceRule = data.recurrenceRule;
+      if (data.remindAt !== undefined) rootPayload.remindAt = data.remindAt ? new Date(data.remindAt) : null;
+      await db.update(todos).set(rootPayload).where(and(eq(todos.id, rootId), eq(todos.userId, userId)));
     }
 
     const [updated] = await db
@@ -210,36 +202,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     let tagNames: string[];
     if (data.tags !== undefined) {
       await db.delete(todoTags).where(eq(todoTags.todoId, id));
-      tagNames = [];
-      for (const rawTag of data.tags) {
-        const tagName = rawTag.trim().toLowerCase();
-        if (!tagName) continue;
-
-        const existingTag = await db
-          .select({ id: tagsTable.id })
-          .from(tagsTable)
-          .where(and(eq(tagsTable.userId, userId), eq(tagsTable.name, tagName)));
-
-        const tagId =
-          existingTag[0]?.id ??
-          (
-            await db.insert(tagsTable).values({ userId, name: tagName, color: "#00F0FF" }).returning({ id: tagsTable.id })
-          )[0].id;
-
-        await db.insert(todoTags).values({ todoId: id, tagId }).onConflictDoNothing();
-        tagNames.push(tagName);
-      }
+      tagNames = await upsertTagsForTodo(userId, id, data.tags);
 
       // "This and future" — tags are a template field (§5). Copy the set
       // we just wrote onto the root so later instances pick them up.
-      if (data.applyToFutureInstances && (existing.recurrenceRule || existing.recurrenceParentId)) {
-        const rootId = existing.recurrenceParentId ?? existing.id;
-        if (rootId !== id) {
-          await db.delete(todoTags).where(eq(todoTags.todoId, rootId));
-          const instanceTagRows = await db.select({ tagId: todoTags.tagId }).from(todoTags).where(eq(todoTags.todoId, id));
-          if (instanceTagRows.length > 0) {
-            await db.insert(todoTags).values(instanceTagRows.map((r) => ({ todoId: rootId, tagId: r.tagId }))).onConflictDoNothing();
-          }
+      if (propagateToRoot) {
+        await db.delete(todoTags).where(eq(todoTags.todoId, rootId));
+        const instanceTagRows = await db.select({ tagId: todoTags.tagId }).from(todoTags).where(eq(todoTags.todoId, id));
+        if (instanceTagRows.length > 0) {
+          await db.insert(todoTags).values(instanceTagRows.map((r) => ({ todoId: rootId, tagId: r.tagId }))).onConflictDoNothing();
         }
       }
     } else {

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { todos, todoTags, tags as tagsTable } from "@/db/schema";
+import { todos } from "@/db/schema";
 import { eq, and, ne, asc, sql, ilike } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { createTodoSchema } from "@/lib/validations/todos";
 import { getLoggedForDate, getUserTimezone } from "@/lib/dal/shared";
-import { zonedTimeToUtc, attachSubtasksAndTags, serializeTodoTimestamps } from "@/lib/dal/todos";
+import { zonedTimeToUtc, attachSubtasksAndTags, serializeTodoTimestamps, upsertTagsForTodo } from "@/lib/dal/todos";
 import { parseTodo } from "@/lib/todos/parse";
 
 function addDays(date: Date, days: number): Date {
@@ -107,28 +107,7 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    const createdTagNames: string[] = [];
-    for (const rawTag of parsed.tags) {
-      const tagName = rawTag.trim().toLowerCase();
-      if (!tagName) continue;
-
-      const existing = await db
-        .select({ id: tagsTable.id })
-        .from(tagsTable)
-        .where(and(eq(tagsTable.userId, userId), eq(tagsTable.name, tagName)));
-
-      const tagId =
-        existing[0]?.id ??
-        (
-          await db
-            .insert(tagsTable)
-            .values({ userId, name: tagName, color: "#00F0FF" })
-            .returning({ id: tagsTable.id })
-        )[0].id;
-
-      await db.insert(todoTags).values({ todoId: inserted.id, tagId }).onConflictDoNothing();
-      createdTagNames.push(tagName);
-    }
+    const createdTagNames = await upsertTagsForTodo(userId, inserted.id, parsed.tags);
 
     return NextResponse.json(
       {

@@ -86,3 +86,68 @@ export function nextOccurrence(rule: string, fromDateStr: string): string | null
 
   return null;
 }
+
+export type SuccessorTemplate = {
+  title: string;
+  note: string | null;
+  energy: "DEEP" | "SHALLOW" | "ERRAND";
+  estimatedMinutes: number;
+  recurrenceRule: string | null;
+};
+
+export type CompletedInstance = {
+  id: string;
+  recurrenceParentId: string | null;
+  dueDate: string | null;
+  completedOn: string | null;
+  originalDueDate: string | null;
+  seriesPosition: number | null;
+};
+
+export type SuccessorFields = {
+  title: string;
+  note: string | null;
+  energy: "DEEP" | "SHALLOW" | "ERRAND";
+  estimatedMinutes: number;
+  dueDate: string;
+  originalDueDate: string;
+  recurrenceRule: string;
+  recurrenceParentId: string;
+  seriesPosition: number;
+};
+
+/**
+ * What a recurring todo's successor should look like on completion —
+ * TODOS.md §5. Template fields (title/note/energy/estimatedMinutes/
+ * recurrenceRule) come from the series root's *current* values, not the
+ * completed instance, so a "this and future" edit on the root actually
+ * reaches later instances while a "this one" edit on a single instance
+ * doesn't leak into the next. Doesn't decide `remindAt` — that needs a
+ * timezone lookup, left to the caller alongside the DB fetch/insert.
+ */
+export function buildSuccessorFields(
+  root: SuccessorTemplate,
+  completedInstance: CompletedInstance
+): SuccessorFields | null {
+  if (!root.recurrenceRule) return null;
+
+  const anchor = completedInstance.dueDate ?? completedInstance.completedOn ?? completedInstance.originalDueDate;
+  if (!anchor) return null;
+
+  const nextDue = nextOccurrence(root.recurrenceRule, anchor);
+  if (!nextDue) return null;
+
+  const rootId = completedInstance.recurrenceParentId ?? completedInstance.id;
+
+  return {
+    title: root.title,
+    note: root.note,
+    energy: root.energy,
+    estimatedMinutes: root.estimatedMinutes,
+    dueDate: nextDue,
+    originalDueDate: nextDue,
+    recurrenceRule: root.recurrenceRule,
+    recurrenceParentId: rootId,
+    seriesPosition: (completedInstance.seriesPosition ?? 1) + 1,
+  };
+}

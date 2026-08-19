@@ -175,6 +175,35 @@ export async function attachSubtasksAndTags(todoIds: string[]) {
 }
 
 /**
+ * Trims/lowercases each raw tag, finds-or-creates it for this user, and
+ * links it to `todoId` (onConflictDoNothing, so re-linking an already-
+ * linked tag is a no-op). Shared by todo creation and todo update — both
+ * just resolve a list of raw tag strings into links on one todo; a caller
+ * that's *replacing* a todo's tag set (PATCH) deletes the old links itself
+ * before calling this, same as it did inline before extraction.
+ */
+export async function upsertTagsForTodo(userId: string, todoId: string, rawTags: string[]): Promise<string[]> {
+  const tagNames: string[] = [];
+  for (const rawTag of rawTags) {
+    const tagName = rawTag.trim().toLowerCase();
+    if (!tagName) continue;
+
+    const existingTag = await db
+      .select({ id: tagsTable.id })
+      .from(tagsTable)
+      .where(and(eq(tagsTable.userId, userId), eq(tagsTable.name, tagName)));
+
+    const tagId =
+      existingTag[0]?.id ??
+      (await db.insert(tagsTable).values({ userId, name: tagName, color: "#00F0FF" }).returning({ id: tagsTable.id }))[0].id;
+
+    await db.insert(todoTags).values({ todoId, tagId }).onConflictDoNothing();
+    tagNames.push(tagName);
+  }
+  return tagNames;
+}
+
+/**
  * Every completed todo with a recorded actualMinutes — the calibration
  * sample set for this user. A dismissed actual-time prompt leaves
  * actualMinutes null, which is exactly what excludes that task here

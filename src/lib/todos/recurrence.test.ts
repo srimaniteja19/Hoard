@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { nextOccurrence } from "./recurrence";
+import { nextOccurrence, buildSuccessorFields, SuccessorTemplate, CompletedInstance } from "./recurrence";
 
 describe("nextOccurrence — daily", () => {
   it("adds one day", () => {
@@ -71,5 +71,86 @@ describe("nextOccurrence — invalid input", () => {
   it("returns null for an unrecognised rule", () => {
     expect(nextOccurrence("hourly", "2024-01-15")).toBeNull();
     expect(nextOccurrence("", "2024-01-15")).toBeNull();
+  });
+});
+
+describe("buildSuccessorFields", () => {
+  const root: SuccessorTemplate = {
+    title: "Standup notes",
+    note: "keep it short",
+    energy: "SHALLOW",
+    estimatedMinutes: 10,
+    recurrenceRule: "daily",
+  };
+
+  const completedInstance: CompletedInstance = {
+    id: "instance-1",
+    recurrenceParentId: "root-id",
+    dueDate: "2024-01-15",
+    completedOn: null,
+    originalDueDate: null,
+    seriesPosition: 3,
+  };
+
+  it("inherits template fields from the root, not the completed instance", () => {
+    const fields = buildSuccessorFields(root, completedInstance);
+    expect(fields).toEqual({
+      title: "Standup notes",
+      note: "keep it short",
+      energy: "SHALLOW",
+      estimatedMinutes: 10,
+      dueDate: "2024-01-16",
+      originalDueDate: "2024-01-16",
+      recurrenceRule: "daily",
+      recurrenceParentId: "root-id",
+      seriesPosition: 4,
+    });
+  });
+
+  it("uses the completed instance's own id as recurrenceParentId when it has no parent (it's the root)", () => {
+    const fields = buildSuccessorFields(root, { ...completedInstance, id: "root-id", recurrenceParentId: null });
+    expect(fields?.recurrenceParentId).toBe("root-id");
+  });
+
+  it("defaults seriesPosition to 2 when the completed instance has none", () => {
+    const fields = buildSuccessorFields(root, { ...completedInstance, seriesPosition: null });
+    expect(fields?.seriesPosition).toBe(2);
+  });
+
+  it("falls back from dueDate to completedOn to originalDueDate for the anchor date", () => {
+    const fields = buildSuccessorFields(root, {
+      ...completedInstance,
+      dueDate: null,
+      completedOn: "2024-02-01",
+      originalDueDate: "2024-03-01",
+    });
+    expect(fields?.dueDate).toBe("2024-02-02"); // anchored on completedOn, not originalDueDate
+
+    const fromOriginal = buildSuccessorFields(root, {
+      ...completedInstance,
+      dueDate: null,
+      completedOn: null,
+      originalDueDate: "2024-03-01",
+    });
+    expect(fromOriginal?.dueDate).toBe("2024-03-02");
+  });
+
+  it("returns null when the root's recurrenceRule has been cleared, even if the instance still has one", () => {
+    expect(buildSuccessorFields({ ...root, recurrenceRule: null }, completedInstance)).toBeNull();
+  });
+
+  it("returns null when there's no anchor date at all", () => {
+    const fields = buildSuccessorFields(root, {
+      ...completedInstance,
+      dueDate: null,
+      completedOn: null,
+      originalDueDate: null,
+    });
+    expect(fields).toBeNull();
+  });
+
+  it("returns null when the rule doesn't resolve to a next occurrence", () => {
+    const fields = buildSuccessorFields({ ...root, recurrenceRule: "weekly:XYZ" }, completedInstance);
+    expect(fields).toBeNull();
   });
 });
