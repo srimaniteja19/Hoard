@@ -16,6 +16,9 @@ export function AppHeader() {
   const trailing = useChromeSlot("trailing");
   const toolbar = useChromeSlot("toolbar");
 
+  const isHome = pathname === "/";
+  const BadgeTag = isHome ? "p" : "h1";
+
   return (
     <header className="app-header">
       <div className="app-header-row">
@@ -27,7 +30,7 @@ export function AppHeader() {
           <span className="app-header-slash" aria-hidden="true">
             /
           </span>
-          <h1 className="page-badge">{label}</h1>
+          <BadgeTag className="page-badge">{label}</BadgeTag>
         </div>
         <AppNav />
         <div className="app-header-actions">

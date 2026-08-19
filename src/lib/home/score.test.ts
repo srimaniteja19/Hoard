@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { filterCandidates, rankCandidates, score } from "./score";
+import { excludeIds, filterCandidates, rankCandidates, score } from "./score";
 import type { LeadCandidate } from "./types";
 
 function todo(over: Partial<LeadCandidate> = {}): LeadCandidate {
@@ -49,6 +49,14 @@ describe("filterCandidates", () => {
   });
 });
 
+describe("excludeIds", () => {
+  it("drops matching ids and leaves the rest", () => {
+    const pool = [todo(), bookmark()];
+    expect(excludeIds(pool, ["t1"]).map((c) => c.id)).toEqual(["99"]);
+    expect(excludeIds(pool, [])).toHaveLength(2);
+  });
+});
+
 describe("rankCandidates", () => {
   it("ranks an overdue todo above a same-length bookmark", () => {
     const ranked = rankCandidates([bookmark(), todo()], 25, null);
@@ -73,5 +81,48 @@ describe("rankCandidates", () => {
 
   it("returns [] for an empty pool", () => {
     expect(rankCandidates([], 25, null)).toEqual([]);
+  });
+
+  it("will not let a DEEP todo lead in wind when anything else exists", () => {
+    const deep = todo({
+      id: "deep",
+      energy: "DEEP",
+      overdueDays: 4,
+      estimatedMinutes: 25,
+    });
+    const shallow = todo({
+      id: "shallow",
+      energy: "SHALLOW",
+      overdueDays: null,
+      dueToday: false,
+      estimatedMinutes: 25,
+    });
+    const ranked = rankCandidates([deep, shallow], 25, null, {
+      context: "wind",
+      preferDeep: false,
+    });
+    expect(ranked[0].id).toBe("shallow");
+    expect(ranked.map((c) => c.id)).toContain("deep");
+  });
+
+  it("boosts DEEP todos when preferDeep is on", () => {
+    const deep = todo({
+      id: "deep",
+      energy: "DEEP",
+      overdueDays: null,
+      dueToday: false,
+    });
+    const errand = todo({
+      id: "errand",
+      energy: "ERRAND",
+      overdueDays: null,
+      dueToday: false,
+      ageDays: 40,
+    });
+    const ranked = rankCandidates([errand, deep], 25, null, {
+      context: "desk",
+      preferDeep: true,
+    });
+    expect(ranked[0].id).toBe("deep");
   });
 });

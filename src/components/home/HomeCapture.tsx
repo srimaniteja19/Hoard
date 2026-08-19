@@ -6,6 +6,7 @@ import {
   canCommitCapture,
   routeCapture,
   type CaptureDestination,
+  type CapturePreview,
 } from "@/lib/home/routeCapture";
 import {
   applyPaletteSelection,
@@ -24,7 +25,11 @@ const FILED_LABEL: Record<CaptureDestination, string> = {
   agenda: "FILED TO THE AGENDA",
 };
 
-export function HomeCapture() {
+export function HomeCapture({
+  onFiled,
+}: {
+  onFiled?: (preview: CapturePreview) => void;
+}) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [input, setInput] = useState("");
@@ -150,7 +155,8 @@ export function HomeCapture() {
       if (!res.ok) {
         setInput(snapshot);
       } else {
-        setFiled(dest);
+        if (onFiled) onFiled(previewNow);
+        else setFiled(dest);
         router.refresh();
       }
     } catch {

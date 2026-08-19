@@ -47,6 +47,7 @@ describe("routeCapture — preview shape", () => {
       parsed: null,
       command: null,
       tilType: null,
+      addedMinutes: null,
     });
   });
 });

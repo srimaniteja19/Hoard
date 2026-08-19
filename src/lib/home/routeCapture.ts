@@ -19,6 +19,7 @@ export type CapturePreview = {
   parsed: ParsedTodo | null;
   command: string | null;
   tilType: TilType | null;
+  addedMinutes: number | null;
 };
 
 function normalizeCaptureInput(input: string): string {
@@ -40,6 +41,7 @@ function emptyPreview(): CapturePreview {
     parsed: null,
     command: null,
     tilType: null,
+    addedMinutes: null,
   };
 }
 
@@ -62,6 +64,7 @@ function queuePreview(trimmed: string, command: string | null = null): CapturePr
     kind,
     host,
     command,
+    addedMinutes: minutes,
     chips: [
       ...(command ? [{ label: `/${command.toUpperCase()}` }] : []),
       { label: kind },
@@ -86,6 +89,7 @@ function recordPreview(
     body,
     command,
     tilType,
+    addedMinutes: 0,
     chips: [
       { label: "RECORD" },
       ...(tilType ? [{ label: tilType }] : []),
@@ -143,6 +147,7 @@ function agendaPreview(
     chips,
     parsed,
     command,
+    addedMinutes: parsed.estimatedMinutes,
   };
 }
 
