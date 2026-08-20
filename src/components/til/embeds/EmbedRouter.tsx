@@ -9,6 +9,7 @@ import { XEmbed } from "@/components/til/embeds/XEmbed";
 import { GenericEmbed } from "@/components/til/embeds/GenericEmbed";
 import { AlertCircle } from "lucide-react";
 import { extractYouTubeVideoId } from "@/lib/cleanTitle";
+import { GlimpseSummaryLink } from "@/components/GlimpseSummaryLink";
 
 export type DensityOption = "inline" | "card" | "quote" | "full";
 
@@ -38,27 +39,27 @@ export const EmbedRouter: React.FC<EmbedRouterProps> = ({
           padding: "8px 12px",
           marginTop: "6px",
           marginBottom: "6px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
         }}
       >
-        <AlertCircle size={14} color="#FF007A" />
-        <a
-          href={targetUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            fontFamily: "var(--mono)",
-            fontSize: "11px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            textDecoration: "underline",
-            wordBreak: "break-all",
-          }}
-        >
-          {targetUrl}
-        </a>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <AlertCircle size={14} color="#FF007A" />
+          <a
+            href={targetUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "11px",
+              fontWeight: 800,
+              color: "var(--ink)",
+              textDecoration: "underline",
+              wordBreak: "break-all",
+            }}
+          >
+            {targetUrl}
+          </a>
+        </div>
+        <GlimpseSummaryLink url={targetUrl} />
       </div>
     );
   }
@@ -87,6 +88,7 @@ export const EmbedRouter: React.FC<EmbedRouterProps> = ({
           durationSec={preview.durationSec}
           providerName={preview.provider as "YOUTUBE" | "VIMEO"}
         />
+        {preview.provider === "YOUTUBE" && <GlimpseSummaryLink url={targetUrl} />}
       </div>
     );
   }
@@ -100,6 +102,12 @@ export const EmbedRouter: React.FC<EmbedRouterProps> = ({
     case "X":
       return <XEmbed preview={preview} density={effectiveDensity} />;
     case "YOUTUBE":
+      return (
+        <div>
+          <GenericEmbed preview={preview} density={effectiveDensity} />
+          <GlimpseSummaryLink url={targetUrl} />
+        </div>
+      );
     case "VIMEO":
     case "SPOTIFY":
     case "GENERIC":

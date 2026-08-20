@@ -6,6 +6,7 @@ import { TYPES } from "@/data/initialBookmarks";
 import { Plus, Lightbulb } from "lucide-react";
 
 import { TilItem } from "@/components/til/TilFeedItem";
+import { GlimpseSummaryLink } from "@/components/GlimpseSummaryLink";
 
 interface InspectorDrawerProps {
   bookmark: Bookmark | null;
@@ -178,6 +179,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
             >
               {bookmark.unread ? "MARK READ" : "MARK UNREAD"}
             </button>
+            <GlimpseSummaryLink url={bookmark.url} variant="button" />
           </div>
 
           {/* 💡 FROM YOUR ARCHIVE Strip */}
