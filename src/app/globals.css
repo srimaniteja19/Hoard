@@ -1723,7 +1723,7 @@ input[type=range]::-moz-range-thumb {
   align-items: flex-start;
   justify-content: center;
   padding-top: 9vh;
-  z-index: 70;
+  z-index: 200;
 }
 
 .veil.on {
