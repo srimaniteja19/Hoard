@@ -218,7 +218,7 @@ export default function Home() {
           onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
           aria-label="Open navigation menu"
         >
-          <span>☰</span> MENU
+          <span>☰</span> <span className="mobile-menu-btn-label">MENU</span>
         </button>
       </ChromeSlot>
       <ChromeSlot name="toolbar">
