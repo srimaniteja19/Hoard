@@ -20,6 +20,7 @@ import { ChromeSlot } from "@/components/chrome/slots";
 import { TilType } from "@/db/schema";
 import { StreakData, HeatmapData } from "@/lib/dal/til";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { ClipTilDraft } from "@/lib/til/clipImport";
 
 function TilPageContent() {
   const router = useRouter();
@@ -251,6 +252,39 @@ function TilPageContent() {
     fetchAuxiliaryData();
   };
 
+  const handleCommitBatch = async (entries: ClipTilDraft[]): Promise<{ failed: ClipTilDraft[] }> => {
+    const failed: ClipTilDraft[] = [];
+    let createdCount = 0;
+
+    for (const entry of entries) {
+      try {
+        const res = await fetch("/api/til", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(entry),
+        });
+        if (!res.ok) {
+          failed.push(entry);
+        } else {
+          createdCount += 1;
+        }
+      } catch {
+        failed.push(entry);
+      }
+    }
+
+    if (createdCount > 0) {
+      if (viewMode === "codex") fetchCodex();
+      else if (viewMode === "recall") fetchRecall();
+      else if (viewMode === "press") fetchPress();
+      else fetchFeed();
+      fetchAuxiliaryData();
+    }
+
+    return { failed };
+  };
+
   const handleUpdate = async (id: string, updated: Partial<TilItem>) => {
     const res = await fetch(`/api/til/${id}`, {
       method: "PATCH",
@@ -414,7 +448,7 @@ function TilPageContent() {
             <TilOnThisDay data={onThisDay} />
 
             {/* Hero Composer Surface */}
-            <TilComposer onCommit={handleCommit} />
+            <TilComposer onCommit={handleCommit} onCommitBatch={handleCommitBatch} />
 
             {/* Timeline Feed Container */}
             {loading ? (

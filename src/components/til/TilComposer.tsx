@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { TilType, tilTypeValues } from "@/db/schema";
 import { Code, Tag, Link as LinkIcon, X, CornerDownLeft } from "lucide-react";
+import { parseClipImport, clipLinksToTilDrafts, type ClipLink, type ClipTilDraft } from "@/lib/til/clipImport";
 
 interface TilComposerProps {
   onCommit: (entry: {
@@ -16,6 +17,7 @@ interface TilComposerProps {
     saveToHoardQueue: boolean;
     replacesEntryId?: string;
   }) => Promise<void>;
+  onCommitBatch?: (entries: ClipTilDraft[]) => Promise<{ failed: ClipTilDraft[] }>;
 }
 
 const TYPE_CONFIG: Record<
@@ -80,7 +82,7 @@ const CODE_LANGUAGES = [
   "json",
 ];
 
-export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
+export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatch }) => {
   const [type, setType] = useState<TilType>("FACT");
   const [body, setBody] = useState("");
   const [code, setCode] = useState("");
@@ -90,7 +92,11 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
   const [tagInput, setTagInput] = useState("");
   const [saveToHoardQueue, setSaveToHoardQueue] = useState(false); // default OFF per spec
   const [submitting, setSubmitting] = useState(false);
+  const [clipBatch, setClipBatch] = useState<ClipLink[] | null>(null);
+  const [clipDropped, setClipDropped] = useState(0);
+  const [clipError, setClipError] = useState<string | null>(null);
 
+  const composerRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -151,7 +157,86 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
     return () => { isMounted = false; };
   }, [showReplacesPicker, tags]);
 
+  const clearClipBatch = () => {
+    setClipBatch(null);
+    setClipDropped(0);
+    setClipError(null);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const text = e.clipboardData.getData("text/plain");
+    const parsed = parseClipImport(text);
+    if (!parsed) return;
+    e.preventDefault();
+    setClipBatch(parsed.items);
+    setClipDropped(parsed.dropped);
+    setClipError(null);
+    setType("LINK");
+    requestAnimationFrame(() => composerRef.current?.focus());
+  };
+
+  const removeClipItem = (index: number) => {
+    if (!clipBatch) return;
+    const next = clipBatch.filter((_, i) => i !== index);
+    if (next.length === 0) {
+      clearClipBatch();
+      return;
+    }
+    setClipBatch(next);
+  };
+
+  const commitSequentially = async (entries: ClipTilDraft[]): Promise<{ failed: ClipTilDraft[] }> => {
+    const failed: ClipTilDraft[] = [];
+    for (const entry of entries) {
+      try {
+        await onCommit(entry);
+      } catch {
+        failed.push(entry);
+      }
+    }
+    return { failed };
+  };
+
+  const handleBatchSubmit = async () => {
+    if (!clipBatch?.length || submitting) return;
+
+    try {
+      setSubmitting(true);
+      setClipError(null);
+      const drafts = clipLinksToTilDrafts(clipBatch);
+      const { failed } = onCommitBatch
+        ? await onCommitBatch(drafts)
+        : await commitSequentially(drafts);
+
+      if (failed.length === 0) {
+        clearClipBatch();
+        setBody("");
+        setCode("");
+        setLinkUrl("");
+        setTags([]);
+        setTagInput("");
+        setSaveToHoardQueue(false);
+        setReplacesEntryId(null);
+        setShowReplacesPicker(false);
+        return;
+      }
+
+      setClipBatch(failed.map((entry) => ({ title: entry.body, url: entry.linkUrl })));
+      setClipDropped(0);
+      setClipError(`${failed.length} failed to save. Review and commit remaining.`);
+    } catch (err) {
+      console.error("Batch commit failed:", err);
+      setClipError("Batch commit failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async () => {
+    if (clipBatch) {
+      await handleBatchSubmit();
+      return;
+    }
     if (!body.trim() && (type !== "SNIPPET" || !code.trim())) return;
     if (submitting) return;
 
@@ -194,8 +279,15 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
 
   const activeConfig = TYPE_CONFIG[type];
 
+  const canCommitSingle = Boolean(body.trim() || (type === "SNIPPET" && code.trim()));
+  const canCommit = clipBatch ? clipBatch.length > 0 : canCommitSingle;
+
   return (
     <div
+      ref={composerRef}
+      tabIndex={clipBatch ? -1 : undefined}
+      onPasteCapture={handlePaste}
+      onKeyDown={clipBatch ? handleKeyDown : undefined}
       style={{
         background: "var(--paper)",
         border: "var(--bd)",
@@ -215,7 +307,10 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
                 key={t}
                 type="button"
                 className="til-type-chip"
-                onClick={() => setType(t)}
+                onClick={() => {
+                  if (!clipBatch) setType(t);
+                }}
+                disabled={Boolean(clipBatch)}
                 style={{
                   fontFamily: "var(--mono)",
                   fontSize: "11px",
@@ -224,10 +319,11 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
                   border: "2px solid var(--ink)",
                   background: isSelected ? cfg.bg : "transparent",
                   color: isSelected ? cfg.color : "var(--ink)",
-                  cursor: "pointer",
+                  cursor: clipBatch ? "default" : "pointer",
                   boxShadow: isSelected ? "2px 2px 0 var(--ink)" : "none",
                   transform: isSelected ? "translate(-1px, -1px)" : "none",
                   transition: "all 0.1s ease",
+                  opacity: clipBatch && !isSelected ? 0.4 : 1,
                 }}
               >
                 {cfg.label}
@@ -239,7 +335,97 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
         <div className="kbd-hint">⌘↵ to commit</div>
       </div>
 
-      {/* Main Body Textarea */}
+      {clipBatch ? (
+        <div style={{ marginBottom: "12px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
+            <span style={{ fontFamily: "var(--mono)", fontSize: "12px", fontWeight: 900 }}>
+              {clipBatch.length} {clipBatch.length === 1 ? "LINK" : "LINKS"} READY
+            </span>
+            {clipDropped > 0 && (
+              <span style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 700, opacity: 0.75 }}>
+                {clipDropped} skipped (missing title or url)
+              </span>
+            )}
+          </div>
+          {clipError && (
+            <div
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#FF007A",
+                marginBottom: "8px",
+              }}
+            >
+              {clipError}
+            </div>
+          )}
+          <div
+            style={{
+              maxHeight: "240px",
+              overflowY: "auto",
+              border: "2px solid var(--ink)",
+            }}
+          >
+            {clipBatch.map((item, index) => {
+              let host = item.url;
+              try {
+                host = new URL(item.url).hostname.replace(/^www\./, "");
+              } catch {
+                // keep raw url
+              }
+              return (
+                <div
+                  key={`${item.url}-${index}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "7px 8px",
+                    borderBottom: index === clipBatch.length - 1 ? "none" : "1px solid var(--ink)",
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.title}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: "var(--mono)",
+                        fontSize: "10.5px",
+                        opacity: 0.7,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {host}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="filter-clear-btn"
+                    aria-label={`Remove ${item.title}`}
+                    onClick={() => removeClipItem(index)}
+                    disabled={submitting}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <>
       <textarea
         ref={textareaRef}
         value={body}
@@ -515,9 +701,30 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* Footer Controls: Bookmark Opt-In & Commit Button */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1.5px solid var(--ink)", paddingTop: "10px", flexWrap: "wrap", gap: "8px" }}>
+        {clipBatch ? (
+          <button
+            type="button"
+            onClick={clearClipBatch}
+            disabled={submitting}
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "11px",
+              fontWeight: 800,
+              background: "transparent",
+              color: "var(--ink)",
+              border: "1px dashed var(--ink)",
+              padding: "3px 8px",
+              cursor: submitting ? "wait" : "pointer",
+            }}
+          >
+            DISMISS
+          </button>
+        ) : (
         <label
           style={{
             fontFamily: "var(--mono)",
@@ -538,11 +745,12 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
           />
           also save to HOARD queue (default off)
         </label>
+        )}
 
         <button
           type="button"
           onClick={() => handleSubmit()}
-          disabled={submitting || (!body.trim() && (type !== "SNIPPET" || !code.trim()))}
+          disabled={submitting || !canCommit}
           style={{
             fontFamily: "var(--mono)",
             fontSize: "12px",
@@ -556,10 +764,15 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit }) => {
             display: "flex",
             alignItems: "center",
             gap: "6px",
-            opacity: (!body.trim() && (type !== "SNIPPET" || !code.trim())) ? 0.5 : 1,
+            opacity: canCommit ? 1 : 0.5,
           }}
         >
-          {submitting ? "COMMITTING..." : "COMMIT"} <CornerDownLeft size={13} />
+          {submitting
+            ? "COMMITTING..."
+            : clipBatch
+              ? `COMMIT ${clipBatch.length}`
+              : "COMMIT"}{" "}
+          <CornerDownLeft size={13} />
         </button>
       </div>
     </div>
