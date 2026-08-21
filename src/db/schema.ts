@@ -18,6 +18,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { KindType } from "@/types";
+import type { AskSaveCitation } from "@/lib/library/askSave";
 
 const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
 
@@ -496,4 +497,23 @@ export const homeEditionCache = pgTable("home_edition_cache", {
   payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
   computedAt: timestamp("computed_at").notNull().defaultNow(),
 });
+
+export const askSaves = pgTable(
+  "ask_saves",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    question: text("question").notNull(),
+    answer: text("answer").notNull(),
+    summary: text("summary").notNull().default(""),
+    citations: jsonb("citations").$type<AskSaveCitation[]>().notNull().default(sql`'[]'::jsonb`),
+    model: text("model").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("ask_saves_user_created_idx").on(table.userId, table.createdAt.desc())]
+);
 

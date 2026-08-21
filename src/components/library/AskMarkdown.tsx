@@ -1,5 +1,5 @@
 import { MarkdownLite } from "@/components/til/MarkdownLite";
-import { parseAskMarkdown, type AskMarkdownBlock } from "@/lib/library/askAnswer";
+import { parseAskAnswer, parseAskMarkdown, type AskMarkdownBlock } from "@/lib/library/askAnswer";
 
 function Inline({ text }: { text: string }) {
   return <MarkdownLite content={text} style={{ whiteSpace: "normal" }} />;
@@ -48,6 +48,34 @@ export function AskMarkdown({ content }: { content: string }) {
       {blocks.map((block, index) => (
         <BlockView key={`${block.type}-${index}`} block={block} />
       ))}
+    </div>
+  );
+}
+
+export function AskAnswer({ text, streaming }: { text: string; streaming?: boolean }) {
+  const { summary, body } = parseAskAnswer(text);
+  return (
+    <div className="ask-answer">
+      {summary ? (
+        <div className="ask-lede">
+          <div className="ask-lede-kicker">THE SHORT OF IT</div>
+          <div className="ask-lede-text">
+            <AskMarkdown content={summary} />
+            {streaming && !body ? <span className="ask-caret" aria-hidden /> : null}
+          </div>
+        </div>
+      ) : null}
+      {body ? (
+        <div className="ask-answer-body">
+          <AskMarkdown content={body} />
+          {streaming ? <span className="ask-caret" aria-hidden /> : null}
+        </div>
+      ) : !summary && text ? (
+        <div className="ask-answer-body">
+          <AskMarkdown content={text} />
+          {streaming ? <span className="ask-caret" aria-hidden /> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

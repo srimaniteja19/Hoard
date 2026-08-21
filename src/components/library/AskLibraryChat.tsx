@@ -5,9 +5,14 @@ import { DefaultChatTransport } from "ai";
 import Link from "next/link";
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { ASK_MODEL, ASK_MODELS, type AskModelId } from "@/lib/ai/askModels";
-import { parseAskAnswer } from "@/lib/library/askAnswer";
 import type { AskUIMessage } from "@/lib/library/askLibrary";
-import { AskMarkdown } from "@/components/library/AskMarkdown";
+import {
+  buildAskSave,
+  citationsFromAskMessage,
+  questionForAssistantTurn,
+  textFromAskMessage,
+} from "@/lib/library/askSave";
+import { AskAnswer } from "@/components/library/AskMarkdown";
 
 const STARTERS = [
   "why didn't SSDs inside the GPU work?",
@@ -15,72 +20,62 @@ const STARTERS = [
   "what have I learned about postgres?",
 ];
 
-type Citation = {
-  key: string;
-  title: string;
-  href: string;
-  kind: string;
-  ownerType: string;
-  ownerId: string;
-};
-
-function citationsFromMessage(message: AskUIMessage): Citation[] {
-  const seen = new Set<string>();
-  const out: Citation[] = [];
-
-  const push = (hit: { title?: unknown; href?: unknown; kind?: unknown; ownerType?: unknown; ownerId?: unknown }) => {
-    const title = typeof hit.title === "string" ? hit.title : "";
-    const href = typeof hit.href === "string" ? hit.href : "";
-    const key = `${hit.ownerType}:${hit.ownerId}`;
-    if (!title || !href || seen.has(key)) return;
-    seen.add(key);
-    out.push({
-      key,
-      title,
-      href,
-      kind: typeof hit.kind === "string" ? hit.kind : "",
-      ownerType: typeof hit.ownerType === "string" ? hit.ownerType : "bookmark",
-      ownerId: typeof hit.ownerId === "string" ? hit.ownerId : "",
-    });
-  };
-
-  for (const part of message.parts) {
-    if (part.type !== "data-shelf" || !Array.isArray(part.data)) continue;
-    for (const hit of part.data) push(hit);
-  }
-  return out;
-}
-
 function recordBookmarkUse(ownerId: string) {
   const id = Number(ownerId);
   if (!Number.isFinite(id)) return;
   fetch(`/api/bookmarks/${id}/use`, { method: "POST", credentials: "include" }).catch(() => {});
 }
 
-function AssistantAnswer({ text, streaming }: { text: string; streaming?: boolean }) {
-  const { summary, body } = parseAskAnswer(text);
+function KeepAnswer({
+  messages,
+  index,
+  model,
+  disabled,
+}: {
+  messages: AskUIMessage[];
+  index: number;
+  model: AskModelId;
+  disabled: boolean;
+}) {
+  const [state, setState] = useState<"idle" | "saving" | "kept" | "error">("idle");
+
+  async function keep() {
+    if ((state !== "idle" && state !== "error") || disabled) return;
+    const message = messages[index];
+    if (!message || message.role !== "assistant") return;
+    setState("saving");
+    try {
+      const body = buildAskSave({
+        question: questionForAssistantTurn(messages, index),
+        answer: textFromAskMessage(message),
+        citations: citationsFromAskMessage(message),
+        model,
+      });
+      const res = await fetch("/api/library/ask/saves", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("keep failed");
+      setState("kept");
+    } catch {
+      setState("error");
+    }
+  }
+
   return (
-    <div className="ask-answer">
-      {summary ? (
-        <div className="ask-lede">
-          <div className="ask-lede-kicker">THE SHORT OF IT</div>
-          <div className="ask-lede-text">
-            <AskMarkdown content={summary} />
-            {streaming && !body ? <span className="ask-caret" aria-hidden /> : null}
-          </div>
-        </div>
-      ) : null}
-      {body ? (
-        <div className="ask-answer-body">
-          <AskMarkdown content={body} />
-          {streaming ? <span className="ask-caret" aria-hidden /> : null}
-        </div>
-      ) : !summary && text ? (
-        <div className="ask-answer-body">
-          <AskMarkdown content={text} />
-          {streaming ? <span className="ask-caret" aria-hidden /> : null}
-        </div>
-      ) : null}
+    <div className="ask-keep">
+      <button type="button" className="ask-keep-btn" onClick={keep} disabled={disabled || state === "saving" || state === "kept"}>
+        {state === "kept" ? "KEPT" : state === "saving" ? "KEEPING…" : "KEEP"}
+      </button>
+      {state === "error" ? (
+        <span className="ask-keep-err">Could not save.</span>
+      ) : (
+        <Link href="/ask/saved" className="ask-keep-hint">
+          Saved answers
+        </Link>
+      )}
     </div>
   );
 }
@@ -133,6 +128,9 @@ export function AskLibraryChat() {
             </option>
           ))}
         </select>
+        <Link href="/ask/saved" className="ask-toolbar-saved">
+          SAVED
+        </Link>
       </div>
       <div className="ask-log" aria-live="polite">
         {messages.length === 0 ? (
@@ -152,11 +150,8 @@ export function AskLibraryChat() {
           </div>
         ) : (
           messages.map((message, index) => {
-            const citations = message.role === "assistant" ? citationsFromMessage(message) : [];
-            const text = message.parts
-              .filter((part) => part.type === "text")
-              .map((part) => part.text)
-              .join("");
+            const citations = message.role === "assistant" ? citationsFromAskMessage(message) : [];
+            const text = textFromAskMessage(message);
             const live = busy && index === messages.length - 1 && message.role === "assistant";
 
             return (
@@ -172,7 +167,7 @@ export function AskLibraryChat() {
                         PULLING THE CARD…
                       </div>
                     ) : null}
-                    {text ? <AssistantAnswer text={text} streaming={live} /> : null}
+                    {text ? <AskAnswer text={text} streaming={live} /> : null}
                     {citations.length > 0 ? (
                       <div className="ask-shelf">
                         <div className="ask-shelf-kicker">FROM THE SHELF</div>
@@ -183,7 +178,7 @@ export function AskLibraryChat() {
                               if (!isTil) recordBookmarkUse(cite.ownerId);
                             };
                             return (
-                              <li key={cite.key}>
+                              <li key={`${cite.ownerType}:${cite.ownerId}`}>
                                 <Link
                                   href={cite.href}
                                   target={isTil ? undefined : "_blank"}
@@ -197,6 +192,9 @@ export function AskLibraryChat() {
                           })}
                         </ul>
                       </div>
+                    ) : null}
+                    {text && !live ? (
+                      <KeepAnswer messages={messages} index={index} model={model} disabled={busy} />
                     ) : null}
                   </>
                 )}
