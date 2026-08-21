@@ -14,10 +14,12 @@
     "seed:heavy": "tsx --env-file=.env.local scripts/seed-heavy.ts",
     "seed:todos": "tsx --env-file=.env.local scripts/seed-todos.ts",
     "verify:home": "tsx --env-file=.env.local scripts/verify-home-edition.ts",
-    "verify:search": "tsx --env-file=.env.local scripts/verify-library-search.ts"
+    "verify:search": "tsx --env-file=.env.local scripts/verify-library-search.ts",
+    "backfill:embeddings": "tsx --env-file=.env.local scripts/backfill-embeddings.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
+    "ai": "^7.0.74",
     "better-auth": "^1.6.26",
     "d3-force": "^3.0.0",
     "drizzle-orm": "^0.45.2",

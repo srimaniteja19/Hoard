@@ -4,6 +4,7 @@ import { bookmarks } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { fetchWithSsrfGuard } from "@/lib/security/ssrfGuard";
+import { scheduleBookmarkEmbedding } from "@/lib/embeddings/upsertBookmarkEmbedding";
 
 function extractCleanText(html: string): string {
   return html
@@ -89,6 +90,10 @@ export async function POST(req: Request) {
         updatedAt: new Date(),
       })
       .where(and(eq(bookmarks.id, bm.id), eq(bookmarks.userId, userId)));
+
+    if (newArchivedText !== (bm.archivedText || "")) {
+      scheduleBookmarkEmbedding({ ...bm, archivedText: newArchivedText });
+    }
 
     return NextResponse.json({
       success: true,

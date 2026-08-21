@@ -13,7 +13,7 @@
  */
 
 import { db } from "../src/db";
-import { users, collections, bookmarks } from "../src/db/schema";
+import { users, collections, bookmarks, embeddings } from "../src/db/schema";
 import { eq, and } from "drizzle-orm";
 import { searchLibrary } from "../src/lib/library/searchLibrary";
 
@@ -39,6 +39,23 @@ async function ensureUser(): Promise<void> {
   }
 
   await db.delete(bookmarks).where(eq(bookmarks.userId, USER_ID));
+}
+
+const FTS_ONLY = { embedQuery: async () => null as number[] | null };
+
+function sentinelVector(): number[] {
+  const v = new Array(1536).fill(0);
+  v[0] = 1;
+  return v;
+}
+
+async function embeddingsTableReady(): Promise<boolean> {
+  try {
+    await db.select({ id: embeddings.id }).from(embeddings).limit(1);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function seed() {
@@ -91,7 +108,9 @@ async function main() {
   // 1. Body-text discoverability: the phrase only ever appears in archivedText,
   // never in any title — client-side title/tag/note search could never have
   // found this before this phase.
-  const bodyResults = await searchLibrary(USER_ID, "zk-snark verification circuits");
+  // FTS checks pin embedQuery to null so a missing Gateway key (or a live
+  // vector index) cannot change keyword ranking. Hybrid is checked separately.
+  const bodyResults = await searchLibrary(USER_ID, "zk-snark verification circuits", 20, FTS_ONLY);
   const bodyUrls = bodyResults.map((r) => r.url);
   checks.push([
     "body-only phrase match is found via archivedText",
@@ -119,6 +138,41 @@ async function main() {
     highIdx !== -1 && lowIdx !== -1 && highIdx < lowIdx,
   ]);
 
+  // 3. Hybrid: a sentinel embedding on the cooking post should surface it for
+  // a query with no keyword overlap ("burnout and deep work"), proving vector
+  // neighbors are fused in even when FTS returns nothing.
+  if (await embeddingsTableReady()) {
+    await db.delete(embeddings).where(eq(embeddings.userId, USER_ID));
+    const [cooking] = await db
+      .select({ id: bookmarks.id })
+      .from(bookmarks)
+      .where(and(eq(bookmarks.userId, USER_ID), eq(bookmarks.url, "https://example.com/verify-search/no-match")))
+      .limit(1);
+    if (!cooking) {
+      checks.push(["vector-only conceptual neighbor is returned when FTS has no keyword overlap", false]);
+    } else {
+      const vec = sentinelVector();
+      await db.insert(embeddings).values({
+        userId: USER_ID,
+        ownerType: "bookmark",
+        ownerId: String(cooking.id),
+        embedding: vec,
+        model: "openai/text-embedding-3-small",
+        contentHash: "verify-sentinel",
+      });
+      const conceptual = await searchLibrary(USER_ID, "burnout and deep work", 20, {
+        embedQuery: async () => vec,
+      });
+      checks.push([
+        "vector-only conceptual neighbor is returned when FTS has no keyword overlap",
+        conceptual.some((r) => r.url.endsWith("/no-match")),
+      ]);
+      await db.delete(embeddings).where(eq(embeddings.userId, USER_ID));
+    }
+  } else {
+    console.log("↷ vector-only conceptual neighbor (skipped — apply drizzle/0008 embeddings first)");
+  }
+
   let failed = 0;
   for (const [label, ok] of checks) {
     console.log(`${ok ? "✓" : "✗"} ${label}`);
@@ -126,6 +180,11 @@ async function main() {
   }
 
   await db.delete(bookmarks).where(and(eq(bookmarks.userId, USER_ID)));
+  try {
+    await db.delete(embeddings).where(eq(embeddings.userId, USER_ID));
+  } catch {
+    // embeddings table may not exist yet
+  }
 
   if (failed === 0) {
     console.log("\n✅ PHASE 4 LIBRARY SEARCH VERIFICATION SUCCESSFUL!");

@@ -9,6 +9,7 @@ import { fetchLinkPreview } from "@/lib/til/previewRegistry";
 import { confidence, confidenceSql } from "@/lib/til/confidence";
 import { checkSupersessionCycle } from "@/lib/til/supersession";
 import { recordUse } from "@/lib/library/recordUse";
+import { scheduleBookmarkEmbedding } from "@/lib/embeddings/upsertBookmarkEmbedding";
 import crypto from "crypto";
 
 // ─── GET /api/til ────────────────────────────────────────────────────────────
@@ -156,7 +157,7 @@ export async function POST(req: Request) {
         domain = new URL(data.linkUrl).hostname.replace(/^www\./, "");
       } catch {}
 
-      await db.insert(bookmarks).values({
+      const [tilBookmark] = await db.insert(bookmarks).values({
         userId,
         title: data.body ? data.body.slice(0, 80) : "TIL Link",
         type: "ART",
@@ -167,7 +168,8 @@ export async function POST(req: Request) {
         collectionId: `${userId.slice(-8)}-unsorted`,
         unread: true,
         note: `Derived from TIL #${shortHash}`,
-      }).onConflictDoNothing();
+      }).onConflictDoNothing().returning();
+      if (tilBookmark) scheduleBookmarkEmbedding(tilBookmark);
     }
 
     // 3. Resolve Link Preview Snapshot if linkUrl provided

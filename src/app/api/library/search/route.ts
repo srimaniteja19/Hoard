@@ -3,8 +3,8 @@ import { requireUserId, AuthError } from "@/lib/session";
 import { searchLibrary } from "@/lib/library/searchLibrary";
 
 // ─── GET /api/library/search ──────────────────────────────────────────────
-// The single ranked full-text search endpoint (LIBRARY.md §4) — shared by
-// the web ⌘K palette and the extension's popup search. Do not build a
+// The single ranked search endpoint (LIBRARY.md §4) — FTS + vector RRF.
+// Shared by the web ⌘K palette and the extension's popup search. Do not build a
 // second search implementation; extend this one.
 
 export async function GET(req: Request) {

@@ -8,6 +8,7 @@ import { parseCoverData } from "@/lib/cover-data";
 import { cleanTitle } from "@/lib/cleanTitle";
 import { enrichBookmarkValues } from "@/lib/enrichBookmark";
 import { inferItemType } from "@/lib/library/inferItemType";
+import { scheduleBookmarkEmbedding } from "@/lib/embeddings/upsertBookmarkEmbedding";
 
 // ─── Shape mapper ────────────────────────────────────────────────────────────
 
@@ -243,6 +244,8 @@ export async function POST(req: Request) {
         set: { ...values, deletedAt: null, updatedAt: new Date() },
       })
       .returning();
+
+    scheduleBookmarkEmbedding(row);
 
     return NextResponse.json(dbToUi(row), { status: 201 });
   } catch (e) {

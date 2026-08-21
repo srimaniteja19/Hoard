@@ -21,6 +21,18 @@ import { KindType } from "@/types";
 
 const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
 
+const vector1536 = customType<{ data: number[]; driverData: string }>({
+  dataType: () => "vector(1536)",
+  toDriver: (value: number[]) => `[${value.join(",")}]`,
+  fromDriver: (value: unknown) => {
+    if (Array.isArray(value)) return value.map(Number);
+    if (typeof value === "string") {
+      return value.replace(/^\[|\]$/g, "").split(",").map(Number);
+    }
+    return [];
+  },
+});
+
 export type LinkPreview = {
   provider: "YOUTUBE" | "VIMEO" | "SPOTIFY" | "GITHUB" | "ARXIV" | "X" | "GENERIC";
   kind: "video" | "audio" | "repo" | "paper" | "post" | "article";
@@ -188,6 +200,28 @@ export const bookmarks = pgTable(
     index("bookmark_search_vector_idx").using("gin", table.searchVector),
     index("bookmark_parent_idx").on(table.parentId),
     index("bookmark_cluster_idx").on(table.clusterId),
+  ]
+);
+
+export const embeddings = pgTable(
+  "embeddings",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ownerType: text("owner_type").notNull(),
+    ownerId: text("owner_id").notNull(),
+    embedding: vector1536("embedding").notNull(),
+    model: text("model").notNull(),
+    contentHash: text("content_hash").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("embeddings_owner_idx").on(table.ownerType, table.ownerId),
+    index("embeddings_user_type_idx").on(table.userId, table.ownerType),
   ]
 );
 

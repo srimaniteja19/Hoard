@@ -7,6 +7,7 @@ import { KindType } from "@/types";
 import { cleanTitle } from "@/lib/cleanTitle";
 import { detectKind } from "@/lib/detectKind";
 import { inferItemType } from "@/lib/library/inferItemType";
+import { scheduleBookmarkEmbedding } from "@/lib/embeddings/upsertBookmarkEmbedding";
 
 interface ImportBookmarkPayload {
   t?: string;
@@ -132,7 +133,15 @@ export async function POST(req: Request) {
       .insert(bookmarks)
       .values(toInsert)
       .onConflictDoNothing({ target: [bookmarks.userId, bookmarks.url] })
-      .returning({ id: bookmarks.id });
+      .returning({
+        id: bookmarks.id,
+        userId: bookmarks.userId,
+        title: bookmarks.title,
+        note: bookmarks.note,
+        archivedText: bookmarks.archivedText,
+      });
+
+    for (const row of inserted) scheduleBookmarkEmbedding(row);
 
     const skipped = toInsert.length - inserted.length;
 

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { bookmarks } from "@/db/schema";
+import { bookmarks, embeddings } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { KindType } from "@/types";
+import { scheduleBookmarkEmbedding } from "@/lib/embeddings/upsertBookmarkEmbedding";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -41,10 +42,16 @@ export async function PATCH(req: Request, { params }: Params) {
     if (body.clusterId !== undefined)    updates.clusterId    = body.clusterId;
     if (body.clusterTitle !== undefined) updates.clusterTitle = body.clusterTitle;
 
-    await db
+    const textChanged =
+      updates.title !== undefined || updates.note !== undefined || updates.archivedText !== undefined;
+
+    const [row] = await db
       .update(bookmarks)
       .set(updates)
-      .where(and(eq(bookmarks.id, numId), eq(bookmarks.userId, userId)));
+      .where(and(eq(bookmarks.id, numId), eq(bookmarks.userId, userId)))
+      .returning();
+
+    if (row && textChanged) scheduleBookmarkEmbedding(row);
 
     return NextResponse.json({ ok: true });
   } catch (e) {
@@ -68,6 +75,9 @@ export async function DELETE(req: Request, { params }: Params) {
       await db
         .delete(bookmarks)
         .where(and(eq(bookmarks.id, numId), eq(bookmarks.userId, userId)));
+      await db
+        .delete(embeddings)
+        .where(and(eq(embeddings.ownerType, "bookmark"), eq(embeddings.ownerId, String(numId))));
     } else {
       await db
         .update(bookmarks)

@@ -6,6 +6,7 @@ import { requireUserId, AuthError } from "@/lib/session";
 import { KindType } from "@/types";
 import { enrichBookmarkValues } from "@/lib/enrichBookmark";
 import { detectKind } from "@/lib/detectKind";
+import { scheduleBookmarkEmbedding } from "@/lib/embeddings/upsertBookmarkEmbedding";
 
 // CORS headers for extension requests (same-origin fetch from injected scripts)
 const CORS = {
@@ -92,6 +93,8 @@ export async function POST(req: Request) {
           set: { ...values, deletedAt: null, updatedAt: new Date() },
         })
         .returning();
+
+      scheduleBookmarkEmbedding(row);
 
       return NextResponse.json(
         { success: true, message: "Bookmark saved.", id: row.id },
