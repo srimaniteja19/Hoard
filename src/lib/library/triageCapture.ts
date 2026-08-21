@@ -2,7 +2,7 @@ import { z } from "zod";
 import { generateText, Output } from "ai";
 import { inferItemType, type ItemType } from "@/lib/library/inferItemType";
 import type { Collection, KindType } from "@/types";
-import { TRIAGE_MODEL } from "@/lib/ai/models";
+import { TRIAGE_MODEL, gatewayProviderOptions, languageModel } from "@/lib/ai/models";
 
 export const triageSchema = z.object({
   tags: z.array(z.string()).max(5),
@@ -92,13 +92,15 @@ export async function triageCapture(input: {
 
   try {
     const result = await generateText({
-      model: TRIAGE_MODEL,
+      model: languageModel(TRIAGE_MODEL),
       output: Output.object({
         schema: triageSchema,
         name: "CaptureTriage",
         description: "Pre-fill metadata for a saved library item",
       }),
       timeout: { totalMs: 8000 },
+      maxRetries: 0,
+      providerOptions: gatewayProviderOptions(TRIAGE_MODEL, ["feature:capture-triage"]),
       prompt: `Classify this saved item for a personal reference library.
 
 URL: ${input.url}

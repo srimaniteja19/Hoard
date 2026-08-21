@@ -1,6 +1,6 @@
 import { convertToModelMessages, stepCountIs, streamText, tool, type InferUITools, type UIMessage } from "ai";
 import { z } from "zod";
-import { ASK_MODEL } from "@/lib/ai/models";
+import { ASK_MODEL, gatewayProviderOptions, languageModel } from "@/lib/ai/models";
 import { citationHref, fetchVector } from "@/lib/library/fetchVector";
 
 export function createLibraryAskTools(userId: string) {
@@ -43,10 +43,12 @@ Write a short synthesis (a few sentences, or a tight bullet list). After the ans
 export async function streamLibraryAsk(userId: string, messages: AskUIMessage[]) {
   const tools = createLibraryAskTools(userId);
   return streamText({
-    model: ASK_MODEL,
+    model: languageModel(ASK_MODEL),
     system: ASK_SYSTEM,
     messages: await convertToModelMessages(messages, { tools }),
     tools,
     stopWhen: stepCountIs(5),
+    maxRetries: 0,
+    providerOptions: gatewayProviderOptions(ASK_MODEL, ["feature:library-ask"]),
   });
 }

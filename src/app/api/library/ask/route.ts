@@ -1,5 +1,6 @@
 import { requireUserId, AuthError } from "@/lib/session";
 import { streamLibraryAsk, type AskUIMessage } from "@/lib/library/askLibrary";
+import { gatewayErrorMessage } from "@/lib/ai/models";
 
 export const maxDuration = 60;
 
@@ -14,7 +15,9 @@ export async function POST(req: Request) {
     }
 
     const result = await streamLibraryAsk(userId, messages);
-    return result.toUIMessageStreamResponse();
+    return result.toUIMessageStreamResponse({
+      onError: gatewayErrorMessage,
+    });
   } catch (e) {
     if (e instanceof AuthError) {
       return new Response("Unauthorized", { status: 401 });
