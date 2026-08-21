@@ -3,7 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent, type KeyboardEvent, type RefObject } from "react";
 import { ASK_MODEL, ASK_MODELS, type AskModelId } from "@/lib/ai/askModels";
 import type { AskUIMessage } from "@/lib/library/askLibrary";
 import { textFromAskMessage } from "@/lib/library/askSave";
@@ -21,19 +21,100 @@ function resizeComposer(el: HTMLTextAreaElement | null) {
   el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
 }
 
+function subscribeNever() {
+  return () => {};
+}
+
+function AskComposer({
+  web,
+  busy,
+  input,
+  setInput,
+  onSubmit,
+  onComposerKey,
+  composerRef,
+  onToggleWire,
+  stop,
+}: {
+  web: boolean;
+  busy: boolean;
+  input: string;
+  setInput: (value: string) => void;
+  onSubmit: (event: FormEvent) => void;
+  onComposerKey: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
+  composerRef: RefObject<HTMLTextAreaElement | null>;
+  onToggleWire: () => void;
+  stop: () => void;
+}) {
+  const label = busy ? "THE DESK IS WRITING" : web ? "ASK THE SHELF — AND THE WIRE" : "ASK ANYTHING — OR WHAT YOU SAVED";
+  const placeholder = web ? "weather in SF, or what I saved about postgres" : "why didn't the thing I saved actually work?";
+  return (
+    <form className="ask-composer" onSubmit={onSubmit}>
+      <label className="ask-composer-label" htmlFor="ask-input">
+        {label}
+      </label>
+      <div className="ask-composer-row">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={web}
+          aria-label="Search the web"
+          className={web ? "ask-wire-switch is-on" : "ask-wire-switch"}
+          disabled={busy}
+          onClick={onToggleWire}
+        >
+          <span className="ask-wire-switch-label">WIRE</span>
+          <span className="ask-wire-switch-track" aria-hidden="true">
+            <span className="ask-wire-switch-knob" />
+          </span>
+        </button>
+        <textarea
+          id="ask-input"
+          ref={composerRef}
+          value={input}
+          rows={1}
+          onChange={(event) => {
+            setInput(event.target.value);
+            resizeComposer(event.target);
+          }}
+          onKeyDown={onComposerKey}
+          placeholder={placeholder}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          disabled={busy}
+        />
+        {busy ? (
+          <button type="button" className="ask-stop" onClick={() => stop()}>
+            STOP
+          </button>
+        ) : (
+          <button type="submit" className="prime" disabled={!input.trim()}>
+            ASK
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
+
 export function AskLibraryChat() {
   const [input, setInput] = useState("");
   const [model, setModel] = useState<AskModelId>(ASK_MODEL);
+  const [web, setWeb] = useState(false);
   const modelRef = useRef(model);
   modelRef.current = model;
+  const webRef = useRef(web);
+  webRef.current = web;
   const logRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const stickRef = useRef(true);
+  const mounted = useSyncExternalStore(subscribeNever, () => true, () => false);
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: "/api/library/ask",
-        body: () => ({ model: modelRef.current }),
+        body: () => ({ model: modelRef.current, web: webRef.current }),
       }),
     []
   );
@@ -179,6 +260,7 @@ export function AskLibraryChat() {
                     model={model}
                     busy={busy}
                     live={live}
+                    web={web}
                     onAsk={submitText}
                   />
                 )}
@@ -189,38 +271,37 @@ export function AskLibraryChat() {
         {error ? <div className="ask-error">{error.message || "The library could not answer."}</div> : null}
       </div>
 
-      <form className="ask-composer" onSubmit={onSubmit}>
-        <label className="ask-composer-label" htmlFor="ask-input">
-          {busy ? "THE DESK IS WRITING" : "ASK ANYTHING — OR WHAT YOU SAVED"}
-        </label>
-        <div className="ask-composer-row">
-          <textarea
-            id="ask-input"
-            ref={composerRef}
-            value={input}
-            rows={1}
-            onChange={(event) => {
-              setInput(event.target.value);
-              resizeComposer(event.target);
-            }}
-            onKeyDown={onComposerKey}
-            placeholder="why didn't the thing I saved actually work?"
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            disabled={busy}
-          />
-          {busy ? (
-            <button type="button" className="ask-stop" onClick={() => stop()}>
-              STOP
+      {mounted ? (
+        <AskComposer
+          web={web}
+          busy={busy}
+          input={input}
+          setInput={setInput}
+          onSubmit={onSubmit}
+          onComposerKey={onComposerKey}
+          composerRef={composerRef}
+          onToggleWire={() => setWeb((on) => !on)}
+          stop={stop}
+        />
+      ) : (
+        <form className="ask-composer">
+          <label className="ask-composer-label" htmlFor="ask-input">
+            ASK ANYTHING — OR WHAT YOU SAVED
+          </label>
+          <div className="ask-composer-row">
+            <button type="button" role="switch" aria-checked={false} aria-label="Search the web" className="ask-wire-switch" disabled>
+              <span className="ask-wire-switch-label">WIRE</span>
+              <span className="ask-wire-switch-track" aria-hidden="true">
+                <span className="ask-wire-switch-knob" />
+              </span>
             </button>
-          ) : (
-            <button type="submit" className="prime" disabled={!input.trim()}>
+            <textarea id="ask-input" rows={1} placeholder="why didn't the thing I saved actually work?" disabled />
+            <button type="submit" className="prime" disabled>
               ASK
             </button>
-          )}
-        </div>
-      </form>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

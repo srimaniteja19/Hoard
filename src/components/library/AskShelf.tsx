@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { AskSaveCitation } from "@/lib/library/askSave";
+import type { AskWireItem } from "@/lib/library/askWire";
 
 const KIND_TOKENS = new Set(["ART", "VID", "PLY", "GIT", "APP", "PPR", "DOC"]);
 
@@ -53,6 +54,29 @@ export function AskShelf({
             </li>
           );
         })}
+      </ul>
+    </div>
+  );
+}
+
+export function AskWire({ items }: { items: AskWireItem[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="ask-shelf ask-wire">
+      <div className="ask-shelf-rail">
+        <span className="ask-shelf-kicker">ON THE WIRE</span>
+        <span className="ask-shelf-count">{String(items.length).padStart(2, "0")}</span>
+      </div>
+      <ul className="ask-cites">
+        {items.map((item, index) => (
+          <li key={item.href}>
+            <Link href={item.href} prefetch={false} target="_blank" data-kind="WEB">
+              <span className="ask-cite-num">{String(index + 1).padStart(2, "0")}</span>
+              <span className="ask-cite-kind">{item.date || "WEB"}</span>
+              <span className="ask-cite-title">{item.title}</span>
+            </Link>
+          </li>
+        ))}
       </ul>
     </div>
   );

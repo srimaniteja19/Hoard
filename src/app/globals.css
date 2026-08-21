@@ -5222,12 +5222,12 @@ input[type=range].wall-zoom-slider {
   max-height: 160px;
 }
 .ask-composer textarea::placeholder {
-  color: color-mix(in srgb, var(--paper) 45%, transparent);
+  color: color-mix(in srgb, var(--paper) 62%, transparent);
 }
 .ask-composer textarea:disabled {
   opacity: 0.5;
 }
-.ask-composer button {
+.ask-composer-row button:not(.ask-wire-switch) {
   border: 0;
   border-left: var(--bd);
   background: var(--paper);
@@ -5240,20 +5240,95 @@ input[type=range].wall-zoom-slider {
   cursor: pointer;
   min-width: 92px;
 }
-.ask-composer button.prime {
+.ask-wire-switch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  width: 58px;
+  border: 0;
+  border-right: var(--bd);
+  background: transparent;
+  color: var(--cyan);
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.ask-wire-switch-label {
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  line-height: 1;
+}
+.ask-wire-switch-track {
+  display: block;
+  width: 28px;
+  height: 14px;
+  border: 2px solid var(--cyan);
+  background: transparent;
+  position: relative;
+}
+.ask-wire-switch-knob {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 8px;
+  height: 8px;
+  background: var(--cyan);
+  transition: left 0.12s steps(2, jump-none);
+}
+.ask-wire-switch.is-on {
+  color: var(--lime);
+}
+.ask-wire-switch.is-on .ask-wire-switch-track {
+  border-color: var(--lime);
+  background: var(--lime);
+}
+.ask-wire-switch.is-on .ask-wire-switch-knob {
+  left: 15px;
+  background: #000;
+}
+.ask-wire-switch:hover:not(:disabled) .ask-wire-switch-track {
+  border-color: var(--yel);
+}
+.ask-wire-switch:hover:not(:disabled) .ask-wire-switch-knob {
+  background: var(--yel);
+}
+.ask-wire-switch.is-on:hover:not(:disabled) .ask-wire-switch-track {
+  border-color: var(--yel);
+  background: var(--yel);
+}
+.ask-wire-switch.is-on:hover:not(:disabled) .ask-wire-switch-knob {
+  background: #000;
+}
+.ask-wire-switch:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ask-composer-row button.prime {
   background: var(--yel);
   color: #000;
 }
-.ask-composer button.prime:hover:not(:disabled) {
+.ask-composer-row button.prime:hover:not(:disabled) {
   background: var(--lime);
 }
-.ask-composer button.ask-stop {
+.ask-composer-row button.ask-stop {
   background: var(--pink);
   color: #fff;
 }
-.ask-composer button:disabled {
+.ask-composer-row button:disabled {
   opacity: 0.4;
   cursor: default;
+}
+.ask-wire .ask-shelf-kicker { color: var(--cyan); }
+.ask-wire .ask-shelf-count {
+  background: var(--cyan);
+  color: #000;
+}
+.ask-cites a[data-kind="WEB"] {
+  --kind-color: var(--cyan);
 }
 
 .ask-prov {

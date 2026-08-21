@@ -10,6 +10,7 @@ import type { AskModelId } from "@/lib/ai/askModels";
 import { isThinSnippet } from "@/lib/library/askAnswer";
 import { relatedHits } from "@/lib/library/relatedHits";
 import { citationHref, fetchVector, type VectorHit } from "@/lib/library/fetchVector";
+import { ASK_WIRE_SYSTEM, fetchWire, formatWire, type AskWireItem } from "@/lib/library/askWire";
 
 export type AskShelfItem = {
   ownerType: VectorHit["ownerType"];
@@ -23,7 +24,7 @@ export type AskShelfItem = {
   thin: boolean;
 };
 
-export type AskUIMessage = UIMessage<never, { shelf: AskShelfItem[] }>;
+export type AskUIMessage = UIMessage<never, { shelf: AskShelfItem[]; wire: AskWireItem[] }>;
 
 export function lastUserQuery(messages: AskUIMessage[]): string {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -80,25 +81,35 @@ Format in compact markdown. No preamble. No "great question." Start writing imme
 4. The UI already shows citations; you may name a source by title only when it is on the shelf.
 5. Cards marked YOUR MARGIN are this person's own words. Quote them when they answer the question.`;
 
-export function streamLibraryAsk(userId: string, messages: AskUIMessage[], model: AskModelId = ASK_MODEL) {
+export function streamLibraryAsk(
+  userId: string,
+  messages: AskUIMessage[],
+  model: AskModelId = ASK_MODEL,
+  web = false
+) {
   const query = lastUserQuery(messages);
 
   return createUIMessageStream<AskUIMessage>({
     originalMessages: messages,
     onError: gatewayErrorMessage,
     execute: async ({ writer }) => {
-      const neighbors = query ? await fetchVector(userId, query, 8) : [];
+      const [neighbors, wire] = await Promise.all([
+        query ? fetchVector(userId, query, 8) : Promise.resolve([]),
+        web && query ? fetchWire(query) : Promise.resolve([]),
+      ]);
       const hits = relatedHits(query, neighbors).map(toShelfItem);
       writer.write({ type: "data-shelf", id: "shelf", data: hits });
+      if (web) writer.write({ type: "data-wire", id: "wire", data: wire });
 
+      const wireBlock = web ? `\n\n## Wire\n${formatWire(wire)}` : "";
       const result = streamText({
         model: languageModel(model),
-        system: `${ASK_SYSTEM}\n\n## Shelf\n${formatShelf(hits)}`,
+        system: `${ASK_SYSTEM}${web ? `\n\n${ASK_WIRE_SYSTEM}` : ""}\n\n## Shelf\n${formatShelf(hits)}${wireBlock}`,
         messages: await convertToModelMessages(messages),
         experimental_transform: smoothStream({ chunking: "word", delayInMs: 12 }),
         maxRetries: 0,
         providerOptions: {
-          ...gatewayProviderOptions(model, ["feature:library-ask"], askFallbackModels(model)),
+          ...gatewayProviderOptions(model, web ? ["feature:library-ask", "feature:library-ask-wire"] : ["feature:library-ask"], askFallbackModels(model)),
           openai: { reasoningEffort: "minimal" },
           google: { thinkingConfig: { thinkingBudget: 0 } },
         },

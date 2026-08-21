@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     }
 
     return createUIMessageStreamResponse({
-      stream: streamLibraryAsk(userId, messages, resolveAskModel(body.model)),
+      stream: streamLibraryAsk(userId, messages, resolveAskModel(body.model), body.web === true),
       headers: {
         "Cache-Control": "no-cache, no-transform",
         "X-Accel-Buffering": "no",

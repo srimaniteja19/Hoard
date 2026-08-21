@@ -4,6 +4,7 @@ import type { AskModelId } from "@/lib/ai/askModels";
 export async function streamAskOnce(options: {
   question: string;
   model: AskModelId;
+  web?: boolean;
   onText?: (text: string) => void;
   onShelf?: (shelf: AskShelfItem[]) => void;
   signal?: AbortSignal;
@@ -14,6 +15,7 @@ export async function streamAskOnce(options: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: options.model,
+      web: Boolean(options.web),
       messages: [
         {
           id: "carbon-q",

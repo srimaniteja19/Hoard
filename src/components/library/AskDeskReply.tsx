@@ -9,6 +9,7 @@ import {
   notesFromShelf,
   shelfFromAskMessage,
 } from "@/lib/library/askDesk";
+import { wireFromAskMessage } from "@/lib/library/askWire";
 import {
   buildAskSave,
   citationsFromAskMessage,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/library/askSave";
 import { streamAskOnce } from "@/lib/library/streamAskOnce";
 import { AskAnswer } from "@/components/library/AskMarkdown";
-import { AskShelf } from "@/components/library/AskShelf";
+import { AskShelf, AskWire } from "@/components/library/AskShelf";
 
 function recordBookmarkUse(ownerId: string) {
   const id = Number(ownerId);
@@ -26,8 +27,10 @@ function recordBookmarkUse(ownerId: string) {
 }
 
 const PULLING = ["PULLING THE CARD…", "READING THE MARGIN…", "CROSS-REFERENCING…", "INKING THE ANSWER…"];
+const PULLING_WIRE = ["CUTTING THE WIRE…", "READING THE FEED…", "CROSS-REFERENCING…", "INKING THE ANSWER…"];
 
-function Searching() {
+function Searching({ web }: { web?: boolean }) {
+  const lines = web ? PULLING_WIRE : PULLING;
   return (
     <div className="ask-searching">
       <div className="ask-searching-deck" aria-hidden="true">
@@ -36,13 +39,13 @@ function Searching() {
         <span />
       </div>
       <div>
-        <div className="ask-searching-kicker">THE CATALOG</div>
+        <div className="ask-searching-kicker">{web ? "THE WIRE" : "THE CATALOG"}</div>
         <div className="ask-searching-msg">
           <div className="ask-searching-reel">
-            {PULLING.map((line) => (
+            {lines.map((line) => (
               <span key={line}>{line}</span>
             ))}
-            <span>{PULLING[0]}</span>
+            <span>{lines[0]}</span>
           </div>
         </div>
       </div>
@@ -203,6 +206,7 @@ export function AskDeskReply({
   model,
   busy,
   live,
+  web,
   onAsk,
 }: {
   messages: AskUIMessage[];
@@ -210,11 +214,13 @@ export function AskDeskReply({
   model: AskModelId;
   busy: boolean;
   live: boolean;
+  web?: boolean;
   onAsk: (text: string) => void;
 }) {
   const message = messages[index];
   const text = textFromAskMessage(message);
   const shelf = shelfFromAskMessage(message);
+  const wire = wireFromAskMessage(message);
   const citations = citationsFromAskMessage(message);
   const question = questionForAssistantTurn(messages, index);
   const [activeCite, setActiveCite] = useState<number | null>(null);
@@ -228,6 +234,7 @@ export function AskDeskReply({
       const result = await streamAskOnce({
         question,
         model: carbonId,
+        web,
         onText: (next) => {
           setCarbon((current) => (current ? { ...current, text: next } : current));
         },
@@ -245,7 +252,7 @@ export function AskDeskReply({
 
   return (
     <div className="ask-desk-col">
-      {live && !text ? shelf.length > 0 ? <AskPull shelf={shelf} /> : <Searching /> : null}
+      {live && !text ? shelf.length > 0 ? <AskPull shelf={shelf} /> : <Searching web={web || wire.length > 0} /> : null}
       {text ? (
         <div className={carbon ? "ask-stack" : undefined}>
           <div className={carbon?.front ? "ask-stack-front is-back" : "ask-stack-front"}>
@@ -288,6 +295,7 @@ export function AskDeskReply({
           if (cite.ownerType !== "til") recordBookmarkUse(cite.ownerId);
         }}
       />
+      <AskWire items={wire} />
       {text && !live ? (
         <>
           <AskNextCards question={question} answer={text} shelf={shelf} disabled={busy} onAsk={onAsk} />
