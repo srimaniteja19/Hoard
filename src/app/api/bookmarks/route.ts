@@ -10,6 +10,7 @@ import { enrichBookmarkValues } from "@/lib/enrichBookmark";
 import { inferItemType } from "@/lib/library/inferItemType";
 import { applyQuoteCapture } from "@/lib/library/textFragment";
 import { scheduleBookmarkEmbedding } from "@/lib/embeddings/upsertBookmarkEmbedding";
+import { primaryTag, triageCapture } from "@/lib/library/triageCapture";
 
 // ─── Shape mapper ────────────────────────────────────────────────────────────
 
@@ -194,13 +195,7 @@ export async function POST(req: Request) {
     const userId = await requireUserId();
     const body = await req.json();
 
-    const collectionId = await ensureCollection(
-      userId,
-      body.coll || "unsorted"
-    );
-
     const kind: KindType = body.ty || "ART";
-    const guessedItemType = inferItemType(kind);
     const capture = applyQuoteCapture({ url: body.url, quote: body.quote, note: body.note });
     const pageUrl = capture.url.split("#")[0];
     const enriched = await enrichBookmarkValues(
@@ -211,6 +206,33 @@ export async function POST(req: Request) {
       body.coverImage || body.ex?.coverImage
     );
 
+    const guessedItemType = inferItemType(kind);
+    let tag = typeof body.tag === "string" && body.tag.trim() ? body.tag.trim() : "";
+    let collectionHint = body.coll || "unsorted";
+    let itemType = body.itemType === "REFERENCE" || body.itemType === "QUEUED" ? body.itemType : null;
+    const itemTypeGuessed = typeof body.itemTypeGuessed === "boolean" ? body.itemTypeGuessed : itemType == null;
+    let note = capture.isQuote ? capture.note : enriched.note;
+
+    if (!body.triaged && !capture.isQuote && itemType == null) {
+      const collRows = await db
+        .select({ id: collections.id, name: collections.name })
+        .from(collections)
+        .where(eq(collections.userId, userId));
+      const triage = await triageCapture({
+        url: pageUrl,
+        title: enriched.title,
+        description: note || body.note || null,
+        kind,
+        collections: collRows.length > 0 ? collRows : [{ id: "unsorted", name: "Unsorted" }],
+      });
+      if (!tag || tag === "general" || tag === "saved") tag = primaryTag(triage.tags);
+      if (!body.coll || body.coll === "unsorted") collectionHint = triage.suggestedCollection;
+      itemType = triage.itemType;
+      if (!note) note = triage.summary;
+    }
+
+    const collectionId = await ensureCollection(userId, collectionHint);
+
     const values = {
       userId,
       title:        enriched.title,
@@ -218,12 +240,12 @@ export async function POST(req: Request) {
       source:       body.src    || "",
       url:          capture.url,
       mins:         capture.isQuote ? 1 : (body.mins ?? (kind === "VID" ? 45 : kind === "PPR" ? 40 : 12)),
-      tag:          body.tag    || "general",
+      tag:          tag || "general",
       collectionId,
       unread:       body.unread ?? true,
-      itemType:     capture.isQuote ? "REFERENCE" : guessedItemType,
-      itemTypeGuessed: !capture.isQuote,
-      note:         capture.isQuote ? capture.note : enriched.note,
+      itemType:     capture.isQuote ? "REFERENCE" : itemType ?? guessedItemType,
+      itemTypeGuessed: capture.isQuote ? false : itemTypeGuessed,
+      note:         note || "",
       excerptSource: capture.isQuote ? "user-note" : enriched.excerptSource,
       extra:        {
         ...(body.ex || {}),

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { Bookmark, Collection, DetectionResult, KindType } from "@/types";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { Bookmark, Collection, DetectionResult, ItemType, KindType } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import { cleanTitle } from "@/lib/cleanTitle";
 import { detectKindFromMetadata, detectKindFromUrl } from "@/lib/detectKind";
+import { flattenCollections, primaryTag } from "@/lib/library/triageCapture";
 
 interface FetchedMeta {
   title: string | null;
@@ -93,6 +94,11 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
   const [manualKind, setManualKind] = useState<KindType | null>(null);
   const [fetchedMeta, setFetchedMeta] = useState<FetchedMeta | null>(null);
   const [isFetchingMeta, setIsFetchingMeta] = useState(false);
+  const [tag, setTag] = useState("");
+  const [itemType, setItemType] = useState<ItemType>("REFERENCE");
+  const [summary, setSummary] = useState("");
+  const [triageStatus, setTriageStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const touched = useRef({ coll: false, tag: false, itemType: false, summary: false });
 
   // Sync local url from the initialUrl prop when it changes (adjusting state during
   // render, per https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
@@ -108,6 +114,9 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
     setPrevUrlForTitle(url);
     setFetchedMeta(null);
     setManualKind(null);
+    setTag("");
+    setSummary("");
+    setTriageStatus("idle");
   }
 
   // Debounced metadata fetch (title, description, og:image, og:type) — fires
@@ -142,6 +151,55 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
     return () => clearTimeout(timer);
   }, [url]);
 
+  useEffect(() => {
+    touched.current = { coll: false, tag: false, itemType: false, summary: false };
+  }, [url]);
+
+  useEffect(() => {
+    const trimmed = url.trim();
+    if (!trimmed || trimmed.length < 8) return;
+    if (isFetchingMeta) return;
+
+    const fullUrl = trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
+    const kind = manualKind ?? detectKindFromUrl(url) ?? detectKindFromMetadata(fetchedMeta?.ogType);
+    const controller = new AbortController();
+
+    const timer = setTimeout(() => {
+      setTriageStatus("loading");
+      fetch("/api/bookmarks/triage", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          url: fullUrl,
+          title: fetchedMeta?.title ?? null,
+          description: fetchedMeta?.description ?? null,
+          kind,
+        }),
+      })
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
+        .then((data: { tags?: string[]; suggestedCollection?: string; itemType?: ItemType; summary?: string }) => {
+          if (!touched.current.tag && data.tags) setTag(primaryTag(data.tags));
+          if (!touched.current.coll && data.suggestedCollection) setSelectedColl(data.suggestedCollection);
+          if (!touched.current.itemType && (data.itemType === "REFERENCE" || data.itemType === "QUEUED")) {
+            setItemType(data.itemType);
+          }
+          if (!touched.current.summary && data.summary) setSummary(data.summary);
+          setTriageStatus("ready");
+        })
+        .catch((e) => {
+          if (e.name === "AbortError") return;
+          setTriageStatus("error");
+        });
+    }, 200);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [url, fetchedMeta, isFetchingMeta, manualKind]);
+
   // Duplicate Check
   const duplicateMatch = useMemo(() => {
     if (!url.trim() || bookmarks.length === 0) return null;
@@ -150,20 +208,6 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
   }, [url, bookmarks]);
 
   if (!isOpen) return null;
-
-  const flattenCollections = (list: Collection[], depth = 0): { id: string; name: string }[] => {
-    let res: { id: string; name: string }[] = [];
-    list.forEach((item) => {
-      if (item.id !== "all") {
-        const prefix = "— ".repeat(depth);
-        res.push({ id: item.id, name: `${prefix}${item.name}` });
-      }
-      if (item.kids) {
-        res = res.concat(flattenCollections(item.kids, depth + 1));
-      }
-    });
-    return res;
-  };
 
   const availableFolders = flattenCollections(collections);
 
@@ -213,11 +257,13 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
       src: domain,
       url: url.startsWith("http") ? url : `https://${url}`,
       mins: ty === "VID" ? 45 : ty === "PPR" ? 40 : 12,
-      tag: ty === "GIT" ? "craft" : ty === "VID" ? "ai" : "systems",
+      tag: tag || (ty === "GIT" ? "craft" : ty === "VID" ? "ai" : "systems"),
       coll: selectedColl || (ty === "PLY" ? "listen" : "unsorted"),
       unread: true,
+      itemType,
+      itemTypeGuessed: false,
       ex: detected.f,
-      note: meta?.description || "",
+      note: summary || meta?.description || "",
       coverImage: meta?.image ?? undefined,
     });
 
@@ -413,7 +459,10 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
                 <dd>
                   <select
                     value={selectedColl}
-                    onChange={(e) => setSelectedColl(e.target.value)}
+                    onChange={(e) => {
+                      touched.current.coll = true;
+                      setSelectedColl(e.target.value);
+                    }}
                     style={{
                       border: "2px solid var(--ink)",
                       background: "#FFE600",
@@ -426,13 +475,91 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
                   >
                     {availableFolders.map((f) => (
                       <option key={f.id} value={f.id}>
-                        {f.name}
+                        {"— ".repeat(f.depth ?? 0)}{f.name}
                       </option>
                     ))}
                   </select>
                 </dd>
               </div>
-              <div className="dnote">{detectionCopy.n}</div>
+              <div className="drow">
+                <dt>SHELF</dt>
+                <dd style={{ display: "flex", border: "2px solid var(--ink)" }}>
+                  {(["REFERENCE", "QUEUED"] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        touched.current.itemType = true;
+                        setItemType(value);
+                      }}
+                      style={{
+                        fontFamily: "var(--mono)",
+                        fontSize: "10px",
+                        fontWeight: 800,
+                        padding: "4px 8px",
+                        border: "none",
+                        borderRight: value === "REFERENCE" ? "2px solid var(--ink)" : "none",
+                        cursor: "pointer",
+                        background: itemType === value ? "var(--ink)" : "var(--paper)",
+                        color: itemType === value ? "var(--yel)" : "var(--ink)",
+                      }}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </dd>
+              </div>
+              <div className="drow">
+                <dt>TAG</dt>
+                <dd>
+                  <input
+                    value={tag}
+                    onChange={(e) => {
+                      touched.current.tag = true;
+                      setTag(e.target.value);
+                    }}
+                    placeholder="rate-limiting"
+                    style={{
+                      border: "2px solid var(--ink)",
+                      background: "#FFE600",
+                      padding: "4px 8px",
+                      fontFamily: "var(--mono)",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      outline: "none",
+                      width: "100%",
+                    }}
+                  />
+                </dd>
+              </div>
+              <div className="drow">
+                <dt>SUMMARY</dt>
+                <dd>
+                  <input
+                    value={summary}
+                    onChange={(e) => {
+                      touched.current.summary = true;
+                      setSummary(e.target.value);
+                    }}
+                    placeholder={triageStatus === "loading" ? "triaging…" : "one-line summary"}
+                    style={{
+                      border: "2px solid var(--ink)",
+                      background: "#FFE600",
+                      padding: "4px 8px",
+                      fontFamily: "var(--mono)",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      outline: "none",
+                      width: "100%",
+                    }}
+                  />
+                </dd>
+              </div>
+              <div className="dnote">
+                {triageStatus === "loading"
+                  ? "Auto-triage is filling tag, shelf, and summary — edit anything that looks wrong."
+                  : detectionCopy.n}
+              </div>
             </>
           )}
         </div>

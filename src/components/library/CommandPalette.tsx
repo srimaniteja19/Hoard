@@ -153,7 +153,9 @@ export function CommandPalette() {
         <div className="k-foot">
           <span>↑↓ NAVIGATE</span>
           <span>↵ OPEN</span>
-          <span>RANKED BY USE COUNT</span>
+          <a href="/library/ask" onClick={close} style={{ color: "inherit", marginLeft: "auto" }}>
+            ASK YOUR LIBRARY →
+          </a>
         </div>
       </div>
     </div>

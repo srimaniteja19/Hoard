@@ -20,6 +20,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
 
     const cursor = searchParams.get("cursor");
+    const hash = searchParams.get("hash");
     const tag = searchParams.get("tag");
     const type = searchParams.get("type");
     const day = searchParams.get("day");
@@ -35,6 +36,10 @@ export async function GET(req: Request) {
 
     if (day) {
       conditions.push(eq(tilEntries.loggedFor, day));
+    }
+
+    if (hash) {
+      conditions.push(eq(tilEntries.shortHash, hash.toLowerCase()));
     }
 
     if (type) {

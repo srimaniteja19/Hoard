@@ -247,15 +247,35 @@ button, input, select, textarea {
 }
 
 /* Detection Card — compact inline strip */
-.detection-card {
-  width: 100%;
-  border: var(--bd);
-  background: var(--paper);
-  box-shadow: 2px 2px 0 #000;
-  padding: 6px 10px;
+.triage-status {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  opacity: 0.6;
+  margin: -4px 0 8px;
+}
+.item-type-toggle {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  border: var(--bd);
+}
+.item-type-btn {
+  flex: 1;
+  background: var(--paper);
+  border: none;
+  border-right: var(--bd);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+.item-type-btn:last-child {
+  border-right: none;
+}
+.item-type-btn.active {
+  background: #000;
+  color: var(--yel);
 }
 
 .detection-header {

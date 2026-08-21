@@ -70,6 +70,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const detectType = document.getElementById("detectType");
   const detectTitle = document.getElementById("detectTitle");
   const detectDetails = document.getElementById("detectDetails");
+  const triageStatus = document.getElementById("triageStatus");
+  const itemTypeToggle = document.getElementById("itemTypeToggle");
   const hoardList = document.getElementById("hoardList");
   const searchInHoard = document.getElementById("searchInHoard");
   const filterChips = document.querySelectorAll(".filter-chip");
@@ -89,6 +91,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let selectedTilType = "FACT";
   let activeTags = new Set(["ai"]);
+  let selectedItemType = "REFERENCE";
+  let triageTouched = { folder: false, tags: false, itemType: false, note: false };
   let currentActiveTab = null;
   let selectedText = "";
 
@@ -117,6 +121,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         pageTitleInput.value = currentActiveTab.title || "";
         pageUrlInput.value = currentActiveTab.url || "";
         updateDetectionUI(currentActiveTab.url);
+        scheduleTriage();
+        loadCollections();
 
         if (tilLinkUrlInput) tilLinkUrlInput.value = currentActiveTab.url || "";
 
@@ -146,6 +152,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Handle URL change detection
   pageUrlInput.addEventListener("input", (e) => {
     updateDetectionUI(e.target.value);
+    scheduleTriage();
   });
 
   function updateDetectionUI(url) {
@@ -155,6 +162,123 @@ document.addEventListener("DOMContentLoaded", async () => {
     detectType.style.color = meta.fg;
     detectTitle.textContent = meta.name;
     detectDetails.textContent = meta.f;
+  }
+
+  function flattenFolders(nodes, depth = 0, out = []) {
+    (nodes || []).forEach((node) => {
+      if (node.id !== "all") {
+        out.push({ id: node.id, name: `${"— ".repeat(depth)}${node.name}` });
+      }
+      if (node.kids) flattenFolders(node.kids, depth + 1, out);
+    });
+    return out;
+  }
+
+  async function loadCollections() {
+    if (!folderSelect) return;
+    const serverUrl = (serverUrlInput?.value || DEFAULT_SERVER_URL).replace(/\/$/, "");
+    try {
+      const res = await fetch(`${serverUrl}/api/collections`, { credentials: "include" });
+      if (!res.ok) return;
+      const tree = await res.json();
+      const folders = flattenFolders(tree);
+      if (folders.length === 0) return;
+      const current = folderSelect.value;
+      folderSelect.innerHTML = folders
+        .map((f) => `<option value="${f.id}">${f.name}</option>`)
+        .join("");
+      if ([...folderSelect.options].some((o) => o.value === current)) {
+        folderSelect.value = current;
+      }
+    } catch (e) {
+      console.warn("Could not load collections:", e);
+    }
+  }
+
+  function setItemType(next) {
+    selectedItemType = next === "QUEUED" ? "QUEUED" : "REFERENCE";
+    itemTypeToggle?.querySelectorAll(".item-type-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.getAttribute("data-item-type") === selectedItemType);
+    });
+  }
+
+  function setPrimaryTag(tag) {
+    const next = (tag || "saved").replace(/^#/, "").trim();
+    if (!next) return;
+    activeTags = new Set([next]);
+    tagChips.forEach((chip) => {
+      chip.classList.toggle("active", chip.getAttribute("data-tag") === next);
+    });
+    const existing = document.querySelector(`.tag-chip[data-tag="${next}"]`);
+    if (!existing && document.getElementById("tagPicker")) {
+      const newChip = document.createElement("button");
+      newChip.type = "button";
+      newChip.className = "tag-chip active";
+      newChip.setAttribute("data-tag", next);
+      newChip.textContent = `#${next}`;
+      newChip.addEventListener("click", () => {
+        if (activeTags.has(next)) {
+          activeTags.delete(next);
+          newChip.classList.remove("active");
+        } else {
+          activeTags.add(next);
+          newChip.classList.add("active");
+        }
+      });
+      document.getElementById("tagPicker").appendChild(newChip);
+    }
+  }
+
+  let triageDebounce = null;
+  async function runTriage() {
+    const url = pageUrlInput?.value?.trim();
+    if (!url) return;
+    const serverUrl = (serverUrlInput?.value || DEFAULT_SERVER_URL).replace(/\/$/, "");
+    const meta = detectUrlMeta(url);
+    if (triageStatus) triageStatus.textContent = "TRIAGING…";
+
+    try {
+      const res = await fetch(`${serverUrl}/api/bookmarks/triage`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url,
+          title: pageTitleInput?.value || "",
+          description: pageNoteInput?.value || "",
+          kind: meta.ty,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (!triageTouched.itemType && (data.itemType === "REFERENCE" || data.itemType === "QUEUED")) {
+        setItemType(data.itemType);
+      }
+      if (!triageTouched.tags && Array.isArray(data.tags) && data.tags[0]) {
+        setPrimaryTag(data.tags[0]);
+      }
+      if (!triageTouched.folder && data.suggestedCollection && folderSelect) {
+        if (![...folderSelect.options].some((o) => o.value === data.suggestedCollection)) {
+          const opt = document.createElement("option");
+          opt.value = data.suggestedCollection;
+          opt.textContent = data.collectionName || data.suggestedCollection;
+          folderSelect.appendChild(opt);
+        }
+        folderSelect.value = data.suggestedCollection;
+      }
+      if (!triageTouched.note && data.summary && pageNoteInput && !pageNoteInput.value.trim()) {
+        pageNoteInput.value = data.summary;
+      }
+      if (triageStatus) triageStatus.textContent = "TRIAGED — edit anything that's wrong";
+    } catch (e) {
+      console.warn("Triage failed:", e);
+      if (triageStatus) triageStatus.textContent = "TRIAGE SKIPPED";
+    }
+  }
+
+  function scheduleTriage() {
+    if (triageDebounce) clearTimeout(triageDebounce);
+    triageDebounce = setTimeout(runTriage, 400);
   }
 
   // Load Unread Bookmarks for Discharge Dropdown
@@ -282,10 +406,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Tag Chips Handler
+  itemTypeToggle?.querySelectorAll(".item-type-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      triageTouched.itemType = true;
+      setItemType(btn.getAttribute("data-item-type"));
+    });
+  });
+
+  folderSelect?.addEventListener("change", () => {
+    triageTouched.folder = true;
+  });
+
+  pageNoteInput?.addEventListener("input", () => {
+    triageTouched.note = true;
+  });
   tagChips.forEach((chip) => {
     chip.addEventListener("click", () => {
       const tagName = chip.getAttribute("data-tag");
+      triageTouched.tags = true;
       if (activeTags.has(tagName)) {
         activeTags.delete(tagName);
         chip.classList.remove("active");
@@ -301,6 +439,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.key === "Enter" && customTagInput.value.trim()) {
       e.preventDefault();
       const rawTag = customTagInput.value.trim().replace(/^#/, "");
+      triageTouched.tags = true;
       activeTags.add(rawTag);
 
       // Create new tag chip dynamically
@@ -349,6 +488,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       tag:    firstTag,
       coll:   folderSelect.value || "unsorted",
       unread: true,
+      itemType: selectedItemType,
+      itemTypeGuessed: false,
+      triaged: true,
       ex:     { Source: domain, Type: meta.name },
       note:   pageNoteInput.value.trim() || "",
       source: "Saved via HOARD Extension",

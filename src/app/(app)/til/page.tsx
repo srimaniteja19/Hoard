@@ -69,6 +69,7 @@ function TilPageContent() {
   const [onThisDay, setOnThisDay] = useState<{ entry: TilItem; daysAgo: number } | null>(null);
 
   // Filters derived from URL query parameters
+  const selectedHash = searchParams.get("hash") || null;
   const selectedTag = searchParams.get("tag") || null;
   const selectedType = (searchParams.get("type") as TilType) || null;
   const selectedDay = searchParams.get("day") || null;
@@ -114,6 +115,7 @@ function TilPageContent() {
 
         const params = new URLSearchParams();
         if (cursor) params.set("cursor", cursor);
+        if (selectedHash) params.set("hash", selectedHash);
         if (selectedTag) params.set("tag", selectedTag);
         if (selectedType) params.set("type", selectedType);
         if (selectedDay) params.set("day", selectedDay);
@@ -140,7 +142,7 @@ function TilPageContent() {
         setLoadingMore(false);
       }
     },
-    [selectedTag, selectedType, selectedDay]
+    [selectedHash, selectedTag, selectedType, selectedDay]
   );
 
   const fetchCodex = useCallback(async () => {

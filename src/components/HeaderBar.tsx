@@ -67,6 +67,26 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
         <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
           <Link
+            href="/library/ask"
+            style={{
+              background: "var(--paper)",
+              color: "var(--ink)",
+              border: "2px solid var(--ink)",
+              padding: "5px 7px",
+              fontWeight: 900,
+              fontSize: "11px",
+              fontFamily: "var(--mono)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "2px",
+              boxShadow: "2px 2px 0 var(--ink)",
+              textDecoration: "none",
+            }}
+          >
+            ASK
+          </Link>
+          <Link
             href="/session"
             style={{
               background: "#FFE600",
@@ -122,6 +142,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </div>
 
         <div className="bar-controls-row">
+          <Link href="/library/ask" className="desktop-start-session-btn" style={{ background: "var(--paper)" }}>
+            ASK LIBRARY
+          </Link>
           <Link href="/session" className="desktop-start-session-btn">
             <Zap size={13} fill="#000" /> START SESSION
           </Link>

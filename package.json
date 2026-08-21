@@ -18,6 +18,7 @@
     "backfill:embeddings": "tsx --env-file=.env.local scripts/backfill-embeddings.ts"
   },
   "dependencies": {
+    "@ai-sdk/react": "^4.0.77",
     "@neondatabase/serverless": "^1.1.0",
     "ai": "^7.0.74",
     "better-auth": "^1.6.26",
