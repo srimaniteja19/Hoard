@@ -8,6 +8,7 @@ import { parseCoverData } from "@/lib/cover-data";
 import { cleanTitle } from "@/lib/cleanTitle";
 import { enrichBookmarkValues } from "@/lib/enrichBookmark";
 import { inferItemType } from "@/lib/library/inferItemType";
+import { applyQuoteCapture } from "@/lib/library/textFragment";
 import { scheduleBookmarkEmbedding } from "@/lib/embeddings/upsertBookmarkEmbedding";
 
 // ─── Shape mapper ────────────────────────────────────────────────────────────
@@ -65,6 +66,7 @@ function dbToUi(row: typeof bookmarks.$inferSelect, titleMap?: Map<number, strin
     ogRejectReason: row.ogRejectReason,
     faviconKey: row.faviconKey,
     excerptSource: (row.excerptSource as Bookmark["excerptSource"]) || (row.note ? "user-note" : null),
+    isQuote: ((row.extra as Record<string, unknown>) || {}).quote === true,
   };
 }
 
@@ -199,11 +201,13 @@ export async function POST(req: Request) {
 
     const kind: KindType = body.ty || "ART";
     const guessedItemType = inferItemType(kind);
+    const capture = applyQuoteCapture({ url: body.url, quote: body.quote, note: body.note });
+    const pageUrl = capture.url.split("#")[0];
     const enriched = await enrichBookmarkValues(
-      body.url,
+      pageUrl,
       kind,
       body.t || body.title,
-      body.note,
+      capture.isQuote ? capture.note : body.note,
       body.coverImage || body.ex?.coverImage
     );
 
@@ -212,19 +216,20 @@ export async function POST(req: Request) {
       title:        enriched.title,
       type:         kind,
       source:       body.src    || "",
-      url:          body.url,
-      mins:         body.mins   ?? (kind === "VID" ? 45 : kind === "PPR" ? 40 : 12),
+      url:          capture.url,
+      mins:         capture.isQuote ? 1 : (body.mins ?? (kind === "VID" ? 45 : kind === "PPR" ? 40 : 12)),
       tag:          body.tag    || "general",
       collectionId,
       unread:       body.unread ?? true,
-      itemType:     guessedItemType,
-      itemTypeGuessed: true,
-      note:         enriched.note,
-      excerptSource: enriched.excerptSource,
+      itemType:     capture.isQuote ? "REFERENCE" : guessedItemType,
+      itemTypeGuessed: !capture.isQuote,
+      note:         capture.isQuote ? capture.note : enriched.note,
+      excerptSource: capture.isQuote ? "user-note" : enriched.excerptSource,
       extra:        {
         ...(body.ex || {}),
         ...(enriched.coverData ? { coverData: enriched.coverData } : {}),
         ...(enriched.coverImage ? { coverImage: enriched.coverImage } : {}),
+        ...(capture.isQuote ? { quote: true } : {}),
       },
       parentId:     body.parentId ?? null,
       startTimeSec: body.startTimeSec ?? null,

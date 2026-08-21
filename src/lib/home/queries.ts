@@ -398,7 +398,14 @@ export async function getCandidates(
         createdAt: bookmarks.createdAt,
       })
       .from(bookmarks)
-      .where(and(eq(bookmarks.userId, userId), isNull(bookmarks.deletedAt), eq(bookmarks.unread, true)))
+      .where(
+        and(
+          eq(bookmarks.userId, userId),
+          isNull(bookmarks.deletedAt),
+          eq(bookmarks.unread, true),
+          eq(bookmarks.itemType, "QUEUED")
+        )
+      )
       .orderBy(asc(bookmarks.createdAt))
       .limit(75),
   ]);

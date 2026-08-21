@@ -157,6 +157,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
             ✕
           </button>
           <span className="tybadge">{bookmark.ty}</span>
+          {bookmark.isQuote && <span className="quote-badge">QUOTE</span>}
         </div>
 
         <div className="ibody">

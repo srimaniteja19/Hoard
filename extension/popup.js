@@ -90,6 +90,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let selectedTilType = "FACT";
   let activeTags = new Set(["ai"]);
   let currentActiveTab = null;
+  let selectedText = "";
 
   // Restore Settings (Server URL)
   if (typeof chrome !== "undefined" && chrome.storage) {
@@ -126,8 +127,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             func: () => window.getSelection()?.toString() || "",
           });
           const text = selResult?.[0]?.result;
-          if (text && text.trim() && tilBodyInput) {
-            tilBodyInput.value = `"${text.trim()}"`;
+          if (text && text.trim()) {
+            selectedText = text.trim();
+            if (pageNoteInput && !pageNoteInput.value) pageNoteInput.value = selectedText;
+            if (tilBodyInput) tilBodyInput.value = `"${selectedText}"`;
+            const saveLabel = saveBtn?.querySelector("span");
+            if (saveLabel) saveLabel.textContent = "SAVE HIGHLIGHT";
           }
         } catch {
           // ignore selection extraction error
@@ -348,6 +353,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       note:   pageNoteInput.value.trim() || "",
       source: "Saved via HOARD Extension",
       when:   `${months[d.getMonth()]} ${d.getDate()}`,
+      ...(selectedText ? { quote: pageNoteInput.value.trim() || selectedText } : {}),
     };
 
     if (typeof chrome !== "undefined" && chrome.storage) {

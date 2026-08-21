@@ -127,6 +127,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
           {isSelected ? "✕" : ""}
         </span>
         <span className="tybadge">{bookmark.ty}</span>
+        {bookmark.isQuote && <span className="quote-badge">QUOTE</span>}
         {durationText && <span className="dur">{durationText}</span>}
       </div>
 

@@ -33,7 +33,7 @@ function detectKindForSave(u) {
 // succeeds if the browser already holds a valid HOARD session cookie for the
 // target origin (i.e. the user is logged in in some tab); on any failure it
 // falls back to the same offline queue content.js drains on next page load.
-async function saveBookmark(url, title, note) {
+async function saveBookmark(url, title, note, quote) {
   if (!url) return;
 
   const { hoard_server_url } = await chrome.storage.local.get(["hoard_server_url"]);
@@ -56,9 +56,10 @@ async function saveBookmark(url, title, note) {
     coll:   "unsorted",
     unread: true,
     ex:     { Source: domain },
-    note:   note || "",
+    note:   quote || note || "",
     source: "Saved via HOARD Extension",
     when:   `${months[d.getMonth()]} ${d.getDate()}`,
+    ...(quote ? { quote } : {}),
   };
 
   try {
@@ -89,7 +90,7 @@ function registerContextMenus() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: "hoard-save-page",      title: "Save Page to HOARD (Alt+Shift+H)", contexts: ["page"] });
     chrome.contextMenus.create({ id: "hoard-save-link",      title: "Save Link to HOARD",               contexts: ["link"] });
-    chrome.contextMenus.create({ id: "hoard-save-selection", title: "Save Highlight as Note to HOARD",  contexts: ["selection"] });
+    chrome.contextMenus.create({ id: "hoard-save-selection", title: "Save Highlight to HOARD",      contexts: ["selection"] });
     console.log("[HOARD Background] Context menus registered.");
   });
 }
@@ -103,24 +104,42 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   let url   = tab?.url   || "";
   let title = tab?.title || "Captured Bookmark";
   let note  = "Saved from context menu";
+  let quote = "";
 
   if (info.menuItemId === "hoard-save-link" && info.linkUrl) {
     url   = info.linkUrl;
     title = `Shared Link: ${info.linkUrl.split("/").pop() || "Link"}`;
   } else if (info.menuItemId === "hoard-save-selection" && info.selectionText) {
-    note  = `Highlight: "${info.selectionText}"`;
+    quote = info.selectionText;
+    note  = "";
   }
 
-  saveBookmark(url, title, note);
+  saveBookmark(url, title, note, quote);
 });
 
 // ─── Keyboard Commands ────────────────────────────────────────────────────────
+
+async function getTabSelection(tabId) {
+  if (!tabId) return "";
+  try {
+    const sel = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => window.getSelection()?.toString() || "",
+    });
+    return (sel?.[0]?.result || "").trim();
+  } catch {
+    return "";
+  }
+}
 
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === "save-to-hoard") {
     try {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tabs?.[0]) saveBookmark(tabs[0].url, tabs[0].title, "Saved via keyboard shortcut");
+      if (tabs?.[0]) {
+        const quote = await getTabSelection(tabs[0].id);
+        saveBookmark(tabs[0].url, tabs[0].title, "Saved via keyboard shortcut", quote);
+      }
     } catch (err) {
       console.error("[HOARD Background] Keyboard command failed:", err);
     }

@@ -64,6 +64,7 @@ export const ListView: React.FC<ListViewProps> = ({
             <div>
               <div className="rt">
                 {x.t}
+                {x.isQuote && <span className="quote-badge">QUOTE</span>}
                 {x.unread && <span style={{ color: "#FF007A", marginLeft: 6 }}>●</span>}
               </div>
               <div className="rm">

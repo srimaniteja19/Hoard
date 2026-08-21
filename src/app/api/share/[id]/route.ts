@@ -27,6 +27,7 @@ function dbToUi(row: typeof bookmarks.$inferSelect): Bookmark {
       ) as Record<string, string>;
     })(),
     note:   row.note,
+    isQuote: ((row.extra as Record<string, unknown>) || {}).quote === true,
   };
 }
 

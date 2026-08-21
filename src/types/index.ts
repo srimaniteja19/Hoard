@@ -82,6 +82,7 @@ export interface Bookmark {
   ogRejectReason?: string | null;
   faviconKey?: string | null;
   excerptSource?: 'og' | 'first-paragraph' | 'user-note' | null;
+  isQuote?: boolean;
 }
 
 export interface SearchFilter {

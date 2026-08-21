@@ -43,6 +43,7 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
               {x.ty}
             </span>
             <span className="ht">{x.t}</span>
+            {x.isQuote && <span className="quote-badge">QUOTE</span>}
             <span className="hm hsrc">{x.src}</span>
             <span className="hm huses" style={{ textAlign: "right" }}>
               {x.useCount ?? 0}×
