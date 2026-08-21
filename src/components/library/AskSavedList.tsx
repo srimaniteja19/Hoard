@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AskAnswer } from "@/components/library/AskMarkdown";
+import { AskShelf } from "@/components/library/AskShelf";
 import type { AskSaveCitation } from "@/lib/library/askSave";
 
 type SavedItem = {
@@ -28,17 +29,25 @@ export function AskSavedList() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/library/ask/saves", { credentials: "include" })
-      .then(async (res) => {
-        if (!res.ok) throw new Error("load failed");
-        const data = (await res.json()) as { items: SavedItem[] };
-        if (!cancelled) setItems(data.items);
-      })
-      .catch(() => {
-        if (!cancelled) setError("Could not load saved answers.");
-      });
+    const load = () => {
+      fetch("/api/library/ask/saves", { credentials: "include" })
+        .then(async (res) => {
+          if (!res.ok) throw new Error("load failed");
+          const data = (await res.json()) as { items: SavedItem[] };
+          if (!cancelled) setItems(data.items);
+        })
+        .catch(() => {
+          if (!cancelled) setError("Could not load saved answers.");
+        });
+    };
+    const idle =
+      typeof window.requestIdleCallback === "function"
+        ? window.requestIdleCallback(load)
+        : window.setTimeout(load, 0);
     return () => {
       cancelled = true;
+      if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);
+      else window.clearTimeout(idle);
     };
   }, []);
 
@@ -60,16 +69,19 @@ export function AskSavedList() {
   }
 
   if (error && !items) return <div className="ask-error">{error}</div>;
-  if (!items) return <p className="ask-saved-status">Loading kept answers…</p>;
+  if (!items) return <p className="ask-saved-status">Pulling the file…</p>;
   if (items.length === 0) {
     return (
-      <div className="ask-empty">
-        <p className="ask-empty-kicker">NOTHING KEPT YET</p>
-        <p>
-          Like an answer at the desk and it lands here — question, write-up, and the shelf as it was that day.
+      <div className="ask-empty ask-empty-saved">
+        <p className="ask-hero-kicker">NOTHING FILED YET</p>
+        <p className="ask-hero-dek">
+          Stamp KEEP on an answer at the desk and it lands here — question, write-up, and the shelf as it
+          was that day.
         </p>
         <p>
-          <Link href="/ask">Ask something →</Link>
+          <Link href="/ask" prefetch={false} className="ask-back">
+            Ask something →
+          </Link>
         </p>
       </div>
     );
@@ -78,40 +90,30 @@ export function AskSavedList() {
   return (
     <div className="ask-saved-list">
       {error ? <div className="ask-error">{error}</div> : null}
-      {items.map((item) => (
+      {items.map((item, index) => (
         <article key={item.id} className="ask-saved-card">
-          <header className="ask-saved-head">
-            <h2>{item.question}</h2>
-            <div className="ask-saved-meta">
-              <span>{formatKeptAt(item.createdAt)}</span>
-              <span className="sep">·</span>
-              <span>{item.model}</span>
-            </div>
-          </header>
-          <AskAnswer text={item.answer} />
-          {item.citations.length > 0 ? (
-            <div className="ask-shelf">
-              <div className="ask-shelf-kicker">FROM THE SHELF</div>
-              <ul className="ask-cites">
-                {item.citations.map((cite) => (
-                  <li key={`${cite.ownerType}:${cite.ownerId}`}>
-                    <Link href={cite.href} target={cite.ownerType === "til" ? undefined : "_blank"}>
-                      <span className="ask-cite-kind">{cite.ownerType === "til" ? "TIL" : cite.kind || "BM"}</span>
-                      <span className="ask-cite-title">{cite.title}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          <button
-            type="button"
-            className="ask-saved-drop"
-            onClick={() => drop(item.id)}
-            disabled={dropping === item.id}
-          >
-            {dropping === item.id ? "DROPPING…" : "DROP"}
-          </button>
+          <div className="ask-saved-spine" aria-hidden="true">
+            {String(items.length - index).padStart(2, "0")}
+          </div>
+          <div className="ask-saved-body">
+            <header className="ask-saved-head">
+              <div className="ask-saved-stamp">{formatKeptAt(item.createdAt)}</div>
+              <h2>{item.question}</h2>
+              <div className="ask-saved-meta">
+                <span>{item.model}</span>
+              </div>
+            </header>
+            <AskAnswer text={item.answer} />
+            <AskShelf citations={item.citations} />
+            <button
+              type="button"
+              className="ask-saved-drop"
+              onClick={() => drop(item.id)}
+              disabled={dropping === item.id}
+            >
+              {dropping === item.id ? "DROPPING…" : "DROP"}
+            </button>
+          </div>
         </article>
       ))}
     </div>

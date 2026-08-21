@@ -40,11 +40,11 @@ function BlockView({ block }: { block: AskMarkdownBlock }) {
   );
 }
 
-export function AskMarkdown({ content }: { content: string }) {
+export function AskMarkdown({ content, lead }: { content: string; lead?: boolean }) {
   const blocks = parseAskMarkdown(content);
   if (blocks.length === 0) return null;
   return (
-    <div className="ask-md">
+    <div className={lead ? "ask-md ask-md-lead" : "ask-md"}>
       {blocks.map((block, index) => (
         <BlockView key={`${block.type}-${index}`} block={block} />
       ))}
@@ -55,10 +55,13 @@ export function AskMarkdown({ content }: { content: string }) {
 export function AskAnswer({ text, streaming }: { text: string; streaming?: boolean }) {
   const { summary, body } = parseAskAnswer(text);
   return (
-    <div className="ask-answer">
+    <div className={streaming ? "ask-answer is-live" : "ask-answer"}>
       {summary ? (
         <div className="ask-lede">
-          <div className="ask-lede-kicker">THE SHORT OF IT</div>
+          <div className="ask-lede-kicker">
+            THE SHORT OF IT
+            {streaming ? <span className="ask-live-pill">LIVE</span> : null}
+          </div>
           <div className="ask-lede-text">
             <AskMarkdown content={summary} />
             {streaming && !body ? <span className="ask-caret" aria-hidden /> : null}
@@ -67,12 +70,12 @@ export function AskAnswer({ text, streaming }: { text: string; streaming?: boole
       ) : null}
       {body ? (
         <div className="ask-answer-body">
-          <AskMarkdown content={body} />
+          <AskMarkdown content={body} lead />
           {streaming ? <span className="ask-caret" aria-hidden /> : null}
         </div>
       ) : !summary && text ? (
         <div className="ask-answer-body">
-          <AskMarkdown content={text} />
+          <AskMarkdown content={text} lead />
           {streaming ? <span className="ask-caret" aria-hidden /> : null}
         </div>
       ) : null}
