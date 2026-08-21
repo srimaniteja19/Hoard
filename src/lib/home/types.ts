@@ -45,6 +45,14 @@ export type RecallCard = {
   confidence: number;
 } | null;
 
+export type ResurfaceItem = {
+  id: number;
+  title: string;
+  url: string;
+  useCount: number;
+  idleDays: number;
+};
+
 export type HomeEdition = {
   masthead: {
     savedTotal: number;
@@ -94,6 +102,7 @@ export type HomeEdition = {
     unfittedMinutes: number;
   };
   recall: RecallCard;
+  resurface: ResurfaceItem[];
 };
 
 export type HomeEditionParams = {

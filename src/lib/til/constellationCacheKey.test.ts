@@ -29,4 +29,10 @@ describe("computeConstellationCacheKey", () => {
   it("handles a null maxUpdatedAt (empty graph)", () => {
     expect(() => computeConstellationCacheKey("user1", 0, null)).not.toThrow();
   });
+
+  it("changes when TIL embeddings maxUpdatedAt changes", () => {
+    const a = computeConstellationCacheKey("user1", 42, "2026-01-01T00:00:00.000Z", null);
+    const b = computeConstellationCacheKey("user1", 42, "2026-01-01T00:00:00.000Z", "2026-01-03T00:00:00.000Z");
+    expect(a).not.toBe(b);
+  });
 });

@@ -9,7 +9,7 @@ import { fetchLinkPreview } from "@/lib/til/previewRegistry";
 import { confidence, confidenceSql } from "@/lib/til/confidence";
 import { checkSupersessionCycle } from "@/lib/til/supersession";
 import { recordUse } from "@/lib/library/recordUse";
-import { scheduleBookmarkEmbedding } from "@/lib/embeddings/upsertBookmarkEmbedding";
+import { scheduleBookmarkEmbedding, scheduleTilEmbedding } from "@/lib/embeddings/upsertBookmarkEmbedding";
 import crypto from "crypto";
 
 // ─── GET /api/til ────────────────────────────────────────────────────────────
@@ -227,6 +227,8 @@ export async function POST(req: Request) {
       const [row] = await db.insert(tilEntries).values(insertValues).returning();
       inserted = row;
     }
+
+    scheduleTilEmbedding(inserted);
 
     // 5. If replacesEntryId provided, mark that older entry as superseded by new entry
     if (data.replacesEntryId) {

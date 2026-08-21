@@ -163,4 +163,14 @@ describe("extractHubNeighborhood", () => {
     expect(nodeIds.has("hub:c")).toBe(false);
     expect(nodeIds.has("hub:d")).toBe(false);
   });
+
+  it("keeps a suggested edge when both satellites sit in the neighborhood", () => {
+    const graph = buildConstellationGraph([
+      entry({ id: "1", tags: ["a"] }),
+      entry({ id: "2", tags: ["a"] }),
+    ]);
+    graph.edges.push({ source: "entry:1", target: "entry:2", kind: "suggested" });
+    const neighborhood = extractHubNeighborhood(graph, "a");
+    expect(neighborhood.edges.some((e) => e.kind === "suggested")).toBe(true);
+  });
 });

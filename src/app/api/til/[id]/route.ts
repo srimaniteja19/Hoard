@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { tilEntries, tilEntryTags, tags as tagsTable } from "@/db/schema";
+import { tilEntries, tilEntryTags, tags as tagsTable, embeddings } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { updateTilSchema } from "@/lib/validations/til";
 import { checkSupersessionCycle } from "@/lib/til/supersession";
+import { scheduleTilEmbedding } from "@/lib/embeddings/upsertBookmarkEmbedding";
 
 // ─── PATCH /api/til/:id ──────────────────────────────────────────────────────
 
@@ -118,6 +119,10 @@ export async function PATCH(
       updatedTagNames = tagRows.map((r) => r.name);
     }
 
+    if (data.body !== undefined || data.code !== undefined || data.linkUrl !== undefined) {
+      scheduleTilEmbedding(updated);
+    }
+
     return NextResponse.json({
       ...updated,
       tags: updatedTagNames,
@@ -156,6 +161,9 @@ export async function DELETE(
     await db
       .delete(tilEntries)
       .where(and(eq(tilEntries.id, id), eq(tilEntries.userId, userId)));
+    await db
+      .delete(embeddings)
+      .where(and(eq(embeddings.ownerType, "til"), eq(embeddings.ownerId, id)));
 
     return NextResponse.json({ success: true });
   } catch (e) {

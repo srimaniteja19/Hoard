@@ -16,8 +16,9 @@ function fnv1a(str: string): number {
 export function computeConstellationCacheKey(
   userId: string,
   entryCount: number,
-  maxUpdatedAt: string | null
+  maxUpdatedAt: string | null,
+  embeddingsMaxUpdatedAt: string | null = null
 ): string {
-  const raw = `${userId}:${entryCount}:${maxUpdatedAt ?? "none"}`;
+  const raw = `${userId}:${entryCount}:${maxUpdatedAt ?? "none"}:${embeddingsMaxUpdatedAt ?? "none"}`;
   return fnv1a(raw).toString(16).padStart(8, "0");
 }

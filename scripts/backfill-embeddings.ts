@@ -1,10 +1,10 @@
 import { isNull } from "drizzle-orm";
 import { db } from "../src/db";
-import { bookmarks } from "../src/db/schema";
-import { upsertBookmarkEmbedding } from "../src/lib/embeddings/upsertBookmarkEmbedding";
+import { bookmarks, tilEntries } from "../src/db/schema";
+import { upsertBookmarkEmbedding, upsertTilEmbedding } from "../src/lib/embeddings/upsertBookmarkEmbedding";
 
 async function main() {
-  const rows = await db
+  const bookmarkRows = await db
     .select({
       id: bookmarks.id,
       userId: bookmarks.userId,
@@ -15,15 +15,36 @@ async function main() {
     .from(bookmarks)
     .where(isNull(bookmarks.deletedAt));
 
-  console.log(`Backfilling embeddings for ${rows.length} bookmark(s)...`);
+  console.log(`Backfilling embeddings for ${bookmarkRows.length} bookmark(s)...`);
   let i = 0;
-  for (const row of rows) {
+  for (const row of bookmarkRows) {
     await upsertBookmarkEmbedding(row);
     i++;
-    if (i % 10 === 0 || i === rows.length) {
-      console.log(`  ${i}/${rows.length}`);
+    if (i % 10 === 0 || i === bookmarkRows.length) {
+      console.log(`  bookmarks ${i}/${bookmarkRows.length}`);
     }
   }
+
+  const tilRows = await db
+    .select({
+      id: tilEntries.id,
+      userId: tilEntries.userId,
+      body: tilEntries.body,
+      code: tilEntries.code,
+      linkUrl: tilEntries.linkUrl,
+    })
+    .from(tilEntries);
+
+  console.log(`Backfilling embeddings for ${tilRows.length} TIL(s)...`);
+  i = 0;
+  for (const row of tilRows) {
+    await upsertTilEmbedding(row);
+    i++;
+    if (i % 10 === 0 || i === tilRows.length) {
+      console.log(`  tils ${i}/${tilRows.length}`);
+    }
+  }
+
   console.log("Done. Rows whose hash was unchanged or whose embed failed were skipped.");
 }
 

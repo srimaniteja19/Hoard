@@ -14,3 +14,12 @@ export function buildEmbeddingText(input: {
 export function hashEmbeddingText(text: string): string {
   return crypto.createHash("sha256").update(text).digest("hex");
 }
+
+export function buildTilEmbeddingText(input: {
+  body?: string | null;
+  code?: string | null;
+  linkUrl?: string | null;
+}): string {
+  const body = (input.body ?? "").slice(0, ARCHIVED_TEXT_LIMIT);
+  return [body, input.code ?? "", input.linkUrl ?? ""].join("\n");
+}

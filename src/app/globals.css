@@ -136,6 +136,7 @@
   --constellation-node: var(--ink);
   --constellation-hub: var(--cyan);
   --constellation-warn: var(--orange);
+  --constellation-suggested: var(--violet);
 }
 
 .cover, .cover-canvas-wrap, .swatch, .hb {
@@ -3281,10 +3282,61 @@ input[type=range]::-moz-range-thumb {
   background: var(--ink);
 }
 
-.home-verso {
-  padding: 12px 0 12px 14px;
+.home-foot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
   border-bottom: var(--bd);
+}
+
+.home-foot > :only-child {
+  grid-column: 1 / -1;
+  border-right: 0;
+}
+
+.home-verso {
+  padding: 12px 14px 12px 14px;
   box-shadow: inset 6px 0 0 var(--cyan);
+  border-right: var(--bd);
+}
+
+.home-stacks {
+  padding: 12px 14px 12px 14px;
+  box-shadow: inset 6px 0 0 var(--violet);
+}
+
+.home-stacks-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-stacks-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.home-stacks-item:hover .home-stacks-title {
+  text-decoration: underline;
+}
+
+.home-stacks-meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0.7;
 }
 
 .home-verso-text {

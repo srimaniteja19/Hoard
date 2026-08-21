@@ -13,6 +13,8 @@ import {
   CONSTELLATION_TIER_3_THRESHOLD,
   ConstellationEntryInput,
 } from "@/lib/til/constellationLayout";
+import { selectSuggestedEdges } from "@/lib/til/selectSuggestedEdges";
+import { fetchTilSimilarityPairs, maxTilEmbeddingUpdatedAt } from "@/lib/til/tilSimilarity";
 
 // ─── GET /api/til/constellation[?hub=<tag>] ──────────────────────────────────
 //
@@ -49,6 +51,13 @@ export async function GET(req: Request) {
     });
 
     const graph = buildConstellationGraph(entries);
+    const pairs = await fetchTilSimilarityPairs(userId);
+    graph.edges.push(
+      ...selectSuggestedEdges(
+        entries.map((e) => ({ id: e.id, tags: e.tags, supersededById: e.supersededById })),
+        pairs
+      )
+    );
 
     if (hubTag) {
       const neighborhood = extractHubNeighborhood(graph, hubTag);
@@ -64,7 +73,13 @@ export async function GET(req: Request) {
       (max, r) => (max === null || r.updatedAt > max ? r.updatedAt : max),
       null
     );
-    const cacheKey = computeConstellationCacheKey(userId, rows.length, maxUpdatedAt?.toISOString() ?? null);
+    const embeddingsMaxUpdatedAt = await maxTilEmbeddingUpdatedAt(userId);
+    const cacheKey = computeConstellationCacheKey(
+      userId,
+      rows.length,
+      maxUpdatedAt?.toISOString() ?? null,
+      embeddingsMaxUpdatedAt
+    );
     const [cachedLayout] = await db
       .select()
       .from(constellationLayouts)

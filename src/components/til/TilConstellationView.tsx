@@ -208,6 +208,7 @@ export function TilConstellationView() {
     const nodeColor = resolveThemeColor(container, "--constellation-node");
     const hubColor = resolveThemeColor(container, "--constellation-hub");
     const warnColor = resolveThemeColor(container, "--constellation-warn");
+    const suggestedColor = resolveThemeColor(container, "--constellation-suggested");
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
@@ -217,15 +218,16 @@ export function TilConstellationView() {
       const b = positions[edge.target];
       if (!a || !b) continue;
       const isSupersession = edge.kind === "supersession";
+      const isSuggested = edge.kind === "suggested";
       const isHot = hoveredId && (edge.source === hoveredId || edge.target === hoveredId) && !isSupersession;
 
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
       ctx.lineTo(b.x, b.y);
-      ctx.strokeStyle = isSupersession ? warnColor : isHot ? hubColor : nodeColor;
-      ctx.globalAlpha = isSupersession ? 0.85 : isHot ? 0.9 : 0.15;
-      ctx.lineWidth = isSupersession ? 1.6 : isHot ? 2 : 1;
-      if (isSupersession) ctx.setLineDash([4, 3]);
+      ctx.strokeStyle = isSupersession ? warnColor : isSuggested ? suggestedColor : isHot ? hubColor : nodeColor;
+      ctx.globalAlpha = isSupersession ? 0.85 : isSuggested ? 0.7 : isHot ? 0.9 : 0.15;
+      ctx.lineWidth = isSupersession ? 1.6 : isSuggested ? 1.4 : isHot ? 2 : 1;
+      if (isSupersession || isSuggested) ctx.setLineDash([4, 3]);
       else ctx.setLineDash([]);
       ctx.stroke();
     }
@@ -294,6 +296,7 @@ export function TilConstellationView() {
 
     const isHot = hoveredId && (edge.source === hoveredId || edge.target === hoveredId) && edge.kind !== "supersession";
     const isSupersession = edge.kind === "supersession";
+    const isSuggested = edge.kind === "suggested";
 
     return (
       <line
@@ -302,10 +305,18 @@ export function TilConstellationView() {
         y1={a.y}
         x2={b.x}
         y2={b.y}
-        stroke={isSupersession ? "var(--constellation-warn)" : isHot ? "var(--constellation-hub)" : "var(--constellation-node)"}
-        strokeOpacity={isSupersession ? 0.85 : isHot ? 0.9 : 0.18}
-        strokeWidth={isSupersession ? 1.6 : isHot ? 2 : 1}
-        strokeDasharray={isSupersession ? "4 3" : undefined}
+        stroke={
+          isSupersession
+            ? "var(--constellation-warn)"
+            : isSuggested
+              ? "var(--constellation-suggested)"
+              : isHot
+                ? "var(--constellation-hub)"
+                : "var(--constellation-node)"
+        }
+        strokeOpacity={isSupersession ? 0.85 : isSuggested ? 0.7 : isHot ? 0.9 : 0.18}
+        strokeWidth={isSupersession ? 1.6 : isSuggested ? 1.4 : isHot ? 2 : 1}
+        strokeDasharray={isSupersession || isSuggested ? "4 3" : undefined}
       />
     );
   };

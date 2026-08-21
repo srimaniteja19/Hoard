@@ -5,6 +5,7 @@ import { tilEntries, constellationLayouts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { computeConstellationCacheKey } from "@/lib/til/constellationCacheKey";
+import { maxTilEmbeddingUpdatedAt } from "@/lib/til/tilSimilarity";
 
 // ─── POST /api/til/constellation/layout ──────────────────────────────────
 //
@@ -30,7 +31,13 @@ export async function POST(req: Request) {
       (max, r) => (max === null || r.updatedAt > max ? r.updatedAt : max),
       null
     );
-    const cacheKey = computeConstellationCacheKey(userId, rows.length, maxUpdatedAt?.toISOString() ?? null);
+    const embeddingsMaxUpdatedAt = await maxTilEmbeddingUpdatedAt(userId);
+    const cacheKey = computeConstellationCacheKey(
+      userId,
+      rows.length,
+      maxUpdatedAt?.toISOString() ?? null,
+      embeddingsMaxUpdatedAt
+    );
 
     await db
       .insert(constellationLayouts)

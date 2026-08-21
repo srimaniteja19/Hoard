@@ -11,6 +11,7 @@ import {
   getLedger,
   getDayPlan,
   getRecallCard,
+  getResurfaceFeed,
   getCandidates,
   getTicker,
 } from "./queries";
@@ -41,7 +42,7 @@ async function computeFingerprint(userId: string): Promise<string> {
       .where(eq(tilEntries.userId, userId)),
   ]);
 
-  const raw = `b:${b.count}:${b.maxUpdated}|t:${t.count}:${t.maxUpdated}|til:${til.count}:${til.maxUpdated}`;
+  const raw = `b:${b.count}:${b.maxUpdated}|t:${t.count}:${t.maxUpdated}|til:${til.count}:${til.maxUpdated}|v:resurface`;
   return crypto.createHash("sha1").update(raw).digest("hex");
 }
 
@@ -52,10 +53,11 @@ async function computeSections(userId: string, timezone: string): Promise<Cached
     getTilStreak(userId, timezone),
   ]);
   const record = await getRecordAggregate(userId, timezone);
-  const [ledger, day, recall, ticker] = await Promise.all([
+  const [ledger, day, recall, resurface, ticker] = await Promise.all([
     getLedger(userId, timezone, record.dischargeRate, record.monthCount),
     getDayPlan(userId, timezone),
     getRecallCard(userId),
+    getResurfaceFeed(userId, timezone),
     getTicker(userId, queue, agenda, record, streak.currentStreak),
   ]);
 
@@ -89,6 +91,7 @@ async function computeSections(userId: string, timezone: string): Promise<Cached
     ledger,
     day,
     recall,
+    resurface,
   };
 }
 
@@ -116,7 +119,10 @@ export async function getHomeEdition(
   let sections: CachedHomeSections;
 
   if (cached && cached.cacheKey === fingerprint && cached.cachedDate === today) {
-    sections = cached.payload as unknown as CachedHomeSections;
+    sections = {
+      ...(cached.payload as unknown as CachedHomeSections),
+      resurface: (cached.payload as { resurface?: CachedHomeSections["resurface"] }).resurface ?? [],
+    };
   } else {
     sections = await computeSections(userId, timezone);
     await db

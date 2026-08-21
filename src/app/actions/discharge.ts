@@ -23,6 +23,7 @@ import { eq, and } from "drizzle-orm";
 import { requireUserId } from "@/lib/session";
 import { generateShortHash, getUserTimezone, getLoggedForDate } from "@/lib/dal/til";
 import { recordUse } from "@/lib/library/recordUse";
+import { scheduleTilEmbedding } from "@/lib/embeddings/upsertBookmarkEmbedding";
 
 const dischargeSchema = z.object({
   bookmarkId: z.number().int().positive(),
@@ -86,6 +87,7 @@ export async function dischargeBookmarkAction(input: DischargeInput): Promise<Di
   ]);
 
   const inserted = insertedRows[0];
+  scheduleTilEmbedding(inserted);
 
   // A TIL entry citing this bookmark is itself a "use" (LIBRARY.md §2) —
   // doesn't need the same atomicity as the batch above, this is informational.

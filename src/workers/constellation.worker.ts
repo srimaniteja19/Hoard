@@ -48,7 +48,8 @@ self.onmessage = (event: MessageEvent<{ type: "simulate"; nodes: ConstellationNo
   const nodes: SimNode[] = event.data.nodes.map((n) => ({ ...n }));
   const links: SimLink[] = event.data.edges.map((e) => ({ source: e.source, target: e.target, kind: e.kind }));
 
-  const linkDistance = (link: SimLink) => (link.kind === "entry-tag" ? 74 : link.kind === "tag-tag" ? 190 : 60);
+  const linkDistance = (link: SimLink) =>
+    link.kind === "entry-tag" ? 74 : link.kind === "tag-tag" ? 190 : link.kind === "suggested" ? 120 : 60;
   const chargeStrength = (node: SimNode) => (node.kind === "hub" ? -900 : -260);
   const collideRadius = (node: SimNode) => (node.kind === "hub" ? node.radius : 5);
 

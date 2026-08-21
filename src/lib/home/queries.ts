@@ -5,9 +5,10 @@ import { getLoggedForDate, getMinutesSinceMidnight, getLocalDayOfWeek } from "@/
 import { withCalibrationPadding, getCalibrationSamples } from "@/lib/dal/todos";
 import { computeDayPlan } from "@/lib/todos/dayplan";
 import { confidence, confidenceSql } from "@/lib/til/confidence";
+import { isResurfaceEligible, pickDailyResurface, resurfaceScore } from "./resurface";
 import { CTX } from "@/data/initialBookmarks";
 import type { ContextType, KindType } from "@/types";
-import type { ColumnEntry, DayBlock, LeadCandidate, RecallCard, TickerItem } from "./types";
+import type { ColumnEntry, DayBlock, LeadCandidate, RecallCard, ResurfaceItem, TickerItem } from "./types";
 
 const MS_PER_DAY = 86_400_000;
 const OPEN_STATES: TodoState[] = ["OPEN"];
@@ -318,6 +319,50 @@ export async function getRecallCard(userId: string): Promise<RecallCard> {
     ageDays,
     confidence: confidence(stability, lastReviewedAt),
   };
+}
+
+export async function getResurfaceFeed(userId: string, timezone: string): Promise<ResurfaceItem[]> {
+  const today = getLoggedForDate(timezone);
+  const cutoff = daysAgo(21);
+
+  const rows = await db
+    .select({
+      id: bookmarks.id,
+      title: bookmarks.title,
+      url: bookmarks.url,
+      useCount: bookmarks.useCount,
+      lastUsedAt: bookmarks.lastUsedAt,
+      createdAt: bookmarks.createdAt,
+    })
+    .from(bookmarks)
+    .where(
+      and(
+        eq(bookmarks.userId, userId),
+        isNull(bookmarks.deletedAt),
+        eq(bookmarks.itemType, "REFERENCE"),
+        sql`${bookmarks.useCount} >= 2`,
+        sql`coalesce(${bookmarks.lastUsedAt}, ${bookmarks.createdAt}) < ${cutoff}`
+      )
+    );
+
+  const now = Date.now();
+  const scored = rows.flatMap((row) => {
+    const last = (row.lastUsedAt ?? row.createdAt).getTime();
+    const idleDays = Math.floor((now - last) / MS_PER_DAY);
+    if (!isResurfaceEligible(Number(row.useCount), idleDays)) return [];
+    return [
+      {
+        id: row.id,
+        title: row.title,
+        url: row.url,
+        useCount: Number(row.useCount),
+        idleDays,
+        score: resurfaceScore(Number(row.useCount), idleDays),
+      },
+    ];
+  });
+
+  return pickDailyResurface(scored, userId, today).map(({ score: _score, ...item }) => item);
 }
 
 // ─── Candidates (lead + up-next pool; scoring itself is Phase 5) ──────────

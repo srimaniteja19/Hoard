@@ -46,6 +46,7 @@ function assertDegraded(edition: Awaited<ReturnType<typeof getHomeEdition>>) {
     ["record.last14.length === 14", edition.record.last14.length === 14],
     ["record.last14 all zero", edition.record.last14.every((n) => n === 0)],
     ["recall === null (no TIL entries to resurface)", edition.recall === null],
+    ["resurface.length === 0 (no forgotten references)", edition.resurface.length === 0],
     ["candidates.length === 0", edition.candidates.length === 0],
     ["day.blocks.length === 0 (no busy_blocks table yet)", edition.day.blocks.length === 0],
     ["day.freeMinutes >= 0", edition.day.freeMinutes >= 0],
