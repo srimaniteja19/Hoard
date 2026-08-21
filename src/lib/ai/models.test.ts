@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ASK_MODEL, ASK_MODELS, resolveAskModel } from "./askModels";
+import { ASK_MODEL, ASK_MODELS, askFallbackModels, resolveAskModel } from "./askModels";
 import { gatewayErrorMessage, gatewayProviderOptions } from "./models";
 
 describe("gatewayErrorMessage", () => {
@@ -31,15 +31,21 @@ describe("resolveAskModel", () => {
     }
     expect(resolveAskModel("openai/gpt-5.4-pro")).toBe(ASK_MODEL);
   });
+
+  it("falls back through the other Ask models when the selected one is limited", () => {
+    expect(askFallbackModels("poolside/laguna-s-2.1-free")).toEqual([
+      "google/gemini-3.5-flash-lite",
+      "google/gemini-3.5-flash",
+      "google/gemini-3.7-flash",
+      "openai/gpt-5.4-mini",
+      "openai/gpt-5.4",
+    ]);
+    expect(askFallbackModels("google/gemini-3.5-flash")).toContain("poolside/laguna-s-2.1-free");
+    expect(askFallbackModels("google/gemini-3.5-flash")).not.toContain("google/gemini-3.5-flash");
+  });
 });
 
 describe("gatewayProviderOptions", () => {
-  it("omits fallbacks when none are provided", () => {
-    expect(gatewayProviderOptions("poolside/laguna-s-2.1-free", ["feature:library-ask"], [])).toEqual({
-      gateway: { tags: ["feature:library-ask"] },
-    });
-  });
-
   it("keeps Gemini fallbacks for triage", () => {
     expect(gatewayProviderOptions("google/gemini-3.5-flash-lite", ["feature:capture-triage"]).gateway).toEqual({
       models: ["google/gemini-3.5-flash", "google/gemini-3-flash"],

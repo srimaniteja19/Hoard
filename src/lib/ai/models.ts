@@ -1,6 +1,6 @@
 import { gateway } from "ai";
 
-export { ASK_MODEL, ASK_MODELS, resolveAskModel, type AskModelId } from "./askModels";
+export { ASK_MODEL, ASK_MODELS, askFallbackModels, resolveAskModel, type AskModelId } from "./askModels";
 
 export const TRIAGE_MODEL = "google/gemini-3.5-flash-lite";
 
@@ -31,7 +31,7 @@ export function gatewayProviderOptions(
 export function gatewayErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (/rate.?limit|free tier/i.test(message)) {
-    return "AI Gateway free-tier limit hit. Try again in a minute, or add credits at vercel.com/ai.";
+    return "AI Gateway free-tier limit hit. Pick another model, wait a minute, or add credits at vercel.com/ai.";
   }
   return message.replace(/^Error:\s*/, "") || "The library could not answer.";
 }

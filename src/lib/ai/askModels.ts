@@ -20,3 +20,7 @@ export function isAskModelId(value: string): value is AskModelId {
 export function resolveAskModel(value: unknown): AskModelId {
   return typeof value === "string" && isAskModelId(value) ? value : ASK_MODEL;
 }
+
+export function askFallbackModels(selected: AskModelId): AskModelId[] {
+  return ASK_MODELS.map((model) => model.id).filter((id) => id !== selected);
+}

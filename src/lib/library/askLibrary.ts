@@ -1,6 +1,6 @@
 import { convertToModelMessages, stepCountIs, streamText, tool, type InferUITools, type UIMessage } from "ai";
 import { z } from "zod";
-import { ASK_MODEL, gatewayProviderOptions, languageModel } from "@/lib/ai/models";
+import { ASK_MODEL, askFallbackModels, gatewayProviderOptions, languageModel } from "@/lib/ai/models";
 import type { AskModelId } from "@/lib/ai/askModels";
 import { citationHref, fetchVector } from "@/lib/library/fetchVector";
 
@@ -54,6 +54,6 @@ export async function streamLibraryAsk(
     tools,
     stopWhen: stepCountIs(5),
     maxRetries: 0,
-    providerOptions: gatewayProviderOptions(model, ["feature:library-ask"], []),
+    providerOptions: gatewayProviderOptions(model, ["feature:library-ask"], askFallbackModels(model)),
   });
 }
