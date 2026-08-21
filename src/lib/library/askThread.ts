@@ -26,14 +26,55 @@ export const upsertAskThreadSchema = z.object({
   messages: z.array(askStoredMessageSchema).min(1).max(80),
 });
 
-export function titleFromMessages(messages: AskStoredMessage[]): string {
+export function messagePlainText(message: AskStoredMessage): string {
+  return textFromParts(message.parts).replace(/\s+/g, " ").trim();
+}
+
+export function firstRoleText(messages: AskStoredMessage[], role: AskStoredMessage["role"]): string {
   for (const message of messages) {
-    if (message.role !== "user") continue;
-    const text = textFromParts(message.parts).replace(/\s+/g, " ").trim();
-    if (!text) continue;
-    return text.length <= 52 ? text : `${text.slice(0, 49).trimEnd()}…`;
+    if (message.role !== role) continue;
+    const text = messagePlainText(message);
+    if (text) return text;
   }
-  return "Untitled folio";
+  return "";
+}
+
+export function clipFolioText(text: string, max = 400): string {
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  return cleaned.length <= max ? cleaned : `${cleaned.slice(0, max - 1).trimEnd()}…`;
+}
+
+export function cleanFolioTitle(raw: string, fallback = "Untitled folio"): string {
+  const line = raw
+    .split("\n")[0]
+    .replace(/^["'“”‘’`]+|["'“”‘’`]+$/g, "")
+    .replace(/^\s*title\s*:\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[.]+$/, "");
+  if (!line) return fallback;
+  return line.length <= 52 ? line : `${line.slice(0, 49).trimEnd()}…`;
+}
+
+export function titleFromMessages(messages: AskStoredMessage[]): string {
+  const text = firstRoleText(messages, "user");
+  if (!text) return "Untitled folio";
+  return text.length <= 52 ? text : `${text.slice(0, 49).trimEnd()}…`;
+}
+
+export function needsFolioName(existingTitle: string | null | undefined, messages: AskStoredMessage[]): boolean {
+  const answer = firstRoleText(messages, "assistant");
+  if (answer.length < 60 && !/^##\s*summary\b/i.test(answer)) return false;
+  const snippet = titleFromMessages(messages);
+  const title = (existingTitle ?? "").replace(/\s+/g, " ").trim();
+  if (!title || title === "Untitled folio") return true;
+  if (title === snippet) return true;
+  if (snippet.endsWith("…")) {
+    const stem = snippet.slice(0, -1).trimEnd();
+    if (stem && title === stem) return true;
+  }
+  return false;
 }
 
 export function previewFromMessages(messages: AskStoredMessage[]): string {

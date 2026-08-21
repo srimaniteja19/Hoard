@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AskDocket } from "@/components/library/AskDocket";
 import { AskLibraryChat } from "@/components/library/AskLibraryChat";
-import type { AskModelId } from "@/lib/ai/askModels";
+import { ASK_MODEL, type AskModelId } from "@/lib/ai/askModels";
 import type { AskUIMessage } from "@/lib/library/askLibrary";
 import {
   asStoredMessages,
+  needsFolioName,
   previewFromMessages,
   titleFromMessages,
   type AskThreadListItem,
@@ -41,6 +42,7 @@ export function AskDesk({ initialThreadId = null }: { initialThreadId?: string |
   const [activeId, setActiveId] = useState<string | null>(initialThreadId);
   const [loaded, setLoaded] = useState<LoadedThread | null>(initialThreadId ? null : { messages: [] });
   const persistSeq = useRef(0);
+  const namedRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (!sheetId) setSheetId(newSheetId());
@@ -140,11 +142,13 @@ export function AskDesk({ initialThreadId = null }: { initialThreadId?: string |
       if (input.messages.length === 0 || !sheetId) return;
       const seq = persistSeq.current;
       const stored = asStoredMessages(input.messages);
-      const title = titleFromMessages(stored);
+      const snippet = titleFromMessages(stored);
       const preview = previewFromMessages(stored);
       const now = new Date().toISOString();
       setActiveId(sheetId);
       setThreads((current) => {
+        const prior = current.find((thread) => thread.id === sheetId);
+        const title = needsFolioName(prior?.title, stored) ? snippet : prior?.title || snippet;
         const next: AskThreadListItem = { id: sheetId, title, preview, updatedAt: now };
         const rest = current.filter((thread) => thread.id !== sheetId);
         return [next, ...rest];
@@ -156,7 +160,6 @@ export function AskDesk({ initialThreadId = null }: { initialThreadId?: string |
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            title,
             model: input.model,
             web: input.web,
             messages: stored,
@@ -173,6 +176,23 @@ export function AskDesk({ initialThreadId = null }: { initialThreadId?: string |
     },
     [sheetId]
   );
+
+  useEffect(() => {
+    if (!sheetId || !loaded || loaded.messages.length === 0) return;
+    if (namedRef.current.has(sheetId)) return;
+    const stored = asStoredMessages(loaded.messages);
+    const listed = threads.find((thread) => thread.id === sheetId)?.title;
+    if (!needsFolioName(listed, stored)) {
+      namedRef.current.add(sheetId);
+      return;
+    }
+    namedRef.current.add(sheetId);
+    void persist({
+      messages: loaded.messages,
+      model: loaded.model ?? ASK_MODEL,
+      web: loaded.web ?? false,
+    });
+  }, [sheetId, loaded, threads, persist]);
 
   return (
     <div className={docketOpen ? "ask-room ask-room-split is-docket" : "ask-room ask-room-split"}>

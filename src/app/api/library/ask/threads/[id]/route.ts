@@ -3,7 +3,9 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { askThreads } from "@/db/schema";
 import { AuthError, requireUserId } from "@/lib/session";
+import { nameAskFolio } from "@/lib/library/askFolioTitle";
 import {
+  needsFolioName,
   previewFromMessages,
   titleFromMessages,
   upsertAskThreadSchema,
@@ -56,12 +58,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: "Validation error", details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const [owned] = await db.select({ userId: askThreads.userId }).from(askThreads).where(eq(askThreads.id, id)).limit(1);
-    if (owned && owned.userId !== userId) {
+    const [existing] = await db.select().from(askThreads).where(eq(askThreads.id, id)).limit(1);
+    if (existing && existing.userId !== userId) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const title = parsed.data.title?.trim() || titleFromMessages(parsed.data.messages);
+    let title = existing?.title?.trim() || parsed.data.title?.trim() || titleFromMessages(parsed.data.messages);
+    if (needsFolioName(existing?.title ?? title, parsed.data.messages)) {
+      title = await nameAskFolio(parsed.data.messages);
+    }
     const now = new Date();
     const [row] = await db
       .insert(askThreads)
