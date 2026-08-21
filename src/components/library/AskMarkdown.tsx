@@ -55,11 +55,13 @@ function BlockView({
   shelf,
   activeCite,
   onActiveCite,
+  prompt,
 }: {
   block: AskMarkdownBlock;
   shelf?: AskShelfItem[];
   activeCite: number | null;
   onActiveCite: (index: number | null) => void;
+  prompt?: string;
 }) {
   const inline =
     shelf && shelf.length > 0 ? (
@@ -92,7 +94,7 @@ function BlockView({
     );
   }
   if (block.type === "table") {
-    return <AskTable headers={block.headers} rows={block.rows} />;
+    return <AskTable headers={block.headers} rows={block.rows} prompt={prompt} />;
   }
   return <p className="ask-md-p">{inline(block.text)}</p>;
 }
@@ -103,12 +105,14 @@ export function AskMarkdown({
   shelf,
   activeCite = null,
   onActiveCite,
+  prompt,
 }: {
   content: string;
   lead?: boolean;
   shelf?: AskShelfItem[];
   activeCite?: number | null;
   onActiveCite?: (index: number | null) => void;
+  prompt?: string;
 }) {
   const blocks = parseAskMarkdown(content);
   if (blocks.length === 0) return null;
@@ -122,6 +126,7 @@ export function AskMarkdown({
           shelf={shelf}
           activeCite={activeCite}
           onActiveCite={hover}
+          prompt={prompt}
         />
       ))}
     </div>
@@ -134,12 +139,14 @@ export function AskAnswer({
   shelf,
   activeCite = null,
   onActiveCite,
+  prompt,
 }: {
   text: string;
   streaming?: boolean;
   shelf?: AskShelfItem[];
   activeCite?: number | null;
   onActiveCite?: (index: number | null) => void;
+  prompt?: string;
 }) {
   const { summary, body } = parseAskAnswer(text);
   const [copied, setCopied] = useState(false);
@@ -183,7 +190,7 @@ export function AskAnswer({
             {!streaming && !copied ? <span className="ask-lede-hint">TEAR OFF</span> : null}
           </div>
           <div className="ask-lede-text">
-            <AskMarkdown content={summary} />
+            <AskMarkdown content={summary} prompt={prompt} />
             {streaming && !body ? <span className="ask-caret" aria-hidden /> : null}
           </div>
           {flying ? (
@@ -201,12 +208,13 @@ export function AskAnswer({
             shelf={liveShelf}
             activeCite={activeCite}
             onActiveCite={onActiveCite}
+            prompt={prompt}
           />
           {streaming ? <span className="ask-caret" aria-hidden /> : null}
         </div>
       ) : !summary && text ? (
         <div className="ask-answer-body">
-          <AskMarkdown content={text} lead shelf={liveShelf} activeCite={activeCite} onActiveCite={onActiveCite} />
+          <AskMarkdown content={text} lead shelf={liveShelf} activeCite={activeCite} onActiveCite={onActiveCite} prompt={prompt} />
           {streaming ? <span className="ask-caret" aria-hidden /> : null}
         </div>
       ) : null}

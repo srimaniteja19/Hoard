@@ -103,7 +103,7 @@ export function AskSavedList() {
                 <span>{item.model}</span>
               </div>
             </header>
-            <AskAnswer text={item.answer} />
+            <AskAnswer text={item.answer} prompt={item.question} />
             <AskShelf citations={item.citations} />
             <button
               type="button"

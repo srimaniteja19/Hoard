@@ -9,6 +9,7 @@ describe("ASK_SYSTEM", () => {
     expect(ASK_SYSTEM).toMatch(/Start writing immediately/);
     expect(ASK_SYSTEM).toMatch(/unrelated/i);
     expect(ASK_SYSTEM).toMatch(/last N days/i);
+    expect(ASK_SYSTEM).toMatch(/picks a suitable type/i);
   });
 });
 

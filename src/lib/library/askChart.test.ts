@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { barWidth, chartLabel, chartsFromTable, parseAskNumber } from "./askChart";
+import { barWidth, chartHintFromPrompt, chartLabel, chartsFromTable, parseAskNumber } from "./askChart";
 
 describe("chartLabel", () => {
   it("strips markdown, prefers a ticker, and shortens ISO dates", () => {
@@ -7,6 +7,7 @@ describe("chartLabel", () => {
     expect(chartLabel("**Dogecoin (DOGE)**")).toBe("DOGE");
     expect(chartLabel("Solana")).toBe("Solana");
     expect(chartLabel("2026-08-16")).toBe("08-16");
+    expect(chartLabel("August 16")).toBe("Aug 16");
     expect(chartLabel("")).toBe("—");
   });
 });
@@ -21,6 +22,8 @@ describe("parseAskNumber", () => {
     expect(parseAskNumber("~$1.56T")).toEqual({ value: 1.56e12, kind: "usd" });
     expect(parseAskNumber("**+$6.6%**")).toEqual({ value: 6.6, kind: "pct" });
     expect(parseAskNumber("118500")).toEqual({ value: 118500, kind: "number" });
+    expect(parseAskNumber("68–69°F")).toEqual({ value: 68.5, kind: "number" });
+    expect(parseAskNumber("~68°F")).toEqual({ value: 68, kind: "number" });
     expect(parseAskNumber("2026-08-16")).toBeNull();
   });
 });
@@ -59,5 +62,28 @@ describe("chartsFromTable", () => {
     expect(charts[0]?.type === "ohlc" && charts[0].candles).toHaveLength(5);
     expect(charts[0]?.type === "ohlc" && charts[0].candles[0]?.label).toBe("08-16");
     expect(charts[1]?.type === "column" && charts[1].title).toMatch(/volume/i);
+  });
+
+  it("reads August weather as a line unless the prompt asks for bars", () => {
+    const rows = [
+      ["August 16", "68–69°F", "56°F", "Cool, foggy", "0.00\""],
+      ["August 17", "72°F", "57°F", "Partly cloudy", "0.00\""],
+      ["August 18", "67–69°F", "55°F", "Marine layer", "0.00\""],
+      ["August 19", "~68°F", "~56°F", "Overcast", "0.00\""],
+      ["August 20", "69°F", "56°F", "Overcast, hazy", "0.00\""],
+    ] as string[][];
+    const headers = ["Date", "High Temperature", "Low Temperature", "Conditions", "Precipitation"];
+    expect(chartsFromTable(headers, rows).map((chart) => chart.type)).toEqual(["line", "line"]);
+    expect(chartsFromTable(headers, rows, "column").map((chart) => chart.type)).toEqual(["column", "column"]);
+    expect(chartsFromTable(headers, rows, "line").map((chart) => chart.type)).toEqual(["line", "line"]);
+  });
+});
+
+describe("chartHintFromPrompt", () => {
+  it("reads line, bar, and pie asks", () => {
+    expect(chartHintFromPrompt("compare weather in linear charts")).toBe("line");
+    expect(chartHintFromPrompt("compare weather in sf for the past 5 days, in bar charts")).toBe("column");
+    expect(chartHintFromPrompt("show allocation as a pie")).toBe("pie");
+    expect(chartHintFromPrompt("compare bitcoin last 10 days")).toBeNull();
   });
 });

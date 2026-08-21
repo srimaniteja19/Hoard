@@ -262,6 +262,7 @@ export function AskDeskReply({
               shelf={shelf}
               activeCite={activeCite}
               onActiveCite={setActiveCite}
+              prompt={question}
             />
           </div>
           {carbon ? (
@@ -276,7 +277,7 @@ export function AskDeskReply({
                 {carbon.status === "error" ? " · FAILED" : ""}
               </button>
               {carbon.text ? (
-                <AskAnswer text={carbon.text} streaming={carbon.status === "streaming"} shelf={carbon.shelf} />
+                <AskAnswer text={carbon.text} streaming={carbon.status === "streaming"} shelf={carbon.shelf} prompt={question} />
               ) : carbon.status === "error" ? (
                 <p className="ask-keep-err" style={{ padding: "10px 12px" }}>
                   Could not pull a carbon copy.

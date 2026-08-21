@@ -82,7 +82,7 @@ Format in compact markdown. No preamble. No "great question." Start writing imme
 3. Do not dump raw snippets.
 4. The UI already shows citations; you may name a source by title only when it is on the shelf.
 5. Cards marked YOUR MARGIN are this person's own words. Quote them when they answer the question.
-6. When comparing prices or stats, use a markdown table with one row per line — never smash the table onto one line.
+6. When comparing numbers over days (weather, prices), use a real markdown table: one header row, then one data row per day. Never smash the table onto one line. Never draw ASCII, unicode, sparkline, or text bar charts — the desk charts the table and picks a suitable type (line for trends, bars for counts, candles for OHLC, pie for shares). If they ask for line, bar, or pie, still only output the table.
 7. Date every time series from the system clock. If the user asks for the last N days, those are the N calendar days ending today.`;
 
 export function streamLibraryAsk(

@@ -3,6 +3,7 @@
 import { MarkdownLite } from "@/components/til/MarkdownLite";
 import {
   barWidth,
+  chartHintFromPrompt,
   chartsFromTable,
   tapeStamp,
   type AskCandle,
@@ -150,18 +151,24 @@ function OhlcTape({ candles }: { candles: AskCandle[] }) {
   );
 }
 
-function ColumnTape({ bars, title }: { bars: AskChartBar[]; title: string }) {
+function ColumnTape({ bars, title, fromZero = true }: { bars: AskChartBar[]; title: string; fromZero?: boolean }) {
   const [hover, setHover] = useState<TapeHover | null>(null);
   if (!Array.isArray(bars) || bars.length === 0) return null;
   const width = 360;
   const height = 148;
-  const left = 8;
+  const left = fromZero ? 8 : 36;
   const right = 8;
-  const top = 8;
+  const top = 10;
   const bottom = 24;
   const plotH = height - top - bottom;
   const plotW = width - left - right;
-  const max = Math.max(...bars.map((bar) => bar.value), 1);
+  const values = bars.map((bar) => bar.value);
+  const max = Math.max(...values, fromZero ? 1 : Number.NEGATIVE_INFINITY);
+  const min = Math.min(...values);
+  const pad = fromZero ? 0 : Math.max((max - min) * 0.2, 1);
+  const lo = fromZero ? 0 : min - pad;
+  const hi = fromZero ? max : max + pad * 0.35;
+  const span = hi - lo || 1;
   const gap = plotW / bars.length;
   const barW = Math.min(22, gap * 0.58);
   const active = hover ? bars[hover.index] : null;
@@ -169,9 +176,19 @@ function ColumnTape({ bars, title }: { bars: AskChartBar[]; title: string }) {
   return (
     <div className="ask-tape" onMouseLeave={() => setHover(null)}>
       <svg className="ask-tape-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Column chart">
+        {fromZero ? null : (
+          <>
+            <text x={left - 4} y={top + 4} className="ask-tape-axis" textAnchor="end">
+              {tapeNum(hi)}
+            </text>
+            <text x={left - 4} y={top + plotH} className="ask-tape-axis" textAnchor="end">
+              {tapeNum(lo)}
+            </text>
+          </>
+        )}
         {bars.map((bar, index) => {
           const x = left + gap * (index + 0.5);
-          const h = Math.max(4, (bar.value / max) * plotH);
+          const h = Math.max(4, ((bar.value - lo) / span) * plotH);
           const hot = hover?.index === index;
           return (
             <g key={`${index}-${bar.label || "b"}`}>
@@ -371,7 +388,7 @@ function AskChartBody({ chart }: { chart: AskChart }) {
     case "ohlc":
       return <OhlcTape candles={chart.candles} />;
     case "column":
-      return <ColumnTape bars={chart.bars} title={chart.title} />;
+      return <ColumnTape bars={chart.bars} title={chart.title} fromZero={chart.fromZero} />;
     case "line":
       return <LineTape points={chart.points} title={chart.title} />;
     case "pie":
@@ -409,8 +426,16 @@ function AskChartCard({ chart }: { chart: AskChart }) {
   );
 }
 
-export function AskTable({ headers = [], rows = [] }: { headers: string[]; rows: string[][] }) {
-  const charts = chartsFromTable(headers, rows);
+export function AskTable({
+  headers = [],
+  rows = [],
+  prompt,
+}: {
+  headers: string[];
+  rows: string[][];
+  prompt?: string;
+}) {
+  const charts = chartsFromTable(headers, rows, chartHintFromPrompt(prompt ?? ""));
   const numeric = headers.map((_, col) => col > 0 && rows.some((row) => looksNumeric(row[col] ?? "")));
   return (
     <div className="ask-figure">
