@@ -46,7 +46,7 @@ export function chartLabel(text: string): string {
   const iso = plain.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (iso) return `${iso[2]}-${iso[3]}`;
   const ticker = plain.match(/\(([A-Z0-9.]{2,8})\)/);
-  return ticker ? ticker[1] : plain;
+  return ticker ? ticker[1] : plain || "—";
 }
 
 export function parseAskNumber(raw: string): { value: number; kind: AskChartKind } | null {

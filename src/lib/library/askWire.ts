@@ -1,4 +1,5 @@
 import { generateText, gateway, stepCountIs } from "ai";
+import { formatAskClock, wireRecencyFilter, wireSearchPrompt, type AskClock } from "./askClock";
 import {
   gatewayErrorMessage,
   gatewayProviderOptions,
@@ -16,6 +17,8 @@ export type AskWireItem = {
 export const ASK_WIRE_SYSTEM = `A live wire is on. Current web results are attached below — weather, news, scores, prices, anything that changes.
 - Prefer the shelf for this person's own notes and saves.
 - Prefer the wire for what is true right now.
+- Use the system clock date. "Last N days" is the N calendar days ending today, not an older month.
+- If a wire hit's date is outside that range, ignore that date. Do not invent a series from training data.
 - Name a wire source by title when you use it. Do not invent URLs.`;
 
 export function formatWire(hits: AskWireItem[]): string {
@@ -91,21 +94,25 @@ function wireFromGenerateSteps(steps: Array<{ toolResults?: Array<{ output?: unk
 
 export async function fetchWire(
   query: string,
-  deps?: { search?: (query: string) => Promise<AskWireItem[]> }
+  deps?: { search?: (query: string) => Promise<AskWireItem[]>; clock?: AskClock; timeZone?: string }
 ): Promise<AskWireItem[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
   if (deps?.search) return deps.search(trimmed);
 
+  const clock = deps?.clock ?? formatAskClock(deps?.timeZone ?? "UTC");
+  const recency = wireRecencyFilter(trimmed);
+
   try {
     const result = await generateText({
       model: languageModel(TRIAGE_MODEL),
       system: "Call perplexity_search once for current web facts that answer this question. Do not write an answer.",
-      prompt: trimmed,
+      prompt: wireSearchPrompt(trimmed, clock),
       tools: {
         perplexity_search: gateway.tools.perplexitySearch({
           maxResults: 6,
           searchLanguageFilter: ["en"],
+          searchRecencyFilter: recency,
         }),
       },
       toolChoice: { type: "tool", toolName: "perplexity_search" },

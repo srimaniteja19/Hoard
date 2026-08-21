@@ -42,8 +42,8 @@ function Searching({ web }: { web?: boolean }) {
         <div className="ask-searching-kicker">{web ? "THE WIRE" : "THE CATALOG"}</div>
         <div className="ask-searching-msg">
           <div className="ask-searching-reel">
-            {lines.map((line) => (
-              <span key={line}>{line}</span>
+            {lines.map((line, index) => (
+              <span key={`${index}-${line}`}>{line}</span>
             ))}
             <span>{lines[0]}</span>
           </div>
@@ -106,7 +106,7 @@ function AskNextCards({
       <div className="ask-next-row">
         {cards.map((card, index) => (
           <button
-            key={card.ownerKey}
+            key={card.ownerKey || `next-${index}`}
             type="button"
             className="ask-next-card"
             style={{ ["--i" as string]: index }}

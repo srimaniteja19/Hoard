@@ -109,7 +109,7 @@ function OhlcTape({ candles }: { candles: AskCandle[] }) {
           const bodyH = Math.max(3, Math.abs(yClose - yOpen));
           const hot = hover?.index === index;
           return (
-            <g key={candle.label}>
+            <g key={`${index}-${candle.label || "c"}`}>
               <line x1={x} x2={x} y1={yHigh} y2={yLow} className="ask-tape-wick" />
               <rect
                 x={x - bodyW / 2}
@@ -174,7 +174,7 @@ function ColumnTape({ bars, title }: { bars: AskChartBar[]; title: string }) {
           const h = Math.max(4, (bar.value / max) * plotH);
           const hot = hover?.index === index;
           return (
-            <g key={bar.label}>
+            <g key={`${index}-${bar.label || "b"}`}>
               <rect
                 x={x - barW / 2}
                 y={top + plotH - h}
@@ -243,7 +243,7 @@ function LineTape({ points, title }: { points: AskChartBar[]; title: string }) {
         <path d={`${d} L${coords[coords.length - 1].x} ${top + plotH} L${coords[0].x} ${top + plotH} Z`} className="ask-tape-area" />
         <polyline points={coords.map((c) => `${c.x},${c.y}`).join(" ")} className="ask-tape-line" fill="none" />
         {coords.map((c, index) => (
-          <g key={c.point.label}>
+          <g key={`${index}-${c.point.label || "p"}`}>
             <rect
               x={c.x - (hover?.index === index ? 5 : 4)}
               y={c.y - (hover?.index === index ? 5 : 4)}
@@ -307,7 +307,7 @@ function PieTape({ slices }: { slices: AskChartBar[] }) {
       <svg className="ask-tape-svg ask-pie-svg" viewBox="0 0 128 128" role="img" aria-label="Pie chart">
         {arcs.map((arc, index) => (
           <path
-            key={arc.slice.label}
+            key={`${index}-${arc.slice.label || "s"}`}
             d={arc.d}
             fill={arc.slice.color}
             stroke="#000"
@@ -319,7 +319,7 @@ function PieTape({ slices }: { slices: AskChartBar[] }) {
       </svg>
       <ul className="ask-pie-legend">
         {slices.map((slice, index) => (
-          <li key={slice.label} className={hover?.index === index ? "is-hot" : undefined}>
+          <li key={`${index}-${slice.label || "s"}`} className={hover?.index === index ? "is-hot" : undefined}>
             <i style={{ background: slice.color }} />
             <span>{slice.label}</span>
             <b>{slice.display}</b>
@@ -346,11 +346,11 @@ function HBarTape({ chart }: { chart: Extract<AskChart, { type: "hbar" }> }) {
   const signed = chart.kind === "pct" && bars.some((bar) => bar.value < 0);
   return (
     <ul className={signed ? "ask-chart-bars is-signed" : "ask-chart-bars"}>
-      {bars.map((bar) => {
+      {bars.map((bar, index) => {
         const width = barWidth(bar.value, bars, chart.log, chart.fromZero);
         const down = bar.value < 0;
         return (
-          <li key={bar.label} title={`${bar.label} · ${bar.display}`}>
+          <li key={`${index}-${bar.label || "bar"}`} title={`${bar.label} · ${bar.display}`}>
             <span className="ask-chart-name">{bar.label}</span>
             <span className="ask-chart-track">
               <span
@@ -438,8 +438,8 @@ export function AskTable({ headers = [], rows = [] }: { headers: string[]; rows:
           </tbody>
         </table>
       </div>
-      {charts.map((chart) => (
-        <AskChartCard key={`${chart.type}-${chart.title}`} chart={chart} />
+      {charts.map((chart, index) => (
+        <AskChartCard key={`${chart.type}-${chart.title}-${index}`} chart={chart} />
       ))}
     </div>
   );

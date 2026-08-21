@@ -69,7 +69,7 @@ export function AskWire({ items }: { items: AskWireItem[] }) {
       </div>
       <ul className="ask-cites">
         {items.map((item, index) => (
-          <li key={item.href}>
+          <li key={`${index}-${item.href || "wire"}`}>
             <Link href={item.href} prefetch={false} target="_blank" data-kind="WEB">
               <span className="ask-cite-num">{String(index + 1).padStart(2, "0")}</span>
               <span className="ask-cite-kind">{item.date || "WEB"}</span>

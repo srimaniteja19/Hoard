@@ -7,6 +7,7 @@ describe("chartLabel", () => {
     expect(chartLabel("**Dogecoin (DOGE)**")).toBe("DOGE");
     expect(chartLabel("Solana")).toBe("Solana");
     expect(chartLabel("2026-08-16")).toBe("08-16");
+    expect(chartLabel("")).toBe("—");
   });
 });
 

@@ -11,6 +11,8 @@ import { isThinSnippet } from "@/lib/library/askAnswer";
 import { relatedHits } from "@/lib/library/relatedHits";
 import { citationHref, fetchVector, type VectorHit } from "@/lib/library/fetchVector";
 import { ASK_WIRE_SYSTEM, fetchWire, formatWire, type AskWireItem } from "@/lib/library/askWire";
+import { askClockLine, formatAskClock } from "@/lib/library/askClock";
+import { getUserTimezone } from "@/lib/dal/shared";
 
 export type AskShelfItem = {
   ownerType: VectorHit["ownerType"];
@@ -80,7 +82,8 @@ Format in compact markdown. No preamble. No "great question." Start writing imme
 3. Do not dump raw snippets.
 4. The UI already shows citations; you may name a source by title only when it is on the shelf.
 5. Cards marked YOUR MARGIN are this person's own words. Quote them when they answer the question.
-6. When comparing prices or stats, use a markdown table with one row per line — never smash the table onto one line.`;
+6. When comparing prices or stats, use a markdown table with one row per line — never smash the table onto one line.
+7. Date every time series from the system clock. If the user asks for the last N days, those are the N calendar days ending today.`;
 
 export function streamLibraryAsk(
   userId: string,
@@ -94,9 +97,11 @@ export function streamLibraryAsk(
     originalMessages: messages,
     onError: gatewayErrorMessage,
     execute: async ({ writer }) => {
+      const timeZone = await getUserTimezone(userId);
+      const clock = formatAskClock(timeZone);
       const [neighbors, wire] = await Promise.all([
         query ? fetchVector(userId, query, 8) : Promise.resolve([]),
-        web && query ? fetchWire(query) : Promise.resolve([]),
+        web && query ? fetchWire(query, { clock }) : Promise.resolve([]),
       ]);
       const hits = relatedHits(query, neighbors).map(toShelfItem);
       writer.write({ type: "data-shelf", id: "shelf", data: hits });
@@ -105,7 +110,7 @@ export function streamLibraryAsk(
       const wireBlock = web ? `\n\n## Wire\n${formatWire(wire)}` : "";
       const result = streamText({
         model: languageModel(model),
-        system: `${ASK_SYSTEM}${web ? `\n\n${ASK_WIRE_SYSTEM}` : ""}\n\n## Shelf\n${formatShelf(hits)}${wireBlock}`,
+        system: `${ASK_SYSTEM}\n\n${askClockLine(clock)}${web ? `\n\n${ASK_WIRE_SYSTEM}` : ""}\n\n## Shelf\n${formatShelf(hits)}${wireBlock}`,
         messages: await convertToModelMessages(messages),
         experimental_transform: smoothStream({ chunking: "word", delayInMs: 12 }),
         maxRetries: 0,

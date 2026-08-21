@@ -8,7 +8,7 @@ describe("ASK_SYSTEM", () => {
     expect(ASK_SYSTEM).toMatch(/thin/i);
     expect(ASK_SYSTEM).toMatch(/Start writing immediately/);
     expect(ASK_SYSTEM).toMatch(/unrelated/i);
-    expect(ASK_SYSTEM).not.toMatch(/Always call fetchVector/);
+    expect(ASK_SYSTEM).toMatch(/last N days/i);
   });
 });
 
