@@ -49,6 +49,32 @@ The bus was the bottleneck.
       { type: "list", ordered: true, items: ["First", "Second"] },
     ]);
   });
+
+  it("parses markdown tables, including smashed one-liners", () => {
+    const neat = parseAskMarkdown(`| Coin | Price |
+| --- | --- |
+| Bitcoin | $77,700 |
+| Solana | $92 |`);
+    expect(neat).toEqual([
+      {
+        type: "table",
+        headers: ["Coin", "Price"],
+        rows: [
+          ["Bitcoin", "$77,700"],
+          ["Solana", "$92"],
+        ],
+      },
+    ]);
+
+    const smashed = parseAskMarkdown(
+      "| Coin | Price | 24h Change | Source | |-------------|-----------|------------|--------------------| | Bitcoin | ~$77,700 | +5–7% | CoinGecko, Yahoo | | Solana | ~$92 | +5% | CoinGecko, Yahoo | | Dogecoin| ~$0.088 | +9% | CoinGecko, Yahoo |"
+    );
+    expect(smashed[0]).toMatchObject({
+      type: "table",
+      headers: ["Coin", "Price", "24h Change", "Source"],
+    });
+    expect(smashed[0].type === "table" && smashed[0].rows).toHaveLength(3);
+  });
 });
 
 describe("isThinSnippet", () => {

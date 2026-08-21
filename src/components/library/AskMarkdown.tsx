@@ -1,6 +1,7 @@
 "use client";
 
 import { MarkdownLite } from "@/components/til/MarkdownLite";
+import { AskTable } from "@/components/library/AskTable";
 import { parseAskAnswer, parseAskMarkdown, type AskMarkdownBlock } from "@/lib/library/askAnswer";
 import { assignProvenance, plainAskText } from "@/lib/library/askDesk";
 import type { AskShelfItem } from "@/lib/library/askLibrary";
@@ -89,6 +90,9 @@ function BlockView({
         ))}
       </Tag>
     );
+  }
+  if (block.type === "table") {
+    return <AskTable headers={block.headers} rows={block.rows} />;
   }
   return <p className="ask-md-p">{inline(block.text)}</p>;
 }

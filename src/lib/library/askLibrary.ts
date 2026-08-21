@@ -79,7 +79,8 @@ Format in compact markdown. No preamble. No "great question." Start writing imme
 2. Then a short explanation: \`##\` headings when useful, bullets, bold key terms, inline \`code\` for technical names. 2–4 tight blocks, not an essay.
 3. Do not dump raw snippets.
 4. The UI already shows citations; you may name a source by title only when it is on the shelf.
-5. Cards marked YOUR MARGIN are this person's own words. Quote them when they answer the question.`;
+5. Cards marked YOUR MARGIN are this person's own words. Quote them when they answer the question.
+6. When comparing prices or stats, use a markdown table with one row per line — never smash the table onto one line.`;
 
 export function streamLibraryAsk(
   userId: string,
