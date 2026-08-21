@@ -3,7 +3,6 @@
 import { MarkdownLite } from "@/components/til/MarkdownLite";
 import {
   barWidth,
-  chartHintFromPrompt,
   chartsFromTable,
   tapeStamp,
   type AskCandle,
@@ -435,7 +434,12 @@ export function AskTable({
   rows: string[][];
   prompt?: string;
 }) {
-  const charts = chartsFromTable(headers, rows, chartHintFromPrompt(prompt ?? ""));
+  let charts: AskChart[] = [];
+  try {
+    charts = chartsFromTable(headers, rows, prompt);
+  } catch {
+    charts = [];
+  }
   const numeric = headers.map((_, col) => col > 0 && rows.some((row) => looksNumeric(row[col] ?? "")));
   return (
     <div className="ask-figure">
@@ -451,8 +455,8 @@ export function AskTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, index) => (
-              <tr key={`${index}-${row[0] ?? ""}`}>
+            {rows.map((row, rowNo) => (
+              <tr key={`${rowNo}-${row[0] ?? ""}`}>
                 {row.map((cell, cellIndex) => (
                   <td key={`${cellIndex}-${cell.slice(0, 16)}`} className={numeric[cellIndex] ? "is-num" : undefined}>
                     <Inline text={cell} />
@@ -463,8 +467,8 @@ export function AskTable({
           </tbody>
         </table>
       </div>
-      {charts.map((chart, index) => (
-        <AskChartCard key={`${chart.type}-${chart.title}-${index}`} chart={chart} />
+      {charts.map((chart, chartNo) => (
+        <AskChartCard key={`${chart.type}-${chart.title}-${chartNo}`} chart={chart} />
       ))}
     </div>
   );

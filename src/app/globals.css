@@ -5065,6 +5065,32 @@ input[type=range].wall-zoom-slider {
   background: var(--yel);
   border-color: var(--yel);
 }
+.ask-copy-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px 10px;
+  border-top: 2px dashed var(--ink);
+  background: var(--cream);
+}
+.ask-copy-btn {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  border: 2px solid var(--ink);
+  background: var(--yel);
+  color: #000;
+  padding: 6px 10px;
+  cursor: pointer;
+  box-shadow: var(--sh-sm);
+}
+.ask-copy-btn:hover {
+  background: var(--lime);
+}
+.ask-copy-btn.is-copied {
+  background: var(--pink);
+  color: #fff;
+}
 .ask-answer-body {
   padding: 20px 18px 22px 44px;
   border-top: var(--bd);

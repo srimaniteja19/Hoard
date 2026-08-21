@@ -149,6 +149,7 @@ export function AskAnswer({
   prompt?: string;
 }) {
   const { summary, body } = parseAskAnswer(text);
+  const [torn, setTorn] = useState(false);
   const [copied, setCopied] = useState(false);
   const [flying, setFlying] = useState(false);
   const liveShelf = streaming ? undefined : shelf;
@@ -160,9 +161,20 @@ export function AskAnswer({
     } catch {
       /* still tear */
     }
-    setCopied(true);
+    setTorn(true);
     setFlying(true);
     window.setTimeout(() => setFlying(false), 900);
+    window.setTimeout(() => setTorn(false), 1800);
+  }
+
+  async function copySheet() {
+    if (streaming || !text) return;
+    try {
+      await navigator.clipboard.writeText(text.trim());
+    } catch {
+      return;
+    }
+    setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   }
 
@@ -170,7 +182,7 @@ export function AskAnswer({
     <div className={streaming ? "ask-answer is-live" : "ask-answer"}>
       {summary ? (
         <div
-          className={copied ? "ask-lede is-torn" : "ask-lede"}
+          className={torn ? "ask-lede is-torn" : "ask-lede"}
           role={streaming ? undefined : "button"}
           tabIndex={streaming ? undefined : 0}
           onClick={tearOff}
@@ -186,8 +198,8 @@ export function AskAnswer({
           <div className="ask-lede-kicker">
             THE SHORT OF IT
             {streaming ? <span className="ask-live-pill">LIVE</span> : null}
-            {!streaming && copied ? <span className="ask-live-pill ask-copied-pill">TORN</span> : null}
-            {!streaming && !copied ? <span className="ask-lede-hint">TEAR OFF</span> : null}
+            {!streaming && torn ? <span className="ask-live-pill ask-copied-pill">TORN</span> : null}
+            {!streaming && !torn ? <span className="ask-lede-hint">TEAR OFF</span> : null}
           </div>
           <div className="ask-lede-text">
             <AskMarkdown content={summary} prompt={prompt} />
@@ -216,6 +228,18 @@ export function AskAnswer({
         <div className="ask-answer-body">
           <AskMarkdown content={text} lead shelf={liveShelf} activeCite={activeCite} onActiveCite={onActiveCite} prompt={prompt} />
           {streaming ? <span className="ask-caret" aria-hidden /> : null}
+        </div>
+      ) : null}
+      {!streaming && text ? (
+        <div className="ask-copy-bar">
+          <button
+            type="button"
+            className={copied ? "ask-copy-btn is-copied" : "ask-copy-btn"}
+            onClick={() => void copySheet()}
+            aria-label="Copy the reply"
+          >
+            {copied ? "COPIED" : "COPY"}
+          </button>
         </div>
       ) : null}
     </div>

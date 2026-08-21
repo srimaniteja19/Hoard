@@ -76,6 +76,8 @@ describe("chartsFromTable", () => {
     expect(chartsFromTable(headers, rows).map((chart) => chart.type)).toEqual(["line", "line"]);
     expect(chartsFromTable(headers, rows, "column").map((chart) => chart.type)).toEqual(["column", "column"]);
     expect(chartsFromTable(headers, rows, "line").map((chart) => chart.type)).toEqual(["line", "line"]);
+    expect(chartsFromTable(headers, rows, "compare in linear charts").map((chart) => chart.type)).toEqual(["line", "line"]);
+    expect(chartsFromTable(headers, rows, "compare in bar charts").map((chart) => chart.type)).toEqual(["column", "column"]);
   });
 });
 

@@ -130,15 +130,17 @@ function series(
   const hits = parsed.filter((item): item is { value: number; kind: AskChartKind } => item != null);
   if (hits.length < 2) return null;
   const kind = headerKind(headers[col], hits[0]) ?? hits[0].kind;
-  return {
-    kind,
-    bars: rows.map((row, index) => ({
+  const bars: AskChartBar[] = [];
+  for (let rowNo = 0; rowNo < rows.length; rowNo += 1) {
+    const row = rows[rowNo] ?? [];
+    bars.push({
       label: chartLabel(row[0] ?? ""),
-      value: parsed[index]?.value ?? 0,
+      value: parsed[rowNo]?.value ?? 0,
       display: stripAskMarks(row[col] ?? "") || "—",
-      color: PALETTE[index % PALETTE.length],
-    })),
-  };
+      color: PALETTE[rowNo % PALETTE.length],
+    });
+  }
+  return { kind, bars };
 }
 
 function ohlcFromTable(headers: string[], rows: string[][], hint: ChartHint): AskChart[] | null {
@@ -191,7 +193,7 @@ export function chartHintFromPrompt(text: string): ChartHint {
     rule.re.lastIndex = 0;
     let match: RegExpExecArray | null;
     while ((match = rule.re.exec(hay))) {
-      hits.push({ at: match.index, hint: rule.hint });
+      hits.push({ at: match.index ?? 0, hint: rule.hint });
     }
   }
   if (hits.length === 0) return null;
@@ -249,8 +251,15 @@ function seriesChart(
   return { type: "hbar", title, kind, log, fromZero, bars };
 }
 
-export function chartsFromTable(headers: string[], rows: string[][], hint: ChartHint = null): AskChart[] {
+function hintFromInput(input?: ChartHint | string | null): ChartHint {
+  if (input == null || input === "") return null;
+  if (input === "line" || input === "column" || input === "hbar" || input === "pie" || input === "ohlc") return input;
+  return chartHintFromPrompt(input);
+}
+
+export function chartsFromTable(headers: string[], rows: string[][], hintOrPrompt: ChartHint | string | null = null): AskChart[] {
   if (headers.length < 2 || rows.length < 2) return [];
+  const hint = hintFromInput(hintOrPrompt);
   const ohlc = ohlcFromTable(headers, rows, hint);
   if (ohlc) return ohlc;
 
