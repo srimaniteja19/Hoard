@@ -1,6 +1,7 @@
 import { convertToModelMessages, stepCountIs, streamText, tool, type InferUITools, type UIMessage } from "ai";
 import { z } from "zod";
 import { ASK_MODEL, gatewayProviderOptions, languageModel } from "@/lib/ai/models";
+import type { AskModelId } from "@/lib/ai/askModels";
 import { citationHref, fetchVector } from "@/lib/library/fetchVector";
 
 export function createLibraryAskTools(userId: string) {
@@ -40,15 +41,19 @@ Answer from the retrieved snippets only. If nothing relevant comes back, say you
 
 Write a short synthesis (a few sentences, or a tight bullet list). After the answer, cite the sources you actually used by title. Do not dump raw snippets.`;
 
-export async function streamLibraryAsk(userId: string, messages: AskUIMessage[]) {
+export async function streamLibraryAsk(
+  userId: string,
+  messages: AskUIMessage[],
+  model: AskModelId = ASK_MODEL
+) {
   const tools = createLibraryAskTools(userId);
   return streamText({
-    model: languageModel(ASK_MODEL),
+    model: languageModel(model),
     system: ASK_SYSTEM,
     messages: await convertToModelMessages(messages, { tools }),
     tools,
     stopWhen: stepCountIs(5),
     maxRetries: 0,
-    providerOptions: gatewayProviderOptions(ASK_MODEL, ["feature:library-ask"]),
+    providerOptions: gatewayProviderOptions(model, ["feature:library-ask"], []),
   });
 }

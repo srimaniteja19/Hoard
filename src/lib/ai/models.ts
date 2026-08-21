@@ -1,6 +1,7 @@
 import { gateway } from "ai";
 
-export const ASK_MODEL = "google/gemini-3.5-flash";
+export { ASK_MODEL, ASK_MODELS, resolveAskModel, type AskModelId } from "./askModels";
+
 export const TRIAGE_MODEL = "google/gemini-3.5-flash-lite";
 
 const GATEWAY_FALLBACKS = [
@@ -13,10 +14,15 @@ export function languageModel(model: string) {
   return gateway(model);
 }
 
-export function gatewayProviderOptions(model: string, tags: string[]) {
+export function gatewayProviderOptions(
+  model: string,
+  tags: string[],
+  fallbacks: readonly string[] = GATEWAY_FALLBACKS
+) {
+  const models = fallbacks.filter((id) => id !== model);
   return {
     gateway: {
-      models: GATEWAY_FALLBACKS.filter((id) => id !== model),
+      ...(models.length > 0 ? { models } : {}),
       tags,
     },
   };

@@ -3,7 +3,8 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, isToolUIPart } from "ai";
 import Link from "next/link";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
+import { ASK_MODEL, ASK_MODELS, type AskModelId } from "@/lib/ai/askModels";
 import type { AskUIMessage } from "@/lib/library/askLibrary";
 
 const STARTERS = [
@@ -55,8 +56,15 @@ function recordBookmarkUse(ownerId: string) {
 
 export function AskLibraryChat() {
   const [input, setInput] = useState("");
+  const [model, setModel] = useState<AskModelId>(ASK_MODEL);
+  const modelRef = useRef(model);
+  modelRef.current = model;
   const transport = useMemo(
-    () => new DefaultChatTransport({ api: "/api/library/ask" }),
+    () =>
+      new DefaultChatTransport({
+        api: "/api/library/ask",
+        body: () => ({ model: modelRef.current }),
+      }),
     []
   );
   const { messages, sendMessage, status, error, stop } = useChat<AskUIMessage>({
@@ -80,6 +88,21 @@ export function AskLibraryChat() {
 
   return (
     <div className="ask-shell">
+      <div className="ask-toolbar">
+        <label htmlFor="ask-model">MODEL</label>
+        <select
+          id="ask-model"
+          value={model}
+          disabled={busy}
+          onChange={(event) => setModel(event.target.value as AskModelId)}
+        >
+          {ASK_MODELS.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.hint ? `${option.label} · ${option.hint}` : option.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="ask-log" aria-live="polite">
         {messages.length === 0 ? (
           <div className="ask-empty">

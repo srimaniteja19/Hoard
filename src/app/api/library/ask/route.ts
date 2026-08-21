@@ -1,6 +1,6 @@
 import { requireUserId, AuthError } from "@/lib/session";
 import { streamLibraryAsk, type AskUIMessage } from "@/lib/library/askLibrary";
-import { gatewayErrorMessage } from "@/lib/ai/models";
+import { gatewayErrorMessage, resolveAskModel } from "@/lib/ai/models";
 
 export const maxDuration = 60;
 
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       return new Response("messages required", { status: 400 });
     }
 
-    const result = await streamLibraryAsk(userId, messages);
+    const result = await streamLibraryAsk(userId, messages, resolveAskModel(body.model));
     return result.toUIMessageStreamResponse({
       onError: gatewayErrorMessage,
     });

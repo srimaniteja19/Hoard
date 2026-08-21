@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { gatewayErrorMessage } from "./models";
+import { ASK_MODEL, ASK_MODELS, resolveAskModel } from "./askModels";
+import { gatewayErrorMessage, gatewayProviderOptions } from "./models";
 
 describe("gatewayErrorMessage", () => {
   it("rewrites free-tier rate limits into an actionable line", () => {
@@ -14,5 +15,35 @@ describe("gatewayErrorMessage", () => {
 
   it("passes through other errors", () => {
     expect(gatewayErrorMessage(new Error("model not found"))).toBe("model not found");
+  });
+});
+
+describe("resolveAskModel", () => {
+  it("defaults to the free Laguna model", () => {
+    expect(ASK_MODEL).toBe("poolside/laguna-s-2.1-free");
+    expect(resolveAskModel(undefined)).toBe(ASK_MODEL);
+    expect(resolveAskModel("not-a-model")).toBe(ASK_MODEL);
+  });
+
+  it("accepts only the Ask allowlist", () => {
+    for (const model of ASK_MODELS) {
+      expect(resolveAskModel(model.id)).toBe(model.id);
+    }
+    expect(resolveAskModel("openai/gpt-5.4-pro")).toBe(ASK_MODEL);
+  });
+});
+
+describe("gatewayProviderOptions", () => {
+  it("omits fallbacks when none are provided", () => {
+    expect(gatewayProviderOptions("poolside/laguna-s-2.1-free", ["feature:library-ask"], [])).toEqual({
+      gateway: { tags: ["feature:library-ask"] },
+    });
+  });
+
+  it("keeps Gemini fallbacks for triage", () => {
+    expect(gatewayProviderOptions("google/gemini-3.5-flash-lite", ["feature:capture-triage"]).gateway).toEqual({
+      models: ["google/gemini-3.5-flash", "google/gemini-3-flash"],
+      tags: ["feature:capture-triage"],
+    });
   });
 });

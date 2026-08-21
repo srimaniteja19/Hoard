@@ -4252,6 +4252,39 @@ input[type=range].wall-zoom-slider {
   background: var(--paper);
   box-shadow: var(--sh);
 }
+.ask-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: var(--bd);
+  background: var(--cream);
+  flex-shrink: 0;
+}
+.ask-toolbar label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  opacity: 0.55;
+}
+.ask-toolbar select {
+  flex: 1;
+  min-width: 0;
+  max-width: 28rem;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--paper);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.ask-toolbar select:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 .ask-log {
   flex: 1;
   min-height: 0;
