@@ -6,6 +6,7 @@ function hit(partial: Partial<VectorHit> & Pick<VectorHit, "ownerType" | "ownerI
     url: "",
     kind: partial.ownerType === "til" ? "FACT" : "DOC",
     snippet: "snippet",
+    note: "",
     rank: 0.9,
     ...partial,
   };

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { parseAskAnswer } from "./askAnswer";
 import type { AskUIMessage } from "./askLibrary";
+import { shelfFromAskMessage } from "./askDesk";
 
 export type AskSaveCitation = {
   ownerType: "bookmark" | "til";
@@ -43,24 +44,13 @@ export function textFromAskMessage(message: AskUIMessage): string {
 }
 
 export function citationsFromAskMessage(message: AskUIMessage): AskSaveCitation[] {
-  const seen = new Set<string>();
-  const out: AskSaveCitation[] = [];
-
-  for (const part of message.parts) {
-    if (part.type !== "data-shelf" || !Array.isArray(part.data)) continue;
-    for (const hit of part.data) {
-      const ownerType = hit.ownerType === "til" ? "til" : hit.ownerType === "bookmark" ? "bookmark" : null;
-      const ownerId = typeof hit.ownerId === "string" ? hit.ownerId : "";
-      const title = typeof hit.title === "string" ? hit.title : "";
-      const href = typeof hit.href === "string" ? hit.href : "";
-      const kind = typeof hit.kind === "string" ? hit.kind : "";
-      const key = `${ownerType}:${ownerId}`;
-      if (!ownerType || !ownerId || !title || !href || seen.has(key)) continue;
-      seen.add(key);
-      out.push({ ownerType, ownerId, title, href, kind });
-    }
-  }
-  return out;
+  return shelfFromAskMessage(message).map((hit) => ({
+    ownerType: hit.ownerType,
+    ownerId: hit.ownerId,
+    title: hit.title,
+    href: hit.href,
+    kind: hit.kind,
+  }));
 }
 
 export function questionForAssistantTurn(messages: AskUIMessage[], assistantIndex: number): string {

@@ -6,110 +6,14 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ASK_MODEL, ASK_MODELS, type AskModelId } from "@/lib/ai/askModels";
 import type { AskUIMessage } from "@/lib/library/askLibrary";
-import {
-  buildAskSave,
-  citationsFromAskMessage,
-  questionForAssistantTurn,
-  textFromAskMessage,
-} from "@/lib/library/askSave";
-import { AskAnswer } from "@/components/library/AskMarkdown";
-import { AskShelf } from "@/components/library/AskShelf";
+import { textFromAskMessage } from "@/lib/library/askSave";
+import { AskDeskReply } from "@/components/library/AskDeskReply";
 
 const STARTERS = [
   { n: "01", tag: "SYSTEMS", q: "why didn't SSDs inside the GPU work?" },
   { n: "02", tag: "NET", q: "what did I save about rate limiting?" },
   { n: "03", tag: "DATA", q: "what have I learned about postgres?" },
 ];
-
-const PULLING = ["PULLING THE CARD…", "READING THE MARGIN…", "CROSS-REFERENCING…", "INKING THE ANSWER…"];
-
-function recordBookmarkUse(ownerId: string) {
-  const id = Number(ownerId);
-  if (!Number.isFinite(id)) return;
-  fetch(`/api/bookmarks/${id}/use`, { method: "POST", credentials: "include" }).catch(() => {});
-}
-
-function Searching() {
-  return (
-    <div className="ask-searching">
-      <div className="ask-searching-deck" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
-      <div>
-        <div className="ask-searching-kicker">THE CATALOG</div>
-        <div className="ask-searching-msg">
-          <div className="ask-searching-reel">
-            {PULLING.map((line) => (
-              <span key={line}>{line}</span>
-            ))}
-            <span>{PULLING[0]}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function KeepAnswer({
-  messages,
-  index,
-  model,
-  disabled,
-}: {
-  messages: AskUIMessage[];
-  index: number;
-  model: AskModelId;
-  disabled: boolean;
-}) {
-  const [state, setState] = useState<"idle" | "saving" | "kept" | "error">("idle");
-
-  async function keep() {
-    if ((state !== "idle" && state !== "error") || disabled) return;
-    const message = messages[index];
-    if (!message || message.role !== "assistant") return;
-    setState("saving");
-    try {
-      const body = buildAskSave({
-        question: questionForAssistantTurn(messages, index),
-        answer: textFromAskMessage(message),
-        citations: citationsFromAskMessage(message),
-        model,
-      });
-      const res = await fetch("/api/library/ask/saves", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error("keep failed");
-      setState("kept");
-    } catch {
-      setState("error");
-    }
-  }
-
-  return (
-    <div className="ask-keep">
-      <button
-        type="button"
-        className={state === "kept" ? "ask-keep-btn is-kept" : "ask-keep-btn"}
-        onClick={keep}
-        disabled={disabled || state === "saving" || state === "kept"}
-      >
-        {state === "kept" ? "KEPT" : state === "saving" ? "INKING…" : "KEEP"}
-      </button>
-      {state === "error" ? (
-        <span className="ask-keep-err">Could not save.</span>
-      ) : (
-        <Link href="/ask/saved" prefetch={false} className="ask-keep-hint">
-          File in the margin →
-        </Link>
-      )}
-    </div>
-  );
-}
 
 function resizeComposer(el: HTMLTextAreaElement | null) {
   if (!el) return;
@@ -254,7 +158,6 @@ export function AskLibraryChat() {
           </div>
         ) : (
           messages.map((message, index) => {
-            const citations = message.role === "assistant" ? citationsFromAskMessage(message) : [];
             const text = textFromAskMessage(message);
             const live = busy && index === messages.length - 1 && message.role === "assistant";
             if (message.role === "user") userN += 1;
@@ -270,19 +173,14 @@ export function AskLibraryChat() {
                 {message.role === "user" ? (
                   <div className="ask-user-bubble">{text}</div>
                 ) : (
-                  <div className="ask-desk-col">
-                    {live && !text ? <Searching /> : null}
-                    {text ? <AskAnswer text={text} streaming={live} /> : null}
-                    <AskShelf
-                      citations={citations}
-                      onOpen={(cite) => {
-                        if (cite.ownerType !== "til") recordBookmarkUse(cite.ownerId);
-                      }}
-                    />
-                    {text && !live ? (
-                      <KeepAnswer messages={messages} index={index} model={model} disabled={busy} />
-                    ) : null}
-                  </div>
+                  <AskDeskReply
+                    messages={messages}
+                    index={index}
+                    model={model}
+                    busy={busy}
+                    live={live}
+                    onAsk={submitText}
+                  />
                 )}
               </article>
             );

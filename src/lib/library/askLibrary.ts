@@ -17,6 +17,7 @@ export type AskShelfItem = {
   title: string;
   kind: string;
   snippet: string;
+  note: string;
   url: string;
   href: string;
   thin: boolean;
@@ -44,6 +45,7 @@ export function toShelfItem(hit: VectorHit): AskShelfItem {
     title: hit.title,
     kind: hit.kind,
     snippet: hit.snippet,
+    note: (hit.note ?? "").trim(),
     url: hit.url,
     href: citationHref(hit),
     thin: isThinSnippet(hit.title, hit.snippet),
@@ -54,7 +56,7 @@ export function formatShelf(hits: AskShelfItem[]): string {
   if (hits.length === 0) return "(no matching cards on the shelf)";
   return hits
     .map((hit, index) => {
-      const flag = hit.thin ? "THIN" : hit.kind || "CARD";
+      const flag = hit.thin ? "THIN" : hit.note ? "YOUR MARGIN" : hit.kind || "CARD";
       const body = hit.snippet || hit.title;
       return `${index + 1}. [${flag}] ${hit.title}\n${body}`;
     })
@@ -75,7 +77,8 @@ Format in compact markdown. No preamble. No "great question." Start writing imme
 1. Start with \`## Summary\` and 1–2 sentences that actually answer the question.
 2. Then a short explanation: \`##\` headings when useful, bullets, bold key terms, inline \`code\` for technical names. 2–4 tight blocks, not an essay.
 3. Do not dump raw snippets.
-4. The UI already shows citations; you may name a source by title only when it is on the shelf.`;
+4. The UI already shows citations; you may name a source by title only when it is on the shelf.
+5. Cards marked YOUR MARGIN are this person's own words. Quote them when they answer the question.`;
 
 export function streamLibraryAsk(userId: string, messages: AskUIMessage[], model: AskModelId = ASK_MODEL) {
   const query = lastUserQuery(messages);

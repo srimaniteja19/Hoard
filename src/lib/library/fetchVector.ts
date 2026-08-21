@@ -13,6 +13,7 @@ export interface VectorHit {
   url: string;
   kind: string;
   snippet: string;
+  note: string;
   rank: number;
   shortHash?: string;
 }
@@ -45,6 +46,7 @@ function asHit(row: Record<string, unknown>): VectorHit {
     url: String(row.url ?? ""),
     kind: String(row.kind ?? ""),
     snippet: clipSnippet(typeof row.snippet === "string" ? row.snippet : ""),
+    note: clipSnippet(typeof row.note === "string" ? row.note : ""),
     rank: Number(row.rank ?? 0),
     ...(shortHash ? { shortHash } : {}),
   };
@@ -71,6 +73,7 @@ async function defaultSearchNeighbors(
           t.code,
           ''
         ) AS snippet,
+        COALESCE(NULLIF(b.note, ''), '') AS note,
         t.short_hash AS "shortHash",
         (1 - (e.embedding <=> ${vec}::vector)) AS rank
       FROM embeddings e

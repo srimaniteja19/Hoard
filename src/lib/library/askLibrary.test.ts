@@ -34,6 +34,7 @@ describe("formatShelf", () => {
           title: "Why SSDs",
           kind: "LINK",
           snippet: "Why SSDs",
+          note: "",
           url: "https://youtu.be/x",
           href: "/til?hash=abcd",
           thin: true,

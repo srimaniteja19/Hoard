@@ -3,7 +3,7 @@ import type { AskSaveCitation } from "@/lib/library/askSave";
 
 const KIND_TOKENS = new Set(["ART", "VID", "PLY", "GIT", "APP", "PPR", "DOC"]);
 
-function kindToken(cite: AskSaveCitation): string {
+export function kindToken(cite: { ownerType: string; kind: string }): string {
   if (cite.ownerType === "til") return "TIL";
   const kind = cite.kind.trim().toUpperCase();
   if (KIND_TOKENS.has(kind)) return kind;
@@ -13,9 +13,13 @@ function kindToken(cite: AskSaveCitation): string {
 
 export function AskShelf({
   citations,
+  activeCite,
+  onActiveCite,
   onOpen,
 }: {
   citations: AskSaveCitation[];
+  activeCite?: number | null;
+  onActiveCite?: (index: number | null) => void;
   onOpen?: (cite: AskSaveCitation) => void;
 }) {
   if (citations.length === 0) return null;
@@ -37,6 +41,9 @@ export function AskShelf({
                 prefetch={false}
                 target={isTil ? undefined : "_blank"}
                 data-kind={kind}
+                className={activeCite === index ? "is-hot" : undefined}
+                onMouseEnter={() => onActiveCite?.(index)}
+                onMouseLeave={() => onActiveCite?.(null)}
                 onClick={() => onOpen?.(cite)}
               >
                 <span className="ask-cite-num">{String(index + 1).padStart(2, "0")}</span>
