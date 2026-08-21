@@ -1,23 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
 import { ThemePicker } from "@/components/ThemePicker";
 import { UserMenu } from "@/components/UserMenu";
 import { pageLabelFromPath } from "@/lib/chrome";
 import { AppToolbar } from "@/components/chrome/AppToolbar";
 import { useChromeSlot } from "@/components/chrome/slots";
+import { useHydratedPathname } from "@/hooks/useHydratedPathname";
 
 export function AppHeader() {
-  const pathname = usePathname() || "/";
-  const label = pageLabelFromPath(pathname);
+  const pathname = useHydratedPathname();
+  const label = pathname ? pageLabelFromPath(pathname) : "\u00A0";
   const leading = useChromeSlot("leading");
   const trailing = useChromeSlot("trailing");
   const toolbar = useChromeSlot("toolbar");
 
   const isHome = pathname === "/";
-  const BadgeTag = isHome ? "p" : "h1";
+  const BadgeTag = !pathname ? "span" : isHome ? "p" : "h1";
 
   return (
     <header className="app-header">
@@ -30,7 +30,9 @@ export function AppHeader() {
           <span className="app-header-slash" aria-hidden="true">
             /
           </span>
-          <BadgeTag className="page-badge">{label}</BadgeTag>
+          <BadgeTag className="page-badge" suppressHydrationWarning>
+            {label}
+          </BadgeTag>
         </div>
         <AppNav />
         <div className="app-header-actions">

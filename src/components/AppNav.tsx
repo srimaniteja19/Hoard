@@ -1,23 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useHydratedPathname } from "@/hooks/useHydratedPathname";
 
 const LINKS = [
   { href: "/", label: "Home", match: (path: string) => path === "/" },
   { href: "/library", label: "Library", match: (path: string) => path.startsWith("/library") || path.startsWith("/session") },
+  { href: "/ask", label: "Ask", match: (path: string) => path === "/ask" || path.startsWith("/ask/") },
   { href: "/todos", label: "Todos", match: (path: string) => path.startsWith("/todos") },
   { href: "/til", label: "TIL", match: (path: string) => path.startsWith("/til") },
   { href: "/stats", label: "Stats", match: (path: string) => path.startsWith("/stats") },
 ] as const;
 
 export function AppNav({ onNavigate }: { onNavigate?: () => void }) {
-  const pathname = usePathname() || "/";
+  const pathname = useHydratedPathname();
 
   return (
     <nav className="app-nav" aria-label="Primary">
       {LINKS.map((link) => {
-        const current = link.match(pathname);
+        const current = pathname ? link.match(pathname) : false;
         return (
           <Link
             key={link.href}

@@ -6,6 +6,7 @@ describe("pageLabelFromPath", () => {
     expect(pageLabelFromPath("/")).toBe("HOME");
     expect(pageLabelFromPath("/library")).toBe("LIBRARY");
     expect(pageLabelFromPath("/library/ask")).toBe("ASK");
+    expect(pageLabelFromPath("/ask")).toBe("ASK");
     expect(pageLabelFromPath("/todos")).toBe("TODOS");
     expect(pageLabelFromPath("/todos/history")).toBe("HISTORY");
     expect(pageLabelFromPath("/til")).toBe("TIL");

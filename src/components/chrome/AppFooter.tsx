@@ -1,12 +1,12 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { pageLabelFromPath } from "@/lib/chrome";
 import { useChromeSlot } from "@/components/chrome/slots";
+import { useHydratedPathname } from "@/hooks/useHydratedPathname";
 
 export function AppFooter() {
-  const pathname = usePathname() || "/";
-  const label = pageLabelFromPath(pathname);
+  const pathname = useHydratedPathname();
+  const label = pathname ? pageLabelFromPath(pathname) : "\u00A0";
   const custom = useChromeSlot("footer");
 
   if (custom) return <>{custom}</>;
@@ -15,7 +15,7 @@ export function AppFooter() {
     <div className="status-line-bar app-footer" role="status">
       <span>HOARD</span>
       <span className="sep">·</span>
-      <span>{label}</span>
+          <span suppressHydrationWarning>{label}</span>
     </div>
   );
 }
