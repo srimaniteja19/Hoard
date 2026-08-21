@@ -19,6 +19,7 @@ import {
 import { sql } from "drizzle-orm";
 import { KindType } from "@/types";
 import type { AskSaveCitation } from "@/lib/library/askSave";
+import type { AskStoredMessage } from "@/lib/library/askThread";
 
 const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
 
@@ -515,5 +516,22 @@ export const askSaves = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [index("ask_saves_user_created_idx").on(table.userId, table.createdAt.desc())]
+);
+
+export const askThreads = pgTable(
+  "ask_threads",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default(""),
+    model: text("model").notNull().default(""),
+    web: boolean("web").notNull().default(false),
+    messages: jsonb("messages").$type<AskStoredMessage[]>().notNull().default(sql`'[]'::jsonb`),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [index("ask_threads_user_updated_idx").on(table.userId, table.updatedAt.desc())]
 );
 

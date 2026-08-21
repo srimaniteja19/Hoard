@@ -98,17 +98,41 @@ function AskComposer({
   );
 }
 
-export function AskLibraryChat() {
+export function AskLibraryChat({
+  chatId,
+  initialMessages = [],
+  initialModel,
+  initialWeb = false,
+  threadTitle,
+  docketOpen = false,
+  onToggleDocket,
+  onFresh,
+  onPersist,
+}: {
+  chatId?: string;
+  initialMessages?: AskUIMessage[];
+  initialModel?: AskModelId;
+  initialWeb?: boolean;
+  threadTitle?: string;
+  docketOpen?: boolean;
+  onToggleDocket?: () => void;
+  onFresh?: () => void;
+  onPersist?: (input: { messages: AskUIMessage[]; model: AskModelId; web: boolean }) => void;
+}) {
   const [input, setInput] = useState("");
-  const [model, setModel] = useState<AskModelId>(ASK_MODEL);
-  const [web, setWeb] = useState(false);
+  const [model, setModel] = useState<AskModelId>(initialModel && ASK_MODELS.some((option) => option.id === initialModel) ? initialModel : ASK_MODEL);
+  const [web, setWeb] = useState(initialWeb);
   const modelRef = useRef(model);
   modelRef.current = model;
   const webRef = useRef(web);
   webRef.current = web;
+  const persistRef = useRef(onPersist);
+  persistRef.current = onPersist;
   const logRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const stickRef = useRef(true);
+  const persistTimer = useRef<number>(0);
+  const skipPersist = useRef(true);
   const mounted = useSyncExternalStore(subscribeNever, () => true, () => false);
   const transport = useMemo(
     () =>
@@ -119,6 +143,8 @@ export function AskLibraryChat() {
     []
   );
   const { messages, sendMessage, status, error, stop } = useChat<AskUIMessage>({
+    id: chatId,
+    messages: initialMessages,
     transport,
     onError: () => {},
   });
@@ -132,6 +158,20 @@ export function AskLibraryChat() {
       behavior: status === "streaming" ? "auto" : "smooth",
     });
   }, [messages, status]);
+
+  useEffect(() => {
+    if (skipPersist.current) {
+      skipPersist.current = false;
+      return;
+    }
+    if (!persistRef.current || messages.length === 0) return;
+    window.clearTimeout(persistTimer.current);
+    const wait = status === "streaming" || status === "submitted" ? 900 : 80;
+    persistTimer.current = window.setTimeout(() => {
+      persistRef.current?.({ messages, model: modelRef.current, web: webRef.current });
+    }, wait);
+    return () => window.clearTimeout(persistTimer.current);
+  }, [messages, status, model, web]);
 
   function submitText(text: string) {
     const trimmed = text.trim();
@@ -161,24 +201,40 @@ export function AskLibraryChat() {
     <div className={messages.length === 0 ? "ask-shell is-empty" : "ask-shell"}>
       <div className="ask-masthead">
         <div className="ask-masthead-brand">
+          <button
+            type="button"
+            className={docketOpen ? "ask-docket-toggle is-on" : "ask-docket-toggle"}
+            aria-expanded={docketOpen}
+            aria-controls="ask-docket"
+            onClick={onToggleDocket}
+          >
+            DOCKET
+          </button>
           <span className="ask-lights" aria-hidden="true">
             <span />
             <span />
             <span />
           </span>
-          <span className="ask-masthead-name">THE DESK</span>
+          <span className="ask-masthead-name">{threadTitle ? threadTitle : "THE DESK"}</span>
           {busy ? <span className="ask-on-air">ON AIR</span> : <span className="ask-masthead-hours">OPEN</span>}
         </div>
-        <Link
-          href="/ask/saved"
-          prefetch={false}
-          className="ask-toolbar-saved"
-          onClick={() => {
-            if (busy) stop();
-          }}
-        >
-          KEPT
-        </Link>
+        <div className="ask-masthead-tools">
+          {onFresh ? (
+            <button type="button" className="ask-toolbar-fresh" onClick={onFresh}>
+              FRESH SHEET
+            </button>
+          ) : null}
+          <Link
+            href="/ask/saved"
+            prefetch={false}
+            className="ask-toolbar-saved"
+            onClick={() => {
+              if (busy) stop();
+            }}
+          >
+            KEPT
+          </Link>
+        </div>
       </div>
 
       <div className="ask-models" role="radiogroup" aria-label="Model">
@@ -217,7 +273,7 @@ export function AskLibraryChat() {
             </h2>
             <p className="ask-hero-dek">
               Pull the card you saved, then get a real answer — even when the note is just a title or a
-              video.
+              video. Every turn files itself in the docket.
             </p>
             <div className="ask-starters">
               {STARTERS.map((starter) => (
