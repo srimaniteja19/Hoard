@@ -11,6 +11,7 @@ import {
 } from "@/lib/til/entryParser";
 import { Edit2, Trash2, X, Check, ExternalLink } from "lucide-react";
 import { tilTypeColorVar } from "@/lib/til/typeColorTokens";
+import { TilMediaPreview } from "@/components/til/TilMediaPreview";
 
 export interface TilItem {
   id: string;
@@ -243,43 +244,48 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
       case "LINK": {
         const preview = item.linkPreview;
         const targetUrl = item.linkUrl || preview?.url;
-        const title = preview?.title || targetUrl || "Reference Link";
-        const host = preview?.host || (targetUrl ? new URL(targetUrl).hostname : "web");
-        const thumbUrl = preview?.thumbnailKey;
 
         return (
-          <>
-            <div className="lk">
-              <span
-                className="lk__thumb"
-                style={thumbUrl ? { backgroundImage: `url(${thumbUrl})` } : {}}
-              />
-              <div className="lk__t">
-                <b>{title}</b>
-                <span>
-                  {host.toUpperCase()} {preview?.durationSec ? `· ${Math.ceil(preview.durationSec / 60)} MIN` : ""}
-                </span>
-              </div>
+          <div style={{ display: "flex", gap: "18px", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+              {item.body && <div className="lk__why" style={{ margin: "0 0 12px", border: "none", padding: 0 }}>{item.body}</div>}
+              {targetUrl && (
+                <div className="src" style={{ marginTop: "8px", paddingTop: "8px" }}>
+                  SOURCE ▸{" "}
+                  <a href={targetUrl} target="_blank" rel="noopener noreferrer">
+                    {preview?.host || targetUrl}
+                  </a>
+                </div>
+              )}
             </div>
-            {item.body && <div className="lk__why">{item.body}</div>}
-          </>
+
+            {targetUrl && (
+              <TilMediaPreview url={targetUrl} preview={item.linkPreview} />
+            )}
+          </div>
         );
       }
 
       case "FACT":
       default: {
         return (
-          <>
-            <p className="claim">{item.body}</p>
+          <div style={{ display: "flex", gap: "18px", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+              <p className="claim">{item.body}</p>
+              {item.linkUrl && (
+                <div className="src">
+                  FROM ▸{" "}
+                  <a href={item.linkUrl} target="_blank" rel="noopener noreferrer">
+                    {item.linkPreview?.host || item.linkUrl}
+                  </a>
+                </div>
+              )}
+            </div>
+
             {item.linkUrl && (
-              <div className="src">
-                FROM ▸{" "}
-                <a href={item.linkUrl} target="_blank" rel="noopener noreferrer">
-                  {item.linkPreview?.host || item.linkUrl}
-                </a>
-              </div>
+              <TilMediaPreview url={item.linkUrl} preview={item.linkPreview} />
             )}
-          </>
+          </div>
         );
       }
     }
