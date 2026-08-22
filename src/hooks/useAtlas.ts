@@ -93,6 +93,7 @@ function applyLiveEvent(id: string, event: AtlasStreamEvent) {
   }
   if (event.type === "done") {
     upsertLive(id, { filing: false, error: null });
+    liveById.delete(id);
     return;
   }
   if (event.type === "error") {
@@ -101,6 +102,7 @@ function applyLiveEvent(id: string, event: AtlasStreamEvent) {
 }
 
 function overlayLive(atlas: AtlasRecord, live: LiveFiling): AtlasRecord {
+  if (!live.filing) return atlas;
   return {
     ...atlas,
     title: live.title ?? atlas.title,
@@ -109,8 +111,8 @@ function overlayLive(atlas: AtlasRecord, live: LiveFiling): AtlasRecord {
     syllabus: {
       ...atlas.syllabus,
       ...(live.thin !== undefined ? { thin: live.thin } : {}),
-      weeks: live.filing || live.weeks.length > 0 ? live.weeks : atlas.syllabus.weeks,
-      stations: live.filing || live.stations.length > 0 ? live.stations : atlas.syllabus.stations,
+      weeks: live.weeks,
+      stations: live.stations,
     },
   };
 }

@@ -17,21 +17,36 @@ describe("extractComplete", () => {
     expect(out.stations.map((s) => s.id)).toEqual(["s1"]);
   });
 
-  it("ignores weeks missing id or label", () => {
+  it("ignores weeks until id, label, and minutes are complete", () => {
     const out = extractComplete({
-      weeks: [{ id: "w1" }, { label: "Solo" }, { id: "w2", label: "OK" }],
+      weeks: [
+        { id: "w1" },
+        { label: "Solo" },
+        { id: "w2", label: "Still streaming" },
+        { id: "w3", label: "Complete", estimatedMinutes: 0 },
+      ],
       stations: [],
     });
-    expect(out.weeks.map((w) => w.id)).toEqual(["w2"]);
+    expect(out.weeks.map((w) => w.id)).toEqual(["w3"]);
   });
 
-  it("defaults required to true when missing", () => {
+  it("ignores stations until required is a boolean", () => {
     const out = extractComplete({
       stations: [
         { id: "s1", weekId: "w1", title: "Bytes", why: "Need size", estimatedMinutes: 20, energy: "DEEP", kind: "read" },
+        { id: "s2", weekId: "w1", title: "Bits", why: "Need shape", estimatedMinutes: 10, energy: "SHALLOW", kind: "recall", required: "false" },
       ],
     });
-    expect(out.stations[0]?.required).toBe(true);
+    expect(out.stations).toEqual([]);
+  });
+
+  it("keeps optional stations optional", () => {
+    const out = extractComplete({
+      stations: [
+        { id: "s1", weekId: "w1", title: "Bytes", why: "Need size", estimatedMinutes: 20, energy: "DEEP", kind: "read", required: false },
+      ],
+    });
+    expect(out.stations[0]?.required).toBe(false);
   });
 
   it("returns empty collections for non-objects", () => {

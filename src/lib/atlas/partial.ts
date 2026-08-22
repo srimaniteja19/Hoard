@@ -16,10 +16,11 @@ function completeWeek(value: unknown): AtlasWeekDraft | null {
   const id = asString(value.id);
   const label = asString(value.label);
   if (!id || !label) return null;
+  if (typeof value.estimatedMinutes !== "number") return null;
   return {
     id,
     label,
-    estimatedMinutes: typeof value.estimatedMinutes === "number" ? value.estimatedMinutes : 0,
+    estimatedMinutes: value.estimatedMinutes,
   };
 }
 
@@ -33,6 +34,7 @@ function completeStation(value: unknown): AtlasStationDraft | null {
   const kind = asString(value.kind);
   if (!id || !weekId || !title || !why) return null;
   if (typeof value.estimatedMinutes !== "number") return null;
+  if (typeof value.required !== "boolean") return null;
   if (!energy || !ENERGIES.has(energy as AtlasEnergy)) return null;
   if (!kind || !KINDS.has(kind as AtlasKind)) return null;
   return {
@@ -43,7 +45,7 @@ function completeStation(value: unknown): AtlasStationDraft | null {
     estimatedMinutes: value.estimatedMinutes,
     energy: energy as AtlasEnergy,
     kind: kind as AtlasKind,
-    required: typeof value.required === "boolean" ? value.required : true,
+    required: value.required,
   };
 }
 

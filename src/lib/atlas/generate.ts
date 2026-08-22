@@ -163,7 +163,13 @@ export async function writeAtlasStream(opts: {
   };
   const emittedWeeks = new Set((opts.existing?.weeks ?? []).map((week) => week.id));
   const emittedStations = new Set((opts.existing?.stations ?? []).map((station) => station.id));
-  let emittedCover: { title: string; brief: string } | null = null;
+  let emittedCover = false;
+
+  const publishCover = () => {
+    if (emittedCover || extracted.title === undefined || extracted.brief === undefined) return;
+    emittedCover = true;
+    opts.write({ type: "cover", title: extracted.title, brief: extracted.brief });
+  };
 
   const publish = (next: ReturnType<typeof extractComplete>) => {
     if (next.title !== undefined) extracted.title = next.title;
@@ -175,13 +181,7 @@ export async function writeAtlasStream(opts: {
       if (!extracted.stations.some((s) => s.id === station.id)) extracted.stations.push(station);
     }
 
-    if (extracted.title !== undefined && extracted.brief !== undefined) {
-      const cover = { title: extracted.title, brief: extracted.brief };
-      if (!emittedCover || emittedCover.title !== cover.title || emittedCover.brief !== cover.brief) {
-        emittedCover = cover;
-        opts.write({ type: "cover", title: cover.title, brief: cover.brief });
-      }
-    }
+    if (extracted.weeks.length > 0) publishCover();
     for (const week of extracted.weeks) {
       if (emittedWeeks.has(week.id)) continue;
       emittedWeeks.add(week.id);
@@ -210,10 +210,12 @@ export async function writeAtlasStream(opts: {
       publish(extractComplete(partial));
     }
   } catch (err) {
+    publishCover();
     opts.write({ type: "error", message: gatewayErrorMessage(err) });
     return assembleSyllabus(opts.parsed, extracted, opts.existing);
   }
 
+  publishCover();
   const syllabus = assembleSyllabus(opts.parsed, extracted, opts.existing);
   opts.write({ type: "thin", thin: syllabus.thin });
   opts.write({ type: "done" });
@@ -302,7 +304,6 @@ export async function persistAtlasStream(opts: {
       if (event.type === "cover") {
         title = event.title;
         brief = event.brief;
-        persistPartial();
       } else if (event.type === "week") {
         if (!weeks.some((week) => week.id === event.week.id)) weeks = [...weeks, event.week];
         persistPartial();

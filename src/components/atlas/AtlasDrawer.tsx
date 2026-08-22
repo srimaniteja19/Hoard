@@ -61,6 +61,11 @@ export function AtlasDrawer({ id }: { id: string }) {
     ? weekLoad(atlas.syllabus, openWeekId, budget)
     : { openRequired: 0, openMinutes: 0, overflowMinutes: 0 };
   const slips = atlas.syllabus.stations.filter((s) => s.weekId === openWeekId);
+  const showRetryRest =
+    !filing &&
+    atlas.status === "draft" &&
+    atlas.syllabus.stations.length > 0 &&
+    (streamError !== null || atlas.syllabus.weeks.length < atlas.weeksPlanned || atlas.syllabus.thin);
 
   const handleThin = async () => {
     if (atlas.status === "draft") {
@@ -77,9 +82,9 @@ export function AtlasDrawer({ id }: { id: string }) {
         ← Desk
       </Link>
       {filing ? <div className="atlas-filing">FILING {atlas.serial}</div> : null}
-      {streamError && atlas.syllabus.stations.length > 0 ? (
+      {showRetryRest ? (
         <div className="atlas-retry-bar">
-          <span>{streamError}</span>
+          <span>{streamError ?? "Filing stopped short."}</span>
           <button type="button" onClick={() => void retryRest()}>
             Retry rest
           </button>
