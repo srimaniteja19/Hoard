@@ -16,7 +16,6 @@ import { Edit2, Trash2, X, Check, ExternalLink, StickyNote } from "lucide-react"
 import { tilTypeColorVar } from "@/lib/til/typeColorTokens";
 import { TilMediaPreview } from "@/components/til/TilMediaPreview";
 import { GlimpseSummaryLink } from "@/components/GlimpseSummaryLink";
-import { TilNoteModal } from "@/components/til/TilNoteModal";
 
 export interface TilItem {
   id: string;
@@ -60,7 +59,8 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
   onSelectType,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [isNoteOpen, setIsNoteOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(parseNote(item.body) || "");
   const [editBody, setEditBody] = useState(item.body || "");
   const [editCode, setEditCode] = useState(item.code || "");
   const [editCodeLang, setEditCodeLang] = useState(item.codeLang || "typescript");
@@ -361,35 +361,145 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
           <>
             {renderCardContent()}
 
-            {/* Attached Note Preview Pill */}
-            {note && (
+            {/* Attached Note Preview or Inline Editor */}
+            {isNoteOpen ? (
               <div
-                onClick={() => setIsNoteModalOpen(true)}
-                className="til-note-preview-pill"
                 style={{
                   marginTop: "14px",
-                  padding: "8px 12px",
+                  padding: "12px 14px",
+                  background: "var(--shelf, #E7E2D8)",
+                  border: "2px solid var(--ink)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 800, letterSpacing: "0.1em", display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                    <StickyNote size={12} /> PERSONAL NOTE
+                  </span>
+                  {note && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const updatedBody = combineWithNote(item.body, "");
+                        await onUpdate(item.id, { body: updatedBody });
+                        setNoteDraft("");
+                        setIsNoteOpen(false);
+                        triggerFeedback("NOTE DELETED");
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "var(--pink)",
+                        fontSize: "10px",
+                        fontFamily: "var(--mono)",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
+                      DELETE NOTE
+                    </button>
+                  )}
+                </div>
+
+                <textarea
+                  value={noteDraft}
+                  onChange={(e) => setNoteDraft(e.target.value)}
+                  rows={3}
+                  placeholder="Type personal takeaways, reflections, timestamps..."
+                  style={{
+                    width: "100%",
+                    border: "1.5px solid var(--ink)",
+                    background: "var(--paper)",
+                    color: "var(--ink)",
+                    fontFamily: "var(--body)",
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    lineHeight: 1.4,
+                    padding: "8px 10px",
+                    boxSizing: "border-box",
+                    outline: "none",
+                    resize: "vertical",
+                  }}
+                />
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNoteDraft(note || "");
+                      setIsNoteOpen(false);
+                    }}
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "10.5px",
+                      fontWeight: 800,
+                      background: "var(--paper)",
+                      color: "var(--ink)",
+                      border: "1.5px solid var(--ink)",
+                      padding: "5px 12px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    CANCEL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const updatedBody = combineWithNote(item.body, noteDraft.trim());
+                      await onUpdate(item.id, { body: updatedBody });
+                      setIsNoteOpen(false);
+                      triggerFeedback(noteDraft.trim() ? "NOTE SAVED!" : "NOTE CLEARED!");
+                    }}
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "10.5px",
+                      fontWeight: 800,
+                      background: "var(--ink)",
+                      color: "var(--yellow, #FFE94A)",
+                      border: "1.5px solid var(--ink)",
+                      padding: "5px 16px",
+                      cursor: "pointer",
+                      boxShadow: "2px 2px 0 var(--pink)",
+                    }}
+                  >
+                    SAVE NOTE
+                  </button>
+                </div>
+              </div>
+            ) : note ? (
+              <div
+                onClick={() => {
+                  setNoteDraft(note);
+                  setIsNoteOpen(true);
+                }}
+                className="til-note-preview-pill"
+                style={{
+                  marginTop: "12px",
+                  padding: "7px 10px",
                   background: "var(--yel, #FFE600)",
                   color: "#000",
-                  border: "2px solid var(--ink)",
-                  boxShadow: "2.5px 2.5px 0 var(--ink)",
+                  border: "1.5px solid var(--ink)",
+                  boxShadow: "2px 2px 0 var(--ink)",
                   fontFamily: "var(--mono)",
                   fontSize: "11px",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
-                  gap: "8px",
-                  transition: "all 0.12s ease",
+                  gap: "6px",
+                  transition: "all 0.1s ease",
                 }}
-                title="Click to expand full note and edit"
+                title="Click to edit note"
               >
-                <StickyNote size={13} style={{ flexShrink: 0 }} />
-                <span style={{ fontWeight: 900, letterSpacing: "0.08em", flexShrink: 0 }}>NOTE:</span>
+                <StickyNote size={12} style={{ flexShrink: 0 }} />
+                <span style={{ fontWeight: 900, letterSpacing: "0.06em", flexShrink: 0 }}>NOTE:</span>
                 <span
                   style={{
                     fontFamily: "var(--body)",
                     fontWeight: 600,
-                    fontSize: "12px",
+                    fontSize: "12.5px",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -398,11 +508,11 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                 >
                   {note}
                 </span>
-                <span style={{ fontSize: "9px", opacity: 0.7, fontWeight: 900, flexShrink: 0, letterSpacing: "0.05em" }}>
-                  EXPAND ↗
+                <span style={{ fontSize: "9px", opacity: 0.7, fontWeight: 900, flexShrink: 0 }}>
+                  EDIT ✎
                 </span>
               </div>
-            )}
+            ) : null}
           </>
         ) : (
           /* Inline Editing View */
@@ -631,13 +741,16 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
             {/* Note Button */}
             <button
               type="button"
-              onClick={() => setIsNoteModalOpen(true)}
-              title={note ? "View / edit attached note" : "Attach a personal note"}
+              onClick={() => {
+                setNoteDraft(note || "");
+                setIsNoteOpen((v) => !v);
+              }}
+              title={note ? "Edit note" : "Add personal note"}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "4px",
-                background: note ? "color-mix(in srgb, var(--yellow, #FFE94A) 35%, var(--card, #FFFDF7))" : undefined,
+                background: (isNoteOpen || note) ? "color-mix(in srgb, var(--yellow, #FFE94A) 35%, var(--card, #FFFDF7))" : undefined,
                 fontWeight: 800,
               }}
             >
@@ -716,21 +829,6 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
           </div>
         )}
       </div>
-
-      {/* Full Note View & Edit Modal */}
-      <TilNoteModal
-        isOpen={isNoteModalOpen}
-        onClose={() => setIsNoteModalOpen(false)}
-        initialNote={note || ""}
-        onSave={async (newNote) => {
-          const updatedBody = combineWithNote(item.body, newNote);
-          await onUpdate(item.id, { body: updatedBody });
-          triggerFeedback(newNote ? "NOTE SAVED!" : "NOTE CLEARED!");
-        }}
-        shortHash={item.shortHash}
-        cardTitle={item.linkPreview?.title || stripNote(item.body) || "TIL Insight"}
-        cardType={item.type}
-      />
     </article>
   );
 };
