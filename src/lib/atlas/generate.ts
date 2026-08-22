@@ -27,6 +27,12 @@ export type AtlasStreamEvent =
 
 export type AtlasWireEvent = AtlasStreamEvent | { type: "row"; id: string; serial: string };
 
+type AtlasStreamResult = {
+  syllabus: AtlasSyllabus;
+  title?: string;
+  brief?: string;
+};
+
 export const atlasGenerateSchema = z.object({
   title: z.string(),
   brief: z.string(),
@@ -154,7 +160,7 @@ export async function writeAtlasStream(opts: {
   prompt: string;
   existing?: AtlasSyllabus;
   write: (event: AtlasStreamEvent) => void;
-}): Promise<AtlasSyllabus> {
+}): Promise<AtlasStreamResult> {
   const extracted = {
     title: undefined as string | undefined,
     brief: undefined as string | undefined,
@@ -212,14 +218,18 @@ export async function writeAtlasStream(opts: {
   } catch (err) {
     publishCover();
     opts.write({ type: "error", message: gatewayErrorMessage(err) });
-    return assembleSyllabus(opts.parsed, extracted, opts.existing);
+    return {
+      syllabus: assembleSyllabus(opts.parsed, extracted, opts.existing),
+      title: extracted.title,
+      brief: extracted.brief,
+    };
   }
 
   publishCover();
   const syllabus = assembleSyllabus(opts.parsed, extracted, opts.existing);
   opts.write({ type: "thin", thin: syllabus.thin });
   opts.write({ type: "done" });
-  return syllabus;
+  return { syllabus, title: extracted.title, brief: extracted.brief };
 }
 
 export function atlasNdjsonResponse(run: (write: (event: AtlasWireEvent) => void) => Promise<void>): Response {
@@ -296,7 +306,7 @@ export async function persistAtlasStream(opts: {
     );
   };
 
-  const syllabus = await writeAtlasStream({
+  const result = await writeAtlasStream({
     parsed: opts.parsed,
     prompt: opts.prompt,
     existing: opts.existing,
@@ -318,6 +328,11 @@ export async function persistAtlasStream(opts: {
   });
 
   await persistChain;
-  await saveAtlas(opts.userId, opts.row.id, { title, brief, syllabus, model: ATLAS_MODEL });
-  return syllabus;
+  await saveAtlas(opts.userId, opts.row.id, {
+    title: result.title ?? title,
+    brief: result.brief ?? brief,
+    syllabus: result.syllabus,
+    model: ATLAS_MODEL,
+  });
+  return result.syllabus;
 }
