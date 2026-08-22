@@ -558,3 +558,30 @@ export const askThreads = pgTable(
   (table) => [index("ask_threads_user_updated_idx").on(table.userId, table.updatedAt.desc())]
 );
 
+export const atlasStatusValues = ["draft", "walking", "archived"] as const;
+export type AtlasRowStatus = (typeof atlasStatusValues)[number];
+
+export const atlases = pgTable(
+  "atlases",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    serial: varchar("serial", { length: 16 }).notNull(),
+    title: text("title").notNull(),
+    brief: text("brief").notNull().default(""),
+    prompt: text("prompt").notNull(),
+    depth: text("depth").notNull(),
+    cadence: text("cadence").notNull(),
+    minutesPerSession: integer("minutes_per_session").notNull(),
+    weeksPlanned: integer("weeks_planned").notNull(),
+    antiScope: jsonb("anti_scope").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    status: text("status").notNull().default("draft"),
+    currentWeekId: text("current_week_id"),
+    syllabus: jsonb("syllabus").$type<import("@/lib/atlas/types").AtlasSyllabus>().notNull(),
+    model: text("model").notNull().default(""),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [index("atlases_user_status_updated_idx").on(table.userId, table.status, table.updatedAt.desc())]
+);
+

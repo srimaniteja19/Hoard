@@ -57,6 +57,13 @@
       "when": 1787325000000,
       "tag": "0009_add_ask_saves",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787373619262,
+      "tag": "0013_add_atlases",
+      "breakpoints": true
     }
   ]
 }
