@@ -40,7 +40,7 @@ export function stampDate(iso: string): string {
 }
 
 export function splitDeckItem(item: string): { title: string; body: string } {
-  const bold = item.match(/^\*\*(.+?)\*\*[\s:.—–-]*(.*)$/s);
+  const bold = item.match(/^\*\*([\s\S]+?)\*\*[\s:.—–-]*([\s\S]*)$/);
   if (bold) {
     return { title: plainAskText(bold[1]), body: plainAskText(bold[2]) };
   }

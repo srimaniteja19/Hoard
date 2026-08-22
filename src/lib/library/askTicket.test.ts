@@ -61,4 +61,11 @@ describe("splitDeckItem", () => {
       body: "A calendar hold with no note attached.",
     });
   });
+
+  it("still lifts a bold lead when the body wraps a line", () => {
+    expect(splitDeckItem("**Silent RSVP.**\nA calendar hold with no note attached.")).toEqual({
+      title: "Silent RSVP.",
+      body: "A calendar hold with no note attached.",
+    });
+  });
 });
