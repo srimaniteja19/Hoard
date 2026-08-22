@@ -31,6 +31,7 @@ export const GenericEmbed: React.FC<GenericEmbedProps> = ({ preview, density }) 
           alignItems: "center",
           gap: "4px",
           textDecoration: "none",
+          boxShadow: "1px 1px 0 var(--ink)",
         }}
       >
         <Globe size={12} /> {preview.title}
@@ -43,36 +44,51 @@ export const GenericEmbed: React.FC<GenericEmbedProps> = ({ preview, density }) 
   return (
     <div
       style={{
-        background: "var(--paper)",
-        border: "var(--bd)",
-        boxShadow: "var(--sh-sm)",
+        background: "color-mix(in srgb, var(--yel) 6%, var(--paper))",
+        border: "1.5px solid var(--ink)",
+        boxShadow: "2px 2px 0 var(--ink)",
         padding: "12px 14px",
-        marginTop: "8px",
-        marginBottom: "8px",
-        borderLeft: "6px solid #FFE600",
+        marginTop: "10px",
+        marginBottom: "10px",
+        borderLeft: "6px solid var(--yel)",
+        position: "relative",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", marginBottom: "6px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <span
             style={{
               fontFamily: "var(--mono)",
               fontSize: "10px",
               fontWeight: 900,
-              background: "#FFE600",
+              background: "var(--yel)",
               color: "#000",
               border: "1px solid var(--ink)",
-              padding: "1px 5px",
+              padding: "1.5px 6px",
               display: "flex",
               alignItems: "center",
               gap: "4px",
+              boxShadow: "1px 1px 0 var(--ink)",
+              textTransform: "lowercase",
             }}
           >
-            <Globe size={12} /> {preview.host}
+            <Globe size={11} /> {preview.host}
           </span>
 
           {readMins && (
-            <span style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 800, background: "#000", color: "#FFF", padding: "1px 4px", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+            <span
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "9.5px",
+                fontWeight: 800,
+                background: "var(--ink)",
+                color: "var(--cream)",
+                padding: "1.5px 5px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "3px",
+              }}
+            >
               <Clock size={10} /> {readMins} MIN READ
             </span>
           )}
@@ -85,26 +101,30 @@ export const GenericEmbed: React.FC<GenericEmbedProps> = ({ preview, density }) 
           style={{
             fontFamily: "var(--mono)",
             fontSize: "10px",
-            fontWeight: 800,
+            fontWeight: 900,
             color: "var(--ink)",
             textDecoration: "none",
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
-            gap: "2px",
+            gap: "3px",
+            padding: "2px 6px",
+            border: "1px solid var(--ink)",
+            background: "var(--paper)",
+            boxShadow: "1px 1px 0 var(--ink)",
           }}
         >
-          VISIT LINK <ExternalLink size={11} />
+          VISIT LINK <ExternalLink size={10} />
         </a>
       </div>
 
       <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: "var(--mono)", fontSize: "13px", fontWeight: 900, color: "var(--ink)", marginBottom: "4px" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: "var(--mono)", fontSize: "13px", fontWeight: 900, color: "var(--ink)", marginBottom: "4px", lineHeight: "1.4" }}>
             {preview.title}
           </div>
 
           {preview.description && (
-            <div style={{ fontSize: "12px", opacity: 0.8, color: "var(--ink)", lineHeight: "1.4" }}>
+            <div style={{ fontSize: "12px", opacity: 0.85, color: "var(--ink)", lineHeight: "1.45" }}>
               {preview.description}
             </div>
           )}
@@ -117,13 +137,12 @@ export const GenericEmbed: React.FC<GenericEmbedProps> = ({ preview, density }) 
             alt=""
             onError={() => setImgFailed(true)}
             style={{
-              width: "90px",
-              height: "65px",
+              width: "95px",
+              height: "68px",
               objectFit: "cover",
-              border: "2px solid var(--ink)",
+              border: "1.5px solid var(--ink)",
               boxShadow: "2px 2px 0 var(--ink)",
               flexShrink: 0,
-              borderRadius: "2px",
             }}
           />
         )}

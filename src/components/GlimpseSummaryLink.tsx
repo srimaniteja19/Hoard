@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { GLIMPSE_HOME, youtubeUrlForGlimpse } from "@/lib/glimpse";
+import { Sparkles, Check } from "lucide-react";
 
 interface GlimpseSummaryLinkProps {
   url: string;
@@ -44,7 +45,22 @@ export const GlimpseSummaryLink: React.FC<GlimpseSummaryLinkProps> = ({
         className="p3"
         onClick={handleClick}
         title="Copy the YouTube URL and open Glimpse"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "5px",
+          background: copied ? "var(--lime)" : "var(--paper)",
+          color: "var(--ink)",
+          border: "1.5px solid var(--ink)",
+          boxShadow: "1.5px 1.5px 0 var(--ink)",
+          fontFamily: "var(--mono)",
+          fontSize: "11px",
+          fontWeight: 800,
+          cursor: "pointer",
+          padding: "4px 8px",
+        }}
       >
+        {copied ? <Check size={12} /> : <Sparkles size={12} color="var(--pink)" />}
         {label}
       </button>
     );
@@ -60,15 +76,21 @@ export const GlimpseSummaryLink: React.FC<GlimpseSummaryLinkProps> = ({
       style={{
         display: "inline-flex",
         alignItems: "center",
+        gap: "4px",
         marginTop: "8px",
         fontFamily: "var(--mono)",
         fontSize: "11px",
         fontWeight: 800,
-        color: "var(--ink)",
-        textDecoration: "underline",
-        textUnderlineOffset: "3px",
+        color: copied ? "var(--lime)" : "var(--ink)",
+        textDecoration: "none",
+        border: "1px solid var(--ink)",
+        background: copied ? "var(--ink)" : "var(--paper)",
+        padding: "2px 7px",
+        boxShadow: "1px 1px 0 var(--ink)",
+        width: "fit-content",
       }}
     >
+      {copied ? <Check size={11} /> : <Sparkles size={11} color="var(--pink)" />}
       {label} ↗
     </a>
   );

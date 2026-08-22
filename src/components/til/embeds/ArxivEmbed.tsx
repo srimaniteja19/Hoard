@@ -30,6 +30,7 @@ export const ArxivEmbed: React.FC<ArxivEmbedProps> = ({ preview, density }) => {
           alignItems: "center",
           gap: "4px",
           textDecoration: "none",
+          boxShadow: "1px 1px 0 var(--ink)",
         }}
       >
         <GraduationCap size={12} /> {preview.title} ({year})
@@ -40,34 +41,44 @@ export const ArxivEmbed: React.FC<ArxivEmbedProps> = ({ preview, density }) => {
   return (
     <div
       style={{
-        background: "var(--paper)",
-        border: "var(--bd)",
-        boxShadow: "var(--sh-sm)",
+        background: "color-mix(in srgb, var(--cyan) 5%, var(--paper))",
+        border: "1.5px solid var(--ink)",
+        boxShadow: "2px 2px 0 var(--ink)",
         padding: "12px 14px",
-        marginTop: "8px",
-        marginBottom: "8px",
-        borderLeft: "6px solid #00F0FF",
+        marginTop: "10px",
+        marginBottom: "10px",
+        borderLeft: "6px solid var(--cyan)",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", marginBottom: "6px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <span
             style={{
               fontFamily: "var(--mono)",
               fontSize: "10px",
               fontWeight: 900,
-              background: "#00F0FF",
+              background: "var(--cyan)",
               color: "#000",
               border: "1px solid var(--ink)",
-              padding: "1px 5px",
+              padding: "1.5px 6px",
               display: "flex",
               alignItems: "center",
               gap: "4px",
+              boxShadow: "1px 1px 0 var(--ink)",
             }}
           >
             <GraduationCap size={12} /> ARXIV PAPER
           </span>
-          <span style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 800, background: "#000", color: "#FFF", padding: "1px 4px" }}>
+          <span
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "10px",
+              fontWeight: 800,
+              background: "var(--ink)",
+              color: "var(--cream)",
+              padding: "1.5px 5px",
+            }}
+          >
             {year}
           </span>
         </div>
@@ -79,15 +90,19 @@ export const ArxivEmbed: React.FC<ArxivEmbedProps> = ({ preview, density }) => {
           style={{
             fontFamily: "var(--mono)",
             fontSize: "10px",
-            fontWeight: 800,
+            fontWeight: 900,
             color: "var(--ink)",
             textDecoration: "none",
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
-            gap: "2px",
+            gap: "3px",
+            padding: "2px 6px",
+            border: "1px solid var(--ink)",
+            background: "var(--paper)",
+            boxShadow: "1px 1px 0 var(--ink)",
           }}
         >
-          VIEW PAPER <ExternalLink size={11} />
+          VIEW PAPER <ExternalLink size={10} />
         </a>
       </div>
 
@@ -96,13 +111,25 @@ export const ArxivEmbed: React.FC<ArxivEmbedProps> = ({ preview, density }) => {
       </div>
 
       {preview.author && (
-        <div style={{ fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 700, color: "var(--ink)", opacity: 0.8, marginBottom: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
+        <div
+          style={{
+            fontFamily: "var(--mono)",
+            fontSize: "11px",
+            fontWeight: 700,
+            color: "var(--ink)",
+            opacity: 0.85,
+            marginBottom: "6px",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+          }}
+        >
           <User size={12} /> {preview.author}
         </div>
       )}
 
       {preview.description && (
-        <div style={{ fontSize: "12px", opacity: 0.85, color: "var(--ink)", lineHeight: "1.4" }}>
+        <div style={{ fontSize: "12px", opacity: 0.85, color: "var(--ink)", lineHeight: "1.45" }}>
           {preview.description}
         </div>
       )}

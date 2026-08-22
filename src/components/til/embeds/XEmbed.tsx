@@ -28,6 +28,7 @@ export const XEmbed: React.FC<XEmbedProps> = ({ preview, density }) => {
           alignItems: "center",
           gap: "4px",
           textDecoration: "none",
+          boxShadow: "1px 1px 0 var(--ink)",
         }}
       >
         <MessageSquare size={12} /> {preview.author ? `@${preview.author}` : "X Post"}
@@ -38,27 +39,28 @@ export const XEmbed: React.FC<XEmbedProps> = ({ preview, density }) => {
   return (
     <blockquote
       style={{
-        margin: "8px 0",
-        background: "var(--paper)",
-        border: "var(--bd)",
-        borderLeft: "6px solid #FF007A",
-        boxShadow: "var(--sh-sm)",
+        margin: "10px 0",
+        background: "color-mix(in srgb, var(--pink) 5%, var(--paper))",
+        border: "1.5px solid var(--ink)",
+        borderLeft: "6px solid var(--pink)",
+        boxShadow: "2px 2px 0 var(--ink)",
         padding: "12px 14px",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
         <span
           style={{
             fontFamily: "var(--mono)",
             fontSize: "10px",
             fontWeight: 900,
-            background: "#FF007A",
+            background: "var(--pink)",
             color: "#FFF",
             border: "1px solid var(--ink)",
-            padding: "1px 5px",
+            padding: "1.5px 6px",
             display: "inline-flex",
             alignItems: "center",
             gap: "4px",
+            boxShadow: "1px 1px 0 var(--ink)",
           }}
         >
           <MessageSquare size={11} /> {preview.author ? `@${preview.author}` : "X POST"}
@@ -71,19 +73,23 @@ export const XEmbed: React.FC<XEmbedProps> = ({ preview, density }) => {
           style={{
             fontFamily: "var(--mono)",
             fontSize: "10px",
-            fontWeight: 800,
+            fontWeight: 900,
             color: "var(--ink)",
             textDecoration: "none",
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
-            gap: "2px",
+            gap: "3px",
+            padding: "2px 6px",
+            border: "1px solid var(--ink)",
+            background: "var(--paper)",
+            boxShadow: "1px 1px 0 var(--ink)",
           }}
         >
-          VIEW POST <ExternalLink size={11} />
+          VIEW POST <ExternalLink size={10} />
         </a>
       </div>
 
-      <div style={{ fontSize: "13px", lineHeight: "1.4", fontStyle: "italic", color: "var(--ink)" }}>
+      <div style={{ fontSize: "13.5px", lineHeight: "1.45", fontStyle: "italic", color: "var(--ink)" }}>
         &quot;{preview.description || preview.title}&quot;
       </div>
     </blockquote>

@@ -9223,10 +9223,233 @@ input[type=range].wall-zoom-slider {
   .home-verso-rate { grid-template-columns: 1fr; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .home-spine,
-  .home-spine:hover,
-  .home-spine:focus-visible { transform: none; }
+/* ==========================================================================
+   TIL Spectacular Knowledge Cards - Design System
+   ========================================================================== */
+
+.til-card-root {
+  background: var(--paper);
+  border: var(--bd);
+  box-shadow: var(--sh-sm);
+  margin-bottom: 16px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.16s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.16s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.til-card-root:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sh);
+}
+
+/* Hazard tape pattern for GOTCHA */
+.til-card-hazard-stripe {
+  height: 6px;
+  width: 100%;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--pink),
+    var(--pink) 10px,
+    var(--ink) 10px,
+    var(--ink) 20px
+  );
+  border-bottom: 1.5px solid var(--ink);
+}
+
+/* Blueprint dot matrix for PATTERN */
+.til-card-pattern-grid {
+  background-image: radial-gradient(color-mix(in srgb, var(--ink) 15%, transparent) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+/* Quote watermark */
+.til-quote-watermark {
+  position: absolute;
+  top: -8px;
+  right: 12px;
+  font-family: var(--display);
+  font-size: 72px;
+  line-height: 1;
+  font-weight: 900;
+  color: var(--ink);
+  opacity: 0.08;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Segmented LED Memory Battery Gauge */
+.til-battery-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--ink);
+  background: color-mix(in srgb, var(--paper) 80%, var(--ink) 20%);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  user-select: none;
+  cursor: help;
+}
+
+.til-battery-cells {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5px;
+}
+
+.til-battery-cell {
+  width: 3.5px;
+  height: 8px;
+  background: color-mix(in srgb, var(--ink) 20%, transparent);
+  border-radius: 0.5px;
+  transition: background-color 0.2s ease;
+}
+
+.til-battery-cell.active-high {
+  background: var(--lime);
+  box-shadow: 0 0 4px var(--lime);
+}
+
+.til-battery-cell.active-med {
+  background: var(--yel);
+  box-shadow: 0 0 4px var(--yel);
+}
+
+.til-battery-cell.active-low {
+  background: var(--pink);
+  box-shadow: 0 0 4px var(--pink);
+}
+
+/* Micro-Terminal Header */
+.til-terminal-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #111318;
+  color: #a0aec0;
+  padding: 5px 10px;
+  border-bottom: 1.5px solid #2d3748;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.til-terminal-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.til-terminal-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Quick Action Buttons */
+.til-action-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ink);
+  padding: 3px 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  opacity: 0.75;
+  transition: all 0.12s ease;
+}
+
+.til-action-btn:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  border-color: var(--ink);
+  transform: translateY(-1px);
+}
+
+.til-action-btn:active {
+  transform: translateY(0);
+}
+
+/* Backside Neural Dossier Panel */
+.til-dossier-panel {
+  background: color-mix(in srgb, var(--ink) 4%, var(--paper));
+  border-top: 1.5px dashed var(--ink);
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.til-dossier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.til-dossier-stat {
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  padding: 6px 8px;
+}
+
+.til-dossier-stat-label {
+  font-size: 9px;
+  opacity: 0.7;
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.til-dossier-stat-val {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
+/* Tag Tabs */
+.til-tag-tab {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  padding: 2px 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.til-tag-tab:hover {
+  background: var(--ink);
+  color: var(--cream);
+  transform: translateY(-1px);
+}
+
+/* Superseded Watermark Banner */
+.til-superseded-banner {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 900;
+  background: var(--pink);
+  color: #FFF;
+  border: 1px solid var(--ink);
+  padding: 2px 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 1.5px 1.5px 0 var(--ink);
 }
 
 /* Reduced Motion Accessibility */
@@ -9240,3 +9463,4 @@ input[type=range].wall-zoom-slider {
     scroll-behavior: auto !important;
   }
 }
+
