@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { AtlasPunchRow } from "@/components/atlas/AtlasPunchRow";
+import { AtlasSerialStub } from "@/components/atlas/AtlasSerialStub";
 import { requiredProgress } from "@/lib/atlas/progress";
 import { weeklyBudgetMinutes } from "@/lib/atlas/validate";
 import { formatMinutes } from "@/lib/home/format";
@@ -33,9 +35,6 @@ export function AtlasCover({
   const showRestore = atlas.status === "archived" && onRestore;
   const body = (
     <>
-      <span className="atlas-cover-kicker">
-        ATLAS · {atlas.serial} · {atlas.weeksPlanned} WEEKS
-      </span>
       <span className="atlas-cover-title">{atlas.title}</span>
       {variant === "large" ? (
         <>
@@ -56,16 +55,18 @@ export function AtlasCover({
         </>
       ) : null}
       <span className="atlas-cover-meta">
-        <span className="atlas-cover-progress">
-          {done} / {total}
-        </span>
+        <AtlasPunchRow done={done} total={total} />
         <span className={`atlas-pill is-${atlas.status}`}>{atlas.status}</span>
       </span>
     </>
   );
 
   return (
-    <article className={`atlas-cover is-${variant}`}>
+    <article className={`atlas-cover is-${variant} is-${atlas.status}`}>
+      <div className="atlas-cover-head">
+        <span className="atlas-folder-tab">ATLAS · {atlas.weeksPlanned} WEEKS</span>
+        <AtlasSerialStub serial={atlas.serial} />
+      </div>
       {variant === "large" ? (
         <div className="atlas-cover-link">{body}</div>
       ) : (

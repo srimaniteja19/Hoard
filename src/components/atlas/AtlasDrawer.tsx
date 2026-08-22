@@ -83,7 +83,7 @@ export function AtlasDrawer({ id }: { id: string }) {
         ← Desk
       </Link>
       {filing ? <div className="atlas-filing">FILING {atlas.serial}</div> : null}
-      {resourcing && !filing ? <div className="atlas-filing">FINDING SOURCES</div> : null}
+      {resourcing && !filing ? <div className="atlas-filing is-holdings">SEARCHING HOLDINGS…</div> : null}
       {showRetryRest ? (
         <div className="atlas-retry-bar">
           <span>{streamError ?? "Filing stopped short."}</span>

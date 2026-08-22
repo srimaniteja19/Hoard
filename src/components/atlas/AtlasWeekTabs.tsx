@@ -47,7 +47,7 @@ export function AtlasWeekTabs({
                 onClick={() => onPin(week.id)}
                 disabled={pinned}
               >
-                {pinned ? "Pinned" : "Pin"}
+                {pinned ? "OUT" : "Hold"}
               </button>
             ) : null}
           </div>

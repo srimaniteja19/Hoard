@@ -236,18 +236,33 @@ export async function writeAtlasStream(opts: {
 
 export function atlasNdjsonResponse(run: (write: (event: AtlasWireEvent) => void) => Promise<void>): Response {
   const encoder = new TextEncoder();
+  let closed = false;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const write = (event: AtlasWireEvent) => {
-        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+        } catch {
+          closed = true;
+        }
       };
       try {
         await run(write);
       } catch (err) {
         write({ type: "error", message: gatewayErrorMessage(err) });
       } finally {
-        controller.close();
+        if (closed) return;
+        closed = true;
+        try {
+          controller.close();
+        } catch {
+          // client already hung up
+        }
       }
+    },
+    cancel() {
+      closed = true;
     },
   });
   return new Response(stream, {

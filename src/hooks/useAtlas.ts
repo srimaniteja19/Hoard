@@ -188,7 +188,13 @@ async function readAtlasNdjson(
   };
 
   while (true) {
-    const { done, value } = await reader.read();
+    let chunk: ReadableStreamReadResult<Uint8Array>;
+    try {
+      chunk = await reader.read();
+    } catch {
+      break;
+    }
+    const { done, value } = chunk;
     if (done) break;
     buf += decoder.decode(value, { stream: true });
     const lines = buf.split("\n");
@@ -369,6 +375,7 @@ export function useAtlasOne(id: string) {
   const filingRef = useRef(liveById.get(id)?.filing ?? false);
   const resourcingRef = useRef(false);
   const resourcesStartedFor = useRef<string | null>(null);
+  const resourcesAbort = useRef<AbortController | null>(null);
   if (seenId !== id) {
     setSeenId(id);
     setAtlas(null);
@@ -382,14 +389,25 @@ export function useAtlasOne(id: string) {
   useEffect(() => {
     resourcingRef.current = false;
     resourcesStartedFor.current = null;
+    return () => {
+      resourcesAbort.current?.abort();
+      resourcesAbort.current = null;
+    };
   }, [id]);
 
   const fillResources = useCallback(async (): Promise<void> => {
     if (resourcingRef.current) return;
+    resourcesAbort.current?.abort();
+    const ac = new AbortController();
+    resourcesAbort.current = ac;
     resourcingRef.current = true;
     setResourcing(true);
     try {
-      const res = await fetch(`/api/atlas/${id}/resources`, { method: "POST", credentials: "include" });
+      const res = await fetch(`/api/atlas/${id}/resources`, {
+        method: "POST",
+        credentials: "include",
+        signal: ac.signal,
+      });
       if (!res.ok) return;
       await readAtlasNdjson(res, {
         knownId: id,
@@ -403,10 +421,13 @@ export function useAtlasOne(id: string) {
         },
       });
     } catch (e) {
+      if (ac.signal.aborted) return;
       console.error("Failed to fill atlas resources", e);
     } finally {
-      resourcingRef.current = false;
-      setResourcing(false);
+      if (resourcesAbort.current === ac) {
+        resourcingRef.current = false;
+        setResourcing(false);
+      }
     }
   }, [id]);
 
@@ -415,7 +436,7 @@ export function useAtlasOne(id: string) {
       if (record.status === "archived") return;
       if (liveById.get(id)?.filing) return;
       if (resourcesStartedFor.current === record.id) return;
-      if (stationsNeedingResources(record.syllabus.stations).length === 0) return;
+      if (stationsNeedingResources(record.syllabus?.stations ?? []).length === 0) return;
       resourcesStartedFor.current = record.id;
       void fillResources();
     },

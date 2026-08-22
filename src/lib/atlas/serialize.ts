@@ -15,7 +15,14 @@ export function serializeAtlas(row: typeof atlases.$inferSelect): AtlasRecord {
     antiScope: row.antiScope,
     status: row.status as AtlasStatus,
     currentWeekId: row.currentWeekId,
-    syllabus: row.syllabus,
+    syllabus: {
+      ...row.syllabus,
+      weeks: row.syllabus?.weeks ?? [],
+      stations: (row.syllabus?.stations ?? []).map((station) => ({
+        ...station,
+        resources: station.resources ?? [],
+      })),
+    },
     model: row.model,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
