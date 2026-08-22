@@ -58,11 +58,22 @@ export const TilFeed: React.FC<TilFeedProps> = ({
 
   const formatDayHeader = (dayStr: string) => {
     try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+
       const [year, month, day] = dayStr.split("-").map(Number);
       const d = new Date(year, month - 1, day);
-      const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
       const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-      return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${year}`;
+      const monthDay = `${months[d.getMonth()]} ${d.getDate()}`;
+
+      if (dayStr === todayStr) {
+        return `TODAY · ${monthDay}`;
+      } else if (dayStr === yesterdayStr) {
+        return `YESTERDAY · ${monthDay}`;
+      }
+      return `${monthDay} · ${year}`;
     } catch {
       return dayStr;
     }
@@ -177,46 +188,15 @@ export const TilFeed: React.FC<TilFeedProps> = ({
         /* Timeline Feed with left spine */
         <div style={{ position: "relative" }}>
           {groupedByDay.map(([dayStr, dayItems]) => (
-            <div key={dayStr} style={{ marginBottom: "24px", position: "relative" }}>
-              {/* Day Spine Header */}
-              <div
-                className="til-feed-day-header"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  marginBottom: "12px",
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: "var(--mono)",
-                    fontSize: "11px",
-                    fontWeight: 900,
-                    background: "var(--ink)",
-                    color: "var(--cream)",
-                    padding: "3px 8px",
-                    border: "1.5px solid var(--ink)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    boxShadow: "2px 2px 0 var(--ink)",
-                  }}
-                >
-                  <Calendar size={12} /> {formatDayHeader(dayStr)}
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    height: "2px",
-                    background: "var(--ink)",
-                    opacity: 0.3,
-                  }}
-                />
+            <div key={dayStr} style={{ marginBottom: "28px", position: "relative" }}>
+              {/* Day Spine Divider */}
+              <div className="day">
+                <b>{formatDayHeader(dayStr)}</b>
+                <span />
               </div>
 
               {/* Entries for this Day */}
-              <div style={{ paddingLeft: "12px" }}>
+              <div>
                 {dayItems.map((item) => (
                   <TilFeedItem
                     key={item.id}

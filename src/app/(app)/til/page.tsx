@@ -5,6 +5,7 @@ import { TilHeaderNav, TilViewMode } from "@/components/til/TilHeaderNav";
 import { TilComposer } from "@/components/til/TilComposer";
 import { TilFeed } from "@/components/til/TilFeed";
 import { TilItem } from "@/components/til/TilFeedItem";
+import { TilHeaderSummary } from "@/components/til/TilHeaderSummary";
 import { TilStreakBar } from "@/components/til/TilStreakBar";
 import { TilHeatmap } from "@/components/til/TilHeatmap";
 import { TilOnThisDay } from "@/components/til/TilOnThisDay";
@@ -431,17 +432,11 @@ function TilPageContent() {
         ) : (
           /* STREAM VIEW MODE (Default) */
           <div>
-            {/* Streak & Risk Banner */}
-            <TilStreakBar
-              currentStreak={streak.currentStreak}
-              longestStreak={streak.longestStreak}
-              streakAtRisk={streak.streakAtRisk}
-              skipsUsedThisMonth={streak.skipsUsedThisMonth}
-            />
-
-            {/* 26-Week Heatmap */}
-            <TilHeatmap
+            {/* Consolidated Header: Stats & 26-Week Dense Strip */}
+            <TilHeaderSummary
+              streak={streak}
               heatmap={heatmap}
+              totalCount={items.length}
               selectedDay={selectedDay}
               onSelectDay={(day) => updateUrlFilters(selectedTag, selectedType, day)}
             />
@@ -449,7 +444,7 @@ function TilPageContent() {
             {/* On This Day Resurfacing Card */}
             <TilOnThisDay data={onThisDay} />
 
-            {/* Hero Composer Surface */}
+            {/* Hero Morphing Composer Surface */}
             <TilComposer onCommit={handleCommit} onCommitBatch={handleCommitBatch} />
 
             {/* Timeline Feed Container */}

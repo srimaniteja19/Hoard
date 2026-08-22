@@ -69,6 +69,8 @@ export type StreakData = {
   longestStreak: number;
   streakAtRisk: boolean;
   skipsUsedThisMonth: number;
+  totalCount?: number;
+  needsTendingCount?: number;
 };
 
 /**
@@ -156,11 +158,31 @@ export async function getTilStreak(userId: string, timezone: string = "UTC"): Pr
   const currentMonthStr = todayStr.slice(0, 7);
   const skipsUsedThisMonth = skipsByMonth[currentMonthStr] || 0;
 
+  const totalCountResult = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(tilEntries)
+    .where(eq(tilEntries.userId, userId));
+  const totalCount = totalCountResult[0]?.count ?? 0;
+
+  const now = new Date();
+  const tendingResult = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(tilEntries)
+    .where(
+      and(
+        eq(tilEntries.userId, userId),
+        sql`(${tilEntries.nextReviewAt} IS NOT NULL AND ${tilEntries.nextReviewAt} <= ${now}) OR ${tilEntries.stability} < 1.5`
+      )
+    );
+  const needsTendingCount = tendingResult[0]?.count ?? 0;
+
   return {
     currentStreak,
     longestStreak,
     streakAtRisk,
     skipsUsedThisMonth,
+    totalCount,
+    needsTendingCount,
   };
 }
 
