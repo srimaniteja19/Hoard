@@ -9256,17 +9256,26 @@ input[type=range].wall-zoom-slider {
 }
 .facts {
   display: flex;
-  gap: 18px;
+  gap: 10px 18px;
   flex-wrap: wrap;
+  align-items: center;
   font-family: var(--mono);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
+  line-height: 1.6;
+}
+.facts span {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
 }
 .facts b {
   background: var(--ink);
   color: var(--yellow, #FFE94A);
-  padding: 2px 7px;
+  padding: 2px 6px;
+  margin: 0 4px;
+  display: inline-block;
 }
 .facts .warn b {
   background: var(--pink);
@@ -9281,11 +9290,16 @@ input[type=range].wall-zoom-slider {
   gap: 2px;
 }
 .strip i {
-  background: var(--card, #FFFDF7);
-  border: 1px solid rgba(10, 10, 10, 0.35);
+  background: color-mix(in srgb, var(--ink) 6%, var(--paper));
+  border: 1px solid rgba(10, 10, 10, 0.18);
   display: block;
   width: 7px;
   height: 7px;
+  transition: transform 0.1s ease;
+}
+.strip i:hover {
+  transform: scale(1.4);
+  z-index: 5;
 }
 .strip i.a { background: var(--lime); border-color: var(--ink); }
 .strip i.b { background: var(--cyan); border-color: var(--ink); }
@@ -9904,6 +9918,41 @@ input[type=range].wall-zoom-slider {
   font-size: 15px;
   line-height: 1.5;
   font-style: italic;
+}
+
+/* ── Glimpse Summary Interactive Pill ── */
+.glimpse-summary-pill:hover {
+  background: var(--pink) !important;
+  color: #fff !important;
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink) !important;
+}
+.glimpse-summary-pill:active {
+  transform: translate(1px, 1px);
+  box-shadow: 0 0 0 !important;
+}
+.glimpse-summary-btn:hover {
+  background: var(--pink) !important;
+  color: #fff !important;
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink) !important;
+}
+.glimpse-summary-link:hover {
+  background: var(--pink) !important;
+  color: #fff !important;
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0 var(--ink) !important;
+}
+
+/* ── TIL Card Note Preview Pill ── */
+.til-note-preview-pill:hover {
+  transform: translate(-1.5px, -1.5px);
+  box-shadow: 4px 4px 0 var(--ink) !important;
+  background: var(--lime) !important;
+}
+.til-note-preview-pill:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ink) !important;
 }
 
 /* Reduced Motion Accessibility */

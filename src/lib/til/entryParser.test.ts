@@ -4,6 +4,9 @@ import {
   parseQuote,
   parseOpinion,
   parsePattern,
+  parseNote,
+  stripNote,
+  combineWithNote,
 } from "./entryParser";
 
 describe("entryParser", () => {
@@ -68,6 +71,28 @@ describe("entryParser", () => {
       expect(res.instances[0].note).toBe("mix-blend-mode");
       expect(res.instances[1].date).toBe("JUL 09");
       expect(res.instances[1].note).toBe("position: fixed");
+    });
+  });
+
+  describe("note utilities", () => {
+    it("parses attached note and strips it cleanly", () => {
+      const input = "LPCAMM2 replaces SO-DIMM.\n\n--- NOTE ---\nChecked compatibility with Dell Precision.";
+      expect(parseNote(input)).toBe("Checked compatibility with Dell Precision.");
+      expect(stripNote(input)).toBe("LPCAMM2 replaces SO-DIMM.");
+    });
+
+    it("combines base text with note", () => {
+      const combined = combineWithNote("Base insight", "My follow-up thoughts");
+      expect(combined).toBe("Base insight\n\n--- NOTE ---\nMy follow-up thoughts");
+      expect(parseNote(combined)).toBe("My follow-up thoughts");
+      expect(stripNote(combined)).toBe("Base insight");
+    });
+
+    it("handles null/empty note safely", () => {
+      expect(parseNote(null)).toBeNull();
+      expect(stripNote(null)).toBe("");
+      expect(combineWithNote("Base insight", null)).toBe("Base insight");
+      expect(combineWithNote("Base insight", "")).toBe("Base insight");
     });
   });
 });

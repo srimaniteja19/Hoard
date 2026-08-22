@@ -104,6 +104,7 @@ export async function getTilStreak(userId: string, timezone: string = "UTC"): Pr
   let currentStreak = 0;
   let longestStreak = 0;
   let runningStreak = 0;
+  let skipsUsedInCurrentStreak = 0;
 
   // Determine starting point for current streak check
   let startOffset = hasLoggedToday ? 0 : 1;
@@ -113,11 +114,10 @@ export async function getTilStreak(userId: string, timezone: string = "UTC"): Pr
   const canContinueCurrent = hasLoggedToday || activeDaysSet.has(yesterdayStr);
 
   if (!canContinueCurrent) {
-    // Current streak might be broken unless saved by a skip-day on yesterday
+    // Current streak might be preserved by a skip-day on yesterday
     const yesterdayMonth = yesterdayStr.slice(0, 7);
-    skipsByMonth[yesterdayMonth] = (skipsByMonth[yesterdayMonth] || 0) + 1;
-    if (skipsByMonth[yesterdayMonth] <= 2) {
-      // Skip day allowed for yesterday
+    if (yesterdayMonth === todayStr.slice(0, 7)) {
+      skipsUsedInCurrentStreak = 1;
       startOffset = 2; // resume checking from 2 days ago
     } else {
       currentStreak = 0;
@@ -130,20 +130,29 @@ export async function getTilStreak(userId: string, timezone: string = "UTC"): Pr
 
   while (i < 365 * 2) {
     const dateStr = getPastDateStr(i);
+    const monthStr = dateStr.slice(0, 7);
+    const isCurrentMonth = monthStr === todayStr.slice(0, 7);
+
     if (activeDaysSet.has(dateStr)) {
       if (currentActive) currentStreak++;
       runningStreak++;
     } else {
-      const monthStr = dateStr.slice(0, 7);
+      if (currentActive) {
+        if (skipsUsedInCurrentStreak < 2 && isCurrentMonth) {
+          skipsUsedInCurrentStreak++;
+        } else {
+          currentActive = false;
+        }
+      }
+
       const used = (skipsByMonth[monthStr] || 0) + 1;
       if (used <= 2) {
         skipsByMonth[monthStr] = used;
-        // Skip day preserves streak, but doesn't add to count
       } else {
-        if (currentActive) currentActive = false;
         runningStreak = 0;
       }
     }
+
     if (runningStreak > longestStreak) {
       longestStreak = runningStreak;
     }
@@ -151,12 +160,10 @@ export async function getTilStreak(userId: string, timezone: string = "UTC"): Pr
       longestStreak = currentStreak;
     }
     i++;
-    // Stop scanning after long gap
     if (!currentActive && i > 365) break;
   }
 
-  const currentMonthStr = todayStr.slice(0, 7);
-  const skipsUsedThisMonth = skipsByMonth[currentMonthStr] || 0;
+  const skipsUsedThisMonth = Math.min(2, skipsUsedInCurrentStreak);
 
   const totalCountResult = await db
     .select({ count: sql<number>`count(*)::int` })
@@ -171,7 +178,7 @@ export async function getTilStreak(userId: string, timezone: string = "UTC"): Pr
     .where(
       and(
         eq(tilEntries.userId, userId),
-        sql`(${tilEntries.nextReviewAt} IS NOT NULL AND ${tilEntries.nextReviewAt} <= ${now}) OR ${tilEntries.stability} < 1.5`
+        sql`(((${tilEntries.nextReviewAt} IS NOT NULL AND ${tilEntries.nextReviewAt} <= ${now}) OR ${tilEntries.stability} < 1.5))`
       )
     );
   const needsTendingCount = tendingResult[0]?.count ?? 0;

@@ -1,7 +1,44 @@
 /**
- * Parser utilities for extracting structured presentation data from TIL entry bodies.
- * Supports both structured formats from the morphing composer and legacy/freeform text.
+ * Parser utilities for extracting structured presentation data and attached notes from TIL entry bodies.
+ * Supports structured formats from the morphing composer, attached notes, and legacy/freeform text.
  */
+
+const NOTE_DELIMITER = "\n\n--- NOTE ---\n";
+
+export function parseNote(body: string | null): string | null {
+  if (!body) return null;
+  const idx = body.indexOf(NOTE_DELIMITER);
+  if (idx !== -1) {
+    const noteContent = body.slice(idx + NOTE_DELIMITER.length).trim();
+    return noteContent || null;
+  }
+  const match = body.match(/(?:\n\n|\n)(?:--- NOTE ---|📝 Note:|NOTE:)\s*([\s\S]*)$/i);
+  if (match && match[1]) {
+    const noteContent = match[1].trim();
+    return noteContent || null;
+  }
+  return null;
+}
+
+export function stripNote(body: string | null): string {
+  if (!body) return "";
+  const idx = body.indexOf(NOTE_DELIMITER);
+  if (idx !== -1) {
+    return body.slice(0, idx).trim();
+  }
+  const match = body.match(/(?:\n\n|\n)(?:--- NOTE ---|📝 Note:|NOTE:)\s*[\s\S]*$/i);
+  if (match && typeof match.index === "number") {
+    return body.slice(0, match.index).trim();
+  }
+  return body.trim();
+}
+
+export function combineWithNote(body: string | null, note: string | null): string {
+  const base = stripNote(body);
+  const trimmedNote = note ? note.trim() : "";
+  if (!trimmedNote) return base;
+  return `${base}${NOTE_DELIMITER}${trimmedNote}`;
+}
 
 export interface ParsedGotcha {
   thought: string;
@@ -10,7 +47,8 @@ export interface ParsedGotcha {
 }
 
 export function parseGotcha(body: string | null): ParsedGotcha {
-  if (!body) {
+  const cleanBody = stripNote(body);
+  if (!cleanBody) {
     return {
       thought: "The initial assumption seemed correct.",
       actually: "The underlying reality behaved completely differently.",
@@ -18,9 +56,9 @@ export function parseGotcha(body: string | null): ParsedGotcha {
   }
 
   // Check for "I THOUGHT: ... ACTUALLY: ... COST: ..."
-  const thoughtMatch = body.match(/(?:I THOUGHT|THOUGHT|MISTAKE|BELIEF):\s*([\s\S]*?)(?=(?:ACTUALLY|REALITY|TRUTH|COST):|$)/i);
-  const actuallyMatch = body.match(/(?:ACTUALLY|REALITY|TRUTH|FIX):\s*([\s\S]*?)(?=(?:COST|IMPACT):|$)/i);
-  const costMatch = body.match(/(?:COST|IMPACT|WHAT IT COST):\s*([\s\S]*?)$/i);
+  const thoughtMatch = cleanBody.match(/(?:I THOUGHT|THOUGHT|MISTAKE|BELIEF):\s*([\s\S]*?)(?=(?:ACTUALLY|REALITY|TRUTH|COST):|$)/i);
+  const actuallyMatch = cleanBody.match(/(?:ACTUALLY|REALITY|TRUTH|FIX):\s*([\s\S]*?)(?=(?:COST|IMPACT):|$)/i);
+  const costMatch = cleanBody.match(/(?:COST|IMPACT|WHAT IT COST):\s*([\s\S]*?)$/i);
 
   if (thoughtMatch && actuallyMatch) {
     return {
@@ -31,7 +69,7 @@ export function parseGotcha(body: string | null): ParsedGotcha {
   }
 
   // Fallback: Split by newline
-  const lines = body.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = cleanBody.split("\n").map((l) => l.trim()).filter(Boolean);
   if (lines.length >= 2) {
     return {
       thought: lines[0].replace(/^(?:I thought|Thought|Assumption):\s*/i, ""),
@@ -42,7 +80,7 @@ export function parseGotcha(body: string | null): ParsedGotcha {
 
   return {
     thought: "Initial intuitive expectation failed in practice.",
-    actually: body,
+    actually: cleanBody,
   };
 }
 
@@ -52,10 +90,11 @@ export interface ParsedQuote {
 }
 
 export function parseQuote(body: string | null): ParsedQuote {
-  if (!body) return { quote: "" };
+  const cleanBody = stripNote(body);
+  if (!cleanBody) return { quote: "" };
 
   // Check for "Quote" — Author or Author, Year
-  const authorMatch = body.match(/^(?:["“]([\s\S]*?)["”]|([\s\S]*?))\s*(?:[-—–\n]\s*|\s+by\s+)([\s\S]*)$/i);
+  const authorMatch = cleanBody.match(/^(?:["“]([\s\S]*?)["”]|([\s\S]*?))\s*(?:[-—–\n]\s*|\s+by\s+)([\s\S]*)$/i);
   if (authorMatch) {
     const quote = (authorMatch[1] || authorMatch[2] || "").trim();
     const author = authorMatch[3].trim();
@@ -66,7 +105,7 @@ export function parseQuote(body: string | null): ParsedQuote {
 
   // Fallback: entire text is quote
   return {
-    quote: body.replace(/^["“]|["”]$/g, "").trim(),
+    quote: cleanBody.replace(/^["“]|["”]$/g, "").trim(),
   };
 }
 
@@ -77,17 +116,18 @@ export interface ParsedOpinion {
 }
 
 export function parseOpinion(body: string | null, createdAt?: string | Date): ParsedOpinion {
-  if (!body) {
+  const cleanBody = stripNote(body);
+  if (!cleanBody) {
     return { take: "", conviction: 4, ageDays: 1 };
   }
 
-  let take = body;
+  let take = cleanBody;
   let conviction = 4;
 
-  const convMatch = body.match(/\[(?:conviction|level):\s*(\d)\]/i);
+  const convMatch = cleanBody.match(/\[(?:conviction|level):\s*(\d)\]/i);
   if (convMatch) {
     conviction = Math.min(5, Math.max(1, parseInt(convMatch[1], 10)));
-    take = body.replace(/\[(?:conviction|level):\s*\d\]/i, "").trim();
+    take = cleanBody.replace(/\[(?:conviction|level):\s*\d\]/i, "").trim();
   }
 
   const created = createdAt ? new Date(createdAt) : new Date();
@@ -108,9 +148,10 @@ export interface ParsedPattern {
 }
 
 export function parsePattern(body: string | null, defaultDate: string): ParsedPattern {
-  if (!body) return { name: "", instances: [] };
+  const cleanBody = stripNote(body);
+  if (!cleanBody) return { name: "", instances: [] };
 
-  const lines = body.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = cleanBody.split("\n").map((l) => l.trim()).filter(Boolean);
   const name = lines[0] || "";
   const instances: { date: string; note: string }[] = [];
 

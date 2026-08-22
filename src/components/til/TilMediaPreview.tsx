@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { LinkPreview } from "@/db/schema";
 import { extractYouTubeVideoId } from "@/lib/cleanTitle";
 import { Play, ExternalLink, Globe, BookOpen, Video } from "lucide-react";
+import { GlimpseSummaryLink } from "@/components/GlimpseSummaryLink";
 
 interface TilMediaPreviewProps {
   url: string;
@@ -45,6 +46,8 @@ export const TilMediaPreview: React.FC<TilMediaPreviewProps> = ({
             background: "#000",
             boxShadow: "3px 3px 0 var(--ink)",
             overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           <div style={{ position: "relative", width: "100%", paddingTop: "56.25%" }}>
@@ -62,6 +65,9 @@ export const TilMediaPreview: React.FC<TilMediaPreviewProps> = ({
                 border: "none",
               }}
             />
+          </div>
+          <div style={{ padding: "6px 8px", background: "var(--card, #FFFDF7)", borderTop: "1.5px solid var(--ink)" }}>
+            <GlimpseSummaryLink url={url} variant="link" />
           </div>
         </div>
       );
@@ -176,7 +182,7 @@ export const TilMediaPreview: React.FC<TilMediaPreviewProps> = ({
               fontFamily: "var(--mono)",
               fontSize: "9px",
               fontWeight: 700,
-              opacity: 0.6,
+              opacity: 0.7,
             }}
           >
             <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
@@ -186,10 +192,14 @@ export const TilMediaPreview: React.FC<TilMediaPreviewProps> = ({
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: "var(--ink)", display: "inline-flex", alignItems: "center", gap: "2px" }}
+              style={{ color: "var(--ink)", display: "inline-flex", alignItems: "center", gap: "2px", textDecoration: "none", fontWeight: 800 }}
             >
               WATCH <ExternalLink size={9} />
             </a>
+          </div>
+
+          <div style={{ marginTop: "8px" }}>
+            <GlimpseSummaryLink url={url} variant="pill" />
           </div>
         </div>
       </div>
