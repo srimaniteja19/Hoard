@@ -87,6 +87,38 @@ export function nextOccurrence(rule: string, fromDateStr: string): string | null
   return null;
 }
 
+/** Whether `rule` has an occurrence on `dateStr` (inclusive). Projection
+ * only — does not invent rows. Monthly/yearly clamp to the last day of a
+ * shorter month, matching nextOccurrence. */
+export function ruleOccursOn(rule: string, dateStr: string): boolean {
+  const { y, m, d } = parseDateStr(dateStr);
+  const dow = weekdayIndex(y, m, d);
+
+  if (rule === "daily") return true;
+  if (rule === "weekdays") return dow >= 1 && dow <= 5;
+
+  const weeklyMatch = rule.match(/^weekly:([A-Z]{3})$/);
+  if (weeklyMatch) return WEEKDAY_NAMES[dow] === weeklyMatch[1];
+
+  const monthlyMatch = rule.match(/^monthly:(\d{2})$/);
+  if (monthlyMatch) {
+    const targetDay = Number(monthlyMatch[1]);
+    if (targetDay < 1 || targetDay > 31) return false;
+    return d === Math.min(targetDay, daysInMonth(y, m));
+  }
+
+  const yearlyMatch = rule.match(/^yearly:(\d{2})-(\d{2})$/);
+  if (yearlyMatch) {
+    const targetMonth = Number(yearlyMatch[1]);
+    const targetDay = Number(yearlyMatch[2]);
+    if (targetMonth < 1 || targetMonth > 12 || targetDay < 1 || targetDay > 31) return false;
+    if (m !== targetMonth) return false;
+    return d === Math.min(targetDay, daysInMonth(y, m));
+  }
+
+  return false;
+}
+
 export type SuccessorTemplate = {
   title: string;
   note: string | null;
@@ -131,7 +163,11 @@ export function buildSuccessorFields(
 ): SuccessorFields | null {
   if (!root.recurrenceRule) return null;
 
-  const anchor = completedInstance.dueDate ?? completedInstance.completedOn ?? completedInstance.originalDueDate;
+  const due = completedInstance.dueDate;
+  const completedOn = completedInstance.completedOn;
+  const original = completedInstance.originalDueDate;
+  let anchor = due ?? completedOn ?? original;
+  if (due && completedOn && completedOn > due) anchor = completedOn;
   if (!anchor) return null;
 
   const nextDue = nextOccurrence(root.recurrenceRule, anchor);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { nextOccurrence, buildSuccessorFields, SuccessorTemplate, CompletedInstance } from "./recurrence";
+import { nextOccurrence, buildSuccessorFields, ruleOccursOn, SuccessorTemplate, CompletedInstance } from "./recurrence";
 
 describe("nextOccurrence — daily", () => {
   it("adds one day", () => {
@@ -71,6 +71,16 @@ describe("nextOccurrence — invalid input", () => {
   it("returns null for an unrecognised rule", () => {
     expect(nextOccurrence("hourly", "2024-01-15")).toBeNull();
     expect(nextOccurrence("", "2024-01-15")).toBeNull();
+  });
+});
+
+describe("ruleOccursOn", () => {
+  it("matches daily, weekdays, and a weekly weekday", () => {
+    expect(ruleOccursOn("daily", "2024-01-15")).toBe(true);
+    expect(ruleOccursOn("weekdays", "2024-01-15")).toBe(true); // Monday
+    expect(ruleOccursOn("weekdays", "2024-01-20")).toBe(false); // Saturday
+    expect(ruleOccursOn("weekly:MON", "2024-01-15")).toBe(true);
+    expect(ruleOccursOn("weekly:MON", "2024-01-16")).toBe(false);
   });
 });
 
@@ -152,5 +162,14 @@ describe("buildSuccessorFields", () => {
   it("returns null when the rule doesn't resolve to a next occurrence", () => {
     const fields = buildSuccessorFields({ ...root, recurrenceRule: "weekly:XYZ" }, completedInstance);
     expect(fields).toBeNull();
+  });
+
+  it("anchors a late completion on completedOn so the next instance is after today", () => {
+    const fields = buildSuccessorFields(root, {
+      ...completedInstance,
+      dueDate: "2024-01-15",
+      completedOn: "2024-01-18",
+    });
+    expect(fields?.dueDate).toBe("2024-01-19");
   });
 });

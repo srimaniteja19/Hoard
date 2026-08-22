@@ -59,6 +59,7 @@ export function useTodos() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [editNote, setEditNote] = useState("");
 
   const [actualTimePromptId, setActualTimePromptId] = useState<string | null>(null);
 
@@ -249,13 +250,16 @@ export function useTodos() {
   const startEdit = useCallback((todo: Todo) => {
     setEditingId(todo.id);
     setEditTitle(todo.title);
+    setEditNote(todo.note ?? "");
   }, []);
 
   const changeEditTitle = useCallback((title: string) => setEditTitle(title), []);
+  const changeEditNote = useCallback((note: string) => setEditNote(note), []);
 
   const cancelEdit = useCallback(() => {
     setEditingId(null);
     setEditTitle("");
+    setEditNote("");
   }, []);
 
   // Recurrence edit scopes — TODOS.md §5: "this one" only touches the
@@ -266,29 +270,60 @@ export function useTodos() {
     async (todoId: string, scope: "one" | "future") => {
       const title = editTitle.trim();
       if (!title) return;
+      const note = editNote.trim() || null;
       setEditingId(null);
-      setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, title } : t)));
+      setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, title, note } : t)));
       await withRequest<Partial<Todo>>(
         () =>
           fetch(`/api/todos/${todoId}`, {
             method: "PATCH",
             credentials: "include",
             headers: json,
-            body: JSON.stringify({ title, applyToFutureInstances: scope === "future" }),
+            body: JSON.stringify({ title, note, applyToFutureInstances: scope === "future" }),
           }),
         (updated) => setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, ...updated } : t))),
         { errorLabel: "Failed to save edit" }
       );
     },
-    [editTitle]
+    [editTitle, editNote]
   );
+
+  const setDueDate = useCallback(async (todoId: string, dueDate: string | null) => {
+    setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, dueDate } : t)));
+    await withRequest<Partial<Todo>>(
+      () =>
+        fetch(`/api/todos/${todoId}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: json,
+          body: JSON.stringify({ dueDate }),
+        }),
+      (updated) => setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, ...updated } : t))),
+      { errorLabel: "Failed to set due date" }
+    );
+  }, []);
+
+  const setRemindAt = useCallback(async (todoId: string, remindAt: string | null) => {
+    setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, remindAt } : t)));
+    await withRequest<Partial<Todo>>(
+      () =>
+        fetch(`/api/todos/${todoId}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: json,
+          body: JSON.stringify({ remindAt }),
+        }),
+      (updated) => setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, ...updated } : t))),
+      { errorLabel: "Failed to set reminder" }
+    );
+  }, []);
 
   return {
     todos,
     loading,
     dayPlan,
     graveyard: { open: graveyardOpen, items: graveyardItems, loading: graveyardLoading, query: graveyardQuery },
-    editing: { id: editingId, title: editTitle },
+    editing: { id: editingId, title: editTitle, note: editNote },
     actualTimePrompt: { id: actualTimePromptId },
     actions: {
       createTodo,
@@ -305,8 +340,11 @@ export function useTodos() {
       restoreFromGraveyard,
       startEdit,
       changeEditTitle,
+      changeEditNote,
       cancelEdit,
       saveEdit,
+      setDueDate,
+      setRemindAt,
       submitActualTime,
       dismissActualTimePrompt,
     },

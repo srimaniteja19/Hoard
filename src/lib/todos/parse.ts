@@ -15,6 +15,8 @@
  * it's built to get right.
  */
 
+import { nextOccurrence, ruleOccursOn } from "./recurrence";
+
 export type Energy = "DEEP" | "SHALLOW" | "ERRAND";
 
 export type ParsedTodo = {
@@ -56,6 +58,27 @@ function todayWeekdayIndex(today: Date, tz: string): number {
 }
 
 /** Local day-of-month in the given timezone — never the raw UTC date. */
+function todayLocalIso(today: Date, tz: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .formatToParts(today)
+    .reduce<Record<string, string>>((acc, part) => {
+      acc[part.type] = part.value;
+      return acc;
+    }, {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function daysBetween(from: string, to: string): number {
+  const [fy, fm, fd] = from.split("-").map(Number);
+  const [ty, tm, td] = to.split("-").map(Number);
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / (24 * 60 * 60 * 1000));
+}
+
 function todayLocalDate(today: Date, tz: string): number {
   const day = new Intl.DateTimeFormat("en-US", { timeZone: tz, day: "2-digit" }).format(today);
   return Number(day);
@@ -224,6 +247,16 @@ export function parseTodo(input: string, today: Date, tz: string): ParsedTodo {
   // Inference: energy from minutes if no explicit energy token was given.
   if (!energy) {
     energy = estimatedMinutes >= 40 ? "DEEP" : "SHALLOW";
+  }
+
+  if (recurrenceRule && dueOffsetDays === null) {
+    const todayStr = todayLocalIso(today, tz);
+    if (ruleOccursOn(recurrenceRule, todayStr)) {
+      dueOffsetDays = 0;
+    } else {
+      const next = nextOccurrence(recurrenceRule, todayStr);
+      if (next) dueOffsetDays = daysBetween(todayStr, next);
+    }
   }
 
   return {

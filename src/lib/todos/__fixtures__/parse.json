@@ -67,27 +67,27 @@
   {
     "name": "every day",
     "input": "Log workout every day",
-    "expected": { "title": "Log workout", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": "daily", "tags": [], "urgent": false }
+    "expected": { "title": "Log workout", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": 0, "remindAtLocal": null, "recurrenceRule": "daily", "tags": [], "urgent": false }
   },
   {
     "name": "every weekday",
     "input": "Check email every weekday",
-    "expected": { "title": "Check email", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": "weekdays", "tags": [], "urgent": false }
+    "expected": { "title": "Check email", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": 0, "remindAtLocal": null, "recurrenceRule": "weekdays", "tags": [], "urgent": false }
   },
   {
     "name": "every week (uses today's weekday)",
     "input": "Water plants every week",
-    "expected": { "title": "Water plants", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": "weekly:MON", "tags": [], "urgent": false }
+    "expected": { "title": "Water plants", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": 0, "remindAtLocal": null, "recurrenceRule": "weekly:MON", "tags": [], "urgent": false }
   },
   {
     "name": "every month (uses today's local date)",
     "input": "Pay rent every month",
-    "expected": { "title": "Pay rent", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": "monthly:15", "tags": [], "urgent": false }
+    "expected": { "title": "Pay rent", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": 0, "remindAtLocal": null, "recurrenceRule": "monthly:15", "tags": [], "urgent": false }
   },
   {
     "name": "every <weekday>, distinct from today",
     "input": "Team retro every friday",
-    "expected": { "title": "Team retro", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": "weekly:FRI", "tags": [], "urgent": false }
+    "expected": { "title": "Team retro", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": 4, "remindAtLocal": null, "recurrenceRule": "weekly:FRI", "tags": [], "urgent": false }
   },
   {
     "name": "due today",
@@ -197,7 +197,7 @@
   {
     "name": "recurrence word does not also fire due-date on the same weekday",
     "input": "Team sync every monday",
-    "expected": { "title": "Team sync", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": null, "remindAtLocal": null, "recurrenceRule": "weekly:MON", "tags": [], "urgent": false }
+    "expected": { "title": "Team sync", "estimatedMinutes": 25, "energy": "SHALLOW", "dueOffsetDays": 0, "remindAtLocal": null, "recurrenceRule": "weekly:MON", "tags": [], "urgent": false }
   },
   {
     "name": "energy inferred DEEP from a high explicit estimate",

@@ -154,6 +154,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (data.actualMinutes !== undefined) updatePayload.actualMinutes = data.actualMinutes;
     if (data.dueDate !== undefined) updatePayload.dueDate = data.dueDate;
     if (data.remindAt !== undefined) updatePayload.remindAt = data.remindAt ? new Date(data.remindAt) : null;
+    if (data.dueDate && existing.remindAt && data.remindAt === undefined) {
+      const timezone = await getUserTimezone(userId);
+      updatePayload.remindAt = remindAtOnDate(existing.remindAt, data.dueDate, timezone);
+      updatePayload.remindSentAt = null;
+    }
     if (data.recurrenceRule !== undefined) updatePayload.recurrenceRule = data.recurrenceRule;
     if (data.sortOrder !== undefined) updatePayload.sortOrder = data.sortOrder;
 
