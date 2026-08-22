@@ -1,23 +1,25 @@
 {
   "manifest_version": 3,
-  "name": "HOARD — Contextual Link Saver",
+  "name": "HOARD — Contextual Link Saver & Power Capture",
   "short_name": "HOARD",
-  "version": "1.0.0",
-  "description": "Neo-brutalist contextual bookmark manager extension for articles, videos, repos, papers, and apps.",
+  "version": "2.0.0",
+  "description": "Neo-brutalist capture suite for Bookmarks, TIL knowledge, and Todos. With smart auto-triage and spaced repetition.",
   "permissions": [
     "activeTab",
     "storage",
     "contextMenus",
     "scripting",
-    "alarms"
+    "alarms",
+    "tabs"
   ],
   "host_permissions": [
     "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*",
     "https://*/*"
   ],
   "content_scripts": [
     {
-      "matches": ["https://hoard-ten.vercel.app/*", "http://localhost:3000/*"],
+      "matches": ["https://hoard-ten.vercel.app/*", "http://localhost:3000/*", "http://127.0.0.1:3000/*"],
       "js": ["content.js"],
       "run_at": "document_start"
     }
@@ -29,7 +31,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "Save to HOARD (Alt+Shift+H)"
+    "default_title": "HOARD (Alt+Shift+H)"
   },
   "background": {
     "service_worker": "background.js"
@@ -40,7 +42,21 @@
         "default": "Alt+Shift+H",
         "mac": "Command+Shift+H"
       },
-      "description": "Instantly save current tab to HOARD"
+      "description": "Save current tab to HOARD (Bookmark)"
+    },
+    "capture-til": {
+      "suggested_key": {
+        "default": "Alt+Shift+T",
+        "mac": "Command+Shift+T"
+      },
+      "description": "Quick capture TIL from tab"
+    },
+    "capture-todo": {
+      "suggested_key": {
+        "default": "Alt+Shift+D",
+        "mac": "Command+Shift+D"
+      },
+      "description": "Add current page or selection as TODO"
     }
   },
   "icons": {
@@ -49,3 +65,4 @@
     "128": "icons/icon128.png"
   }
 }
+

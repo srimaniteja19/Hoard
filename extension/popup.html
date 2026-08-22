@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HOARD — Extension</title>
+  <title>HOARD — Power Extension</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -12,17 +12,20 @@
     <header class="header">
       <div class="brand">
         <span class="logo-badge">HOARD</span>
-        <span class="version-badge">EXTENSION</span>
+        <span class="version-badge">v2.0</span>
       </div>
-      <div class="status-indicator" id="syncStatus">● LIVE</div>
+      <div class="header-right">
+        <div class="status-indicator" id="syncStatus">● LIVE</div>
+      </div>
     </header>
 
-    <!-- Tab Switcher -->
+    <!-- 5-Column Tab Navigation -->
     <nav class="tab-nav">
-      <button class="tab-btn active" data-tab="save">SAVE TAB</button>
-      <button class="tab-btn" data-tab="til">CAPTURE TIL</button>
-      <button class="tab-btn" data-tab="hoard">MY HOARD</button>
-      <button class="tab-btn" data-tab="settings">SETTINGS</button>
+      <button class="tab-btn active" data-tab="save" title="Save Bookmark">🔖 SAVE</button>
+      <button class="tab-btn" data-tab="til" title="Capture TIL">💡 TIL</button>
+      <button class="tab-btn" data-tab="todos" title="Manage Todos">✅ TODOS</button>
+      <button class="tab-btn" data-tab="hoard" title="Search Library">🔍 HOARD</button>
+      <button class="tab-btn" data-tab="settings" title="Settings & Auth">⚙️ CONFIG</button>
     </nav>
 
     <!-- Notification Toast -->
@@ -30,7 +33,9 @@
       <span id="toastMsg">✓ SAVED TO HOARD</span>
     </div>
 
-    <!-- TAB 1: SAVE TAB -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 1: SAVE BOOKMARK -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
     <main class="tab-content active" id="tab-save">
       <div class="tab-scroll">
         <div class="form-group">
@@ -43,26 +48,32 @@
           <input type="url" id="pageUrl" class="input-field" placeholder="https://..." />
         </div>
 
-        <!-- Detection Badge — compact inline strip -->
+        <!-- Detection Badge & Triage -->
         <div class="detection-card" id="detectionCard">
           <div class="detection-header">
             <span class="type-tag" id="detectType">ART</span>
             <span class="detect-title" id="detectTitle">Web Article</span>
           </div>
-          <div class="detect-details" id="detectDetails">Type: Web Article</div>
+          <div class="detect-details" id="detectDetails">Source: Web</div>
         </div>
         <div class="triage-status" id="triageStatus">TRIAGE IDLE</div>
 
-        <div class="form-group">
-          <label class="field-lbl">SHELF</label>
-          <div class="item-type-toggle" id="itemTypeToggle">
-            <button type="button" class="item-type-btn active" data-item-type="REFERENCE">REFERENCE</button>
-            <button type="button" class="item-type-btn" data-item-type="QUEUED">QUEUED</button>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="field-lbl">SHELF</label>
+            <div class="item-type-toggle" id="itemTypeToggle">
+              <button type="button" class="item-type-btn active" data-item-type="REFERENCE">REF</button>
+              <button type="button" class="item-type-btn" data-item-type="QUEUED">QUEUE</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="field-lbl">EST. MINS</label>
+            <input type="number" id="pageMins" class="input-field" value="15" min="1" max="600" />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="field-lbl">FOLDER / COLLECTION</label>
+          <label class="field-lbl">COLLECTION / FOLDER</label>
           <select id="folderSelect" class="select-field">
             <option value="unsorted">📁 [ Unsorted ]</option>
             <option value="read">📚 [ Read queue ]</option>
@@ -79,14 +90,15 @@
             <button type="button" class="tag-chip active" data-tag="ai">#ai</button>
             <button type="button" class="tag-chip" data-tag="systems">#systems</button>
             <button type="button" class="tag-chip" data-tag="craft">#craft</button>
+            <button type="button" class="tag-chip" data-tag="dev">#dev</button>
             <button type="button" class="tag-chip" data-tag="paper">#paper</button>
           </div>
           <input type="text" id="customTag" class="input-field-sm" placeholder="Add custom #tag and press Enter..." />
         </div>
 
         <div class="form-group">
-          <label class="field-lbl">MY NOTE</label>
-          <textarea id="pageNote" class="textarea-field" placeholder="What's worth remembering?"></textarea>
+          <label class="field-lbl">NOTE OR QUOTE</label>
+          <textarea id="pageNote" class="textarea-field" placeholder="What's worth remembering? Highlight text on page to auto-quote..."></textarea>
         </div>
       </div>
 
@@ -96,10 +108,18 @@
       </button>
     </main>
 
-    <!-- TAB: CAPTURE TIL -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 2: CAPTURE TIL & SPACED REPETITION -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
     <main class="tab-content" id="tab-til" style="display: none;">
-      <div class="tab-scroll">
-        <!-- TIL Type selector chips -->
+      <!-- Sub view toggle for TIL: Capture vs Review -->
+      <div class="sub-view-nav">
+        <button type="button" class="sub-nav-btn active" id="tilSubNavCapture">📝 NEW ENTRY</button>
+        <button type="button" class="sub-nav-btn" id="tilSubNavReview">🎴 REVIEW DUE (<span id="tilDueCount">0</span>)</button>
+      </div>
+
+      <!-- VIEW A: Capture New TIL -->
+      <div class="tab-scroll" id="tilCaptureView">
         <div class="form-group">
           <label class="field-lbl">TIL TYPE</label>
           <div class="til-type-chips" id="tilTypeChips">
@@ -113,57 +133,126 @@
           </div>
         </div>
 
-        <!-- Body Textarea -->
         <div class="form-group">
           <label class="field-lbl">WHAT DID YOU LEARN?</label>
-          <textarea id="tilBody" class="textarea-field" placeholder="Today I learned that..." rows="4"></textarea>
+          <textarea id="tilBody" class="textarea-field" placeholder="Today I learned that..." rows="3"></textarea>
         </div>
 
-        <!-- Snippet Code area (visible for SNIPPET) -->
+        <!-- Code Snippet Box (Visible when SNIPPET is active) -->
         <div class="form-group" id="tilSnippetGroup" style="display: none;">
           <label class="field-lbl">CODE SNIPPET</label>
-          <textarea id="tilCode" class="textarea-field mono-code" placeholder="// Paste code..." rows="3"></textarea>
+          <textarea id="tilCode" class="textarea-field mono-code" placeholder="// Paste code or function..." rows="3"></textarea>
         </div>
 
-        <!-- Link URL -->
         <div class="form-group">
-          <label class="field-lbl">LINK URL</label>
+          <label class="field-lbl">SOURCE URL</label>
           <input type="url" id="tilLinkUrl" class="input-field" placeholder="https://..." />
         </div>
 
-        <!-- Discharge Bookmark Dropdown -->
         <div class="form-group">
-          <label class="field-lbl">DISCHARGE A BOOKMARK</label>
+          <label class="field-lbl">DISCHARGE AN UNREAD BOOKMARK</label>
           <select id="tilDischargeSelect" class="select-field">
-            <option value="">-- Optional: Select bookmark to mark read --</option>
+            <option value="">-- Optional: Mark an unread bookmark as finished --</option>
           </select>
         </div>
 
-        <!-- Tags input -->
         <div class="form-group">
           <label class="field-lbl">TAGS (COMMA SEPARATED)</label>
-          <input type="text" id="tilTags" class="input-field-sm" placeholder="ai, postgres, nextjs..." />
+          <input type="text" id="tilTags" class="input-field-sm" placeholder="postgres, nextjs, vector, ai..." />
         </div>
 
-        <!-- Save to Hoard Queue checkbox -->
         <div class="form-group-checkbox">
-          <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer;">
+          <label class="checkbox-label">
             <input type="checkbox" id="tilSaveToQueue" />
             <span>Also save link to HOARD unread queue</span>
           </label>
         </div>
+
+        <button id="commitTilBtn" class="btn-primary" style="background: var(--cyan); color: #000; margin-top: 4px;">
+          <span>COMMIT TIL ENTRY</span>
+          <kbd>⌘↵</kbd>
+        </button>
       </div>
 
-      <button id="commitTilBtn" class="btn-primary" style="background: var(--cyan); color: #000;">
-        <span>COMMIT TIL ENTRY</span>
-        <kbd>⌘↵</kbd>
-      </button>
+      <!-- VIEW B: Spaced Repetition Review Widget -->
+      <div class="tab-scroll" id="tilReviewView" style="display: none;">
+        <div class="review-card" id="reviewCard">
+          <div class="review-badge" id="reviewTypeBadge">FACT</div>
+          <div class="review-front" id="reviewFront">Loading flashcards due for review...</div>
+          <div class="review-back" id="reviewBack" style="display: none;">
+            <div class="review-code" id="reviewCodeBlock" style="display: none;"></div>
+            <div class="review-meta" id="reviewMetaInfo"></div>
+          </div>
+          
+          <button type="button" class="btn-secondary" id="revealAnswerBtn" style="margin-top: 10px;">
+            REVEAL ANSWER / DETAILS
+          </button>
+
+          <div class="review-actions" id="reviewActions" style="display: none; margin-top: 10px;">
+            <button type="button" class="rating-btn rate-hard" data-rating="1">1: HARD 🔴</button>
+            <button type="button" class="rating-btn rate-good" data-rating="2">2: GOOD 🟡</button>
+            <button type="button" class="rating-btn rate-easy" data-rating="3">3: EASY 🟢</button>
+          </div>
+        </div>
+
+        <div class="review-empty" id="reviewEmpty" style="display: none;">
+          <div style="font-size: 24px; margin-bottom: 6px;">🎉</div>
+          <div style="font-weight: 800; font-size: 13px;">ALL CAUGHT UP!</div>
+          <p style="font-size: 10px; opacity: .7; margin-top: 4px;">No TIL flashcards due for spaced review right now. Keep learning!</p>
+        </div>
+      </div>
     </main>
 
-    <!-- TAB 2: MY HOARD SEARCH -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 3: CAPTURE & MANAGE TODOS -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <main class="tab-content" id="tab-todos" style="display: none;">
+      <!-- Natural Language Quick Capture -->
+      <div class="todo-capture-box">
+        <div class="form-group" style="margin-bottom: 4px;">
+          <label class="field-lbl">NATURAL LANGUAGE TASK CAPTURE</label>
+          <input type="text" id="todoInput" class="input-field" placeholder="e.g. Fix auth bug @urgent ~30m #dev tom 2pm" />
+        </div>
+
+        <!-- Live Parsed Breakdown -->
+        <div class="parsed-pills" id="parsedPills">
+          <span class="parsed-pill pill-energy" id="pillEnergy" style="display: none;">⚡ SHALLOW</span>
+          <span class="parsed-pill pill-estimate" id="pillEstimate" style="display: none;">⏱️ 25m</span>
+          <span class="parsed-pill pill-due" id="pillDue" style="display: none;">📅 TODAY</span>
+          <span class="parsed-pill pill-remind" id="pillRemind" style="display: none;">⏰ 3:00 PM</span>
+          <span class="parsed-pill pill-urgent" id="pillUrgent" style="display: none;">🚨 URGENT</span>
+          <span class="parsed-pill pill-recur" id="pillRecur" style="display: none;">🔁 RECUR</span>
+        </div>
+
+        <div class="todo-capture-actions">
+          <button id="addTodoBtn" class="btn-primary" style="background: var(--lime); color: #000; flex: 1; padding: 6px 8px;">
+            <span>ADD TASK</span>
+            <kbd>↵</kbd>
+          </button>
+          <button id="addTabAsTodoBtn" class="btn-secondary" title="Capture current page as a reading task" style="flex: 1; padding: 6px 8px;">
+            📌 TAB AS TASK
+          </button>
+        </div>
+      </div>
+
+      <!-- Todo Filters & List -->
+      <div class="sub-view-nav" style="margin-top: 6px; margin-bottom: 6px;">
+        <button type="button" class="sub-nav-btn active" data-todo-filter="open">OPEN TASKS (<span id="todoOpenCount">0</span>)</button>
+        <button type="button" class="sub-nav-btn" data-todo-filter="today">TODAY (<span id="todoTodayCount">0</span>)</button>
+        <button type="button" class="sub-nav-btn" data-todo-filter="done">COMPLETED</button>
+      </div>
+
+      <div class="todo-list" id="todoList">
+        <!-- Injected via popup.js -->
+      </div>
+    </main>
+
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 4: MY HOARD (RANKED SEARCH & BROWSE) -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
     <main class="tab-content" id="tab-hoard" style="display: none;">
       <div class="search-bar">
-        <input type="text" id="searchInHoard" class="input-field" placeholder="Search saved bookmarks..." />
+        <input type="text" id="searchInHoard" class="input-field" placeholder="Ranked search in titles, tags, notes..." />
       </div>
 
       <div class="filter-chips">
@@ -172,6 +261,9 @@
         <button class="filter-chip" data-filter="VID">VIDEOS</button>
         <button class="filter-chip" data-filter="GIT">REPOS</button>
         <button class="filter-chip" data-filter="PPR">PAPERS</button>
+        <button class="filter-chip" data-filter="DOC">DOCS</button>
+        <button class="filter-chip" data-filter="ART">ARTICLES</button>
+        <button class="filter-chip" data-filter="APP">APPS</button>
       </div>
 
       <div class="hoard-list" id="hoardList">
@@ -179,33 +271,62 @@
       </div>
     </main>
 
-    <!-- TAB 3: SETTINGS -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 5: SETTINGS & AUTH -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
     <main class="tab-content" id="tab-settings" style="display: none;">
-      <div class="settings-inner">
+      <div class="tab-scroll settings-inner">
         <div class="form-group">
           <label class="field-lbl">HOARD APP SERVER URL</label>
           <input type="text" id="serverUrl" class="input-field" value="https://hoard-ten.vercel.app" />
         </div>
 
+        <div class="form-group">
+          <label class="field-lbl">EXTENSION API TOKEN (htk_...)</label>
+          <div style="display: flex; gap: 4px; width: 100%;">
+            <input type="password" id="apiToken" class="input-field" placeholder="Optional: Personal Access Token" style="flex: 1;" />
+            <button type="button" id="toggleTokenVisibilityBtn" class="icon-btn" title="Show/Hide Token" style="padding: 0 8px;">👁️</button>
+          </div>
+          <span style="font-size: 8.5px; opacity: .75; font-family: var(--mono); margin-top: 3px;">
+            Enables background sync even when Hoard tab is closed. Generate in Hoard Settings > Tokens.
+          </span>
+        </div>
+
+        <button type="button" id="testConnectionBtn" class="btn-secondary" style="margin-top: 2px;">
+          ⚡ TEST SERVER CONNECTION
+        </button>
+        <div id="testConnResult" style="font-family: var(--mono); font-size: 9px; display: none; padding: 4px 6px; border: var(--bd); background: var(--paper);"></div>
+
+        <div class="info-box" style="margin-top: 4px;">
+          <b>OFFLINE SYNC STATUS</b>
+          <div class="shortcut-row" style="margin-top: 4px;">
+            <span>Pending Offline Items:</span>
+            <span id="offlineQueueCount" style="font-family: var(--mono); font-weight: 800;">0 items</span>
+          </div>
+          <button type="button" id="forceSyncBtn" class="btn-secondary" style="margin-top: 6px; font-size: 9.5px; padding: 4px 6px;">
+            🔄 FORCE SYNC NOW
+          </button>
+        </div>
+
         <div class="info-box">
           <b>KEYBOARD SHORTCUTS</b>
           <div class="shortcut-row">
-            <span>Quick Save Tab</span>
+            <span>Save Bookmark</span>
             <kbd>Alt + Shift + H</kbd>
           </div>
           <div class="shortcut-row">
-            <span>Open Hoard Web App</span>
-            <kbd>Alt + Shift + O</kbd>
+            <span>Capture TIL</span>
+            <kbd>Alt + Shift + T</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span>Add Todo</span>
+            <kbd>Alt + Shift + D</kbd>
           </div>
         </div>
 
-        <div class="info-box">
-          <b>RIGHT-CLICK CONTEXT MENU</b>
-          <p style="margin: 4px 0 0; font-size: 10px; opacity: .8;">Right-click any link or selection to save directly into HOARD.</p>
-        </div>
-
-        <button id="openWebAppBtn" class="btn-secondary">
-          OPEN HOARD WEB APP ↗
+        <button id="openWebAppBtn" class="btn-primary" style="background: var(--yel); color: #000; margin-top: 4px;">
+          <span>OPEN HOARD WEB APP</span>
+          <span>↗</span>
         </button>
       </div>
     </main>
