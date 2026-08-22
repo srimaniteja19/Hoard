@@ -5,6 +5,7 @@ import { applyStationPatch } from "@/lib/atlas/apply";
 import type { AtlasStreamEvent } from "@/lib/atlas/generate";
 import { parseAtlas } from "@/lib/atlas/parse";
 import { nextStatusAfterCheck } from "@/lib/atlas/progress";
+import { applyStationResources, stationsNeedingResources } from "@/lib/atlas/resources";
 import type {
   AtlasCadence,
   AtlasDepth,
@@ -89,6 +90,15 @@ function applyLiveEvent(id: string, event: AtlasStreamEvent) {
   }
   if (event.type === "thin") {
     upsertLive(id, { thin: event.thin });
+    return;
+  }
+  if (event.type === "resources") {
+    if (!liveById.has(id)) return;
+    upsertLive(id, {
+      stations: live.stations.map((station) =>
+        station.id === event.stationId ? { ...station, resources: event.resources } : station,
+      ),
+    });
     return;
   }
   if (event.type === "done") {
@@ -353,17 +363,64 @@ export function useAtlasOne(id: string) {
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState(false);
   const [filing, setFiling] = useState(() => liveById.get(id)?.filing ?? false);
+  const [resourcing, setResourcing] = useState(false);
   const [streamError, setStreamError] = useState<string | null>(() => liveById.get(id)?.error ?? null);
   const [seenId, setSeenId] = useState(id);
   const filingRef = useRef(liveById.get(id)?.filing ?? false);
+  const resourcingRef = useRef(false);
+  const resourcesStartedFor = useRef<string | null>(null);
   if (seenId !== id) {
     setSeenId(id);
     setAtlas(null);
     setLoading(true);
     setMissing(false);
     setFiling(liveById.get(id)?.filing ?? false);
+    setResourcing(false);
     setStreamError(liveById.get(id)?.error ?? null);
   }
+
+  useEffect(() => {
+    resourcingRef.current = false;
+    resourcesStartedFor.current = null;
+  }, [id]);
+
+  const fillResources = useCallback(async (): Promise<void> => {
+    if (resourcingRef.current) return;
+    resourcingRef.current = true;
+    setResourcing(true);
+    try {
+      const res = await fetch(`/api/atlas/${id}/resources`, { method: "POST", credentials: "include" });
+      if (!res.ok) return;
+      await readAtlasNdjson(res, {
+        knownId: id,
+        onEvent: (_eventId, event) => {
+          if (event.type !== "resources") return;
+          setAtlas((prev) => {
+            if (!prev) return prev;
+            const syllabus = applyStationResources(prev.syllabus, event.stationId, event.resources);
+            return syllabus ? { ...prev, syllabus } : prev;
+          });
+        },
+      });
+    } catch (e) {
+      console.error("Failed to fill atlas resources", e);
+    } finally {
+      resourcingRef.current = false;
+      setResourcing(false);
+    }
+  }, [id]);
+
+  const maybeStartResources = useCallback(
+    (record: AtlasRecord) => {
+      if (record.status === "archived") return;
+      if (liveById.get(id)?.filing) return;
+      if (resourcesStartedFor.current === record.id) return;
+      if (stationsNeedingResources(record.syllabus.stations).length === 0) return;
+      resourcesStartedFor.current = record.id;
+      void fillResources();
+    },
+    [fillResources, id],
+  );
 
   const loadOne = useCallback(async () => {
     try {
@@ -377,14 +434,16 @@ export function useAtlasOne(id: string) {
       const next = await readAtlas(res);
       if (!next) return;
       const live = liveById.get(id);
-      setAtlas(live ? overlayLive(next, live) : next);
+      const shown = live ? overlayLive(next, live) : next;
+      setAtlas(shown);
       setMissing(false);
+      maybeStartResources(shown);
     } catch (e) {
       console.error("Failed to load atlas", e);
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, maybeStartResources]);
 
   useEffect(() => {
     let cancelled = false;
@@ -401,8 +460,10 @@ export function useAtlasOne(id: string) {
         const next = await readAtlas(res);
         if (cancelled || !next) return;
         const live = liveById.get(id);
-        setAtlas(live ? overlayLive(next, live) : next);
+        const shown = live ? overlayLive(next, live) : next;
+        setAtlas(shown);
         setMissing(false);
+        maybeStartResources(shown);
       } catch (e) {
         console.error("Failed to load atlas", e);
       } finally {
@@ -413,13 +474,14 @@ export function useAtlasOne(id: string) {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, maybeStartResources]);
 
   useEffect(() => {
     filingRef.current = liveById.get(id)?.filing ?? false;
     return subscribeLive(id, (live) => {
       const wasFiling = filingRef.current;
       filingRef.current = live.filing;
+      if (live.filing) resourcesStartedFor.current = null;
       setFiling(live.filing);
       setStreamError(live.error);
       setAtlas((prev) => (prev ? overlayLive(prev, live) : prev));
@@ -603,6 +665,7 @@ export function useAtlasOne(id: string) {
     loading,
     missing,
     filing,
+    resourcing,
     streamError,
     toggle,
     setNote,

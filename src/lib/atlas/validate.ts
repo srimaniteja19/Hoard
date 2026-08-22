@@ -24,6 +24,7 @@ export function hydrateStations(draft: AtlasStationDraft[]): AtlasStation[] {
     state: "OPEN" as const,
     note: null,
     doneAt: null,
+    resources: [],
   }));
 }
 

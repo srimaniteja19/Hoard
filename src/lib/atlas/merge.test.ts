@@ -15,3 +15,16 @@ it("keeps existing done/note and appends new ids", () => {
   expect(out[0]).toMatchObject({ id: "a", title: "Old", state: "DONE", note: "filed" });
   expect(out[1]).toMatchObject({ id: "b", state: "OPEN", note: null });
 });
+
+it("keeps existing resources on retry-rest", () => {
+  const existing = hydrateStations([
+    { id: "a", weekId: "w1", title: "Old", why: "x", estimatedMinutes: 20, energy: "DEEP", kind: "read", required: true },
+  ]).map((s) => ({
+    ...s,
+    resources: [{ title: "Hit", href: "https://example.com/a", kind: "article" as const }],
+  }));
+  const incoming = [
+    { id: "a", weekId: "w1", title: "New title", why: "y", estimatedMinutes: 20, energy: "DEEP" as const, kind: "read" as const, required: true },
+  ];
+  expect(mergeStations(existing, incoming)[0]?.resources).toEqual(existing[0]?.resources);
+});

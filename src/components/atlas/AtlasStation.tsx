@@ -52,6 +52,18 @@ export function AtlasStation({
             <p className="atlas-slip-run">
               {station.estimatedMinutes}m · {station.energy} · {station.kind}
             </p>
+            {(station.resources ?? []).length > 0 ? (
+              <ul className="atlas-slip-resources">
+                {(station.resources ?? []).map((resource) => (
+                  <li key={resource.href}>
+                    <a href={resource.href} target="_blank" rel="noreferrer" className="atlas-slip-resource">
+                      <span className="atlas-slip-resource-kind">{resource.kind === "video" ? "YT" : "ART"}</span>
+                      {resource.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             {editing ? (
               <input
                 type="text"

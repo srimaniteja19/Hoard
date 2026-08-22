@@ -16,6 +16,7 @@ export function mergeStations(existing: AtlasStation[], incoming: AtlasStationDr
       state: prev.state,
       note: prev.note,
       doneAt: prev.doneAt,
+      resources: prev.resources,
     };
   });
 }

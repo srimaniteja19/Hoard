@@ -7,6 +7,7 @@ import { parseAtlas } from "./parse";
 import { extractComplete } from "./partial";
 import type {
   AtlasRecord,
+  AtlasResource,
   AtlasStation,
   AtlasStationDraft,
   AtlasSyllabus,
@@ -22,6 +23,7 @@ export type AtlasStreamEvent =
   | { type: "week"; week: AtlasWeekDraft }
   | { type: "station"; station: AtlasStationDraft }
   | { type: "thin"; thin: boolean }
+  | { type: "resources"; stationId: string; resources: AtlasResource[] }
   | { type: "done" }
   | { type: "error"; message: string };
 

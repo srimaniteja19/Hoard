@@ -4,6 +4,13 @@ export type AtlasKind = "read" | "make" | "recall" | "talk" | "ship";
 export type AtlasEnergy = "DEEP" | "SHALLOW" | "ERRAND";
 export type AtlasStatus = "draft" | "walking" | "archived";
 export type AtlasStationState = "OPEN" | "DONE";
+export type AtlasResourceKind = "video" | "article";
+
+export type AtlasResource = {
+  title: string;
+  href: string;
+  kind: AtlasResourceKind;
+};
 
 export type ParsedAtlas = {
   topic: string;
@@ -35,6 +42,7 @@ export type AtlasStation = AtlasStationDraft & {
   state: AtlasStationState;
   note: string | null;
   doneAt: string | null;
+  resources: AtlasResource[];
 };
 
 export type AtlasSyllabus = {
