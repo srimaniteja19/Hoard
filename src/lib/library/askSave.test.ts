@@ -4,7 +4,13 @@ import {
   buildAskSave,
   citationsFromAskMessage,
   createAskSaveSchema,
+  displayKeptTitle,
+  filterKeptStamps,
+  groupKeptByDay,
+  keptDayLabel,
+  needsKeptTitle,
   questionForAssistantTurn,
+  snippetKeptTitle,
 } from "./askSave";
 
 const tilCite = {
@@ -93,3 +99,40 @@ describe("createAskSaveSchema", () => {
     );
   });
 });
+
+describe("groupKeptByDay", () => {
+  const now = new Date("2026-08-21T20:00:00");
+
+  it("files stamps into TODAY / YDAY drawers and matches a query", () => {
+    const items = [
+      stamp("1", "2026-08-21T18:00:00", "postgres hnsw"),
+      stamp("2", "2026-08-21T10:00:00", "rate limiting"),
+      stamp("3", "2026-08-20T12:00:00", "gpu ssd"),
+    ];
+    const groups = groupKeptByDay(items, now);
+    expect(groups.map((group) => group.label)).toEqual(["TODAY", "YDAY"]);
+    expect(groups[0]?.stamps).toHaveLength(2);
+    expect(keptDayLabel("2026-08-16", now)).toBe("SUN AUG 16");
+    expect(filterKeptStamps(items, "postgres").map((item) => item.id)).toEqual(["1"]);
+    expect(filterKeptStamps(items, "missing topic")).toEqual([]);
+    expect(filterKeptStamps([{ ...items[0], title: "HNSW Index Tuning" }], "hnsw index").map((item) => item.id)).toEqual(
+      ["1"]
+    );
+  });
+});
+
+describe("needsKeptTitle", () => {
+  it("names empty, snippet, and raw-question titles once", () => {
+    const question = "give me an AI engineering learning plan, what to learn first";
+    expect(needsKeptTitle("", question)).toBe(true);
+    expect(needsKeptTitle(snippetKeptTitle(question), question)).toBe(true);
+    expect(needsKeptTitle(question, question)).toBe(true);
+    expect(needsKeptTitle("AI Engineering Learning Plan", question)).toBe(false);
+    expect(displayKeptTitle("", question)).toBe(snippetKeptTitle(question));
+    expect(displayKeptTitle("AI Engineering Learning Plan", question)).toBe("AI Engineering Learning Plan");
+  });
+});
+
+function stamp(id: string, createdAt: string, question: string) {
+  return { id, question, answer: question, summary: question, citations: [], createdAt };
+}

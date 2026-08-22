@@ -8,19 +8,26 @@ import {
   type AskStoredMessage,
 } from "@/lib/library/askThread";
 
-export async function nameAskFolio(messages: AskStoredMessage[]): Promise<string> {
-  const fallback = titleFromMessages(messages);
-  const question = clipFolioText(firstRoleText(messages, "user"), 400);
-  const answer = clipFolioText(firstRoleText(messages, "assistant"), 500);
-  if (!question) return fallback;
+export async function nameAskTitle(input: {
+  question: string;
+  answer: string;
+  fallback: string;
+  kind: "folio" | "stamp";
+}): Promise<string> {
+  const question = clipFolioText(input.question, 400);
+  const answer = clipFolioText(input.answer, 500);
+  if (!question) return input.fallback;
+
+  const subject = input.kind === "stamp" ? "kept library stamp" : "library desk sheet";
+  const feature = input.kind === "stamp" ? "feature:ask-save-title" : "feature:ask-folio-title";
 
   try {
     const result = await generateText({
       model: languageModel(TRIAGE_MODEL),
       timeout: { totalMs: 6000 },
       maxRetries: 0,
-      providerOptions: gatewayProviderOptions(TRIAGE_MODEL, ["feature:ask-folio-title"]),
-      prompt: `Name this library desk sheet. Return only the title.
+      providerOptions: gatewayProviderOptions(TRIAGE_MODEL, [feature]),
+      prompt: `Name this ${subject}. Return only the title.
 
 Rules:
 - 3 to 7 words, Title Case
@@ -35,8 +42,21 @@ ${question}
 Reply:
 ${answer || "(still writing)"}`,
     });
-    return cleanFolioTitle(result.text, fallback);
+    return cleanFolioTitle(result.text, input.fallback);
   } catch {
-    return fallback;
+    return input.fallback;
   }
+}
+
+export async function nameAskFolio(messages: AskStoredMessage[]): Promise<string> {
+  return nameAskTitle({
+    question: firstRoleText(messages, "user"),
+    answer: firstRoleText(messages, "assistant"),
+    fallback: titleFromMessages(messages),
+    kind: "folio",
+  });
+}
+
+export async function nameAskStamp(question: string, answer: string, fallback: string): Promise<string> {
+  return nameAskTitle({ question, answer, fallback, kind: "stamp" });
 }

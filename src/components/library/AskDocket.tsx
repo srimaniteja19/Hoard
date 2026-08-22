@@ -63,13 +63,15 @@ export function AskDocket({
                 const active = thread.id === activeId;
                 return (
                   <li key={thread.id}>
+                    <span className="ask-folio-tab" aria-hidden="true">
+                      #{n}
+                    </span>
                     <button
                       type="button"
                       className={active ? "ask-folio is-live" : "ask-folio"}
                       onClick={() => onOpen(thread.id)}
                     >
                       <span className="ask-folio-meta">
-                        <span className="ask-folio-n">#{n}</span>
                         <span className="ask-folio-when">{formatFolioWhen(thread.updatedAt)}</span>
                       </span>
                       <span className="ask-folio-title">{thread.title || "Untitled folio"}</span>

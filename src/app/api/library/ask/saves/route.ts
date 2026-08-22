@@ -3,11 +3,13 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { askSaves } from "@/db/schema";
 import { AuthError, requireUserId } from "@/lib/session";
-import { createAskSaveSchema } from "@/lib/library/askSave";
+import { createAskSaveSchema, snippetKeptTitle } from "@/lib/library/askSave";
+import { nameAskStamp } from "@/lib/library/askFolioTitle";
 
 function serialize(row: typeof askSaves.$inferSelect) {
   return {
     id: row.id,
+    title: row.title,
     question: row.question,
     answer: row.answer,
     summary: row.summary,
@@ -45,10 +47,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Validation error", details: parsed.error.flatten() }, { status: 400 });
     }
 
+    const snippet = snippetKeptTitle(parsed.data.question);
+    const title = await nameAskStamp(parsed.data.question, parsed.data.answer, snippet);
+
     const [row] = await db
       .insert(askSaves)
       .values({
         userId,
+        title,
         question: parsed.data.question,
         answer: parsed.data.answer,
         summary: parsed.data.summary,

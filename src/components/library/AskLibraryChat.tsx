@@ -25,6 +25,13 @@ function subscribeNever() {
   return () => {};
 }
 
+function deskStamp(now = new Date()) {
+  return now
+    .toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" })
+    .replace(/,/g, "")
+    .toUpperCase();
+}
+
 function AskComposer({
   web,
   busy,
@@ -35,6 +42,7 @@ function AskComposer({
   composerRef,
   onToggleWire,
   stop,
+  stamp,
 }: {
   web: boolean;
   busy: boolean;
@@ -45,45 +53,53 @@ function AskComposer({
   composerRef: RefObject<HTMLTextAreaElement | null>;
   onToggleWire: () => void;
   stop: () => void;
+  stamp: string;
 }) {
   const label = busy ? "THE DESK IS WRITING" : web ? "ASK THE SHELF — AND THE WIRE" : "ASK ANYTHING — OR WHAT YOU SAVED";
   const placeholder = web ? "weather in SF, or what I saved about postgres" : "why didn't the thing I saved actually work?";
   return (
     <form className="ask-composer" onSubmit={onSubmit}>
-      <label className="ask-composer-label" htmlFor="ask-input">
-        {label}
-      </label>
+      <div className="ask-slip-head">
+        <span className="ask-slip-kicker">CALL SLIP</span>
+        <label className="ask-composer-label" htmlFor="ask-input">
+          {label}
+        </label>
+        <span className="ask-slip-date">{stamp}</span>
+      </div>
       <div className="ask-composer-row">
+        <div className="ask-slip-request">
+          <span className="ask-slip-field" aria-hidden="true">
+            REQUEST
+          </span>
+          <textarea
+            id="ask-input"
+            ref={composerRef}
+            value={input}
+            rows={1}
+            onChange={(event) => {
+              setInput(event.target.value);
+              resizeComposer(event.target);
+            }}
+            onKeyDown={onComposerKey}
+            placeholder={placeholder}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            disabled={busy}
+          />
+        </div>
         <button
           type="button"
           role="switch"
           aria-checked={web}
           aria-label="Search the web"
-          className={web ? "ask-wire-switch is-on" : "ask-wire-switch"}
+          className={web ? "ask-wire-pad is-on" : "ask-wire-pad"}
           disabled={busy}
           onClick={onToggleWire}
         >
-          <span className="ask-wire-switch-label">WIRE</span>
-          <span className="ask-wire-switch-track" aria-hidden="true">
-            <span className="ask-wire-switch-knob" />
-          </span>
+          <b>WIRE</b>
+          <i>{web ? "INKED" : "PAD"}</i>
         </button>
-        <textarea
-          id="ask-input"
-          ref={composerRef}
-          value={input}
-          rows={1}
-          onChange={(event) => {
-            setInput(event.target.value);
-            resizeComposer(event.target);
-          }}
-          onKeyDown={onComposerKey}
-          placeholder={placeholder}
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          disabled={busy}
-        />
         {busy ? (
           <button type="button" className="ask-stop" onClick={() => stop()}>
             STOP
@@ -134,6 +150,7 @@ export function AskLibraryChat({
   const persistTimer = useRef<number>(0);
   const skipPersist = useRef(true);
   const mounted = useSyncExternalStore(subscribeNever, () => true, () => false);
+  const stamp = mounted ? deskStamp() : "TODAY";
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -266,31 +283,44 @@ export function AskLibraryChat({
       >
         {messages.length === 0 ? (
           <div className="ask-empty">
-            <p className="ask-hero-kicker">THE READING ROOM</p>
-            <h2 className="ask-hero-title">
-              <span className="ask-hero-stamp">ASK</span>
-              <span className="ask-hero-rest">the shelf</span>
-            </h2>
-            <p className="ask-hero-dek">
-              Pull the card you saved, then get a real answer — even when the note is just a title or a
-              video. Every turn files itself in the docket.
-            </p>
-            <div className="ask-starters">
-              {STARTERS.map((starter) => (
-                <button
-                  key={starter.q}
-                  type="button"
-                  className="ask-starter"
-                  onClick={() => submitText(starter.q)}
-                >
-                  <span className="ask-starter-meta">
-                    <span className="ask-starter-n">{starter.n}</span>
-                    <span className="ask-starter-tag">{starter.tag}</span>
+            <div className="ask-blotter">
+              <div className="ask-blotter-meta">
+                <p className="ask-hero-kicker">THE READING ROOM</p>
+                <span className="ask-blotter-date">{stamp}</span>
+              </div>
+              <div className="ask-blotter-desk">
+                <div className="ask-folder" aria-hidden="true">
+                  <span className="ask-folder-tab">FOLIO</span>
+                  <span className="ask-folder-body">
+                    <span className="ask-folder-peek">01</span>
+                    closed
                   </span>
-                  <span className="ask-starter-q">{starter.q}</span>
-                  <span className="ask-starter-go">PULL →</span>
-                </button>
-              ))}
+                </div>
+                <div className="ask-blotter-copy">
+                  <span className="ask-blotter-stamp">ASK</span>
+                  <p className="ask-hero-dek">
+                    Pull the card you saved, then get a real answer — even when the note is just a title or a
+                    video. Every turn files itself in the docket.
+                  </p>
+                </div>
+              </div>
+              <div className="ask-starters">
+                {STARTERS.map((starter) => (
+                  <button
+                    key={starter.q}
+                    type="button"
+                    className="ask-starter"
+                    onClick={() => submitText(starter.q)}
+                  >
+                    <span className="ask-starter-meta">
+                      <span className="ask-starter-n">{starter.n}</span>
+                      <span className="ask-starter-tag">{starter.tag}</span>
+                    </span>
+                    <span className="ask-starter-q">{starter.q}</span>
+                    <span className="ask-starter-go">PULL →</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         ) : (
@@ -338,20 +368,28 @@ export function AskLibraryChat({
           composerRef={composerRef}
           onToggleWire={() => setWeb((on) => !on)}
           stop={stop}
+          stamp={stamp}
         />
       ) : (
         <form className="ask-composer">
-          <label className="ask-composer-label" htmlFor="ask-input">
-            ASK ANYTHING — OR WHAT YOU SAVED
-          </label>
+          <div className="ask-slip-head">
+            <span className="ask-slip-kicker">CALL SLIP</span>
+            <label className="ask-composer-label" htmlFor="ask-input">
+              ASK ANYTHING — OR WHAT YOU SAVED
+            </label>
+            <span className="ask-slip-date">TODAY</span>
+          </div>
           <div className="ask-composer-row">
-            <button type="button" role="switch" aria-checked={false} aria-label="Search the web" className="ask-wire-switch" disabled>
-              <span className="ask-wire-switch-label">WIRE</span>
-              <span className="ask-wire-switch-track" aria-hidden="true">
-                <span className="ask-wire-switch-knob" />
+            <div className="ask-slip-request">
+              <span className="ask-slip-field" aria-hidden="true">
+                REQUEST
               </span>
+              <textarea id="ask-input" rows={1} placeholder="why didn't the thing I saved actually work?" disabled />
+            </div>
+            <button type="button" role="switch" aria-checked={false} aria-label="Search the web" className="ask-wire-pad" disabled>
+              <b>WIRE</b>
+              <i>PAD</i>
             </button>
-            <textarea id="ask-input" rows={1} placeholder="why didn't the thing I saved actually work?" disabled />
             <button type="submit" className="prime" disabled>
               ASK
             </button>

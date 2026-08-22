@@ -79,3 +79,86 @@ export function buildAskSave(input: {
     model: input.model.trim(),
   });
 }
+
+export type KeptStamp = {
+  id: string;
+  title?: string;
+  question: string;
+  answer: string;
+  summary: string;
+  citations: Array<{ title: string }>;
+  createdAt: string;
+};
+
+export function snippetKeptTitle(question: string): string {
+  const text = question.replace(/\s+/g, " ").trim();
+  if (!text) return "Untitled stamp";
+  return text.length <= 52 ? text : `${text.slice(0, 49).trimEnd()}…`;
+}
+
+export function needsKeptTitle(existingTitle: string | null | undefined, question: string): boolean {
+  const snippet = snippetKeptTitle(question);
+  const title = (existingTitle ?? "").replace(/\s+/g, " ").trim();
+  if (!title || title === "Untitled stamp") return true;
+  if (title === snippet) return true;
+  if (title === question.replace(/\s+/g, " ").trim()) return true;
+  if (snippet.endsWith("…")) {
+    const stem = snippet.slice(0, -1).trimEnd();
+    if (stem && title === stem) return true;
+  }
+  return false;
+}
+
+export function displayKeptTitle(title: string | undefined, question: string): string {
+  const named = (title ?? "").replace(/\s+/g, " ").trim();
+  return named || snippetKeptTitle(question);
+}
+
+function localDayKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+export function keptDayKey(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "undated";
+  return localDayKey(date);
+}
+
+export function keptDayLabel(key: string, now = new Date()): string {
+  if (key === "undated") return "UNDATED";
+  const today = localDayKey(now);
+  const yday = new Date(now);
+  yday.setDate(yday.getDate() - 1);
+  if (key === today) return "TODAY";
+  if (key === localDayKey(yday)) return "YDAY";
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(year, month - 1, day)
+    .toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" })
+    .replace(/,/g, "")
+    .toUpperCase();
+}
+
+export function filterKeptStamps<T extends KeptStamp>(items: T[], query: string): T[] {
+  const tokens = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return items;
+  return items.filter((item) => {
+    const hay = `${item.title ?? ""} ${item.question} ${item.summary} ${item.answer} ${item.citations.map((cite) => cite.title).join(" ")}`.toLowerCase();
+    return tokens.every((token) => hay.includes(token));
+  });
+}
+
+export function groupKeptByDay<T extends KeptStamp>(
+  items: T[],
+  now = new Date()
+): { key: string; label: string; stamps: T[] }[] {
+  const buckets = new Map<string, T[]>();
+  for (const item of items) {
+    const key = keptDayKey(item.createdAt);
+    const list = buckets.get(key);
+    if (list) list.push(item);
+    else buckets.set(key, [item]);
+  }
+  return [...buckets.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([key, stamps]) => ({ key, label: keptDayLabel(key, now), stamps }));
+}

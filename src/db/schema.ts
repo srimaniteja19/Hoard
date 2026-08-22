@@ -508,6 +508,7 @@ export const askSaves = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default(""),
     question: text("question").notNull(),
     answer: text("answer").notNull(),
     summary: text("summary").notNull().default(""),
