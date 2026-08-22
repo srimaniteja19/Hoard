@@ -1,0 +1,22 @@
+[
+  { "name": "empty", "input": "   ", "chips": {}, "expected": { "topic": "", "weeksPlanned": 4, "minutesPerSession": 45, "cadence": "weeknights", "depth": "working", "antiScope": [] } },
+  { "name": "topic only", "input": "systems from JS", "chips": {}, "expected": { "topic": "systems from JS", "weeksPlanned": 4, "minutesPerSession": 45, "cadence": "weeknights", "depth": "working", "antiScope": [] } },
+  { "name": "tilde weeks", "input": "rust ~4w", "chips": {}, "expected": { "topic": "rust", "weeksPlanned": 4, "minutesPerSession": 45, "cadence": "weeknights", "depth": "working", "antiScope": [] } },
+  { "name": "weeks word", "input": "sql 6 weeks", "chips": {}, "expected": { "topic": "sql", "weeksPlanned": 6, "minutesPerSession": 45, "cadence": "weeknights", "depth": "working", "antiScope": [] } },
+  { "name": "clamp weeks high", "input": "piano 12 weeks", "chips": {}, "expected": { "topic": "piano", "weeksPlanned": 6, "minutesPerSession": 45, "cadence": "weeknights", "depth": "working", "antiScope": [] } },
+  { "name": "clamp weeks low", "input": "go 1 week", "chips": {}, "expected": { "topic": "go", "weeksPlanned": 3, "minutesPerSession": 45, "cadence": "weeknights", "depth": "working", "antiScope": [] } },
+  { "name": "minutes m", "input": "graphs ~30m", "chips": {}, "expected": { "topic": "graphs", "weeksPlanned": 4, "minutesPerSession": 30, "cadence": "weeknights", "depth": "working", "antiScope": [] } },
+  { "name": "minutes min", "input": "css 20 min", "chips": {}, "expected": { "topic": "css", "weeksPlanned": 4, "minutesPerSession": 20, "cadence": "weeknights", "depth": "working", "antiScope": [] } },
+  { "name": "hours session", "input": "compilers ~2h", "chips": {}, "expected": { "topic": "compilers", "weeksPlanned": 4, "minutesPerSession": 120, "cadence": "weeknights", "depth": "working", "antiScope": [] } },
+  { "name": "weeknights word", "input": "systems weeknights", "chips": {}, "expected": { "topic": "systems", "weeksPlanned": 4, "minutesPerSession": 45, "cadence": "weeknights", "depth": "working", "antiScope": [] } },
+  { "name": "weekends", "input": "oil painting weekends", "chips": {}, "expected": { "topic": "oil painting", "weeksPlanned": 4, "minutesPerSession": 45, "cadence": "weekends", "depth": "working", "antiScope": [] } },
+  { "name": "daily", "input": "hanzi daily ~20m", "chips": {}, "expected": { "topic": "hanzi", "weeksPlanned": 4, "minutesPerSession": 20, "cadence": "daily", "depth": "working", "antiScope": [] } },
+  { "name": "no leetcode", "input": "systems no leetcode", "chips": {}, "expected": { "topic": "systems", "weeksPlanned": 4, "minutesPerSession": 45, "cadence": "weeknights", "depth": "working", "antiScope": ["leetcode"] } },
+  { "name": "not X", "input": "ml not certifications", "chips": {}, "expected": { "topic": "ml", "weeksPlanned": 4, "minutesPerSession": 45, "cadence": "weeknights", "depth": "working", "antiScope": ["certifications"] } },
+  { "name": "chip depth wins", "input": "rust", "chips": { "depth": "dangerous" }, "expected": { "topic": "rust", "weeksPlanned": 4, "minutesPerSession": 45, "cadence": "weeknights", "depth": "dangerous", "antiScope": [] } },
+  { "name": "chip cadence wins over line", "input": "rust weeknights", "chips": { "cadence": "weekends" }, "expected": { "topic": "rust", "weeksPlanned": 4, "minutesPerSession": 45, "cadence": "weekends", "depth": "working", "antiScope": [] } },
+  { "name": "chip antiScope appends", "input": "systems no leetcode", "chips": { "antiScope": "ML" }, "expected": { "topic": "systems", "weeksPlanned": 4, "minutesPerSession": 45, "cadence": "weeknights", "depth": "working", "antiScope": ["leetcode", "ml"] } },
+  { "name": "full line", "input": "systems from JS ~4w 45m weeknights, no leetcode", "chips": { "depth": "working" }, "expected": { "topic": "systems from JS", "weeksPlanned": 4, "minutesPerSession": 45, "cadence": "weeknights", "depth": "working", "antiScope": ["leetcode"] } },
+  { "name": "comma no-clause", "input": "photography, no portraits", "chips": {}, "expected": { "topic": "photography", "weeksPlanned": 4, "minutesPerSession": 45, "cadence": "weeknights", "depth": "working", "antiScope": ["portraits"] } },
+  { "name": "tourist chip", "input": "jazz", "chips": { "depth": "tourist" }, "expected": { "topic": "jazz", "weeksPlanned": 4, "minutesPerSession": 45, "cadence": "weeknights", "depth": "tourist", "antiScope": [] } }
+]
