@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import {
   buildCaptureRequest,
@@ -28,12 +28,21 @@ const FILED_LABEL: Record<CaptureDestination, string> = {
 
 export function HomeCapture({
   onFiled,
+  compact = false,
+  hideChips = false,
+  seed = "",
+  inputRef: forwardedRef,
 }: {
   onFiled?: (preview: CapturePreview) => void;
+  compact?: boolean;
+  hideChips?: boolean;
+  seed?: string;
+  inputRef?: RefObject<HTMLInputElement | null>;
 }) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [input, setInput] = useState("");
+  const localRef = useRef<HTMLInputElement>(null);
+  const inputRef = forwardedRef ?? localRef;
+  const [input, setInput] = useState(seed);
   const [focused, setFocused] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [filed, setFiled] = useState<CaptureDestination | null>(null);
@@ -213,16 +222,18 @@ export function HomeCapture({
   }
 
   return (
-    <section className="home-capture">
-      <div className="home-capture-label-row">
-        <label htmlFor="home-capture" className="home-capture-label">
-          CAPTURE
-          {modeLabel ? <span className="home-capture-mode"> · {modeLabel}</span> : null}
-        </label>
-        <span className="home-capture-kbd" aria-hidden="true">
-          {palette.open ? "↑↓ tab  ·  ↵ enter  ·  esc" : "type / for commands"}
-        </span>
-      </div>
+    <section className={`home-capture${compact ? " home-capture-compact" : ""}`}>
+      {compact ? null : (
+        <div className="home-capture-label-row">
+          <label htmlFor="home-capture" className="home-capture-label">
+            CAPTURE
+            {modeLabel ? <span className="home-capture-mode"> · {modeLabel}</span> : null}
+          </label>
+          <span className="home-capture-kbd" aria-hidden="true">
+            {palette.open ? "↑↓ tab  ·  ↵ enter  ·  esc" : "type / for commands"}
+          </span>
+        </div>
+      )}
 
       <div className="home-capture-field">
         <div className={`home-capture-shell home-capture-shell-${shellTone}`}>
@@ -270,32 +281,34 @@ export function HomeCapture({
         ) : null}
       </div>
 
-      <div className="home-capture-chips" aria-live="polite">
-        {filed ? (
-          <span className={`home-filed-flash home-filed-flash-${filed}`}>{FILED_LABEL[filed]} →</span>
-        ) : !input.trim() ? (
-          CAPTURE_STARTERS.map((entry) => (
-            <button
-              key={entry.name}
-              type="button"
-              className="home-starter-chip"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                setInput(`/${entry.name} `);
-                inputRef.current?.focus();
-              }}
-            >
-              /{entry.name}
-            </button>
-          ))
-        ) : (
-          preview.chips.map((chip, index) => (
-            <span key={`${chip.label}-${index}`} className="home-preview-chip">
-              {chip.label}
-            </span>
-          ))
-        )}
-      </div>
+      {hideChips ? null : (
+        <div className="home-capture-chips" aria-live="polite">
+          {filed ? (
+            <span className={`home-filed-flash home-filed-flash-${filed}`}>{FILED_LABEL[filed]} →</span>
+          ) : !input.trim() ? (
+            CAPTURE_STARTERS.map((entry) => (
+              <button
+                key={entry.name}
+                type="button"
+                className="home-starter-chip"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  setInput(`/${entry.name} `);
+                  inputRef.current?.focus();
+                }}
+              >
+                /{entry.name}
+              </button>
+            ))
+          ) : (
+            preview.chips.map((chip, index) => (
+              <span key={`${chip.label}-${index}`} className="home-preview-chip">
+                {chip.label}
+              </span>
+            ))
+          )}
+        </div>
+      )}
     </section>
   );
 }

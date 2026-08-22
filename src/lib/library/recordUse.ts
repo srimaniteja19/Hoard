@@ -1,6 +1,6 @@
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { bookmarks } from "@/db/schema";
+import { bookmarkUses, bookmarks } from "@/db/schema";
 
 const DEBOUNCE_MS = 60_000;
 
@@ -11,14 +11,24 @@ const DEBOUNCE_MS = 60_000;
 // once traffic spreads across instances.
 export async function recordUse(bookmarkId: number, userId: string): Promise<void> {
   const cutoff = new Date(Date.now() - DEBOUNCE_MS);
-  await db
+  const usedAt = new Date();
+  const bumped = await db
     .update(bookmarks)
-    .set({ useCount: sql`${bookmarks.useCount} + 1`, lastUsedAt: new Date() })
+    .set({ useCount: sql`${bookmarks.useCount} + 1`, lastUsedAt: usedAt })
     .where(
       and(
         eq(bookmarks.id, bookmarkId),
         eq(bookmarks.userId, userId),
         or(isNull(bookmarks.lastUsedAt), lt(bookmarks.lastUsedAt, cutoff))
       )
-    );
+    )
+    .returning({ id: bookmarks.id });
+
+  if (bumped.length === 0) return;
+
+  try {
+    await db.insert(bookmarkUses).values({ userId, bookmarkId, usedAt });
+  } catch (error) {
+    console.error("[recordUse] bookmark_uses insert failed", error);
+  }
 }

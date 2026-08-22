@@ -7,44 +7,15 @@ import {
   Collection,
   ContextType,
   KindType,
-  SearchFilter,
   SortMode,
   ViewMode,
 } from "@/types";
 import { CTX } from "@/data/initialBookmarks";
 import { dischargeBookmarkAction, DischargeResult } from "@/app/actions/discharge";
 import { TilType } from "@/db/schema";
+import { parseQ } from "@/lib/library/parseQuery";
 
-// ─── Query Parser ─────────────────────────────────────────────────────────────
-
-export function parseQ(q: string): SearchFilter {
-  const f: SearchFilter = { text: [], ty: null, under: null, tag: null, lang: null, unread: false };
-  q.toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .forEach((tok) => {
-      let m: RegExpMatchArray | null;
-      if (tok === "is:unread") {
-        f.unread = true;
-      } else if ((m = tok.match(/^is:(\w+)$/))) {
-        const map: Record<string, KindType> = {
-          video: "VID", videos: "VID", article: "ART", articles: "ART",
-          repo: "GIT", repos: "GIT", playlist: "PLY", app: "APP", paper: "PPR",
-          docs: "DOC", doc: "DOC",
-        };
-        f.ty = map[m[1]] || null;
-      } else if ((m = tok.match(/^under:(\d+)m?$/))) {
-        f.under = +m[1];
-      } else if ((m = tok.match(/^lang:(\w+)$/))) {
-        f.lang = m[1];
-      } else if (tok.startsWith("#")) {
-        f.tag = tok.slice(1);
-      } else {
-        f.text.push(tok);
-      }
-    });
-  return f;
-}
+export { parseQ };
 
 export function getMatchingCollectionIds(collections: Collection[], targetId: string): Set<string> {
   const ids = new Set<string>();

@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { requireUserId, AuthError } from "@/lib/session";
-import { getHomeEdition } from "@/lib/home/edition";
-import { HomeCommand } from "@/components/home/HomeCommand";
+import { getHomeDesk } from "@/lib/home/deskQueries";
+import { HomeDesk } from "@/components/home/HomeDesk";
+import { AppPage } from "@/components/chrome/AppPage";
 
 export default async function HomePage() {
   let userId: string;
@@ -11,6 +12,10 @@ export default async function HomePage() {
     if (e instanceof AuthError) redirect("/login");
     throw e;
   }
-  const edition = await getHomeEdition(userId, { minutes: 180, context: "all" });
-  return <HomeCommand edition={edition} />;
+  const desk = await getHomeDesk(userId);
+  return (
+    <AppPage width="full">
+      <HomeDesk desk={desk} />
+    </AppPage>
+  );
 }

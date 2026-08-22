@@ -205,6 +205,28 @@ export const bookmarks = pgTable(
   ]
 );
 
+// One row per recorded reach. Home's "most reached for" ranks the last 60
+// days of these events so lifetime favorites cannot pin the list forever.
+export const bookmarkUses = pgTable(
+  "bookmark_uses",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    bookmarkId: integer("bookmark_id")
+      .notNull()
+      .references(() => bookmarks.id, { onDelete: "cascade" }),
+    usedAt: timestamp("used_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("bookmark_uses_user_used_idx").on(table.userId, table.usedAt),
+    index("bookmark_uses_bookmark_used_idx").on(table.bookmarkId, table.usedAt),
+  ]
+);
+
 export const embeddings = pgTable(
   "embeddings",
   {

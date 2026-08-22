@@ -228,7 +228,7 @@ function HomeCommandContent({ edition }: { edition: HomeEdition }) {
           </Rail>
         </section>
 
-        <HomeVerso recall={edition.recall} resurface={edition.resurface} />
+        <HomeVerso recall={edition.recall} />
 
         <HomeDayStrip
           blocks={edition.day.blocks}
