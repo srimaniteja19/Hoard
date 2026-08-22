@@ -68,8 +68,8 @@ export function parseAtlas(
 
   let topic = line.replace(/\s+/g, " ").trim().replace(/\s*,\s*$/, "");
 
-  let resolvedDepth = depth;
-  let resolvedCadence = cadence;
+  let resolvedDepth: AtlasDepth = depth;
+  let resolvedCadence: AtlasCadence = cadence;
 
   if (chips?.depth) {
     resolvedDepth = chips.depth;
