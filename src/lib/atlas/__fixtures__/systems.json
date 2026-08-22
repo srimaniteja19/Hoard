@@ -1,0 +1,148 @@
+{
+  "prompt": "systems from JS ~4w 45m weeknights, no leetcode",
+  "depth": "working",
+  "cadence": "weeknights",
+  "syllabus": {
+    "title": "Systems from JS",
+    "brief": "From JavaScript objects down to bytes, processes, and a shipped socket.",
+    "antiScope": ["leetcode"],
+    "weeks": [
+      { "id": "w1", "label": "Week 1 — foundations", "estimatedMinutes": 95 },
+      { "id": "w2", "label": "Week 2 — processes", "estimatedMinutes": 110 },
+      { "id": "w3", "label": "Week 3 — files & sockets", "estimatedMinutes": 135 },
+      { "id": "w4", "label": "Week 4 — ship", "estimatedMinutes": 265 }
+    ],
+    "stations": [
+      {
+        "id": "s1",
+        "weekId": "w1",
+        "title": "How a JS object sits in memory",
+        "why": "Size and layout before you chase pointers.",
+        "estimatedMinutes": 45,
+        "energy": "DEEP",
+        "kind": "read",
+        "required": true
+      },
+      {
+        "id": "s2",
+        "weekId": "w1",
+        "title": "Hex-dump a Buffer",
+        "why": "See the bytes you already allocate.",
+        "estimatedMinutes": 30,
+        "energy": "SHALLOW",
+        "kind": "make",
+        "required": true
+      },
+      {
+        "id": "s3",
+        "weekId": "w1",
+        "title": "Endianness from a number",
+        "why": "Recall which byte is which without notes.",
+        "estimatedMinutes": 20,
+        "energy": "SHALLOW",
+        "kind": "recall",
+        "required": true
+      },
+      {
+        "id": "s4",
+        "weekId": "w2",
+        "title": "The event loop is not the kernel",
+        "why": "Separate userland wait from a real syscall.",
+        "estimatedMinutes": 45,
+        "energy": "DEEP",
+        "kind": "read",
+        "required": true
+      },
+      {
+        "id": "s5",
+        "weekId": "w2",
+        "title": "Spawn and wait",
+        "why": "A child process is just another fd story.",
+        "estimatedMinutes": 40,
+        "energy": "DEEP",
+        "kind": "make",
+        "required": true
+      },
+      {
+        "id": "s6",
+        "weekId": "w2",
+        "title": "Explain a syscall out loud",
+        "why": "If you cannot say it, you do not have it.",
+        "estimatedMinutes": 25,
+        "energy": "SHALLOW",
+        "kind": "talk",
+        "required": true
+      },
+      {
+        "id": "s7",
+        "weekId": "w3",
+        "title": "File descriptors are integers",
+        "why": "Every later socket is this fact again.",
+        "estimatedMinutes": 40,
+        "energy": "DEEP",
+        "kind": "read",
+        "required": true
+      },
+      {
+        "id": "s8",
+        "weekId": "w3",
+        "title": "Tiny TCP echo",
+        "why": "Bind, listen, accept — no framework.",
+        "estimatedMinutes": 50,
+        "energy": "DEEP",
+        "kind": "make",
+        "required": true
+      },
+      {
+        "id": "s9",
+        "weekId": "w3",
+        "title": "What close() actually does",
+        "why": "Recall the kernel side, not the JS wrapper.",
+        "estimatedMinutes": 15,
+        "energy": "SHALLOW",
+        "kind": "recall",
+        "required": true
+      },
+      {
+        "id": "s10",
+        "weekId": "w3",
+        "title": "Watch one packet leave",
+        "why": "Optional: see the wire once.",
+        "estimatedMinutes": 30,
+        "energy": "ERRAND",
+        "kind": "read",
+        "required": false
+      },
+      {
+        "id": "s11",
+        "weekId": "w4",
+        "title": "How Node binds a port",
+        "why": "Read the path from listen() to the NIC.",
+        "estimatedMinutes": 90,
+        "energy": "DEEP",
+        "kind": "read",
+        "required": true
+      },
+      {
+        "id": "s12",
+        "weekId": "w4",
+        "title": "Ship a tiny HTTP server",
+        "why": "No Express. One file. It answers.",
+        "estimatedMinutes": 90,
+        "energy": "DEEP",
+        "kind": "make",
+        "required": true
+      },
+      {
+        "id": "s13",
+        "weekId": "w4",
+        "title": "Deploy it and hit it",
+        "why": "A syllabus that never ships is a bookmark.",
+        "estimatedMinutes": 85,
+        "energy": "DEEP",
+        "kind": "ship",
+        "required": true
+      }
+    ]
+  }
+}

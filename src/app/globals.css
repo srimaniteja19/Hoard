@@ -4549,6 +4549,276 @@ input[type=range]::-moz-range-thumb {
   gap: 10px;
   margin-top: 10px;
 }
+.atlas-fixture {
+  align-self: flex-start;
+  border: 2px dashed var(--ink);
+  background: var(--cream);
+  padding: 6px 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.atlas-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 48px;
+}
+.atlas-back {
+  width: fit-content;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  color: inherit;
+}
+.atlas-cover.is-large {
+  box-shadow: var(--sh);
+}
+.atlas-cover.is-large .atlas-cover-title {
+  background: var(--yel);
+  margin: 0 12px;
+  padding: 6px 8px;
+  border: 2px solid var(--ink);
+}
+.atlas-cover-brief {
+  display: block;
+  padding: 0 12px;
+  font-family: var(--grot);
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+.atlas-cover-stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 0 12px;
+}
+.atlas-cover-budget {
+  border: 2px solid var(--ink);
+  background: var(--cyan);
+  padding: 2px 7px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.atlas-cover-week {
+  border: 2px solid var(--ink);
+  background: var(--lime);
+  padding: 2px 7px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.atlas-cover-antiscope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px;
+}
+.atlas-cover-antiscope span {
+  border: 2px solid var(--ink);
+  background: var(--pink);
+  color: #fff;
+  padding: 1px 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.atlas-thin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--ink);
+  color: var(--yel);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.atlas-thin button {
+  border: 2px solid var(--yel);
+  background: transparent;
+  color: var(--yel);
+  padding: 3px 8px;
+  font: inherit;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.atlas-week-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  align-items: flex-end;
+  border-bottom: 3px solid var(--ink);
+  padding: 0 4px;
+}
+.atlas-week-tab {
+  display: flex;
+  flex-direction: column;
+  margin-right: -8px;
+  border: 2px solid var(--ink);
+  border-bottom: 0;
+  background: var(--cream);
+  transform: rotate(-1.4deg);
+  box-shadow: 2px 0 0 var(--ink);
+}
+.atlas-week-tab.is-open {
+  z-index: 1;
+  background: var(--paper);
+  transform: translateY(2px) rotate(0deg);
+}
+.atlas-week-tab.is-pinned button[role="tab"] {
+  box-shadow: inset 0 -3px 0 var(--lime);
+}
+.atlas-week-tab button[role="tab"] {
+  border: 0;
+  background: transparent;
+  padding: 8px 12px 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-align: left;
+  cursor: pointer;
+}
+.atlas-week-pin {
+  border: 0;
+  border-top: 2px solid var(--ink);
+  background: var(--yel);
+  padding: 3px 8px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.atlas-week-pin:disabled {
+  background: var(--lime);
+  cursor: default;
+}
+.atlas-load {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.atlas-load.is-over { color: var(--pink); }
+.atlas-slips { display: flex; flex-direction: column; gap: 0; }
+.atlas-slip {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  margin-bottom: 8px;
+  border: var(--bd);
+  background: var(--paper);
+  box-shadow: var(--sh-sm);
+}
+.atlas-slip.is-optional {
+  border-style: dashed;
+  background: var(--cream);
+}
+.atlas-slip.is-done { opacity: 0.62; }
+.atlas-slip-spine {
+  border-right: 2px solid var(--ink);
+  background: var(--cyan);
+}
+.atlas-slip-spine.is-deep { background: var(--violet); }
+.atlas-slip-spine.is-shallow { background: var(--cyan); }
+.atlas-slip-spine.is-errand { background: var(--yel); }
+.atlas-slip.is-done .atlas-slip-spine { background: var(--lime); }
+.atlas-slip-sheet {
+  min-width: 0;
+  background:
+    repeating-linear-gradient(
+      transparent 0 23px,
+      color-mix(in srgb, var(--ink) 6%, transparent) 23px 24px
+    );
+}
+.atlas-slip-top {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px 8px 10px;
+}
+.atlas-slip-check {
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  accent-color: var(--lime);
+  cursor: pointer;
+}
+.atlas-slip-copy { min-width: 0; }
+.atlas-slip-title {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-family: var(--grot);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  cursor: text;
+}
+.atlas-slip.is-done .atlas-slip-title { text-decoration: line-through; }
+.atlas-slip-why {
+  margin: 3px 0 0;
+  font-family: var(--grot);
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.55;
+}
+.atlas-slip-run {
+  margin: 5px 0 0;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  opacity: 0.5;
+}
+.atlas-slip-note,
+.atlas-slip-note-text {
+  margin: 6px 0 0;
+  font-family: var(--grot);
+  font-size: 13px;
+}
+.atlas-slip-note {
+  width: 100%;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  padding: 4px 7px;
+}
+.atlas-slip-note-text { opacity: 0.7; }
+.atlas-desk :is(a, button, input):focus-visible,
+.atlas-drawer :is(a, button, input):focus-visible {
+  outline: 3px solid var(--pink);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .atlas-week-tab,
+  .atlas-week-tab.is-open,
+  .atlas-cover.is-large,
+  .atlas-slip {
+    transform: none;
+  }
+}
 
 .home-discharge-types button:focus-visible,
 .home-stack-promote:focus-visible,

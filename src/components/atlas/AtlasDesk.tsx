@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useAtlasList, type AtlasChips } from "@/hooks/useAtlas";
+import type { AtlasCadence, AtlasDepth } from "@/lib/atlas/types";
 import { AtlasCapture } from "@/components/atlas/AtlasCapture";
 import { AtlasCover } from "@/components/atlas/AtlasCover";
 
@@ -18,9 +19,24 @@ export function AtlasDesk() {
     return atlas;
   };
 
+  const handleFixture = async () => {
+    const systems = (await import("@/lib/atlas/__fixtures__/systems.json")).default;
+    const atlas = await create(
+      systems.prompt,
+      { depth: systems.depth as AtlasDepth, cadence: systems.cadence as AtlasCadence },
+      systems.syllabus
+    );
+    if (atlas) router.push(`/atlas/${atlas.id}`);
+  };
+
   return (
     <div className="atlas-desk">
       <AtlasCapture onCreate={handleCreate} />
+      {process.env.NODE_ENV !== "production" ? (
+        <button type="button" className="atlas-fixture" onClick={() => void handleFixture()}>
+          File systems fixture
+        </button>
+      ) : null}
 
       {loading ? <p className="atlas-muted">Loading…</p> : null}
 
