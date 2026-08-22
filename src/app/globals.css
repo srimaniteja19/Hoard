@@ -4656,6 +4656,35 @@ input[type=range]::-moz-range-thumb {
   letter-spacing: 0.08em;
   cursor: pointer;
 }
+.atlas-filing {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 6px 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+.atlas-retry-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--yel);
+  border: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.atlas-retry-bar button {
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  padding: 3px 8px;
+  font: inherit;
+  cursor: pointer;
+}
 .atlas-week-tabs {
   display: flex;
   flex-wrap: wrap;

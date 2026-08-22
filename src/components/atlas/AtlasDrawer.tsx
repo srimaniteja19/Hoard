@@ -19,7 +19,22 @@ function loadLine(openRequired: number, openMinutes: number, overflowMinutes: nu
 
 export function AtlasDrawer({ id }: { id: string }) {
   const router = useRouter();
-  const { atlas, loading, missing, toggle, setNote, pinWeek, archive, restore, drop } = useAtlasOne(id);
+  const {
+    atlas,
+    loading,
+    missing,
+    filing,
+    streamError,
+    toggle,
+    setNote,
+    pinWeek,
+    archive,
+    restore,
+    drop,
+    retryRest,
+    regenerate,
+    fork,
+  } = useAtlasOne(id);
   const [peekWeekId, setPeekWeekId] = useState<string | null>(null);
 
   const weeks = atlas?.syllabus.weeks ?? [];
@@ -29,7 +44,7 @@ export function AtlasDrawer({ id }: { id: string }) {
     weeks[0]?.id ||
     null;
 
-  if (loading) return <p className="atlas-muted">Loading…</p>;
+  if (loading && !atlas) return <p className="atlas-muted">Loading…</p>;
   if (missing || !atlas) {
     return (
       <div className="atlas-drawer">
@@ -47,11 +62,29 @@ export function AtlasDrawer({ id }: { id: string }) {
     : { openRequired: 0, openMinutes: 0, overflowMinutes: 0 };
   const slips = atlas.syllabus.stations.filter((s) => s.weekId === openWeekId);
 
+  const handleThin = async () => {
+    if (atlas.status === "draft") {
+      await regenerate();
+      return;
+    }
+    const next = await fork();
+    if (next) router.push(`/atlas/${next.id}`);
+  };
+
   return (
     <div className="atlas-drawer">
       <Link href="/atlas" className="atlas-back">
         ← Desk
       </Link>
+      {filing ? <div className="atlas-filing">FILING {atlas.serial}</div> : null}
+      {streamError && atlas.syllabus.stations.length > 0 ? (
+        <div className="atlas-retry-bar">
+          <span>{streamError}</span>
+          <button type="button" onClick={() => void retryRest()}>
+            Retry rest
+          </button>
+        </div>
+      ) : null}
       <AtlasCover
         atlas={atlas}
         variant="large"
@@ -59,11 +92,11 @@ export function AtlasDrawer({ id }: { id: string }) {
         onRestore={() => void restore()}
         onDrop={atlas.status !== "walking" ? () => void drop().then((ok) => { if (ok) router.push("/atlas"); }) : undefined}
       />
-      {atlas.syllabus.thin ? (
+      {atlas.syllabus.thin && !filing ? (
         <div className="atlas-thin">
           <span>Thin syllabus — regenerate?</span>
-          <button type="button" onClick={() => undefined}>
-            Regenerate
+          <button type="button" onClick={() => void handleThin()}>
+            {atlas.status === "draft" ? "Regenerate" : "Fork"}
           </button>
         </div>
       ) : null}
@@ -92,7 +125,7 @@ export function AtlasDrawer({ id }: { id: string }) {
           </div>
         </>
       ) : (
-        <p className="atlas-muted">No weeks filed yet.</p>
+        <p className="atlas-muted">{filing ? "Filing weeks…" : "No weeks filed yet."}</p>
       )}
     </div>
   );

@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { listForDesk } from "@/lib/atlas/apply";
+import {
+  ATLAS_MODEL,
+  atlasNdjsonResponse,
+  emptyAtlasSyllabus,
+  persistAtlasStream,
+} from "@/lib/atlas/generate";
 import { parseAtlas } from "@/lib/atlas/parse";
-import type { AtlasCadence, AtlasDepth, AtlasStationDraft, AtlasWeekDraft, ParsedAtlas } from "@/lib/atlas/types";
-import { validateSyllabus, weeklyBudgetMinutes } from "@/lib/atlas/validate";
+import type { AtlasCadence, AtlasDepth } from "@/lib/atlas/types";
 import { insertDraft, listAtlases } from "@/lib/dal/atlas";
 import { AuthError, requireUserId } from "@/lib/session";
+
+export const maxDuration = 60;
 
 const DEPTHS = new Set<AtlasDepth>(["tourist", "working", "dangerous"]);
 const CADENCES = new Set<AtlasCadence>(["weeknights", "weekends", "daily"]);
@@ -27,26 +34,6 @@ function chipsFromBody(body: Record<string, unknown>): {
     chips.antiScope = body.antiScope.filter((part): part is string => typeof part === "string").join(",");
   }
   return chips;
-}
-
-function draftFromClientSyllabus(raw: unknown, parsed: ParsedAtlas): {
-  title: string;
-  brief: string;
-  antiScope: string[];
-  weeks: AtlasWeekDraft[];
-  stations: AtlasStationDraft[];
-} | null {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const o = raw as Record<string, unknown>;
-  return {
-    title: typeof o.title === "string" ? o.title : "Filing…",
-    brief: typeof o.brief === "string" ? o.brief : "",
-    antiScope: Array.isArray(o.antiScope)
-      ? o.antiScope.filter((part): part is string => typeof part === "string")
-      : parsed.antiScope,
-    weeks: Array.isArray(o.weeks) ? (o.weeks as AtlasWeekDraft[]) : [],
-    stations: Array.isArray(o.stations) ? (o.stations as AtlasStationDraft[]) : [],
-  };
 }
 
 export async function GET(req: Request) {
@@ -79,39 +66,28 @@ export async function POST(req: Request) {
     }
 
     const parsed = parseAtlas(prompt, chipsFromBody(body));
-
-    let title: string | undefined;
-    let brief: string | undefined;
-    let syllabus;
-
-    if (body.syllabus !== undefined) {
-      const draft = draftFromClientSyllabus(body.syllabus, parsed);
-      if (!draft) {
-        return NextResponse.json({ error: "Validation error" }, { status: 400 });
-      }
-      syllabus = validateSyllabus(draft, parsed.cadence, parsed.minutesPerSession);
-      title = draft.title;
-      brief = draft.brief;
-    } else {
-      syllabus = {
-        thin: false,
-        hoursPerWeek: weeklyBudgetMinutes(parsed.minutesPerSession, parsed.cadence) / 60,
-        weeks: [],
-        stations: [],
-      };
+    if (parsed.topic === "") {
+      return NextResponse.json({ error: "Say what you want to learn." }, { status: 422 });
     }
 
     const atlas = await insertDraft({
       userId,
       parsed,
       prompt,
-      syllabus,
-      model: "",
-      title,
-      brief,
+      syllabus: emptyAtlasSyllabus(parsed),
+      model: ATLAS_MODEL,
     });
 
-    return NextResponse.json({ atlas }, { status: 201 });
+    return atlasNdjsonResponse(async (write) => {
+      write({ type: "row", id: atlas.id, serial: atlas.serial });
+      await persistAtlasStream({
+        userId,
+        row: atlas,
+        parsed,
+        prompt,
+        write,
+      });
+    });
   } catch (e) {
     if (e instanceof AuthError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
