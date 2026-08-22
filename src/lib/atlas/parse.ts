@@ -66,7 +66,7 @@ export function parseAtlas(
     line = line.replace(notMatch[0], " ");
   }
 
-  let topic = line.replace(/\s+/g, " ").trim().replace(/\s*,\s*$/, "");
+  const topic = line.replace(/\s+/g, " ").trim().replace(/\s*,\s*$/, "");
 
   let resolvedDepth: AtlasDepth = depth;
   let resolvedCadence: AtlasCadence = cadence;

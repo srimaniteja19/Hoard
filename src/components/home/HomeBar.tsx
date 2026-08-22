@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useRouter } from "next/navigation";
 import { HomeCapture } from "@/components/home/HomeCapture";
 import { kindChip } from "@/lib/home/deskModel";
 import { filterFindHits, type FindHit } from "@/lib/library/parseQuery";
@@ -22,6 +23,7 @@ function toFindHit(bookmark: Bookmark): FindHit {
 }
 
 export function HomeBar() {
+  const router = useRouter();
   const [mode, setMode] = useState<"find" | "stash">("find");
   const [query, setQuery] = useState("");
   const [catalog, setCatalog] = useState<FindHit[] | null>(null);
@@ -67,10 +69,6 @@ export function HomeBar() {
     [catalog, query],
   );
 
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
-
   function openResult(result: FindHit) {
     window.open(result.url, "_blank");
     fetch(`/api/bookmarks/${result.id}/use`, { method: "POST", credentials: "include" }).catch((error) => {
@@ -87,6 +85,7 @@ export function HomeBar() {
       return;
     }
     setQuery(value);
+    setSelectedIndex(0);
   }
 
   function onFindKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
@@ -230,9 +229,9 @@ export function HomeBar() {
             key={name}
             type="button"
             className="home-starter-chip"
-            title={name === "roadmap" ? "Roadmaps are not wired yet" : `/${name}`}
+            title={name === "roadmap" ? "Atlas" : `/${name}`}
             onMouseDown={(event) => event.preventDefault()}
-            onClick={() => startStash(name)}
+            onClick={() => (name === "roadmap" ? router.push("/atlas") : startStash(name))}
           >
             /{name}
           </button>

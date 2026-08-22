@@ -4549,17 +4549,6 @@ input[type=range]::-moz-range-thumb {
   gap: 10px;
   margin-top: 10px;
 }
-.atlas-fixture {
-  align-self: flex-start;
-  border: 2px dashed var(--ink);
-  background: var(--cream);
-  padding: 6px 10px;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-}
 .atlas-drawer {
   display: flex;
   flex-direction: column;

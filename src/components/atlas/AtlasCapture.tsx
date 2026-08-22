@@ -66,6 +66,7 @@ export function AtlasCapture({
           value={input}
           onChange={(event) => setInput(event.target.value)}
           placeholder="systems from JS ~4w 45m weeknights, no leetcode"
+          aria-label="New atlas prompt"
           disabled={submitting}
         />
       </form>
@@ -75,6 +76,7 @@ export function AtlasCapture({
             key={value}
             type="button"
             className={`atlas-chip${depth === value ? " is-on" : ""}`}
+            aria-pressed={depth === value}
             onClick={() => setDepth((cur) => (cur === value ? null : value))}
           >
             {value}
@@ -85,6 +87,7 @@ export function AtlasCapture({
             key={value}
             type="button"
             className={`atlas-chip${cadence === value ? " is-on" : ""}`}
+            aria-pressed={cadence === value}
             onClick={() => setCadence((cur) => (cur === value ? null : value))}
           >
             {value}
@@ -96,6 +99,7 @@ export function AtlasCapture({
           value={antiScope}
           onChange={(event) => setAntiScope(event.target.value)}
           placeholder="anti-scope"
+          aria-label="Anti-scope"
           disabled={submitting}
         />
       </div>
