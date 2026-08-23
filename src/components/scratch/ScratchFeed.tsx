@@ -100,11 +100,11 @@ export const ScratchFeed: React.FC<ScratchFeedProps> = ({
             </i>
           </div>
 
-          {group.items.map((scrap, sIdx) => (
+          {group.items.map((scrap) => (
             <ScratchCard
               key={scrap.id}
               scrap={scrap}
-              isOpenDefault={gIdx === 0 && sIdx === 0 && !!scrap.notes}
+              isOpenDefault={false}
               onUpdateNotes={onUpdateNotes}
               onPromoteTil={onPromoteTil}
               onPromoteTodo={onPromoteTodo}
