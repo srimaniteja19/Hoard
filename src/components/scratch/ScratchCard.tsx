@@ -3,6 +3,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ScrapRow } from "@/db/schema";
 import { ScratchMarkdown } from "./ScratchMarkdown";
+import {
+  uploadScrapImage,
+  extractImagesFromClipboard,
+  extractImagesFromDragEvent,
+} from "@/lib/scratch/image";
 
 interface ScratchCardProps {
   scrap: ScrapRow;
@@ -30,7 +35,11 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   const [notes, setNotes] = useState(scrap.notes || "");
   const [savedStatus, setSavedStatus] = useState("AUTOSAVED");
   const [copied, setCopied] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [aiStreaming, setAiStreaming] = useState(false);
@@ -82,10 +91,99 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
     }
   };
 
+  // ── INSERT TEXT AT CURSOR ──
+  const insertTextAtCursor = (textToInsert: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      const updated = notes ? `${notes}\n\n${textToInsert}` : textToInsert;
+      setNotes(updated);
+      void onUpdateNotes(scrap.id, updated);
+      return;
+    }
+
+    const start = textarea.selectionStart ?? notes.length;
+    const end = textarea.selectionEnd ?? notes.length;
+    const before = notes.substring(0, start);
+    const after = notes.substring(end);
+
+    const prefix = before.length > 0 && !before.endsWith("\n") ? "\n\n" : "";
+    const suffix = after.length > 0 && !after.startsWith("\n") ? "\n\n" : "";
+
+    const updated = `${before}${prefix}${textToInsert}${suffix}${after}`;
+    setNotes(updated);
+    setSavedStatus("AUTOSAVED");
+    void onUpdateNotes(scrap.id, updated);
+
+    // Reposition cursor after insert
+    setTimeout(() => {
+      const newPos = start + prefix.length + textToInsert.length;
+      textarea.focus();
+      textarea.setSelectionRange(newPos, newPos);
+    }, 50);
+  };
+
+  // ── IMAGE UPLOAD HANDLER ──
+  const processImageFile = async (file: File) => {
+    setUploadingImage(true);
+    setSavedStatus("UPLOADING IMAGE...");
+    try {
+      const asset = await uploadScrapImage(file, scrap.id);
+      insertTextAtCursor(asset.markdown);
+      setSavedStatus("AUTOSAVED");
+    } catch (err) {
+      console.error("Failed to upload image", err);
+      setSavedStatus("UPLOAD FAILED");
+      setTimeout(() => setSavedStatus("AUTOSAVED"), 3000);
+    } finally {
+      setUploadingImage(false);
+      setIsDragOver(false);
+    }
+  };
+
+  // ── CLIPBOARD PASTE LISTENER ──
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const images = extractImagesFromClipboard(e);
+    if (images.length > 0) {
+      e.preventDefault();
+      void processImageFile(images[0]);
+    }
+  };
+
+  // ── DRAG & DROP LISTENERS ──
+  const handleDragOver = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    if (e.dataTransfer?.types?.includes("Files")) {
+      e.preventDefault();
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    const images = extractImagesFromDragEvent(e);
+    if (images.length > 0) {
+      e.preventDefault();
+      void processImageFile(images[0]);
+    } else {
+      setIsDragOver(false);
+    }
+  };
+
+  // ── FILE INPUT PICKER ──
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      void processImageFile(files[0]);
+    }
+    // reset input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   // ── AI EXPAND ──
   const handleAiExpand = async () => {
     if (aiStreaming) {
-      // Cancel ongoing stream
       abortRef.current?.abort();
       setAiStreaming(false);
       return;
@@ -137,7 +235,6 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
       setAiStreaming(false);
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
-        // User cancelled — keep what we have
         setAiStreaming(false);
         return;
       }
@@ -146,7 +243,6 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
     }
   };
 
-  // Accept AI output — merge into notes
   const handleAcceptAi = async () => {
     const merged = notes.trim()
       ? `${notes.trim()}\n\n---\n\n${aiStreamedText}`
@@ -156,12 +252,10 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
     setAiDone(false);
     setAiError(null);
 
-    // Save immediately
     await onUpdateNotes(scrap.id, merged);
     setSavedStatus("AUTOSAVED");
   };
 
-  // Discard AI output
   const handleDiscardAi = () => {
     setAiStreamedText("");
     setAiDone(false);
@@ -176,18 +270,14 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
     hour12: false,
   });
 
-  // Render formatted scrap text
   const renderFormattedText = useCallback((text: string) => {
     let t = text;
-    // Highlight questions
     if (/^\?/.test(t) || /\?\s*$/.test(t)) {
       return <span className="q">{t}</span>;
     }
-    // Highlight quotes
     if (/^>/.test(t)) {
       return <em>{t}</em>;
     }
-    // Highlight hashtags
     const parts = t.split(/(#[\w-]+)/g);
     return (
       <>
@@ -242,7 +332,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
 
       <div className="scrap__p">
         <button
-          className={`notes-btn`}
+          className="notes-btn"
           type="button"
           onClick={toggleOpen}
         >
@@ -303,10 +393,26 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
             <div className="note__meta">
               <span className="wc">{wordCount} WORDS</span>
               <span>{savedStatus}</span>
-              <span>:::gotcha :::question :::action :::fact</span>
+              <span className="cheat">:::gotcha :::question :::action :::fact</span>
             </div>
 
             <div className="note__acts">
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                style={{ display: "none" }}
+                onChange={handleFileInputChange}
+              />
+              <button
+                type="button"
+                className="img-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingImage}
+                title="Paste, drag-and-drop, or click to upload screenshots and images"
+              >
+                {uploadingImage ? "⏳ UPLOADING..." : "📷 IMAGE"}
+              </button>
               <button
                 type="button"
                 className={`ai-expand-btn${aiStreaming ? " streaming" : ""}`}
@@ -404,14 +510,28 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
               mode === "split" ? "" : mode === "edit" ? "edit" : "read"
             }`}
           >
-            <div className="ed">
+            <div className={`ed${isDragOver ? " drag-over" : ""}`}>
               <textarea
                 ref={textareaRef}
                 spellCheck="false"
                 value={notes}
                 onChange={handleNotesChange}
-                placeholder="Write your note in Markdown... #tags, ```code, :::gotcha, | tables"
+                onPaste={handlePaste}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                placeholder="Write in Markdown... Paste screenshots (Cmd+V), drop images, #tags, ```code, :::gotcha, | tables"
               />
+              {uploadingImage && (
+                <div className="ed-upload-overlay">
+                  <span>⏳ COMPRESSING &amp; UPLOADING IMAGE...</span>
+                </div>
+              )}
+              {isDragOver && (
+                <div className="ed-drag-overlay">
+                  <span>📷 DROP IMAGE TO UPLOAD</span>
+                </div>
+              )}
             </div>
             <div className="pv">
               <ScratchMarkdown content={notes} />

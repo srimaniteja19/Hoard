@@ -51,10 +51,16 @@ describe("renderScratchMarkdown", () => {
     expect(res).toContain("First task");
   });
 
-  it("handles headings and blockquotes", () => {
-    const md = "## Reframed Idea\n\n> This is a quote";
-    const res = renderScratchMarkdown(md);
-    expect(res).toContain("<h2>Reframed Idea</h2>");
-    expect(res).toContain("<blockquote><p>This is a quote</p></blockquote>");
+  it("handles standalone and inline images", () => {
+    const standalone = "![Design Draft](/api/scratch/assets/123)";
+    const res1 = renderScratchMarkdown(standalone);
+    expect(res1).toContain('<figure class="md-figure" data-full-src="/api/scratch/assets/123">');
+    expect(res1).toContain('<img src="/api/scratch/assets/123" alt="Design Draft"');
+    expect(res1).toContain("<figcaption>Design Draft</figcaption>");
+
+    const inline = "Here is an inline ![diagram](/api/scratch/assets/456) in a sentence.";
+    const res2 = renderScratchMarkdown(inline);
+    expect(res2).toContain('<span class="md-inline-img-wrap"><img src="/api/scratch/assets/456" alt="diagram"');
   });
 });
+

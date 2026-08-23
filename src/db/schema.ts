@@ -638,4 +638,35 @@ export const scraps = pgTable(
 export type ScrapRow = typeof scraps.$inferSelect;
 export type NewScrapRow = typeof scraps.$inferInsert;
 
+export const scrapAssets = pgTable(
+  "scrap_assets",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    scrapId: text("scrap_id").references(
+      (): AnyPgColumn => scraps.id,
+      { onDelete: "set null" }
+    ),
+    filename: varchar("filename", { length: 255 }).notNull(),
+    mimeType: varchar("mime_type", { length: 100 }).notNull(),
+    data: text("data").notNull(), // Base64 data string
+    sizeBytes: integer("size_bytes").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("scrap_assets_user_created_idx").on(table.userId, table.createdAt.desc()),
+    index("scrap_assets_scrap_id_idx").on(table.scrapId),
+  ]
+);
+
+export type ScrapAssetRow = typeof scrapAssets.$inferSelect;
+export type NewScrapAssetRow = typeof scrapAssets.$inferInsert;
+
+
 

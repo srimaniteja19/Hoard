@@ -620,6 +620,85 @@
 
 .ed {
   border-right: var(--b) solid var(--ink);
+  position: relative;
+}
+
+.ed.drag-over {
+  outline: 3px dashed var(--yellow);
+  outline-offset: -4px;
+}
+
+.ed-drag-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(123, 92, 240, 0.88);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  z-index: 10;
+  pointer-events: none;
+  border: 3px dashed var(--yellow);
+}
+
+.ed-upload-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.82);
+  color: var(--yellow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  z-index: 10;
+  pointer-events: none;
+  animation: ai-btn-pulse 1.2s ease infinite;
+}
+
+.slab.drag-over {
+  outline: 4px dashed var(--ink);
+  outline-offset: -4px;
+}
+
+.slab-upload-indicator {
+  background: var(--ink);
+  color: var(--yellow);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  padding: 5px 14px;
+  text-align: center;
+  animation: ai-btn-pulse 1.2s ease infinite;
+}
+
+.pchip.img-picker {
+  background: var(--cyan);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.pchip.img-picker:hover {
+  background: var(--pink);
+  color: #fff;
+}
+
+.note__acts .img-btn {
+  background: var(--yellow) !important;
+  color: var(--ink) !important;
+  font-weight: 800 !important;
+}
+
+.note__acts .img-btn:hover {
+  background: var(--pink) !important;
+  color: #fff !important;
 }
 
 .note__body.edit .ed,
@@ -991,6 +1070,181 @@
   border: 2px solid var(--ink);
   padding: 1px 6px;
   background: var(--card);
+}
+
+/* ── Markdown Images & Figures ── */
+.md-figure {
+  margin: 20px 0;
+  border: var(--b) solid var(--ink);
+  background: var(--card);
+  box-shadow: 5px 5px 0 var(--ink);
+  max-width: 100%;
+}
+
+.md-figure__wrap {
+  position: relative;
+  overflow: hidden;
+  background: #0A0A0A;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.md-figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  max-height: 480px;
+  cursor: zoom-in;
+  transition: transform 0.15s ease;
+}
+
+.md-figure:hover img {
+  transform: scale(1.01);
+}
+
+.md-figure__zoom {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  background: var(--ink);
+  color: var(--yellow);
+  border: 2px solid var(--yellow);
+  padding: 4px 10px;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 2;
+}
+
+.md-figure__zoom:hover {
+  opacity: 1;
+  background: var(--pink);
+  color: #fff;
+  border-color: #fff;
+  transform: scale(1.05);
+}
+
+.md-figure figcaption {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 8px 14px;
+  background: var(--shelf);
+  border-top: var(--b) solid var(--ink);
+  color: var(--ink);
+}
+
+.md-inline-img-wrap {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 2px 4px;
+}
+
+.md-inline-img-wrap img {
+  max-height: 120px;
+  max-width: 200px;
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  cursor: zoom-in;
+}
+
+/* ── Lightbox Image Modal ── */
+.scratch-img-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  z-index: 99999;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 3vw, 24px);
+  animation: lbFadeIn 0.15s ease-out;
+}
+
+@keyframes lbFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.scratch-img-lightbox__box {
+  background: var(--card);
+  border: var(--b) solid var(--ink);
+  box-shadow: 8px 8px 0 var(--yellow);
+  max-width: 92vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.scratch-img-lightbox__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: var(--ink);
+  color: var(--yellow);
+  padding: 9px 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.scratch-img-lightbox__acts {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.scratch-img-lightbox__dl {
+  color: var(--cyan);
+  text-decoration: none;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 4px 10px;
+  border: 1px solid var(--cyan);
+  transition: all 0.12s;
+}
+
+.scratch-img-lightbox__dl:hover {
+  background: var(--cyan);
+  color: var(--ink);
+}
+
+.scratch-img-lightbox__close {
+  background: var(--pink);
+  color: #fff;
+  border: none;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.scratch-img-lightbox__close:hover {
+  background: #fff;
+  color: var(--pink);
+}
+
+.scratch-img-lightbox__img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(90vh - 60px);
+  object-fit: contain;
+  background: #0A0A0A;
 }
 
 /* ── side panels ── */

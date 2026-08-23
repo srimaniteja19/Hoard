@@ -1,8 +1,13 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import { parseSlabText } from "@/lib/scratch/parse";
 import { findCollisions, CollisionHit, CollisionCandidate } from "@/lib/scratch/collision";
+import {
+  uploadScrapImage,
+  extractImagesFromClipboard,
+  extractImagesFromDragEvent,
+} from "@/lib/scratch/image";
 
 interface ScratchSlabProps {
   onFile: (text: string) => Promise<void> | void;
@@ -18,7 +23,11 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
   submitting = false,
 }) => {
   const [value, setValue] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const parsed = useMemo(() => {
     return parseSlabText(value);
@@ -30,10 +39,10 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
 
   const handleCommit = useCallback(async () => {
     const trimmed = value.trim();
-    if (!trimmed || submitting) return;
+    if (!trimmed || submitting || uploadingImage) return;
     setValue("");
     await onFile(trimmed);
-  }, [value, submitting, onFile]);
+  }, [value, submitting, uploadingImage, onFile]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
@@ -42,9 +51,55 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
     }
   };
 
+  const processImageFile = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      const asset = await uploadScrapImage(file);
+      setValue((prev) => (prev.trim() ? `${prev.trim()}\n\n${asset.markdown}` : asset.markdown));
+    } catch (err) {
+      console.error("Failed to upload image from slab", err);
+    } finally {
+      setUploadingImage(false);
+      setIsDragOver(false);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const images = extractImagesFromClipboard(e);
+    if (images.length > 0) {
+      e.preventDefault();
+      void processImageFile(images[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    if (e.dataTransfer?.types?.includes("Files")) {
+      e.preventDefault();
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    const images = extractImagesFromDragEvent(e);
+    if (images.length > 0) {
+      e.preventDefault();
+      void processImageFile(images[0]);
+    } else {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      void processImageFile(files[0]);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   return (
     <div>
-      <div className="slab">
+      <div className={`slab${isDragOver ? " drag-over" : ""}`}>
         <textarea
           ref={textareaRef}
           id="slab"
@@ -52,11 +107,36 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Start typing.  ? question  ·  > quote  ·  → action  ·  !! rant  ·  #tag"
-          disabled={submitting}
+          onPaste={handlePaste}
+          onDragOver={handleDragOver}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={handleDrop}
+          placeholder="Start typing or paste a screenshot (Cmd+V). ? question · > quote · → action · !! rant · #tag"
+          disabled={submitting || uploadingImage}
         />
+        {uploadingImage && (
+          <div className="slab-upload-indicator">
+            <span>⏳ COMPRESSING &amp; UPLOADING IMAGE...</span>
+          </div>
+        )}
         <div className="slab__tear" />
         <div className="slab__bar" id="bar">
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+            style={{ display: "none" }}
+            onChange={handleFileInputChange}
+          />
+          <button
+            type="button"
+            className="pchip img-picker"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingImage || submitting}
+            title="Upload or paste an image/screenshot"
+          >
+            📷 {uploadingImage ? "UPLOADING..." : "IMAGE"}
+          </button>
           {parsed.chips.map((chip, idx) => (
             <span
               key={idx}
@@ -73,7 +153,7 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
             className="file"
             type="button"
             onClick={handleCommit}
-            disabled={submitting || !value.trim()}
+            disabled={submitting || uploadingImage || !value.trim()}
           >
             FILE IT ⌘↵
           </button>

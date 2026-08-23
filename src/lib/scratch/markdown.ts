@@ -24,6 +24,11 @@ export function highlightCode(code: string): string {
 export function inlineMarkdown(s: string): string {
   if (!s) return "";
   let res = escapeHtml(s);
+  // Images: ![alt](url)
+  res = res.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    '<span class="md-inline-img-wrap"><img src="$2" alt="$1" class="md-img" data-full-src="$2" loading="lazy" /></span>'
+  );
   // Code: `code`
   res = res.replace(/`([^`]+)`/g, "<code>$1</code>");
   // Bold: **text**
@@ -121,6 +126,20 @@ export function renderScratchMarkdown(md: string): string {
 
     // Blank line
     if (!L.trim()) {
+      i++;
+      continue;
+    }
+
+    // Standalone Image Figure ![alt](url)
+    const imgMatch = L.match(/^\s*!\[([^\]]*)\]\(([^)]+)\)\s*$/);
+    if (imgMatch) {
+      const altText = escapeHtml(imgMatch[1]);
+      const imgUrl = escapeHtml(imgMatch[2]);
+      out.push(
+        `<figure class="md-figure" data-full-src="${imgUrl}"><div class="md-figure__wrap"><img src="${imgUrl}" alt="${altText}" class="md-img" loading="lazy" /><button type="button" class="md-figure__zoom" data-full-src="${imgUrl}">ZOOM ⊕</button></div>${
+          altText ? `<figcaption>${inlineMarkdown(altText)}</figcaption>` : ""
+        }</figure>`
+      );
       i++;
       continue;
     }
@@ -249,8 +268,12 @@ export function renderScratchMarkdown(md: string): string {
     while (i < lines.length) {
       const nextLine = lines[i];
       if (!nextLine.trim()) break;
-      // Stop if next line starts a block element
-      if (/^(#{1,6}\s|>|```|:::(\w+)|(-{3,}|\*{3,}|_{3,})\s*$|\s*[-*]\s+|\s*\d+\.\s+)/.test(nextLine)) {
+      // Stop if next line starts a block element or standalone image
+      if (
+        /^(#{1,6}\s|>|```|:::(\w+)|(-{3,}|\*{3,}|_{3,})\s*$|\s*[-*]\s+|\s*\d+\.\s+|^\s*!\[)/.test(
+          nextLine
+        )
+      ) {
         break;
       }
       // Stop if next line is start of a table
