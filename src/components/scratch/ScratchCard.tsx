@@ -33,6 +33,13 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // AI Expand state
+  const [aiStreaming, setAiStreaming] = useState(false);
+  const [aiStreamedText, setAiStreamedText] = useState("");
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiDone, setAiDone] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
     setNotes(scrap.notes || "");
   }, [scrap.notes]);
@@ -67,6 +74,92 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
     if (next && mode !== "read") {
       setTimeout(() => textareaRef.current?.focus(), 50);
     }
+  };
+
+  // ── AI EXPAND ──
+  const handleAiExpand = async () => {
+    if (aiStreaming) {
+      // Cancel ongoing stream
+      abortRef.current?.abort();
+      setAiStreaming(false);
+      return;
+    }
+
+    setAiStreaming(true);
+    setAiStreamedText("");
+    setAiError(null);
+    setAiDone(false);
+    setMode("split");
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const res = await fetch(`/api/scratch/${scrap.id}/expand`, {
+        method: "POST",
+        credentials: "include",
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "AI request failed" }));
+        setAiError(data.error || "AI request failed");
+        setAiStreaming(false);
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) {
+        setAiError("No response stream");
+        setAiStreaming(false);
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let accumulated = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        accumulated += chunk;
+        setAiStreamedText(accumulated);
+      }
+
+      setAiDone(true);
+      setAiStreaming(false);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        // User cancelled — keep what we have
+        setAiStreaming(false);
+        return;
+      }
+      setAiError(err instanceof Error ? err.message : "AI expand failed");
+      setAiStreaming(false);
+    }
+  };
+
+  // Accept AI output — merge into notes
+  const handleAcceptAi = async () => {
+    const merged = notes.trim()
+      ? `${notes.trim()}\n\n---\n\n${aiStreamedText}`
+      : aiStreamedText;
+    setNotes(merged);
+    setAiStreamedText("");
+    setAiDone(false);
+    setAiError(null);
+
+    // Save immediately
+    await onUpdateNotes(scrap.id, merged);
+    setSavedStatus("AUTOSAVED");
+  };
+
+  // Discard AI output
+  const handleDiscardAi = () => {
+    setAiStreamedText("");
+    setAiDone(false);
+    setAiError(null);
   };
 
   // Format creation time
@@ -105,6 +198,8 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
       </>
     );
   }, []);
+
+  const showAiPanel = aiStreaming || aiStreamedText || aiError;
 
   return (
     <article
@@ -206,6 +301,14 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
             </div>
 
             <div className="note__acts">
+              <button
+                type="button"
+                className={`ai-expand-btn${aiStreaming ? " streaming" : ""}`}
+                onClick={handleAiExpand}
+                title={aiStreaming ? "Stop AI generation" : "AI: expand this scrap into structured notes"}
+              >
+                {aiStreaming ? "◼ STOP" : "✦ EXPAND"}
+              </button>
               <button type="button" onClick={() => onPromoteTil(scrap.id)}>
                 → TIL
               </button>
@@ -221,6 +324,71 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
               </button>
             </div>
           </div>
+
+          {/* ── AI STREAMING PANEL ── */}
+          {showAiPanel && (
+            <div className="ai-panel">
+              <div className="ai-panel__header">
+                <span className="ai-panel__badge">
+                  <span className={`ai-panel__dot${aiStreaming ? " pulse" : ""}`} />
+                  {aiStreaming ? "AI EXPANDING..." : aiError ? "AI ERROR" : "AI DRAFT"}
+                </span>
+                {aiDone && (
+                  <span className="ai-panel__hint">
+                    Review the draft below, then accept or discard
+                  </span>
+                )}
+              </div>
+
+              {aiError ? (
+                <div className="ai-panel__error">
+                  <span>⚠</span> {aiError}
+                  <button type="button" onClick={handleDiscardAi}>DISMISS</button>
+                </div>
+              ) : (
+                <>
+                  <div className={`ai-panel__preview${aiStreaming ? " streaming" : ""}${aiDone ? " done" : ""}`}>
+                    {aiStreamedText ? (
+                      <ScratchMarkdown content={aiStreamedText} />
+                    ) : (
+                      <div className="ai-panel__skeleton">
+                        <div className="sk-line w80" />
+                        <div className="sk-line w60" />
+                        <div className="sk-line w90" />
+                        <div className="sk-line w45" />
+                      </div>
+                    )}
+                  </div>
+
+                  {aiDone && (
+                    <div className="ai-panel__actions">
+                      <button
+                        type="button"
+                        className="ai-accept"
+                        onClick={handleAcceptAi}
+                      >
+                        ✓ ACCEPT &amp; MERGE
+                      </button>
+                      <button
+                        type="button"
+                        className="ai-discard"
+                        onClick={handleDiscardAi}
+                      >
+                        ✕ DISCARD
+                      </button>
+                      <button
+                        type="button"
+                        className="ai-retry"
+                        onClick={handleAiExpand}
+                      >
+                        ↻ RETRY
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           <div
             className={`note__body ${
