@@ -11,6 +11,7 @@ interface CrumbBarProps {
   coll: string;
   ty: KindType | null;
   tag?: string | null;
+  activeTopicCluster?: string | null;
   onReset?: () => void;
 }
 
@@ -20,15 +21,17 @@ export const CrumbBar: React.FC<CrumbBarProps> = ({
   coll,
   ty,
   tag,
+  activeTopicCluster,
   onReset,
 }) => {
   const uniqueKinds = useMemo(() => {
     return new Set(items.map((b) => b.ty)).size;
   }, [items]);
 
-  const isFiltered = ty !== null || coll !== "all" || Boolean(tag);
+  const isFiltered = ty !== null || coll !== "all" || Boolean(tag) || Boolean(activeTopicCluster);
 
   const titleText = useMemo(() => {
+    if (activeTopicCluster) return `TOPIC: ${activeTopicCluster.toUpperCase()}`;
     if (ty) return TYPES[ty]?.name.toUpperCase() || ty;
     if (tag) return `#${tag.toUpperCase()}`;
     const flatten = (list: Collection[]): Collection[] => {
@@ -42,7 +45,7 @@ export const CrumbBar: React.FC<CrumbBarProps> = ({
     const allColls = flatten(collections);
     const found = allColls.find((c) => c.id === coll);
     return (found?.name || "ALL BOOKMARKS").toUpperCase();
-  }, [coll, ty, tag, collections]);
+  }, [coll, ty, tag, activeTopicCluster, collections]);
 
   return (
     <div className="crumb" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>

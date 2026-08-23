@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { Sidebar } from "@/components/Sidebar";
 import { HeaderBar } from "@/components/HeaderBar";
@@ -20,6 +20,9 @@ import { HeadlinesView } from "@/components/views/HeadlinesView";
 import { ArchiveView } from "@/components/views/ArchiveView";
 import { StatusLine } from "@/components/StatusLine";
 import { ColdStart } from "@/components/ColdStart";
+import { GhostReaderModal } from "@/components/library/GhostReaderModal";
+import { TopicClusterHubModal } from "@/components/library/TopicClusterHubModal";
+import { LivingTopicCluster } from "@/lib/library/topicClustering";
 import { AppLoading } from "@/components/chrome/AppLoading";
 import { AppPage } from "@/components/chrome/AppPage";
 import { ChromeSlot } from "@/components/chrome/slots";
@@ -42,6 +45,8 @@ export default function Home() {
     setTy,
     tag,
     setTag,
+    activeTopicCluster,
+    setActiveTopicCluster,
     view,
     setView,
     sort,
@@ -82,6 +87,8 @@ export default function Home() {
   const [captureUrl, setCaptureUrl] = useState("");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [ghostReaderBookmark, setGhostReaderBookmark] = useState<Bookmark | null>(null);
+  const [topicHubCluster, setTopicHubCluster] = useState<LivingTopicCluster | null>(null);
   const [dischargeTarget, setDischargeTarget] = useState<Bookmark | null>(null);
   const [dischargeSourceRect, setDischargeSourceRect] = useState<DOMRect | null>(null);
   const [dischargeCount, setDischargeCount] = useState(0);
@@ -109,10 +116,47 @@ export default function Home() {
     [setDiffBookmark, setIsDiffOpen]
   );
 
-  const handleOpenDischargeModal = React.useCallback((bm: Bookmark, sourceRect: DOMRect) => {
-    setDischargeTarget(bm);
-    setDischargeSourceRect(sourceRect);
-  }, []);
+  const handleOpenDischargeModal = useCallback(
+    (bookmark: Bookmark, sourceRect?: DOMRect) => {
+      setDischargeTarget(bookmark);
+      setDischargeSourceRect(sourceRect ?? null);
+    },
+    []
+  );
+
+  const handleSaveQuoteBookmark = useCallback(
+    async (parentId: number, quoteText: string) => {
+      const parent = bookmarks.find((b) => b.id === parentId);
+      if (!parent) return;
+      const excerpt = quoteText.length > 70 ? `${quoteText.slice(0, 70)}...` : quoteText;
+      await addBookmark({
+        t: `"${excerpt}"`,
+        ty: parent.ty,
+        src: parent.src,
+        url: parent.url,
+        mins: 0,
+        tag: parent.tag,
+        coll: parent.coll,
+        unread: false,
+        itemType: "REFERENCE",
+        itemTypeGuessed: false,
+        note: quoteText,
+        ex: { ...parent.ex, quote: "true" },
+      });
+    },
+    [bookmarks, addBookmark]
+  );
+
+  const handleCreateCollectionFromCluster = useCallback(
+    async (cluster: LivingTopicCluster) => {
+      await addCollection({
+        name: cluster.title,
+        ic: cluster.icon || "🏷️",
+        c: cluster.color || "#00F0FF",
+      });
+    },
+    [addCollection]
+  );
 
   const handleDischargeSubmit = React.useCallback(
     async (input: { type: TilType; body: string; tags: string[] }) => {
@@ -259,6 +303,9 @@ export default function Home() {
         onOpenImport={() => setIsImportOpen(true)}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        activeTopicCluster={activeTopicCluster}
+        setActiveTopicCluster={setActiveTopicCluster}
+        onOpenTopicHub={(cluster) => setTopicHubCluster(cluster)}
         dischargeCount={dischargeCount}
         dischargePulseNonce={dischargePulseNonce}
         dischargeReducedMotion={dischargeReducedMotion}
@@ -274,10 +321,12 @@ export default function Home() {
           coll={coll}
           ty={ty}
           tag={tag}
+          activeTopicCluster={activeTopicCluster}
           onReset={() => {
             setColl("all");
             setTy(null);
             setTag(null);
+            setActiveTopicCluster(null);
             setQuery("");
             setUnreadOnly(false);
             setNeverOpenedOnly(false);
@@ -324,6 +373,7 @@ export default function Home() {
                   setColl("all");
                   setTy(null);
                   setTag(null);
+                  setActiveTopicCluster(null);
                   setQuery("");
                   setUnreadOnly(false);
                   setNeverOpenedOnly(false);
@@ -351,6 +401,7 @@ export default function Home() {
               onOpen={(id) => setOpenId(id)}
               onOpenDiff={handleOpenDiffModal}
               onDischarge={handleOpenDischargeModal}
+              onGhostRead={(bm) => setGhostReaderBookmark(bm)}
             />
           ) : view === "grid" ? (
             <GridView
@@ -360,6 +411,7 @@ export default function Home() {
               onOpen={(id) => setOpenId(id)}
               onOpenDiff={handleOpenDiffModal}
               onDischarge={handleOpenDischargeModal}
+              onGhostRead={(bm) => setGhostReaderBookmark(bm)}
             />
           ) : view === "list" ? (
             <ListView
@@ -401,6 +453,7 @@ export default function Home() {
           onOpenDiff={handleOpenDiffModal}
           onSelectBookmark={(id) => setOpenId(id)}
           onRecordUse={recordBookmarkUse}
+          onOpenGhostReader={(bm) => setGhostReaderBookmark(bm)}
         />
 
       </main>
@@ -445,6 +498,32 @@ export default function Home() {
         bookmark={dischargeTarget}
         onClose={() => setDischargeTarget(null)}
         onSubmit={handleDischargeSubmit}
+      />
+
+      {/* ⚡ Ghost Reader Modal */}
+      <GhostReaderModal
+        bookmark={ghostReaderBookmark}
+        onClose={() => setGhostReaderBookmark(null)}
+        onToggleRead={toggleReadStatus}
+        onDischargeQuote={(quote, bm) => {
+          setDischargeTarget({ ...bm, note: quote });
+        }}
+        onDischargeFull={(bm) => {
+          setDischargeTarget(bm);
+        }}
+        onSaveQuoteBookmark={handleSaveQuoteBookmark}
+        onRecordUse={recordBookmarkUse}
+      />
+
+      {/* 🏷️ Living Topic Cluster Hub Modal */}
+      <TopicClusterHubModal
+        cluster={topicHubCluster}
+        onClose={() => setTopicHubCluster(null)}
+        onOpenBookmark={(id) => setOpenId(id)}
+        onGhostRead={(bm) => setGhostReaderBookmark(bm)}
+        onToggleRead={toggleReadStatus}
+        onDischarge={handleOpenDischargeModal}
+        onCreateCollectionFromCluster={handleCreateCollectionFromCluster}
       />
 
       {/* Discharge FLIP flyers — one per in-flight discharge, independently

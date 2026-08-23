@@ -26,6 +26,7 @@ interface BookmarkCardProps {
   onOpen: (id: number) => void;
   onOpenDiff?: (bookmark: Bookmark) => void;
   onDischarge?: (bookmark: Bookmark, sourceRect: DOMRect) => void;
+  onGhostRead?: (bookmark: Bookmark) => void;
 }
 
 export const BookmarkCard: React.FC<BookmarkCardProps> = ({
@@ -38,6 +39,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   onOpen,
   onOpenDiff,
   onDischarge,
+  onGhostRead,
 }) => {
   const typeMeta = TYPES[bookmark.ty] || { name: bookmark.ty, c: "#00F0FF", fg: "#000", verb: "READ" };
   const e = bookmark.ex || {};
@@ -120,6 +122,21 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         >
           ↗
         </button>
+
+        {onGhostRead && (
+          <button
+            type="button"
+            className="ghost-read-card-btn"
+            onClick={(evt) => {
+              evt.stopPropagation();
+              onGhostRead(bookmark);
+            }}
+            title="Read in Ghost Reader"
+            aria-label="Open in Ghost Reader"
+          >
+            <span>📖</span> READ
+          </button>
+        )}
 
         {/* READ Stamp Overlay */}
         {!bookmark.unread && (

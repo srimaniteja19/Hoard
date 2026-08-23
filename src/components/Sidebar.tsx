@@ -15,7 +15,10 @@ import {
   AppWindow,
   GraduationCap,
   BookOpen,
+  Layers,
+  Sparkles,
 } from "lucide-react";
+import { buildLivingTopicClusters, LivingTopicCluster } from "@/lib/library/topicClustering";
 
 const KIND_GLYPHS: Record<KindType, React.ReactNode> = {
   ART: <FileText size={12} strokeWidth={2.5} />,
@@ -47,6 +50,9 @@ interface SidebarProps {
   onOpenImport: () => void;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
+  activeTopicCluster?: string | null;
+  setActiveTopicCluster?: (c: string | null) => void;
+  onOpenTopicHub?: (cluster: LivingTopicCluster) => void;
   /** Session count of bookmarks discharged into TIL entries (SPECTACLE.md §4). */
   dischargeCount?: number;
   /** Bumped on each discharge to retrigger the counter pulse/cross-fade via key remount. */
@@ -74,6 +80,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenImport,
   isMobileOpen = false,
   onCloseMobile,
+  activeTopicCluster,
+  setActiveTopicCluster,
+  onOpenTopicHub,
   dischargeCount = 0,
   dischargePulseNonce = 0,
   dischargeReducedMotion = false,
@@ -82,6 +91,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [shareCopied, setShareCopied] = useState(false);
   const [showAllCollections, setShowAllCollections] = useState(false);
   const isColdStart = bookmarks.length > 0 && bookmarks.length < 15;
+
+  const livingClusters = useMemo(() => {
+    return buildLivingTopicClusters(bookmarks);
+  }, [bookmarks]);
 
   const activeBookmarks = useMemo(() => {
     return bookmarks.filter((x) => !x.isDeleted && x.unread);
@@ -398,6 +411,77 @@ export const Sidebar: React.FC<SidebarProps> = ({
               );
             })}
           </div>
+
+          {/* 🏷️ Living Topic Clusters */}
+          {livingClusters.length > 0 && (
+            <>
+              <div className="slbl" style={{ justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  TOPIC CLUSTERS<i></i>
+                </div>
+                <span style={{ fontSize: "9px", fontFamily: "var(--mono)", opacity: 0.6 }}>LIVING HUBS</span>
+              </div>
+
+              <div id="topic-clusters" style={{ display: "grid", gap: "2px", marginBottom: "8px" }}>
+                {livingClusters.slice(0, 5).map((c) => {
+                  const isSelected = activeTopicCluster === c.title;
+
+                  return (
+                    <div
+                      key={c.id}
+                      className={`ci ${isSelected ? "on" : ""}`}
+                      onClick={() => {
+                        if (setActiveTopicCluster) {
+                          setActiveTopicCluster(isSelected ? null : c.title);
+                        }
+                        if (onCloseMobile) onCloseMobile();
+                      }}
+                      style={{
+                        position: "relative",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <span className="ic" style={{ background: c.color, color: "#000", fontWeight: 800 }}>
+                        {c.icon}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "11px", fontWeight: isSelected ? 800 : 700 }}>
+                          {c.title}
+                        </div>
+                        <div style={{ display: "flex", gap: "4px", alignItems: "center", fontSize: "9px", opacity: 0.75 }}>
+                          <span>{c.densityLevel}</span>
+                          <span>·</span>
+                          <span>{c.unreadCount > 0 ? `🔥 ${c.unreadCount} unread` : "✓ Explored"}</span>
+                        </div>
+                      </div>
+
+                      {onOpenTopicHub && (
+                        <button
+                          className="cluster-hub-open-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenTopicHub(c);
+                          }}
+                          title="Open Topic Hub Details"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "2px 4px",
+                            opacity: 0.6,
+                          }}
+                        >
+                          ↗
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           <div className="slbl">
             TAGS<i></i>

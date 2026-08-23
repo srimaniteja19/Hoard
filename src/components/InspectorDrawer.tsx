@@ -22,6 +22,7 @@ interface InspectorDrawerProps {
   onOpenDiff?: (b: Bookmark) => void;
   onSelectBookmark?: (id: number) => void;
   onRecordUse?: (id: number) => void;
+  onOpenGhostReader?: (bookmark: Bookmark) => void;
 }
 
 export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
@@ -38,6 +39,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
   onOpenDiff,
   onSelectBookmark,
   onRecordUse,
+  onOpenGhostReader,
 }) => {
   const [noteVal, setNoteVal] = useState("");
   const [permCopy, setPermCopy] = useState(true);
@@ -160,6 +162,16 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
           <div className="iurl">{bookmark.url}</div>
 
           <div className="iacts">
+            {onOpenGhostReader && (
+              <button
+                className="p1"
+                style={{ background: "var(--yel)", color: "#000" }}
+                onClick={() => onOpenGhostReader(bookmark)}
+                title="Read in distraction-free Ghost Reader"
+              >
+                📖 GHOST READER
+              </button>
+            )}
             <button
               className="p1"
               onClick={() => {

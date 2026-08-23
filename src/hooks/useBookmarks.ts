@@ -75,6 +75,7 @@ export function useBookmarks() {
   const [coll, setColl]           = useState("all");
   const [ty, setTy]               = useState<KindType | null>(null);
   const [tag, setTag]             = useState<string | null>(null);
+  const [activeTopicCluster, setActiveTopicCluster] = useState<string | null>(null);
   const [time, setTime]           = useState(180);
   const [ctx, setCtx]             = useState<ContextType>("all");
   const [view, setView]           = useState<ViewMode>("masonry");
@@ -215,6 +216,7 @@ export function useBookmarks() {
 
     const list = itemsToEvaluate.filter((x) => {
       if (!activeSmartColl && !inColl(x, coll, collections)) return false;
+      if (activeTopicCluster && x.clusterTitle !== activeTopicCluster && x.tag?.toLowerCase() !== activeTopicCluster.toLowerCase()) return false;
       if (ty && x.ty !== ty)               return false;
       if (tag && x.tag !== tag)            return false;
       if (unreadOnly && !x.unread)         return false;
@@ -242,7 +244,7 @@ export function useBookmarks() {
       });
     }
     return list;
-  }, [bookmarks, collections, query, coll, ty, tag, ctx, sort, unreadOnly, neverOpenedOnly, activeSmartColl]);
+  }, [bookmarks, collections, query, coll, ty, tag, activeTopicCluster, ctx, sort, unreadOnly, neverOpenedOnly, activeSmartColl]);
 
   // ── Selection ─────────────────────────────────────────────────────────────
 
@@ -561,6 +563,7 @@ export function useBookmarks() {
     coll,      setColl,
     ty,        setTy,
     tag,       setTag,
+    activeTopicCluster, setActiveTopicCluster,
     time,      setTime,
     ctx,       setCtx,
     view,      setView,

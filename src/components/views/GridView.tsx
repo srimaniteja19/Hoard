@@ -11,6 +11,7 @@ interface GridViewProps {
   onOpen: (id: number) => void;
   onOpenDiff?: (bookmark: Bookmark) => void;
   onDischarge?: (bookmark: Bookmark, sourceRect: DOMRect) => void;
+  onGhostRead?: (bookmark: Bookmark) => void;
 }
 
 export const GridView: React.FC<GridViewProps> = ({
@@ -20,6 +21,7 @@ export const GridView: React.FC<GridViewProps> = ({
   onOpen,
   onOpenDiff,
   onDischarge,
+  onGhostRead,
 }) => {
   return (
     <div className="grid">
@@ -33,6 +35,7 @@ export const GridView: React.FC<GridViewProps> = ({
           onOpen={onOpen}
           onOpenDiff={onOpenDiff}
           onDischarge={onDischarge}
+          onGhostRead={onGhostRead}
         />
       ))}
     </div>
