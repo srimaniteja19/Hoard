@@ -5,6 +5,7 @@ import { ScrapRow } from "@/db/schema";
 import { ScratchStats } from "@/lib/dal/scratch";
 import { ScratchCalendar } from "./ScratchCalendar";
 import { extractAllTags } from "@/lib/scratch/filters";
+import { playSound } from "@/lib/sound";
 
 interface ScratchSidePanelsProps {
   scraps: ScrapRow[];
@@ -57,7 +58,10 @@ export const ScratchSidePanels: React.FC<ScratchSidePanelsProps> = ({
                   key={t.tag}
                   type="button"
                   className={`tag-cloud-pill ${isActive ? "active" : ""}`}
-                  onClick={() => onSelectTag(isActive ? null : t.tag)}
+                  onClick={() => {
+                    playSound.pop();
+                    onSelectTag(isActive ? null : t.tag);
+                  }}
                 >
                   <span className="tc-name">{t.tag}</span>
                   <span className="tc-count">{t.count}</span>

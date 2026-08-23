@@ -8,6 +8,7 @@ import {
   extractImagesFromClipboard,
   extractImagesFromDragEvent,
 } from "@/lib/scratch/image";
+import { playSound } from "@/lib/sound";
 
 interface ScratchSlabProps {
   onFile: (text: string) => Promise<void> | void;
@@ -40,6 +41,7 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
   const handleCommit = useCallback(async () => {
     const trimmed = value.trim();
     if (!trimmed || submitting || uploadingImage) return;
+    playSound.fileIt();
     setValue("");
     await onFile(trimmed);
   }, [value, submitting, uploadingImage, onFile]);
@@ -132,11 +134,12 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
                 <button
                   type="button"
                   className="slab-img-preview__remove"
-                  onClick={() =>
+                  onClick={() => {
+                    playSound.click();
                     setValue((prev) =>
                       prev.replace(/!\[([^\]]*)\]\(([^)]+)\)\n?/, "").trim()
-                    )
-                  }
+                    );
+                  }}
                   title="Remove image"
                 >
                   ✕ REMOVE
@@ -157,7 +160,10 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
           <button
             type="button"
             className="pchip img-picker"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {
+              playSound.click();
+              fileInputRef.current?.click();
+            }}
             disabled={uploadingImage || submitting}
             title="Upload or paste an image/screenshot"
           >

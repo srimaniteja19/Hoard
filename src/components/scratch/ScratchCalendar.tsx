@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { ScrapRow } from "@/db/schema";
 import { generateMonthCalendar, DayActivity } from "@/lib/scratch/filters";
+import { playSound } from "@/lib/sound";
 
 interface ScratchCalendarProps {
   scraps: ScrapRow[];
@@ -24,6 +25,7 @@ export const ScratchCalendar: React.FC<ScratchCalendarProps> = ({
   }, [scraps, currentYear, currentMonth, selectedDate]);
 
   const handlePrevMonth = () => {
+    playSound.click();
     if (currentMonth === 0) {
       setCurrentMonth(11);
       setCurrentYear((y) => y - 1);
@@ -33,6 +35,7 @@ export const ScratchCalendar: React.FC<ScratchCalendarProps> = ({
   };
 
   const handleNextMonth = () => {
+    playSound.click();
     if (currentMonth === 11) {
       setCurrentMonth(0);
       setCurrentYear((y) => y + 1);
@@ -42,6 +45,7 @@ export const ScratchCalendar: React.FC<ScratchCalendarProps> = ({
   };
 
   const handleJumpToday = () => {
+    playSound.click();
     const now = new Date();
     setCurrentYear(now.getFullYear());
     setCurrentMonth(now.getMonth());
@@ -50,6 +54,7 @@ export const ScratchCalendar: React.FC<ScratchCalendarProps> = ({
   };
 
   const handleDayClick = (day: DayActivity) => {
+    playSound.pop();
     if (selectedDate === day.dateIso) {
       // Toggle off
       onSelectDate(null);

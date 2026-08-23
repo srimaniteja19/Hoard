@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useRef, useEffect, useMemo } from "react";
+import React, { useRef, useEffect, useMemo, useState } from "react";
 import { ScrapRow, ScrapKind, scrapKindValues } from "@/db/schema";
 import { ScratchFilters, StatusFilter, extractAllTags } from "@/lib/scratch/filters";
+import { playSound, sound } from "@/lib/sound";
 
 interface ScratchFilterBarProps {
   scraps: ScrapRow[];
@@ -22,6 +23,16 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
   onResetFilters,
 }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [sfxEnabled, setSfxEnabled] = useState(true);
+
+  useEffect(() => {
+    setSfxEnabled(sound.isEnabled());
+  }, []);
+
+  const handleToggleSfx = () => {
+    const next = sound.toggle();
+    setSfxEnabled(next);
+  };
 
   // Global '/' keyboard shortcut to focus search
   useEffect(() => {
@@ -101,7 +112,10 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
             <button
               type="button"
               className="scratch-search-clear"
-              onClick={() => onFilterChange({ query: "" })}
+              onClick={() => {
+                playSound.click();
+                onFilterChange({ query: "" });
+              }}
               title="Clear search"
             >
               ✕
@@ -110,6 +124,15 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
         </div>
 
         <div className="scratch-search-status">
+          <button
+            type="button"
+            className={`scratch-sfx-toggle ${sfxEnabled ? "on" : "off"}`}
+            onClick={handleToggleSfx}
+            title={sfxEnabled ? "Mute interactive click sound effects" : "Enable interactive sound effects"}
+          >
+            {sfxEnabled ? "🔊 SOUND ON" : "🔇 SOUND OFF"}
+          </button>
+
           <span className="match-badge">
             <b>{filteredCount}</b> / {totalCount} SCRAPS
           </span>
@@ -117,7 +140,10 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
             <button
               type="button"
               className="scratch-reset-filters-btn"
-              onClick={onResetFilters}
+              onClick={() => {
+                playSound.click();
+                onResetFilters();
+              }}
             >
               RESET ALL ✕
             </button>
@@ -136,7 +162,10 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
               key={cat.id}
               type="button"
               className={`scratch-cat-tab ${isActive ? "active" : ""} cat-${cat.color}`}
-              onClick={() => onFilterChange({ kind: cat.id })}
+              onClick={() => {
+                playSound.click();
+                onFilterChange({ kind: cat.id });
+              }}
             >
               <span className="cat-label">{cat.label}</span>
               <span className="cat-count">{count}</span>
@@ -156,7 +185,10 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
                 key={st.id}
                 type="button"
                 className={`scratch-status-pill ${isActive ? "active" : ""}`}
-                onClick={() => onFilterChange({ status: st.id })}
+                onClick={() => {
+                  playSound.pop();
+                  onFilterChange({ status: st.id });
+                }}
               >
                 {st.label}
               </button>
@@ -175,7 +207,10 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
                   key={t.tag}
                   type="button"
                   className={`scratch-tag-pill ${isActive ? "active" : ""}`}
-                  onClick={() => onFilterChange({ tag: isActive ? null : t.tag })}
+                  onClick={() => {
+                    playSound.pop();
+                    onFilterChange({ tag: isActive ? null : t.tag });
+                  }}
                 >
                   <span>{t.tag}</span>
                   <span className="tag-n">{t.count}</span>

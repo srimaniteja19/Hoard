@@ -8,6 +8,7 @@ import {
   extractImagesFromClipboard,
   extractImagesFromDragEvent,
 } from "@/lib/scratch/image";
+import { playSound } from "@/lib/sound";
 
 interface ScratchCardProps {
   scrap: ScrapRow;
@@ -78,6 +79,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   };
 
   const handleCopyMd = () => {
+    playSound.copy();
     navigator.clipboard.writeText(notes);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
@@ -85,6 +87,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
 
   const toggleOpen = () => {
     const next = !isOpen;
+    playSound.toggle(next);
     setIsOpen(next);
     if (next && mode !== "read") {
       setTimeout(() => textareaRef.current?.focus(), 50);
@@ -344,22 +347,40 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
         </button>
         <button
           type="button"
-          onClick={() => onPromoteTil(scrap.id)}
+          onClick={() => {
+            playSound.promote();
+            void onPromoteTil(scrap.id);
+          }}
           title="Promote this scrap to a minted TIL entry"
         >
           → TIL
         </button>
         <button
           type="button"
-          onClick={() => onPromoteTodo(scrap.id)}
+          onClick={() => {
+            playSound.promote();
+            void onPromoteTodo(scrap.id);
+          }}
           title="Promote this scrap to a Todo item"
         >
           → TODO
         </button>
-        <button type="button" onClick={() => onWeld(scrap.id)}>
+        <button
+          type="button"
+          onClick={() => {
+            playSound.click();
+            onWeld(scrap.id);
+          }}
+        >
           WELD
         </button>
-        <button type="button" onClick={() => onBury(scrap.id)}>
+        <button
+          type="button"
+          onClick={() => {
+            playSound.bury();
+            void onBury(scrap.id);
+          }}
+        >
           BURY
         </button>
       </div>
@@ -372,7 +393,10 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
                 type="button"
                 data-m="split"
                 aria-pressed={mode === "split"}
-                onClick={() => setMode("split")}
+                onClick={() => {
+                  playSound.click();
+                  setMode("split");
+                }}
               >
                 SPLIT
               </button>
@@ -380,7 +404,10 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
                 type="button"
                 data-m="edit"
                 aria-pressed={mode === "edit"}
-                onClick={() => setMode("edit")}
+                onClick={() => {
+                  playSound.click();
+                  setMode("edit");
+                }}
               >
                 WRITE
               </button>
@@ -388,7 +415,10 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
                 type="button"
                 data-m="read"
                 aria-pressed={mode === "read"}
-                onClick={() => setMode("read")}
+                onClick={() => {
+                  playSound.click();
+                  setMode("read");
+                }}
               >
                 READ
               </button>
@@ -411,7 +441,10 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
               <button
                 type="button"
                 className="img-btn"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  playSound.click();
+                  fileInputRef.current?.click();
+                }}
                 disabled={uploadingImage}
                 title="Paste, drag-and-drop, or click to upload screenshots and images"
               >
@@ -420,12 +453,21 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
               <button
                 type="button"
                 className={`ai-expand-btn${aiStreaming ? " streaming" : ""}`}
-                onClick={handleAiExpand}
+                onClick={() => {
+                  playSound.click();
+                  void handleAiExpand();
+                }}
                 title={aiStreaming ? "Stop AI generation" : "AI: expand this scrap into structured notes"}
               >
                 {aiStreaming ? "◼ STOP" : "✦ EXPAND"}
               </button>
-              <button type="button" onClick={() => onPromoteTil(scrap.id)}>
+              <button
+                type="button"
+                onClick={() => {
+                  playSound.promote();
+                  void onPromoteTil(scrap.id);
+                }}
+              >
                 → TIL
               </button>
               <button type="button" onClick={handleCopyMd}>
@@ -434,7 +476,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
               <button
                 className="close"
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={toggleOpen}
               >
                 CLOSE ▴
               </button>
@@ -484,21 +526,30 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
                       <button
                         type="button"
                         className="ai-accept"
-                        onClick={handleAcceptAi}
+                        onClick={() => {
+                          playSound.promote();
+                          void handleAcceptAi();
+                        }}
                       >
                         ✓ ACCEPT &amp; MERGE
                       </button>
                       <button
                         type="button"
                         className="ai-discard"
-                        onClick={handleDiscardAi}
+                        onClick={() => {
+                          playSound.click();
+                          handleDiscardAi();
+                        }}
                       >
                         ✕ DISCARD
                       </button>
                       <button
                         type="button"
                         className="ai-retry"
-                        onClick={handleAiExpand}
+                        onClick={() => {
+                          playSound.click();
+                          void handleAiExpand();
+                        }}
                       >
                         ↻ RETRY
                       </button>
