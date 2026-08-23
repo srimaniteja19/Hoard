@@ -22,12 +22,13 @@ export function highlightCode(code: string): string {
 }
 
 export function inlineMarkdown(s: string): string {
+  if (!s) return "";
   let res = escapeHtml(s);
-  // Code
+  // Code: `code`
   res = res.replace(/`([^`]+)`/g, "<code>$1</code>");
-  // Bold
+  // Bold: **text**
   res = res.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  // Italic
+  // Italic: *text*
   res = res.replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>");
   // Highlight ==...==
   res = res.replace(/==([^=]+)==/g, "<mark>$1</mark>");
@@ -36,7 +37,7 @@ export function inlineMarkdown(s: string): string {
   // Links [title](url)
   res = res.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
   // Hashtags #tag
-  res = res.replace(/(^|\s)(#[a-z][\w-]*)/gi, '$1<span class="tg">$2</span>');
+  res = res.replace(/(^|\s)(#[a-zA-Z][\w-]*)/g, '$1<span class="tg">$2</span>');
   return res;
 }
 
@@ -78,6 +79,11 @@ export function renderScratchMarkdown(md: string): string {
       i++;
     }
 
+    if (items.length === 0) {
+      i++;
+      return "";
+    }
+
     const tag = ordered ? "ol" : "ul";
     let html = `<${tag}${isTaskList ? ' class="task"' : ""}>`;
     let openSub = 0;
@@ -110,7 +116,14 @@ export function renderScratchMarkdown(md: string): string {
   }
 
   while (i < lines.length) {
+    const loopStartIndex = i;
     const L = lines[i];
+
+    // Blank line
+    if (!L.trim()) {
+      i++;
+      continue;
+    }
 
     // Fenced code blocks ```lang
     if (/^```/.test(L)) {
@@ -121,7 +134,9 @@ export function renderScratchMarkdown(md: string): string {
         codeBuffer.push(lines[i]);
         i++;
       }
-      i++; // Skip closing ```
+      if (i < lines.length && /^```/.test(lines[i])) {
+        i++; // Skip closing ```
+      }
       const rawCode = codeBuffer.join("\n");
       out.push(
         `<div class="cb"><div class="cb__h"><span>${escapeHtml(
@@ -144,7 +159,9 @@ export function renderScratchMarkdown(md: string): string {
         calloutBuffer.push(lines[i]);
         i++;
       }
-      i++; // Skip closing :::
+      if (i < lines.length && /^:::\s*$/.test(lines[i])) {
+        i++; // Skip closing :::
+      }
       const calloutBody = calloutBuffer
         .filter((x) => x.trim())
         .map((x) => `<p>${inlineMarkdown(x)}</p>`)
@@ -166,12 +183,13 @@ export function renderScratchMarkdown(md: string): string {
       i += 2; // skip header and delimiter lines
       const rows: string[][] = [];
       while (i < lines.length && /^\|/.test(lines[i])) {
-        rows.push(
-          lines[i]
-            .split("|")
-            .slice(1, -1)
-            .map((c) => c.trim())
-        );
+        const cols = lines[i]
+          .split("|")
+          .slice(1, -1)
+          .map((c) => c.trim());
+        if (cols.length > 0) {
+          rows.push(cols);
+        }
         i++;
       }
       const thead = `<thead><tr>${headers
@@ -186,17 +204,17 @@ export function renderScratchMarkdown(md: string): string {
       continue;
     }
 
-    // Headings #, ##, ###
-    const hMatch = L.match(/^(#{1,3})\s+(.*)$/);
+    // Headings #, ##, ###, ####, #####, ######
+    const hMatch = L.match(/^(#{1,6})\s+(.*)$/);
     if (hMatch) {
-      const level = hMatch[1].length;
+      const level = Math.min(hMatch[1].length, 6);
       out.push(`<h${level}>${inlineMarkdown(hMatch[2])}</h${level}>`);
       i++;
       continue;
     }
 
-    // Horizontal Rule ---, ***
-    if (/^(-{3,}|\*{3,})\s*$/.test(L)) {
+    // Horizontal Rule ---, ***, ___
+    if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(L)) {
       out.push("<hr>");
       i++;
       continue;
@@ -225,23 +243,29 @@ export function renderScratchMarkdown(md: string): string {
       continue;
     }
 
-    // Empty lines
-    if (!L.trim()) {
-      i++;
-      continue;
-    }
-
-    // Paragraph
-    const pBuffer: string[] = [];
-    while (
-      i < lines.length &&
-      lines[i].trim() &&
-      !/^(#{1,3}\s|>|```|:::|\||\s*[-*]\s|\s*\d+\.\s|-{3,}|\*{3,})/.test(lines[i])
-    ) {
-      pBuffer.push(lines[i]);
+    // Paragraph: consume current line and any continuation lines
+    const pBuffer: string[] = [L];
+    i++;
+    while (i < lines.length) {
+      const nextLine = lines[i];
+      if (!nextLine.trim()) break;
+      // Stop if next line starts a block element
+      if (/^(#{1,6}\s|>|```|:::(\w+)|(-{3,}|\*{3,}|_{3,})\s*$|\s*[-*]\s+|\s*\d+\.\s+)/.test(nextLine)) {
+        break;
+      }
+      // Stop if next line is start of a table
+      if (/^\|/.test(nextLine) && /^\s*\|?[\s:-]+\|/.test(lines[i + 1] || "")) {
+        break;
+      }
+      pBuffer.push(nextLine);
       i++;
     }
     out.push(`<p>${inlineMarkdown(pBuffer.join(" "))}</p>`);
+
+    // Absolute failsafe: guarantee loop progress
+    if (i === loopStartIndex) {
+      i++;
+    }
   }
 
   return out.join("");

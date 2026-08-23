@@ -59,6 +59,7 @@ export async function POST(
       model: languageModel(EXPAND_MODEL),
       system: EXPAND_SYSTEM,
       prompt: `Scrap kind: ${scrap.kind}\nScrap content: ${scrap.content}${scrap.notes ? `\n\nExisting notes (expand on these):\n${scrap.notes}` : ""}`,
+      experimental_transform: smoothStream({ chunking: "word", delayInMs: 10 }),
       maxRetries: 1,
       providerOptions: {
         ...gatewayProviderOptions(EXPAND_MODEL, ["feature:scratch-expand"]),

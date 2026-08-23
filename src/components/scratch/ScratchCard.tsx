@@ -33,12 +33,18 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // AI Expand state
   const [aiStreaming, setAiStreaming] = useState(false);
   const [aiStreamedText, setAiStreamedText] = useState("");
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiDone, setAiDone] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const aiPreviewRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (aiStreaming && aiPreviewRef.current) {
+      aiPreviewRef.current.scrollTop = aiPreviewRef.current.scrollHeight;
+    }
+  }, [aiStreamedText, aiStreaming]);
 
   useEffect(() => {
     setNotes(scrap.notes || "");
@@ -347,7 +353,10 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
                 </div>
               ) : (
                 <>
-                  <div className={`ai-panel__preview${aiStreaming ? " streaming" : ""}${aiDone ? " done" : ""}`}>
+                  <div
+                    ref={aiPreviewRef}
+                    className={`ai-panel__preview${aiStreaming ? " streaming" : ""}${aiDone ? " done" : ""}`}
+                  >
                     {aiStreamedText ? (
                       <ScratchMarkdown content={aiStreamedText} />
                     ) : (
