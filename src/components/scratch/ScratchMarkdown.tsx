@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useCallback, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { renderScratchMarkdown } from "@/lib/scratch/markdown";
 
 interface ScratchMarkdownProps {
@@ -14,6 +15,11 @@ export const ScratchMarkdown: React.FC<ScratchMarkdownProps> = ({
   className = "md",
 }) => {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const html = useMemo(() => {
     return renderScratchMarkdown(content);
@@ -50,7 +56,10 @@ export const ScratchMarkdown: React.FC<ScratchMarkdownProps> = ({
       target.classList.contains("md-img") ||
       target.classList.contains("md-figure__zoom")
     ) {
-      const fullSrc = target.getAttribute("data-full-src") || (target as HTMLImageElement).src;
+      const fullSrc =
+        target.getAttribute("data-full-src") ||
+        (target as HTMLImageElement).src ||
+        target.closest(".md-figure")?.getAttribute("data-full-src");
       if (fullSrc) {
         setLightboxSrc(fullSrc);
       }
@@ -66,38 +75,51 @@ export const ScratchMarkdown: React.FC<ScratchMarkdownProps> = ({
         onClick={handleClick}
       />
 
-      {lightboxSrc && (
-        <div
-          className="scratch-img-lightbox"
-          onClick={() => setLightboxSrc(null)}
-        >
-          <div className="scratch-img-lightbox__box" onClick={(e) => e.stopPropagation()}>
-            <div className="scratch-img-lightbox__header">
-              <span>IMAGE PREVIEW</span>
-              <div className="scratch-img-lightbox__acts">
-                <a
-                  href={lightboxSrc}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download
-                  className="scratch-img-lightbox__dl"
-                >
-                  DOWNLOAD ⤓
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setLightboxSrc(null)}
-                  className="scratch-img-lightbox__close"
-                >
-                  CLOSE ✕
-                </button>
+      {lightboxSrc &&
+        mounted &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="scratch-img-lightbox"
+            onClick={() => setLightboxSrc(null)}
+          >
+            <div
+              className="scratch-img-lightbox__box"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="scratch-img-lightbox__header">
+                <span>◈ IMAGE PREVIEW</span>
+                <div className="scratch-img-lightbox__acts">
+                  <a
+                    href={lightboxSrc}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download
+                    className="scratch-img-lightbox__dl"
+                  >
+                    DOWNLOAD ⤓
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setLightboxSrc(null)}
+                    className="scratch-img-lightbox__close"
+                  >
+                    CLOSE ✕
+                  </button>
+                </div>
+              </div>
+              <div className="scratch-img-lightbox__body">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={lightboxSrc}
+                  alt="Full preview"
+                  className="scratch-img-lightbox__img"
+                />
               </div>
             </div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={lightboxSrc} alt="Full preview" className="scratch-img-lightbox__img" />
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 };
