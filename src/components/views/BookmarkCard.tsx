@@ -9,6 +9,12 @@ import { CoverCanvas } from "@/components/covers/CoverCanvas";
 import { calculateSunFadeOpacity } from "@/components/covers/lib/cover-geometry";
 import { formatDuration } from "@/lib/format";
 import { formatRelativeTime } from "@/lib/library/formatRelativeTime";
+import {
+  classifyHorizon,
+  getBookmarkDate,
+  getDaysAgo,
+  getHorizonMetadata,
+} from "@/lib/library/timeCapsule";
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -51,6 +57,11 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   const sunFadeOpacity = calculateSunFadeOpacity(bookmark.lastFetchedAt || bookmark.when);
   const neverOpened = bookmark.itemType === "REFERENCE" && (bookmark.useCount ?? 0) === 0;
 
+  const bookmarkDate = getBookmarkDate(bookmark);
+  const daysAgo = getDaysAgo(bookmarkDate);
+  const horizon = bookmark.unread ? classifyHorizon(daysAgo) : null;
+  const horizonMeta = horizon ? getHorizonMetadata(horizon, daysAgo) : null;
+
   return (
     <article
       className={`card ${isSelected ? "sel" : ""}`}
@@ -63,6 +74,24 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         ...(neverOpened ? { borderLeft: "4px solid var(--orange)" } : {}),
       }}
     >
+      {/* Paper Pin Memory Nudge Badge */}
+      {horizonMeta && (
+        <div
+          className={`card-paper-pin card-paper-pin-${horizon}`}
+          style={{
+            background: horizonMeta.color,
+            color: horizonMeta.accent,
+          }}
+          title={`${horizonMeta.headline}: ${horizonMeta.prompt} — Click to open!`}
+          onClick={(evt) => {
+            evt.stopPropagation();
+            onOpen(bookmark.id);
+          }}
+        >
+          <span className="pin-symbol">📌</span>
+          <span className="pin-text">{horizonMeta.badge}</span>
+        </div>
+      )}
       <div
         className={`cover ${heightClass}`}
         data-kind={bookmark.ty}

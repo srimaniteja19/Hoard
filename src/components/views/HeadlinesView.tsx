@@ -2,6 +2,12 @@
 
 import React from "react";
 import { Bookmark } from "@/types";
+import {
+  classifyHorizon,
+  getBookmarkDate,
+  getDaysAgo,
+  getHorizonMetadata,
+} from "@/lib/library/timeCapsule";
 
 interface HeadlinesViewProps {
   items: Bookmark[];
@@ -22,6 +28,11 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
         const isSel = selectedIds.has(x.id);
         const neverOpened = x.itemType === "REFERENCE" && (x.useCount ?? 0) === 0;
 
+        const bookmarkDate = getBookmarkDate(x);
+        const daysAgo = getDaysAgo(bookmarkDate);
+        const horizon = x.unread ? classifyHorizon(daysAgo) : null;
+        const horizonMeta = horizon ? getHorizonMetadata(horizon, daysAgo) : null;
+
         return (
           <div
             key={x.id}
@@ -38,7 +49,21 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
             <span className="hb" data-kind={x.ty}>
               {x.ty}
             </span>
-            <span className="ht">{x.t}</span>
+            <span className="ht">
+              {x.t}
+              {horizonMeta && (
+                <span
+                  className={`heads-paper-pin heads-paper-pin-${horizon}`}
+                  style={{
+                    background: horizonMeta.color,
+                    color: horizonMeta.accent,
+                  }}
+                  title={`${horizonMeta.headline}: ${horizonMeta.prompt}`}
+                >
+                  📌 {horizonMeta.badge}
+                </span>
+              )}
+            </span>
             {x.isQuote && <span className="quote-badge">QUOTE</span>}
             <span className="hm hsrc">{x.src}</span>
             <span className="hm huses" style={{ textAlign: "right" }}>

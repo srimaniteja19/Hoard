@@ -3,6 +3,12 @@
 import React from "react";
 import { Bookmark } from "@/types";
 import { formatRelativeTime } from "@/lib/library/formatRelativeTime";
+import {
+  classifyHorizon,
+  getBookmarkDate,
+  getDaysAgo,
+  getHorizonMetadata,
+} from "@/lib/library/timeCapsule";
 
 interface ListViewProps {
   items: Bookmark[];
@@ -35,6 +41,11 @@ export const ListView: React.FC<ListViewProps> = ({
         const metaBits = getMetaBits(x);
         const neverOpened = x.itemType === "REFERENCE" && (x.useCount ?? 0) === 0;
 
+        const bookmarkDate = getBookmarkDate(x);
+        const daysAgo = getDaysAgo(bookmarkDate);
+        const horizon = x.unread ? classifyHorizon(daysAgo) : null;
+        const horizonMeta = horizon ? getHorizonMetadata(horizon, daysAgo) : null;
+
         return (
           <div
             key={x.id}
@@ -55,6 +66,18 @@ export const ListView: React.FC<ListViewProps> = ({
             <div>
               <div className="rt">
                 {x.t}
+                {horizonMeta && (
+                  <span
+                    className={`list-paper-pin list-paper-pin-${horizon}`}
+                    style={{
+                      background: horizonMeta.color,
+                      color: horizonMeta.accent,
+                    }}
+                    title={`${horizonMeta.headline}: ${horizonMeta.prompt}`}
+                  >
+                    📌 {horizonMeta.badge}
+                  </span>
+                )}
                 {x.isQuote && <span className="quote-badge">QUOTE</span>}
                 {x.unread && <span style={{ color: "#FF007A", marginLeft: 6 }}>●</span>}
               </div>
