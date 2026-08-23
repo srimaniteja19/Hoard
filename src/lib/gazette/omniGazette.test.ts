@@ -2,70 +2,87 @@ import { describe, it, expect } from "vitest";
 import { exportOmniGazetteMarkdown, OmniGazetteIssue } from "./omniGazette";
 
 describe("omniGazette", () => {
-  it("exports omni gazette to clean Markdown format", () => {
+  it("exports omni gazette to clean Markdown format matching the editorial layout", () => {
     const mockIssue: OmniGazetteIssue = {
       volumeNumber: 3,
       issueNumber: 34,
-      dateRange: "Aug 17 – Aug 23, 2026",
-      publishedDate: "Sunday, August 23, 2026",
-      ledger: {
-        totalHoards: 12,
-        totalReads: 5,
-        readingMinutes: 45,
-        totalTodosCompleted: 8,
-        totalTilMinted: 4,
-        curatorScore: 92,
-        topTopic: "postgres",
+      dateRange: "17–23 AUGUST 2026",
+      publishedDate: "SUNDAY, 23 AUGUST 2026",
+      totalEditions: 34,
+      verdict: {
+        headline: "Thirteen in, one out.",
+        body: "Your worst intake-to-use ratio in eight weeks. You saved thirteen things, opened one of them, and finished a single todo.",
       },
-      leadStory: {
-        id: 1,
-        title: "PostgreSQL 17 Vector Index Optimization",
-        url: "https://postgres.org/17",
-        kind: "ART",
-        tag: "postgres",
-        source: "postgres.org",
-        mins: 15,
-        note: "HNSW builds are 3x faster with parallel indexing.",
-        unread: false,
-      },
-      weeklyHoards: [
-        {
-          id: 2,
-          title: "Vite 6 Architecture",
-          url: "https://vitejs.dev",
-          kind: "DOC",
-          tag: "frontend",
-          source: "vitejs.dev",
-          mins: 0,
-          unread: true,
-        },
+      vsAverage: [
+        { label: "SAVED", val: "13", diff: "▲ +5", dir: "up" },
+        { label: "OPENED", val: "1", diff: "▼ −6", dir: "dn" },
+        { label: "TODOS DONE", val: "1", diff: "▼ −3", dir: "dn" },
+        { label: "TIL FILED", val: "6", diff: "▲ +2", dir: "up" },
+        { label: "ATLAS STATIONS", val: "0", diff: "0 — flat", dir: "flat" },
+        { label: "READ TIME", val: "39m", diff: "▼ −2h 10m", dir: "dn" },
       ],
-      completedTodos: [
+      flow: {
+        opened: 1,
+        filed: 2,
+        untouched: 10,
+        note: "TEN OF THIRTEEN NEVER LEFT THE INBOX. AT THIS WEEK'S RATE THE LIBRARY CLEARS IN 224 DAYS.",
+      },
+      acquisitions: [
         {
-          id: "todo-101",
-          title: "Refactor embedding pipeline",
-          completedAt: "Aug 21, 2026",
+          tag: "postgresql",
+          title: "PostgreSQL for Everything",
+          source: "RAPHAELBAUER.COM · THE ONE YOU ACTUALLY READ",
+          note: "An article exploring versatility",
+          status: "READ",
+          statusType: "warm",
+          url: "https://raphaelbauer.com",
         },
       ],
       mintedTils: [
         {
           id: "til-1",
-          body: "Postgres 17 parallel vacuum reduces I/O spikes by 40%.",
-          type: "FACT",
-          tags: ["postgres"],
-          createdAt: "Aug 22, 2026",
+          body: "mix-blend-mode composites against the nearest stacking context, not the page.",
+          type: "GOTCHA",
+          dateStr: "22 AUG",
         },
       ],
-      vaultResurfaced: [],
-      topicBreakdown: [{ name: "postgres", count: 8, percentage: 67 }],
+      gaps: [
+        {
+          stat: "0/20",
+          desc: "Atlas stations walked. Advanced Postgres Mastery has sat at zero.",
+        },
+      ],
+      weather: [
+        {
+          tag: "#ai",
+          count: 3,
+          trend: "▲ RISING · 4 WEEKS RUNNING",
+          trendType: "up",
+          sparks: [30, 45, 62, 100],
+        },
+      ],
+      nextActions: [
+        {
+          kicker: "WALK ONE STATION",
+          desc: "Deconstructing EXPLAIN ANALYZE — 45 minutes.",
+        },
+      ],
+      ledger: {
+        totalHoards: 13,
+        totalReads: 1,
+        readingMinutes: 39,
+        totalTodosCompleted: 1,
+        totalTilMinted: 6,
+        curatorScore: 92,
+        topTopic: "postgresql",
+      },
     };
 
     const markdown = exportOmniGazetteMarkdown(mockIssue);
-    expect(markdown).toContain("# 📰 THE HOARD GAZETTE — SUNDAY OMNI-EDITION");
+    expect(markdown).toContain("# 📰 THE HOARD GAZETTE — NO. 34");
     expect(markdown).toContain("Vol. 3 · Issue 34");
-    expect(markdown).toContain("PostgreSQL 17 Vector Index Optimization");
-    expect(markdown).toContain("Refactor embedding pipeline");
-    expect(markdown).toContain("Postgres 17 parallel vacuum reduces I/O spikes");
-    expect(markdown).toContain("Curator Velocity Score**: 92/100");
+    expect(markdown).toContain("THE WEEK'S VERDICT: Thirteen in, one out.");
+    expect(markdown).toContain("PostgreSQL for Everything");
+    expect(markdown).toContain("mix-blend-mode composites against the nearest stacking context");
   });
 });

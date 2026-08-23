@@ -2,17 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { OmniGazetteIssue, exportOmniGazetteMarkdown } from "@/lib/gazette/omniGazette";
-import {
-  X,
-  Copy,
-  Check,
-  Printer,
-  ExternalLink,
-  Zap,
-  CheckSquare,
-  Sparkles,
-  TrendingUp,
-} from "lucide-react";
+
+export type GazetteTheme = "broadsheet" | "wire" | "riso" | "quarterly" | "night";
 
 interface HomeSundayGazetteModalProps {
   isOpen: boolean;
@@ -20,12 +11,33 @@ interface HomeSundayGazetteModalProps {
   issue: OmniGazetteIssue;
 }
 
+const SETIN: Record<GazetteTheme, string> = {
+  broadsheet: "SET IN BODONI MODA & NEWSREADER",
+  wire: "SET ENTIRELY IN SPACE MONO",
+  riso: "SET IN BRICOLAGE GROTESQUE & SPACE GROTESK",
+  quarterly: "SET IN INTER & IBM PLEX MONO",
+  night: "SET IN BODONI MODA & NEWSREADER · NIGHT EDITION",
+};
+
 export const HomeSundayGazetteModal: React.FC<HomeSundayGazetteModalProps> = ({
   isOpen,
   onClose,
   issue,
 }) => {
+  const [theme, setTheme] = useState<GazetteTheme>("broadsheet");
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("hoard_gazette_theme") as GazetteTheme | null;
+    if (saved && (saved in SETIN)) {
+      setTheme(saved);
+    }
+  }, []);
+
+  const handleSelectTheme = (t: GazetteTheme) => {
+    setTheme(t);
+    localStorage.setItem("hoard_gazette_theme", t);
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -51,268 +63,270 @@ export const HomeSundayGazetteModal: React.FC<HomeSundayGazetteModalProps> = ({
   };
 
   return (
-    <div className="gazette-overlay" onClick={onClose} role="dialog" aria-modal="true">
-      <div
-        className="home-gazette-modal-card"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Newspaper Container */}
-        <div className="home-gazette-newspaper">
-          {/* Masthead Header */}
-          <header className="home-gazette-masthead">
-            <div className="masthead-top-rule">
-              <span>SUNDAY EDITION · AUTOMATED CURATION DIGEST</span>
-              <span>{issue.publishedDate}</span>
-              <span>EDITION 34.0</span>
+    <div
+      className="gazette-popup-overlay"
+      data-theme={theme}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="gazette-popup-wrap" onClick={(e) => e.stopPropagation()}>
+        {/* Press Theme Switcher Bar */}
+        <div className="gazette-picker no-print" id="gazette-theme-picker">
+          <span>PRESS</span>
+          <button
+            type="button"
+            data-t="broadsheet"
+            aria-pressed={theme === "broadsheet"}
+            onClick={() => handleSelectTheme("broadsheet")}
+          >
+            BROADSHEET
+          </button>
+          <button
+            type="button"
+            data-t="wire"
+            aria-pressed={theme === "wire"}
+            onClick={() => handleSelectTheme("wire")}
+          >
+            WIRE
+          </button>
+          <button
+            type="button"
+            data-t="riso"
+            aria-pressed={theme === "riso"}
+            onClick={() => handleSelectTheme("riso")}
+          >
+            RISO
+          </button>
+          <button
+            type="button"
+            data-t="quarterly"
+            aria-pressed={theme === "quarterly"}
+            onClick={() => handleSelectTheme("quarterly")}
+          >
+            QUARTERLY
+          </button>
+          <button
+            type="button"
+            data-t="night"
+            aria-pressed={theme === "night"}
+            onClick={() => handleSelectTheme("night")}
+          >
+            NIGHT
+          </button>
+        </div>
+
+        {/* Action Controls Bar */}
+        <div className="gazette-acts no-print">
+          <button type="button" onClick={handleCopyMarkdown}>
+            {copied ? "COPIED DIGEST!" : "COPY DIGEST"}
+          </button>
+          <button className="print" type="button" onClick={handlePrint}>
+            PRINT ⌘P
+          </button>
+          <button type="button" onClick={onClose} aria-label="Close" title="Close (Esc)">
+            ✕
+          </button>
+        </div>
+
+        {/* Newspaper Sheet */}
+        <div className="gazette-sheet">
+          {/* Top Date Header */}
+          <div className="gazette-top-row">
+            <span>SUNDAY EDITION · AUTOMATED</span>
+            <span>{issue.publishedDate}</span>
+            <span>NO. {issue.issueNumber}</span>
+          </div>
+
+          {/* Masthead */}
+          <div className="gazette-mast">
+            <h1>The Hoard Gazette</h1>
+            <div className="gazette-kick">
+              BOOKMARKS · TODOS · ATLAS · TIL — ONE WEEK, HONESTLY REPORTED
+            </div>
+          </div>
+
+          {/* Folio Bar */}
+          <div className="gazette-folio-bar">
+            <span>VOL. {issue.volumeNumber} · ISSUE {issue.issueNumber}</span>
+            <span className="mid">WEEK OF {issue.dateRange}</span>
+            <span>{issue.totalEditions} EDITIONS · 0 MISSED</span>
+          </div>
+
+          {/* The Week's Verdict */}
+          <div className="gazette-verdict">
+            <div>
+              <div className="gazette-kicker">
+                <b>THE WEEK&apos;S VERDICT</b>
+              </div>
+              <h2>{issue.verdict.headline}</h2>
+              <p>{issue.verdict.body}</p>
             </div>
 
-            <div className="masthead-main-row">
-              <div className="masthead-title-wrap">
-                <h2 className="home-gazette-title">THE HOARD GAZETTE</h2>
-                <div className="home-gazette-tagline">
-                  ALL-SYSTEMS SYNTHESIS · BOOKMARKS · EXECUTED TODOS · TIL CONSTELLATION
+            <div className="gazette-vs">
+              <h4>VS YOUR 8-WEEK AVERAGE</h4>
+              {issue.vsAverage.map((v) => (
+                <div key={v.label}>
+                  <span>{v.label}</span>
+                  <span className={v.dir}>
+                    {v.val} {v.diff}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Flow Section */}
+          <div className="gazette-flow">
+            <div className="gazette-flow__h">
+              <span>WHERE THE {issue.ledger.totalHoards} WENT</span>
+              <span>DRAWN TO SCALE</span>
+            </div>
+            <div className="gazette-flow__b">
+              <div className="gazette-bar">
+                <div
+                  className="b-read"
+                  style={{ flex: Math.max(1, issue.flow.opened) }}
+                  title={`${issue.flow.opened} opened`}
+                >
+                  <b>{issue.flow.opened}</b>
+                  <span>OPENED</span>
+                </div>
+                <div
+                  className="b-filed"
+                  style={{ flex: Math.max(1, issue.flow.filed) }}
+                  title={`${issue.flow.filed} filed`}
+                >
+                  <b>{issue.flow.filed}</b>
+                  <span>FILED, UNREAD</span>
+                </div>
+                <div
+                  className="b-stuck"
+                  style={{ flex: Math.max(1, issue.flow.untouched) }}
+                  title={`${issue.flow.untouched} untouched`}
+                >
+                  <b>{issue.flow.untouched}</b>
+                  <span>UNSORTED, UNTOUCHED</span>
                 </div>
               </div>
+              <div className="gazette-flow__note">{issue.flow.note}</div>
+            </div>
+          </div>
 
-              <div className="home-gazette-controls no-print">
-                <button
-                  className="gazette-top-btn copy"
-                  onClick={handleCopyMarkdown}
-                  title="Copy full issue as Markdown for Obsidian / Notion"
-                >
-                  {copied ? <Check size={12} color="#000" /> : <Copy size={12} />}
-                  {copied ? "COPIED DIGEST!" : "COPY DIGEST"}
-                </button>
-
-                <button
-                  className="gazette-top-btn print"
-                  onClick={handlePrint}
-                  title="Print Sunday issue or save as PDF"
-                >
-                  <Printer size={12} />
-                  PRINT
-                </button>
-
-                <button
-                  className="gazette-top-btn close-btn"
-                  onClick={onClose}
-                  title="Close Gazette (Esc)"
-                  aria-label="Close"
-                >
-                  <X size={14} />
-                </button>
+          {/* 2-Column Body: Acquisitions & Minted TIL */}
+          <div className="gazette-body-grid">
+            {/* Left: Acquisitions */}
+            <div>
+              <div className="gazette-sec__h">
+                <b>Acquisitions</b>
+                <i>{issue.ledger.totalHoards} THIS WEEK</i>
               </div>
+              {issue.acquisitions.map((acq, i) => (
+                <div key={i} className="acq__r">
+                  <span className="tg">#{acq.tag}</span>
+                  <span className="tt">
+                    <a
+                      href={acq.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="acq-link"
+                    >
+                      {acq.title}
+                    </a>
+                    <em>{acq.source}</em>
+                  </span>
+                  <span className={`st ${acq.statusType}`}>{acq.status}</span>
+                </div>
+              ))}
             </div>
 
-            <div className="masthead-ticker-bar">
-              <span>VOL. {issue.volumeNumber} · ISSUE {issue.issueNumber}</span>
-              <span>★</span>
-              <span>WEEK OF {issue.dateRange.toUpperCase()}</span>
-              <span>★</span>
-              <span className="ticker-score">
-                CURATOR VELOCITY: {issue.ledger.curatorScore}/100
-              </span>
+            {/* Right: Minted TIL */}
+            <div>
+              <div className="gazette-sec__h">
+                <b>Minted</b>
+                <i>{issue.mintedTils.length} CLAIMS</i>
+              </div>
+              {issue.mintedTils.map((til) => {
+                const kindClass =
+                  til.type === "GOTCHA"
+                    ? "k-gotcha"
+                    : til.type === "SNIPPET"
+                    ? "k-snip"
+                    : til.type === "PATTERN"
+                    ? "k-pat"
+                    : til.type === "OPINION"
+                    ? "k-op"
+                    : "k-fact";
+
+                return (
+                  <div key={til.id} className="til__r">
+                    <div className="til__m">
+                      <span className={`k ${kindClass}`}>{til.type}</span>
+                      <span className="d">{til.dateStr}</span>
+                    </div>
+                    <p>{til.body}</p>
+                  </div>
+                );
+              })}
             </div>
-          </header>
+          </div>
 
-          {/* 3-Column Content Body */}
-          <div className="home-gazette-content">
-            <div className="home-gazette-columns">
-              {/* Column 1: The Lead Dispatch & Links */}
-              <div className="home-gazette-col lead-col">
-                <div className="col-header-label">
-                  <Sparkles size={12} />
-                  <span>LEAD DISPATCH</span>
+          {/* Black Inverted Block: What Didn't Happen */}
+          <div className="gazette-gap">
+            <h3>What didn&apos;t happen</h3>
+            <div className="sub">THE PART NO OTHER WEEKLY REVIEW SHOWS YOU</div>
+            <div className="gazette-gap__g">
+              {issue.gaps.map((g, i) => (
+                <div key={i}>
+                  <b>{g.stat}</b>
+                  <p>{g.desc}</p>
                 </div>
+              ))}
+            </div>
+          </div>
 
-                {issue.leadStory ? (
-                  <article className="gazette-lead-card">
-                    <div className="lead-tag-row">
-                      <span className="lead-badge">#{issue.leadStory.tag}</span>
-                      <span className="lead-src">{issue.leadStory.source}</span>
-                      {issue.leadStory.kind === "ART" && issue.leadStory.mins > 0 && (
-                        <span className="lead-mins">~{issue.leadStory.mins} MIN READ</span>
-                      )}
-                    </div>
-
-                    <h3 className="lead-headline">
-                      <a
-                        href={issue.leadStory.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="lead-headline-link"
-                      >
-                        {issue.leadStory.title}
-                        <ExternalLink size={12} className="inline-ext" />
-                      </a>
-                    </h3>
-
-                    {issue.leadStory.note && (
-                      <blockquote className="lead-pullquote">
-                        &ldquo;{issue.leadStory.note}&rdquo;
-                      </blockquote>
-                    )}
-                  </article>
-                ) : (
-                  <div className="gazette-empty-col">No lead story recorded this week.</div>
-                )}
-
-                {/* Additional Weekly Hoards */}
-                {issue.weeklyHoards.length > 0 && (
-                  <div className="gazette-sub-hoards">
-                    <div className="sub-label">NOTABLE WEEKLY HOARDS</div>
-                    <div className="sub-list">
-                      {issue.weeklyHoards.map((b) => (
-                        <a
-                          key={b.id}
-                          href={b.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="sub-item"
-                        >
-                          <span className="sub-item-badge">#{b.tag}</span>
-                          <span className="sub-item-title">{b.title}</span>
-                          <span className="sub-item-src">{b.source}</span>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Column 2: The Master Ledger & Executed Todos */}
-              <div className="home-gazette-col ledger-col">
-                <div className="col-header-label">
-                  <TrendingUp size={12} />
-                  <span>ALL-SYSTEMS LEDGER</span>
-                </div>
-
-                {/* Ledger Box */}
-                <div className="gazette-ledger-stats">
-                  <div className="stat-cell">
-                    <span className="stat-val">{issue.ledger.totalHoards}</span>
-                    <span className="stat-lbl">HOARDS</span>
-                  </div>
-                  <div className="stat-cell">
-                    <span className="stat-val">{issue.ledger.totalReads}</span>
-                    <span className="stat-lbl">READS</span>
-                  </div>
-                  <div className="stat-cell">
-                    <span className="stat-val">~{issue.ledger.readingMinutes}m</span>
-                    <span className="stat-lbl">READ TIME</span>
-                  </div>
-                  <div className="stat-cell">
-                    <span className="stat-val" style={{ color: "#00875A" }}>
-                      {issue.ledger.totalTodosCompleted}
-                    </span>
-                    <span className="stat-lbl">TODOS DONE</span>
-                  </div>
-                  <div className="stat-cell">
-                    <span className="stat-val" style={{ color: "#7C4DFF" }}>
-                      {issue.ledger.totalTilMinted}
-                    </span>
-                    <span className="stat-lbl">TIL MINTED</span>
-                  </div>
-                </div>
-
-                {/* Executed Todos List */}
-                <div className="gazette-todos-box">
-                  <div className="sub-label">
-                    <CheckSquare size={11} />
-                    <span>EXECUTED & SHIPPED THIS WEEK</span>
-                  </div>
-
-                  {issue.completedTodos.length > 0 ? (
-                    <div className="todos-shipped-list">
-                      {issue.completedTodos.map((t) => (
-                        <div key={t.id} className="shipped-todo-item">
-                          <span className="todo-check">✓</span>
-                          <span className="todo-title">{t.title}</span>
-                          <span className="todo-time">{t.completedAt}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="gazette-empty-col">No completed tasks this week yet.</div>
-                  )}
-                </div>
-
-                {/* Topic Density Breakdown */}
-                {issue.topicBreakdown.length > 0 && (
-                  <div className="gazette-topic-radar">
-                    <div className="sub-label">TOPIC DENSITY RADAR</div>
-                    <div className="radar-bars">
-                      {issue.topicBreakdown.map((topic) => (
-                        <div key={topic.name} className="radar-row">
-                          <div className="radar-info">
-                            <span className="radar-name">#{topic.name}</span>
-                            <span className="radar-count">{topic.count} hoards</span>
-                          </div>
-                          <div className="radar-track">
-                            <div
-                              className="radar-fill"
-                              style={{ width: `${Math.max(15, topic.percentage)}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Column 3: Knowledge Constellation & Vault Resurfacing */}
-              <div className="home-gazette-col til-col">
-                <div className="col-header-label">
-                  <Zap size={12} />
-                  <span>KNOWLEDGE MINTED (TIL)</span>
-                </div>
-
-                {issue.mintedTils.length > 0 ? (
-                  <div className="gazette-tils-list">
-                    {issue.mintedTils.map((til) => (
-                      <div key={til.id} className="gazette-til-card">
-                        <div className="til-card-top">
-                          <span className="til-type-badge">{til.type}</span>
-                          <span className="til-date">{til.createdAt}</span>
-                        </div>
-                        <p className="til-body-text">{til.body}</p>
-                      </div>
+          {/* Topic Weather */}
+          <div className="gazette-weather">
+            <div className="gazette-weather__h">
+              <span>TOPIC WEATHER</span>
+              <span>vs PREVIOUS 4 WEEKS</span>
+            </div>
+            <div className="gazette-weather__b">
+              {issue.weather.map((w, i) => (
+                <div key={i} className="w">
+                  <div className="t">{w.tag}</div>
+                  <div className="n">{w.count}</div>
+                  <div className={`dl ${w.trendType}`}>{w.trend}</div>
+                  <div className="spark">
+                    {w.sparks.map((h, spIdx) => (
+                      <i key={spIdx} style={{ height: `${h}%` }} />
                     ))}
                   </div>
-                ) : (
-                  <div className="gazette-empty-col">No new TIL notes minted this week.</div>
-                )}
-
-                {/* Resurfaced from Deep Vault */}
-                {issue.vaultResurfaced.length > 0 && (
-                  <div className="gazette-vault-section">
-                    <div className="sub-label">FROM THE DEEP VAULT</div>
-                    <div className="vault-items-list">
-                      {issue.vaultResurfaced.map((v) => (
-                        <a
-                          key={v.id}
-                          href={v.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="vault-link-item"
-                        >
-                          <span className="vault-item-title">{v.title}</span>
-                          <span className="vault-item-src">{v.source}</span>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
+          </div>
 
-            {/* Newspaper Footer */}
-            <footer className="home-gazette-footer">
-              <div className="footer-line-text">
-                HOARD AUTOMATED NEWSLETTER · AUTONOMOUSLY SYNTHESIZED ON SUNDAYS · NO CLUTTER
-              </div>
-            </footer>
+          {/* Tomorrow's Front Page */}
+          <div className="gazette-next">
+            <div className="gazette-next__h">
+              TOMORROW&apos;S FRONT PAGE · THREE THINGS THAT WOULD CHANGE IT
+            </div>
+            <div className="gazette-next__b">
+              {issue.nextActions.map((nxt, i) => (
+                <div key={i}>
+                  <h5>{nxt.kicker}</h5>
+                  <p>{nxt.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Colophon */}
+          <div className="gazette-colophon">
+            <span>THE HOARD GAZETTE · NO. {issue.issueNumber}</span>
+            <span id="setin">{SETIN[theme]}</span>
+            <span>SYNTHESISED SUNDAY 06:00 · NO CLUTTER</span>
           </div>
         </div>
       </div>
