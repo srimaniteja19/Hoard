@@ -271,6 +271,10 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   });
 
   const renderFormattedText = useCallback((text: string) => {
+    // If scrap content contains markdown images, render with ScratchMarkdown
+    if (/!\[([^\]]*)\]\(([^)]+)\)/.test(text)) {
+      return <ScratchMarkdown content={text} className="md-card-content" />;
+    }
     let t = text;
     if (/^\?/.test(t) || /\?\s*$/.test(t)) {
       return <span className="q">{t}</span>;

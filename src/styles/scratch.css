@@ -679,6 +679,67 @@
   animation: ai-btn-pulse 1.2s ease infinite;
 }
 
+.slab-img-preview {
+  padding: 10px 16px;
+  background: rgba(10, 10, 10, 0.05);
+  border-top: 2px dashed rgba(10, 10, 10, 0.3);
+}
+
+.slab-img-preview__wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: #0A0A0A;
+  padding: 5px 10px;
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.slab-img-preview__wrap img {
+  height: 52px;
+  max-width: 140px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: block;
+}
+
+.slab-img-preview__remove {
+  background: var(--pink);
+  color: #fff;
+  border: none;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.slab-img-preview__remove:hover {
+  opacity: 0.85;
+}
+
+/* Card face markdown image styling */
+.md-card-content {
+  max-width: 100%;
+}
+
+.md-card-content .md-figure {
+  margin: 6px 0 10px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.md-card-content .md-figure img {
+  max-height: 280px;
+}
+
+.md-card-content p {
+  margin: 0 0 6px;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
 .pchip.img-picker {
   background: var(--cyan);
   color: var(--ink);

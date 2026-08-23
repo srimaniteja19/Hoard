@@ -119,6 +119,32 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
             <span>⏳ COMPRESSING &amp; UPLOADING IMAGE...</span>
           </div>
         )}
+        {(() => {
+          const match = value.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+          if (!match) return null;
+          const imgUrl = match[2];
+          const imgAlt = match[1];
+          return (
+            <div className="slab-img-preview">
+              <div className="slab-img-preview__wrap">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imgUrl} alt={imgAlt || "Image"} />
+                <button
+                  type="button"
+                  className="slab-img-preview__remove"
+                  onClick={() =>
+                    setValue((prev) =>
+                      prev.replace(/!\[([^\]]*)\]\(([^)]+)\)\n?/, "").trim()
+                    )
+                  }
+                  title="Remove image"
+                >
+                  ✕ REMOVE
+                </button>
+              </div>
+            </div>
+          );
+        })()}
         <div className="slab__tear" />
         <div className="slab__bar" id="bar">
           <input
