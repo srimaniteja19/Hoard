@@ -55,10 +55,12 @@ export const ScratchWeldModal: React.FC<ScratchWeldModalProps> = ({
         style={{
           background: "var(--card)",
           border: "var(--b) solid var(--ink)",
-          boxShadow: "10px 10px 0 var(--violet)",
+          boxShadow: "6px 6px 0 var(--violet)",
           maxWidth: "540px",
           width: "100%",
-          padding: "24px",
+          maxHeight: "92vh",
+          overflowY: "auto",
+          padding: "clamp(16px, 4vw, 24px)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
