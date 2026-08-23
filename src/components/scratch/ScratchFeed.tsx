@@ -7,6 +7,8 @@ import { formatScrapDayHeader } from "@/lib/scratch/parse";
 
 interface ScratchFeedProps {
   scraps: ScrapRow[];
+  hasActiveFilters?: boolean;
+  onResetFilters?: () => void;
   onUpdateNotes: (id: string, notes: string) => Promise<void> | void;
   onPromoteTil: (id: string) => Promise<void> | void;
   onPromoteTodo: (id: string) => Promise<void> | void;
@@ -16,6 +18,8 @@ interface ScratchFeedProps {
 
 export const ScratchFeed: React.FC<ScratchFeedProps> = ({
   scraps,
+  hasActiveFilters = false,
+  onResetFilters,
   onUpdateNotes,
   onPromoteTil,
   onPromoteTodo,
@@ -51,20 +55,34 @@ export const ScratchFeed: React.FC<ScratchFeedProps> = ({
   }, [scraps]);
 
   if (scraps.length === 0) {
+    if (hasActiveFilters) {
+      return (
+        <div className="scratch-empty-state">
+          <div className="scratch-empty-icon">🔍</div>
+          <div className="scratch-empty-title">NO SCRAPS MATCH YOUR CURRENT FILTERS</div>
+          <div className="scratch-empty-desc">
+            Try adjusting your search query, category tabs, tag, or calendar date.
+          </div>
+          {onResetFilters && (
+            <button
+              type="button"
+              className="scratch-empty-reset-btn"
+              onClick={onResetFilters}
+            >
+              CLEAR ALL FILTERS ✕
+            </button>
+          )}
+        </div>
+      );
+    }
+
     return (
-      <div
-        style={{
-          border: "var(--b) solid var(--ink)",
-          background: "var(--card)",
-          padding: "48px 24px",
-          textAlign: "center",
-          fontFamily: "var(--mono)",
-          fontSize: "13px",
-          fontWeight: 700,
-          boxShadow: "6px 6px 0 var(--ink)",
-        }}
-      >
-        NO SCRAPS YET — START TYPING IN THE SLAB ABOVE!
+      <div className="scratch-empty-state">
+        <div className="scratch-empty-icon">✍️</div>
+        <div className="scratch-empty-title">SCRATCHPAD IS EMPTY</div>
+        <div className="scratch-empty-desc">
+          Type an idea, quote, question, or paste a screenshot in The Slab above to begin!
+        </div>
       </div>
     );
   }

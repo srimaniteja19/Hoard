@@ -4,12 +4,14 @@ import React, { useState, useEffect, useCallback, useMemo, Suspense } from "reac
 import { AppPage } from "@/components/chrome/AppPage";
 import { AppLoading } from "@/components/chrome/AppLoading";
 import { ScratchSlab } from "@/components/scratch/ScratchSlab";
+import { ScratchFilterBar } from "@/components/scratch/ScratchFilterBar";
 import { ScratchFeed } from "@/components/scratch/ScratchFeed";
 import { ScratchSidePanels } from "@/components/scratch/ScratchSidePanels";
 import { ScratchWeldModal } from "@/components/scratch/ScratchWeldModal";
 import { ScrapRow } from "@/db/schema";
 import { ScratchStats } from "@/lib/dal/scratch";
 import { CollisionCandidate, CollisionHit } from "@/lib/scratch/collision";
+import { ScratchFilters, filterScraps } from "@/lib/scratch/filters";
 
 function ScratchPageContent() {
   const [scraps, setScraps] = useState<ScrapRow[]>([]);
@@ -17,6 +19,15 @@ function ScratchPageContent() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+
+  // Filters state
+  const [filters, setFilters] = useState<ScratchFilters>({
+    query: "",
+    kind: "ALL",
+    tag: null,
+    date: null,
+    status: "all",
+  });
 
   // Weld Modal state
   const [weldTargetScrap, setWeldTargetScrap] = useState<ScrapRow | null>(null);
@@ -58,6 +69,20 @@ function ScratchPageContent() {
   const showToast = (msg: string) => {
     setFeedback(msg);
     setTimeout(() => setFeedback(null), 3000);
+  };
+
+  const handleFilterChange = (patch: Partial<ScratchFilters>) => {
+    setFilters((prev) => ({ ...prev, ...patch }));
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      query: "",
+      kind: "ALL",
+      tag: null,
+      date: null,
+      status: "all",
+    });
   };
 
   // 1. File new scrap from Slab
@@ -174,7 +199,6 @@ function ScratchPageContent() {
   // 7. Weld directly from Slab collision hit
   const handleWeldFromSlab = async (hit: CollisionHit, currentSlabText: string) => {
     if (currentSlabText.trim()) {
-      // First file the slab text, then weld
       const res = await fetch("/api/scratch", {
         method: "POST",
         credentials: "include",
@@ -268,6 +292,18 @@ function ScratchPageContent() {
     }));
   }, [scraps]);
 
+  // Compute filtered scraps
+  const filteredScraps = useMemo(() => {
+    return filterScraps(scraps, filters);
+  }, [scraps, filters]);
+
+  const hasActiveFilters =
+    !!filters.query ||
+    (filters.kind && filters.kind !== "ALL") ||
+    !!filters.tag ||
+    !!filters.date ||
+    (filters.status && filters.status !== "all");
+
   return (
     <AppPage width="wide">
       <div className="scratch-page-root">
@@ -284,16 +320,19 @@ function ScratchPageContent() {
             </div>
             <div className="scratch-mini">
               <span>
-                THIS WEEK <b>{stats?.thisWeek ?? 14}</b>
+                TOTAL <b>{scraps.length}</b>
               </span>
               <span>
-                PROMOTED <b>{stats?.promoted ?? 5}</b>
+                THIS WEEK <b>{stats?.thisWeek ?? 0}</b>
               </span>
               <span>
-                OPEN QUESTIONS <b>{stats?.openQuestions ?? 7}</b>
+                PROMOTED <b>{stats?.promoted ?? 0}</b>
+              </span>
+              <span>
+                OPEN QUESTIONS <b>{stats?.openQuestions ?? 0}</b>
               </span>
               <span className="warn">
-                GOING COLD <b>{stats?.goingCold ?? 9}</b>
+                GOING COLD <b>{stats?.goingCold ?? 0}</b>
               </span>
             </div>
           </div>
@@ -328,6 +367,16 @@ function ScratchPageContent() {
             submitting={submitting}
           />
 
+          {/* ── FILTER, SEARCH & CATEGORY BAR ── */}
+          <ScratchFilterBar
+            scraps={scraps}
+            totalCount={scraps.length}
+            filteredCount={filteredScraps.length}
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onResetFilters={handleResetFilters}
+          />
+
           {/* ── MAIN CONTENT (FEED + SIDE PANELS) ── */}
           {loading ? (
             <div
@@ -344,7 +393,9 @@ function ScratchPageContent() {
           ) : (
             <div className="scratch-cols">
               <ScratchFeed
-                scraps={scraps}
+                scraps={filteredScraps}
+                hasActiveFilters={hasActiveFilters}
+                onResetFilters={handleResetFilters}
                 onUpdateNotes={handleUpdateNotes}
                 onPromoteTil={handlePromoteTil}
                 onPromoteTodo={handlePromoteTodo}
@@ -353,7 +404,12 @@ function ScratchPageContent() {
               />
 
               <ScratchSidePanels
+                scraps={scraps}
                 stats={stats}
+                selectedDate={filters.date || null}
+                selectedTag={filters.tag || null}
+                onSelectDate={(date) => handleFilterChange({ date })}
+                onSelectTag={(tag) => handleFilterChange({ tag })}
                 onSelectQuestion={handleSelectQuestion}
                 onBuryCompost={handleBuryCompost}
                 onKeepCompost={handleKeepCompost}
