@@ -239,7 +239,7 @@ export async function POST(req: Request) {
       type:         kind,
       source:       body.src    || "",
       url:          capture.url,
-      mins:         capture.isQuote ? 1 : (body.mins ?? (kind === "VID" ? 45 : kind === "PPR" ? 40 : 12)),
+      mins:         capture.isQuote ? 0 : (body.mins ?? (kind === "ART" ? 10 : 0)),
       tag:          tag || "general",
       collectionId,
       unread:       body.unread ?? true,

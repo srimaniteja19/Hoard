@@ -25,7 +25,6 @@ import {
   Filter,
 } from "lucide-react";
 import { CoverCanvas } from "@/components/covers/CoverCanvas";
-import { formatDuration } from "@/lib/format";
 
 export type ArchiveSubFilter = "all" | "snapshots" | "drift" | "discharged" | "trash";
 
@@ -120,10 +119,7 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({
   ]);
 
   // Telemetry metrics
-  const totalReadMinutes = useMemo(() => {
-    return archivedReadBookmarks.reduce((sum, b) => sum + (b.mins || 0), 0);
-  }, [archivedReadBookmarks]);
-
+  const totalArchivedCount = archivedReadBookmarks.length;
   const totalSnapshotsCount = snapshotBookmarks.length;
   const totalDriftProtected = driftBookmarks.length;
 
@@ -364,7 +360,7 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({
             }}
           >
             <div style={{ fontFamily: "var(--mono)", fontSize: "10px", opacity: 0.6, fontWeight: 700 }}>
-              READING TIME CONSUMED
+              COMPLETED READS
             </div>
             <div
               style={{
@@ -376,9 +372,7 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({
                 marginTop: "2px",
               }}
             >
-              {totalReadMinutes >= 60
-                ? `${(totalReadMinutes / 60).toFixed(1)}h`
-                : `${totalReadMinutes}m`}
+              {totalArchivedCount}
             </div>
           </div>
 
@@ -828,7 +822,7 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({
                       <span>{bm.src}</span>
                       <span>•</span>
                       <span>#{bm.tag}</span>
-                      {bm.mins > 0 && (
+                      {bm.ty === "ART" && bm.mins > 0 && (
                         <>
                           <span>•</span>
                           <span>{bm.mins}m</span>

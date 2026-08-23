@@ -2,13 +2,11 @@
 
 import React from "react";
 import { Bookmark } from "@/types";
-import { TYPES } from "@/data/initialBookmarks";
 import { formatRelativeTime } from "@/lib/library/formatRelativeTime";
 
 interface ListViewProps {
   items: Bookmark[];
   selectedIds: Set<number>;
-  currentTimeLimit: number;
   onToggleSelect: (id: number, e: React.MouseEvent) => void;
   onOpen: (id: number) => void;
 }
@@ -16,14 +14,9 @@ interface ListViewProps {
 export const ListView: React.FC<ListViewProps> = ({
   items,
   selectedIds,
-  currentTimeLimit,
   onToggleSelect,
   onOpen,
 }) => {
-  const formatMins = (m: number) => {
-    return m < 60 ? `${m} MIN` : `${Math.floor(m / 60)}H${m % 60 ? ` ${m % 60}M` : ""}`;
-  };
-
   const getMetaBits = (x: Bookmark) => {
     const bits: string[] = [x.src];
     Object.entries(x.ex)
@@ -38,9 +31,7 @@ export const ListView: React.FC<ListViewProps> = ({
   return (
     <div className="list">
       {items.map((x) => {
-        const typeMeta = TYPES[x.ty];
         const isSel = selectedIds.has(x.id);
-        const fits = currentTimeLimit < 180 && x.mins <= currentTimeLimit;
         const metaBits = getMetaBits(x);
         const neverOpened = x.itemType === "REFERENCE" && (x.useCount ?? 0) === 0;
 
@@ -76,6 +67,12 @@ export const ListView: React.FC<ListViewProps> = ({
                 ))}
                 <span style={{ opacity: 0.4 }}>·</span>
                 <span>#{x.tag}</span>
+                {x.ty === "ART" && x.mins > 0 && (
+                  <>
+                    <span style={{ opacity: 0.4 }}>·</span>
+                    <span>READ {x.mins}m</span>
+                  </>
+                )}
                 <span style={{ opacity: 0.4 }}>·</span>
                 <span>{x.when}</span>
                 <span style={{ opacity: 0.4 }}>·</span>
@@ -83,10 +80,6 @@ export const ListView: React.FC<ListViewProps> = ({
                   {x.useCount ?? 0}× · {formatRelativeTime(x.lastUsedAt)}
                 </span>
               </div>
-            </div>
-
-            <div className={`cost ${fits ? "fits" : ""}`}>
-              {typeMeta.verb} {formatMins(x.mins)}
             </div>
           </div>
         );

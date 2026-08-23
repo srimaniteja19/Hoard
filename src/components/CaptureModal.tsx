@@ -256,7 +256,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
       ty,
       src: domain,
       url: url.startsWith("http") ? url : `https://${url}`,
-      mins: ty === "VID" ? 45 : ty === "PPR" ? 40 : 12,
+      mins: ty === "ART" ? 10 : 0,
       tag: tag || (ty === "GIT" ? "craft" : ty === "VID" ? "ai" : "systems"),
       coll: selectedColl || (ty === "PLY" ? "listen" : "unsorted"),
       unread: true,

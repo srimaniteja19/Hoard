@@ -116,7 +116,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             ref={searchInputRef}
             value={query}
             onChange={handleInput}
-            placeholder="Search — try  is:video  under:20m  #ai  lang:ts"
+            placeholder="Search — try  is:video  #ai  lang:ts"
             autoComplete="off"
           />
         </div>
@@ -153,9 +153,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </button>
             <button className={sort === "recentlyUsed" ? "on" : ""} onClick={() => setSort("recentlyUsed")}>
               RECENTLY USED
-            </button>
-            <button className={sort === "short" ? "on" : ""} onClick={() => setSort("short")}>
-              SHORTEST
             </button>
             <button className={sort === "az" ? "on" : ""} onClick={() => setSort("az")}>
               A–Z

@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Bookmark } from "@/types";
-import { formatDuration } from "@/lib/format";
 
 interface StatusLineProps {
   bookmarks: Bookmark[];
@@ -30,20 +29,8 @@ export const StatusLine: React.FC<StatusLineProps> = ({ bookmarks }) => {
 
   const stats = useMemo(() => {
     if (now === null) return null;
-    const unread = bookmarks.filter((b) => b.unread);
-    const queuedMins = unread.reduce((acc, b) => acc + (b.mins || 0), 0);
-
-    // Approximate "completed" rate: minutes of read items whose last update
-    // (a proxy for when they were marked read) falls in the last 28 days.
-    const windowMs = 28 * 24 * 60 * 60 * 1000;
-    const minutesCompletedLast28Days = bookmarks.reduce((acc, b) => {
-      if (b.unread || !b.updatedAt) return acc;
-      const updated = new Date(b.updatedAt).getTime();
-      if (Number.isNaN(updated) || now - updated > windowMs) return acc;
-      return acc + (b.mins || 0);
-    }, 0);
-    const dailyRate = minutesCompletedLast28Days / 28;
-    const burnDownDays = dailyRate > 0 ? Math.ceil(queuedMins / dailyRate) : null;
+    const unread = bookmarks.filter((b) => !b.isDeleted && b.unread);
+    const read = bookmarks.filter((b) => !b.isDeleted && !b.unread);
 
     const mostRecentCreatedAt = bookmarks.reduce<number | null>((latest, b) => {
       if (!b.createdAt) return latest;
@@ -54,9 +41,8 @@ export const StatusLine: React.FC<StatusLineProps> = ({ bookmarks }) => {
     const lastSaveAgoMins = mostRecentCreatedAt !== null ? (now - mostRecentCreatedAt) / 60000 : null;
 
     return {
-      itemCount: unread.length,
-      queuedMins,
-      burnDownDays,
+      unreadCount: unread.length,
+      readCount: read.length,
       lastSaveAgoMins,
     };
   }, [bookmarks, now]);
@@ -65,15 +51,9 @@ export const StatusLine: React.FC<StatusLineProps> = ({ bookmarks }) => {
 
   return (
     <div className="status-line-bar" role="status">
-      <span>{stats.itemCount} ITEMS</span>
+      <span>{stats.unreadCount} UNREAD</span>
       <span className="sep">·</span>
-      <span>{formatDuration(stats.queuedMins)} QUEUED</span>
-      <span className="sep">·</span>
-      <span>
-        {stats.burnDownDays !== null
-          ? `BURNS DOWN IN ${stats.burnDownDays} ${stats.burnDownDays === 1 ? "DAY" : "DAYS"} AT CURRENT RATE`
-          : "BURN-DOWN RATE UNKNOWN"}
-      </span>
+      <span>{stats.readCount} COMPLETED</span>
       {stats.lastSaveAgoMins !== null && (
         <>
           <span className="sep">·</span>

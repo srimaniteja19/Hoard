@@ -97,21 +97,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return map;
   }, [activeBookmarks]);
 
-  // Single grouped aggregate calculation of queued minutes per Kind
-  const kindQueuedMinutes = useMemo(() => {
-    const map: Record<KindType, number> = {
-      ART: 0, VID: 0, PLY: 0, GIT: 0, APP: 0, PPR: 0, DOC: 0,
-    };
-    activeBookmarks.forEach((x) => {
-      map[x.ty] = (map[x.ty] || 0) + (x.mins || 0);
-    });
-    return map;
-  }, [activeBookmarks]);
-
-  const maxQueuedMinutes = useMemo(() => {
-    const vals = Object.values(kindQueuedMinutes);
+  const maxTypeCount = useMemo(() => {
+    const vals = Object.values(typeCounts);
     return Math.max(...vals, 1);
-  }, [kindQueuedMinutes]);
+  }, [typeCounts]);
 
   const tagCounts = useMemo(() => {
     const map: Record<string, number> = {};
@@ -150,6 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleSelectCollection = (cId: string) => {
     setColl(cId);
     setTy(null);
+    setTag(null);
     if (onCloseMobile) onCloseMobile();
   };
 
@@ -223,7 +213,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <aside className={`side ${isMobileOpen ? "mobile-open" : ""}`}>
         <div className="logo">
-          <Link href="/" className="logo-home" onClick={() => onCloseMobile?.()}>
+          <Link
+            href="/library"
+            className="logo-home"
+            onClick={() => {
+              setColl("all");
+              setTy(null);
+              setTag(null);
+              setUnreadOnly(false);
+              setNeverOpenedOnly(false);
+              onCloseMobile?.();
+            }}
+          >
             <b>HOARD</b>
           </Link>
           <span>{unreadCount}</span>
@@ -274,6 +275,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
           <div id="colls">
+            <div
+              className={`ci ${coll === "all" && ty === null && tag === null && !unreadOnly && !neverOpenedOnly ? "on" : ""}`}
+              onClick={() => {
+                setColl("all");
+                setTy(null);
+                setTag(null);
+                setUnreadOnly(false);
+                setNeverOpenedOnly(false);
+                if (onCloseMobile) onCloseMobile();
+              }}
+              style={{ fontWeight: 800 }}
+            >
+              <span className="ic" style={{ background: "var(--ink)", color: "#FFE600", fontWeight: 900 }}>
+                ⚡
+              </span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                All Bookmarks (Full Shelf)
+              </span>
+              <span className="n">{activeBookmarks.length}</span>
+            </div>
             {renderCollectionTree(
               isColdStart && !showAllCollections
                 ? collections.filter((c) => cnt(c.id) > 0)
@@ -349,12 +370,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div id="kinds">
             {(Object.keys(TYPES) as KindType[]).map((k) => {
               const v = TYPES[k];
-              const queuedMins = kindQueuedMinutes[k] || 0;
               const count = typeCounts[k] || 0;
-              const isZero = count === 0 || queuedMins === 0;
+              const isZero = count === 0;
 
-              const barWidthPct = queuedMins > 0 ? Math.round(18 + (queuedMins / maxQueuedMinutes) * 82) : 0;
-              const trailingLabel = queuedMins > 0 ? `${queuedMins}m` : "empty";
+              const barWidthPct = count > 0 ? Math.round(18 + (count / maxTypeCount) * 82) : 0;
+              const trailingLabel = count > 0 ? `${count}` : "0";
 
               return (
                 <div

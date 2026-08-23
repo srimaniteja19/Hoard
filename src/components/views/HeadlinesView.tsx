@@ -16,10 +16,6 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
   onToggleSelect,
   onOpen,
 }) => {
-  const formatMins = (m: number) => {
-    return m < 60 ? `${m} MIN` : `${Math.floor(m / 60)}H${m % 60 ? ` ${m % 60}M` : ""}`;
-  };
-
   return (
     <div className="heads">
       {items.map((x) => {
@@ -49,7 +45,7 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
               {x.useCount ?? 0}×
             </span>
             <span className="hm hdur" style={{ textAlign: "right" }}>
-              {formatMins(x.mins)}
+              {x.ty === "ART" && x.mins > 0 ? `${x.mins}m` : ""}
             </span>
           </div>
         );

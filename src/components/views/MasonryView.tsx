@@ -3,8 +3,6 @@
 import React from "react";
 import { Bookmark } from "@/types";
 import { BookmarkCard } from "./BookmarkCard";
-import { calculateCoverHeight } from "../covers/lib/cover-geometry";
-import { useSizeByTimePreference } from "../ThemePicker";
 
 interface MasonryViewProps {
   items: Bookmark[];
@@ -23,21 +21,17 @@ export const MasonryView: React.FC<MasonryViewProps> = ({
   onOpenDiff,
   onDischarge,
 }) => {
-  const { sizeByTime } = useSizeByTimePreference();
-
   return (
     <div className="masonry">
       {items.map((item, i) => {
         const heightClass = i % 3 === 0 ? "tall" : i % 4 === 1 ? "short" : "";
-        const coverHeightPx = sizeByTime ? calculateCoverHeight(item.mins || 5) : undefined;
 
         return (
           <BookmarkCard
             key={item.id}
             bookmark={item}
             isSelected={selectedIds.has(item.id)}
-            heightClass={sizeByTime ? "" : heightClass}
-            heightPx={coverHeightPx}
+            heightClass={heightClass}
             onToggleSelect={onToggleSelect}
             onOpen={onOpen}
             onOpenDiff={onOpenDiff}

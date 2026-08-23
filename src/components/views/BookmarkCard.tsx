@@ -182,10 +182,12 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         <div className="cmeta">
           {e.Platform && <span>{e.Platform} · </span>}
           <span>{bookmark.src}</span>
-          <span>·</span>
-          <span>
-            {typeMeta.verb} {formatDuration(bookmark.mins)}
-          </span>
+          {bookmark.ty === "ART" && bookmark.mins > 0 && (
+            <>
+              <span>·</span>
+              <span>READ {formatDuration(bookmark.mins)}</span>
+            </>
+          )}
           <span>·</span>
           <span>
             {bookmark.useCount ?? 0}× · {formatRelativeTime(bookmark.lastUsedAt)}

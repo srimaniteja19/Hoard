@@ -72,7 +72,7 @@ export async function POST(req: Request) {
         type:         kind,
         source:       bm.source || bm.src || "Saved via HOARD Extension",
         url:          bm.url,
-        mins:         bm.mins ?? (kind === "VID" ? 45 : kind === "PPR" ? 40 : 12),
+        mins:         bm.mins ?? (kind === "ART" ? 10 : 0),
         tag:          bm.tag  || "general",
         collectionId,
         unread:       bm.unread ?? true,

@@ -47,7 +47,6 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
   // New chapter form state
   const [showAddChap, setShowAddChap] = useState(false);
   const [chapTitle, setChapTitle] = useState("");
-  const [chapMins, setChapMins] = useState(10);
   const [chapSec, setChapSec] = useState(0);
 
   const [dischargedTils, setDischargedTils] = useState<TilItem[]>([]);
@@ -116,10 +115,6 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
 
   const allFolders = flattenCollections(collections);
 
-  const formatMins = (m: number) => {
-    return m < 60 ? `${m} MIN` : `${Math.floor(m / 60)}H${m % 60 ? ` ${m % 60}M` : ""}`;
-  };
-
   const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setNoteVal(val);
@@ -136,7 +131,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
 
     await onAddChapter(bookmark.id, {
       t: chapTitle.trim(),
-      mins: chapMins,
+      mins: bookmark.mins || 5,
       url: chapUrl,
       startTimeSec: chapSec,
     });
@@ -272,7 +267,6 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                   >
                     <div>
                       <div style={{ fontWeight: 800 }}>⚡ {chap.t}</div>
-                      <div style={{ fontSize: "10px", color: "#666" }}>{chap.mins} min chapter</div>
                     </div>
 
                     <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
@@ -327,26 +321,15 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                   style={{ width: "100%", padding: "6px", fontSize: "11px", fontFamily: "var(--mono)", border: "1.5px solid var(--ink)", marginBottom: "8px" }}
                   required
                 />
-                <div className="inspector-chapter-form" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
-                  <div>
-                    <label style={{ fontSize: "9px", fontWeight: 800 }}>ESTIMATED MINS</label>
-                    <input
-                      type="number"
-                      value={chapMins}
-                      onChange={(e) => setChapMins(Number(e.target.value))}
-                      style={{ width: "100%", padding: "4px", fontSize: "11px", fontFamily: "var(--mono)", border: "1.5px solid var(--ink)" }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: "9px", fontWeight: 800 }}>START SEC (OPTIONAL)</label>
-                    <input
-                      type="number"
-                      value={chapSec}
-                      onChange={(e) => setChapSec(Number(e.target.value))}
-                      placeholder="e.g. 1420 for ?t=1420"
-                      style={{ width: "100%", padding: "4px", fontSize: "11px", fontFamily: "var(--mono)", border: "1.5px solid var(--ink)" }}
-                    />
-                  </div>
+                <div style={{ marginBottom: "8px" }}>
+                  <label style={{ fontSize: "9px", fontWeight: 800 }}>START SEC (OPTIONAL)</label>
+                  <input
+                    type="number"
+                    value={chapSec}
+                    onChange={(e) => setChapSec(Number(e.target.value))}
+                    placeholder="e.g. 1420 for ?t=1420"
+                    style={{ width: "100%", padding: "4px", fontSize: "11px", fontFamily: "var(--mono)", border: "1.5px solid var(--ink)" }}
+                  />
                 </div>
                 <button
                   type="submit"
@@ -450,12 +433,12 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                   </select>
                 </dd>
               </div>
-              <div className="kv">
-                <dt>COST</dt>
-                <dd>
-                  {typeMeta.verb} {formatMins(bookmark.mins)}
-                </dd>
-              </div>
+              {bookmark.ty === "ART" && bookmark.mins > 0 && (
+                <div className="kv">
+                  <dt>READING TIME</dt>
+                  <dd>{bookmark.mins} MIN</dd>
+                </div>
+              )}
               {Object.entries(bookmark.ex || {})
                 .filter(([k, v]) => k !== "coverData" && typeof v === "string")
                 .map(([k, v]) => (

@@ -6,7 +6,6 @@ import { Sidebar } from "@/components/Sidebar";
 import { HeaderBar } from "@/components/HeaderBar";
 import { CrumbBar } from "@/components/CrumbBar";
 import { ItemTypeReviewBanner } from "@/components/ItemTypeReviewBanner";
-import { TimeContextBar } from "@/components/TimeContextBar";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { InspectorDrawer } from "@/components/InspectorDrawer";
 import { CaptureModal } from "@/components/CaptureModal";
@@ -43,10 +42,6 @@ export default function Home() {
     setTy,
     tag,
     setTag,
-    time,
-    setTime,
-    ctx,
-    setCtx,
     view,
     setView,
     sort,
@@ -275,15 +270,18 @@ export default function Home() {
 
         <CrumbBar
           items={filteredBookmarks}
+          collections={collections}
           coll={coll}
           ty={ty}
-        />
-
-        <TimeContextBar
-          time={time}
-          setTime={setTime}
-          ctx={ctx}
-          setCtx={setCtx}
+          tag={tag}
+          onReset={() => {
+            setColl("all");
+            setTy(null);
+            setTag(null);
+            setQuery("");
+            setUnreadOnly(false);
+            setNeverOpenedOnly(false);
+          }}
         />
 
         <div className={`scroll ${bookmarks.length > 0 && bookmarks.length < 15 ? "cold-start-view" : ""}`}>
@@ -318,9 +316,32 @@ export default function Home() {
               >
                 NO MATCHING BOOKMARKS
               </div>
-              <div style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "var(--fg)", opacity: 0.8 }}>
+              <div style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "var(--fg)", opacity: 0.8, marginBottom: "16px" }}>
                 No bookmarks match the current filter or search query.
               </div>
+              <button
+                onClick={() => {
+                  setColl("all");
+                  setTy(null);
+                  setTag(null);
+                  setQuery("");
+                  setUnreadOnly(false);
+                  setNeverOpenedOnly(false);
+                }}
+                style={{
+                  fontFamily: "var(--mono)",
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  border: "2px solid var(--ink)",
+                  background: "var(--lime, #B6FF3C)",
+                  color: "#000",
+                  padding: "8px 16px",
+                  cursor: "pointer",
+                  boxShadow: "3px 3px 0 var(--ink)",
+                }}
+              >
+                ← BACK TO FULL SHELF
+              </button>
             </div>
           ) : view === "masonry" ? (
             <MasonryView
@@ -344,7 +365,6 @@ export default function Home() {
             <ListView
               items={filteredBookmarks}
               selectedIds={selectedIds}
-              currentTimeLimit={time}
               onToggleSelect={(id) => toggleSelect(id)}
               onOpen={(id) => setOpenId(id)}
             />

@@ -109,7 +109,7 @@ export async function POST(req: Request) {
         type,
         source,
         url: validUrl,
-        mins: item.mins ?? (type === "VID" ? 30 : type === "PPR" ? 30 : 10),
+        mins: item.mins ?? (type === "ART" ? 10 : 0),
         tag: item.tag || "imported",
         collectionId: targetCollId,
         unread: item.unread ?? true,

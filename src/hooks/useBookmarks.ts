@@ -209,20 +209,7 @@ export function useBookmarks() {
       if (!b.parentId) {
         const kids = (chaptersByParent.get(b.id) || []).filter((k) => !k.isDeleted && k.unread);
         const fullItem = { ...b, chapters: kids };
-
-        if (time < 180 && b.mins > time) {
-          // Parent is too long for current time filter! Surface fits child chapters instead
-          kids.forEach((chap) => {
-            if (chap.mins <= time) {
-              itemsToEvaluate.push({
-                ...chap,
-                parentTitle: b.t,
-              });
-            }
-          });
-        } else {
-          itemsToEvaluate.push(fullItem);
-        }
+        itemsToEvaluate.push(fullItem);
       }
     });
 
@@ -238,7 +225,6 @@ export function useBookmarks() {
       if (f.under && x.mins > f.under)     return false;
       if (f.lang && !((x.ex.Lang || "").toLowerCase().startsWith(f.lang))) return false;
       if (!okKinds.includes(x.ty))         return false;
-      if (time < 180 && x.mins > time)     return false;
       if (f.text.length) {
         const hay = (x.t + " " + x.src + " " + x.tag + " " + x.note + " " + (x.parentTitle || "") + " " + Object.entries(x.ex).filter(([, v]) => typeof v === "string").map(([, v]) => v).join(" ")).toLowerCase();
         if (!f.text.every((t) => hay.includes(t))) return false;
@@ -246,7 +232,6 @@ export function useBookmarks() {
       return true;
     });
 
-    if (sort === "short") return [...list].sort((a, b) => a.mins - b.mins);
     if (sort === "az")    return [...list].sort((a, b) => a.t.localeCompare(b.t));
     if (sort === "mostUsed") return [...list].sort((a, b) => (b.useCount ?? 0) - (a.useCount ?? 0));
     if (sort === "recentlyUsed") {
@@ -257,7 +242,7 @@ export function useBookmarks() {
       });
     }
     return list;
-  }, [bookmarks, collections, query, coll, ty, tag, time, ctx, sort, unreadOnly, neverOpenedOnly, activeSmartColl]);
+  }, [bookmarks, collections, query, coll, ty, tag, ctx, sort, unreadOnly, neverOpenedOnly, activeSmartColl]);
 
   // ── Selection ─────────────────────────────────────────────────────────────
 
