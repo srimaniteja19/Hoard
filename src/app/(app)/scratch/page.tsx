@@ -38,6 +38,19 @@ function ScratchPageContent() {
     }
   }, []);
 
+  // Quietly refresh stats in the background without flashing the UI
+  const refreshStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/scratch", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data.stats || null);
+      }
+    } catch (_) {
+      // silent — stats refresh is best-effort
+    }
+  }, []);
+
   useEffect(() => {
     void fetchScraps();
   }, [fetchScraps]);
@@ -63,7 +76,7 @@ function ScratchPageContent() {
         const created: ScrapRow = await res.json();
         setScraps((prev) => [created, ...prev]);
         showToast("✓ Scrap filed to stream");
-        void fetchScraps();
+        void refreshStats();
       }
     } catch (err) {
       console.error("Failed to file scrap", err);
@@ -103,7 +116,7 @@ function ScratchPageContent() {
         const { scrap, shortHash } = await res.json();
         setScraps((prev) => prev.map((s) => (s.id === id ? { ...s, ...scrap } : s)));
         showToast(`✓ Minted as TIL #${shortHash}`);
-        void fetchScraps();
+        void refreshStats();
       }
     } catch (err) {
       console.error("Failed to promote to TIL", err);
@@ -122,7 +135,7 @@ function ScratchPageContent() {
         const { scrap } = await res.json();
         setScraps((prev) => prev.map((s) => (s.id === id ? { ...s, ...scrap } : s)));
         showToast("✓ Filed to Todos");
-        void fetchScraps();
+        void refreshStats();
       }
     } catch (err) {
       console.error("Failed to promote to Todo", err);
@@ -172,7 +185,7 @@ function ScratchPageContent() {
       if (res.ok) {
         const created: ScrapRow = await res.json();
         await handleConfirmWeld(created.id, hit.content.slice(0, 40));
-        void fetchScraps();
+        void refreshStats();
       }
     } else {
       handleOpenWeldModal(hit.id);
@@ -192,7 +205,7 @@ function ScratchPageContent() {
       if (res.ok) {
         setScraps((prev) => prev.filter((s) => s.id !== id));
         showToast("✓ Scrap buried");
-        void fetchScraps();
+        void refreshStats();
       }
     } catch (err) {
       console.error("Failed to bury scrap", err);
@@ -212,7 +225,7 @@ function ScratchPageContent() {
       if (res.ok) {
         setScraps((prev) => prev.filter((s) => !ids.includes(s.id)));
         showToast(`✓ Buried ${ids.length} items`);
-        void fetchScraps();
+        void refreshStats();
       }
     } catch (err) {
       console.error("Failed to bury compost", err);
@@ -231,7 +244,7 @@ function ScratchPageContent() {
 
       if (res.ok) {
         showToast("✓ Marked items kept");
-        void fetchScraps();
+        void refreshStats();
       }
     } catch (err) {
       console.error("Failed to keep compost", err);
