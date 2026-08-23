@@ -94,9 +94,9 @@ export function getHorizonMetadata(horizon: Exclude<TimeHorizon, "all">, daysAgo
       return {
         headline: "ADDED YESTERDAY",
         badge: "YESTERDAY",
-        color: "#FFE600",
-        accent: "#000",
-        icon: "🔥",
+        color: "#FF007A",
+        accent: "#FFFFFF",
+        icon: "📌",
         prompt: "Captured yesterday while fresh in mind — ready to dive in?",
         timeLabel: daysAgo === 1 ? "1 day ago" : `${daysAgo} days ago`,
       };
@@ -104,9 +104,9 @@ export function getHorizonMetadata(horizon: Exclude<TimeHorizon, "all">, daysAgo
       return {
         headline: "HOARDED LAST WEEK",
         badge: "LAST WEEK",
-        color: "#00F0FF",
-        accent: "#000",
-        icon: "⚡",
+        color: "#7C4DFF",
+        accent: "#FFFFFF",
+        icon: "📌",
         prompt: "You saved this last week — still relevant to what you're working on?",
         timeLabel: `${daysAgo} days ago`,
       };
@@ -114,9 +114,9 @@ export function getHorizonMetadata(horizon: Exclude<TimeHorizon, "all">, daysAgo
       return {
         headline: "SAVED A MONTH AGO",
         badge: "LAST MONTH",
-        color: "#FF007A",
-        accent: "#fff",
-        icon: "⏳",
+        color: "#C026D3",
+        accent: "#FFFFFF",
+        icon: "📌",
         prompt: "One month in your backlog — open it, review it, or discharge to TIL?",
         timeLabel: `~${Math.round(daysAgo / 7)} weeks ago`,
       };
@@ -124,9 +124,9 @@ export function getHorizonMetadata(horizon: Exclude<TimeHorizon, "all">, daysAgo
       return {
         headline: "DEEP FROM THE VAULT",
         badge: "ARCHIVE ECHO",
-        color: "#B6FF3C",
-        accent: "#000",
-        icon: "🏛️",
+        color: "#4C1D95",
+        accent: "#FFFFFF",
+        icon: "📌",
         prompt: "A gem from your past collections resurfacing today.",
         timeLabel: `${Math.round(daysAgo / 30)} mo ago`,
       };
