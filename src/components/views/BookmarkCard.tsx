@@ -3,7 +3,7 @@
 import React from "react";
 import { Bookmark } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
-import { Layers, ShieldCheck, AlertTriangle, Zap } from "lucide-react";
+import { Layers, ShieldCheck, AlertTriangle, Zap, Sparkles } from "lucide-react";
 
 import { CoverCanvas } from "@/components/covers/CoverCanvas";
 import { calculateSunFadeOpacity } from "@/components/covers/lib/cover-geometry";
@@ -27,6 +27,7 @@ interface BookmarkCardProps {
   onOpenDiff?: (bookmark: Bookmark) => void;
   onDischarge?: (bookmark: Bookmark, sourceRect: DOMRect) => void;
   onGhostRead?: (bookmark: Bookmark) => void;
+  onOpenSynapse?: (bookmark: Bookmark) => void;
 }
 
 export const BookmarkCard: React.FC<BookmarkCardProps> = ({
@@ -40,6 +41,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   onOpenDiff,
   onDischarge,
   onGhostRead,
+  onOpenSynapse,
 }) => {
   const typeMeta = TYPES[bookmark.ty] || { name: bookmark.ty, c: "#00F0FF", fg: "#000", verb: "READ" };
   const e = bookmark.ex || {};
@@ -241,10 +243,24 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         </div>
 
         {/* Drift & Badges Row */}
-        <div className="ctags" style={{ flexWrap: "wrap", gap: "4px" }}>
+        <div className="ctags" style={{ flexWrap: "wrap", gap: "4px", alignItems: "center" }}>
           <span className="ctag" style={{ background: typeMeta.c, color: typeMeta.fg }}>
             #{bookmark.tag}
           </span>
+
+          {onOpenSynapse && (
+            <button
+              type="button"
+              className="card-synapse-btn"
+              onClick={(evt) => {
+                evt.stopPropagation();
+                onOpenSynapse(bookmark);
+              }}
+              title="Explore Synapse Trail (Connected Hoards)"
+            >
+              <Sparkles size={9} /> SYNAPSE
+            </button>
+          )}
 
           {bookmark.unread && (
             <span className="ctag" style={{ background: "#FF007A", color: "#fff" }}>

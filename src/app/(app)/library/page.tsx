@@ -23,6 +23,7 @@ import { ColdStart } from "@/components/ColdStart";
 import { GhostReaderModal } from "@/components/library/GhostReaderModal";
 import { TopicClusterHubModal } from "@/components/library/TopicClusterHubModal";
 import { HoardGazetteModal } from "@/components/gazette/HoardGazetteModal";
+import { SynapseTrailModal } from "@/components/synapse/SynapseTrailModal";
 import { LivingTopicCluster } from "@/lib/library/topicClustering";
 import { AppLoading } from "@/components/chrome/AppLoading";
 import { AppPage } from "@/components/chrome/AppPage";
@@ -91,6 +92,7 @@ export default function Home() {
   const [isGazetteOpen, setIsGazetteOpen] = useState(false);
   const [ghostReaderBookmark, setGhostReaderBookmark] = useState<Bookmark | null>(null);
   const [topicHubCluster, setTopicHubCluster] = useState<LivingTopicCluster | null>(null);
+  const [synapseBookmark, setSynapseBookmark] = useState<Bookmark | null>(null);
   const [dischargeTarget, setDischargeTarget] = useState<Bookmark | null>(null);
   const [dischargeSourceRect, setDischargeSourceRect] = useState<DOMRect | null>(null);
   const [dischargeCount, setDischargeCount] = useState(0);
@@ -405,6 +407,7 @@ export default function Home() {
               onOpenDiff={handleOpenDiffModal}
               onDischarge={handleOpenDischargeModal}
               onGhostRead={(bm) => setGhostReaderBookmark(bm)}
+              onOpenSynapse={(bm) => setSynapseBookmark(bm)}
             />
           ) : view === "grid" ? (
             <GridView
@@ -415,6 +418,7 @@ export default function Home() {
               onOpenDiff={handleOpenDiffModal}
               onDischarge={handleOpenDischargeModal}
               onGhostRead={(bm) => setGhostReaderBookmark(bm)}
+              onOpenSynapse={(bm) => setSynapseBookmark(bm)}
             />
           ) : view === "list" ? (
             <ListView
@@ -457,6 +461,7 @@ export default function Home() {
           onSelectBookmark={(id) => setOpenId(id)}
           onRecordUse={recordBookmarkUse}
           onOpenGhostReader={(bm) => setGhostReaderBookmark(bm)}
+          onOpenSynapse={(bm) => setSynapseBookmark(bm)}
         />
 
       </main>
@@ -534,6 +539,16 @@ export default function Home() {
         isOpen={isGazetteOpen}
         bookmarks={bookmarks}
         onClose={() => setIsGazetteOpen(false)}
+        onOpenBookmark={(id) => setOpenId(id)}
+        onGhostRead={(bm) => setGhostReaderBookmark(bm)}
+        onDischarge={handleOpenDischargeModal}
+      />
+
+      {/* 🌌 Synapse Trail (Semantic Serendipity) Modal */}
+      <SynapseTrailModal
+        targetBookmark={synapseBookmark}
+        allBookmarks={bookmarks}
+        onClose={() => setSynapseBookmark(null)}
         onOpenBookmark={(id) => setOpenId(id)}
         onGhostRead={(bm) => setGhostReaderBookmark(bm)}
         onDischarge={handleOpenDischargeModal}

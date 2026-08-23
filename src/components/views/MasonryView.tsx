@@ -12,6 +12,7 @@ interface MasonryViewProps {
   onOpenDiff?: (bookmark: Bookmark) => void;
   onDischarge?: (bookmark: Bookmark, sourceRect: DOMRect) => void;
   onGhostRead?: (bookmark: Bookmark) => void;
+  onOpenSynapse?: (bookmark: Bookmark) => void;
 }
 
 export const MasonryView: React.FC<MasonryViewProps> = ({
@@ -22,6 +23,7 @@ export const MasonryView: React.FC<MasonryViewProps> = ({
   onOpenDiff,
   onDischarge,
   onGhostRead,
+  onOpenSynapse,
 }) => {
   return (
     <div className="masonry">
@@ -39,6 +41,7 @@ export const MasonryView: React.FC<MasonryViewProps> = ({
             onOpenDiff={onOpenDiff}
             onDischarge={onDischarge}
             onGhostRead={onGhostRead}
+            onOpenSynapse={onOpenSynapse}
           />
         );
       })}

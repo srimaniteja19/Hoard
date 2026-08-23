@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     try {
       const res = await fetchWithSsrfGuard(bm.url);
       if (res.ok && res.text) {
-        const parsed = extractArticleText(res.text, bm.title);
+        const parsed = extractArticleText(res.text, bm.title, bm.url);
         parsedContent = parsed.content;
         byline = parsed.byline;
         wordCount = parsed.wordCount;

@@ -23,6 +23,7 @@ interface InspectorDrawerProps {
   onSelectBookmark?: (id: number) => void;
   onRecordUse?: (id: number) => void;
   onOpenGhostReader?: (bookmark: Bookmark) => void;
+  onOpenSynapse?: (bookmark: Bookmark) => void;
 }
 
 export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
@@ -40,6 +41,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
   onSelectBookmark,
   onRecordUse,
   onOpenGhostReader,
+  onOpenSynapse,
 }) => {
   const [noteVal, setNoteVal] = useState("");
   const [permCopy, setPermCopy] = useState(true);
@@ -170,6 +172,16 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                 title="Read in distraction-free Ghost Reader"
               >
                 📖 GHOST READER
+              </button>
+            )}
+            {onOpenSynapse && (
+              <button
+                className="p1"
+                style={{ background: "#00F0FF", color: "#000" }}
+                onClick={() => onOpenSynapse(bookmark)}
+                title="Explore Synapse Trail (Semantic Connections)"
+              >
+                🌌 SYNAPSE TRAIL
               </button>
             )}
             <button

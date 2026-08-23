@@ -462,6 +462,56 @@ export const GhostReaderModal: React.FC<GhostReaderModalProps> = ({
                     );
                   }
 
+                  // Images, Figures & Interactive Graphic Demos
+                  if (trimmed.startsWith("![") && trimmed.includes("](") && trimmed.endsWith(")")) {
+                    const match = trimmed.match(/^!\[(.*?)\]\((.*?)\)$/);
+                    if (match) {
+                      const alt = match[1];
+                      const src = match[2];
+
+                      // If it's an interactive demo / widget
+                      if (alt.startsWith("Interactive Demo:") || src === bookmark.url) {
+                        return (
+                          <div key={idx} className="ghost-reader-demo-card">
+                            <div className="demo-card-top">
+                              <span className="demo-badge">⚡ INTERACTIVE SIMULATION & GRAPHIC</span>
+                              <span className="demo-src">{bookmark.src}</span>
+                            </div>
+                            <h4 className="demo-title">{alt.replace(/^Interactive Demo:\s*/, "")}</h4>
+                            <p className="demo-desc">
+                              This article features an interactive visual simulation on the live page.
+                            </p>
+                            <a
+                              href={bookmark.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="demo-launch-btn"
+                            >
+                              <ExternalLink size={12} /> OPEN LIVE SIMULATION ↗
+                            </a>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <figure key={idx} className="ghost-reader-figure">
+                          <img
+                            src={src}
+                            alt={alt || "Article illustration"}
+                            loading="lazy"
+                            className="ghost-reader-img"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = "none";
+                            }}
+                          />
+                          {alt && alt.trim() && (
+                            <figcaption className="ghost-reader-caption">{alt}</figcaption>
+                          )}
+                        </figure>
+                      );
+                    }
+                  }
+
                   // Blockquotes
                   if (trimmed.startsWith("> ")) {
                     return (

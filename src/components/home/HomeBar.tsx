@@ -22,7 +22,7 @@ function toFindHit(bookmark: Bookmark): FindHit {
   };
 }
 
-export function HomeBar() {
+export function HomeBar({ onOpenGazette }: { onOpenGazette?: () => void } = {}) {
   const router = useRouter();
   const [mode, setMode] = useState<"find" | "stash">("find");
   const [query, setQuery] = useState("");
@@ -236,6 +236,18 @@ export function HomeBar() {
             /{name}
           </button>
         ))}
+
+        {onOpenGazette && (
+          <button
+            type="button"
+            className="home-starter-chip home-gazette-starter-chip"
+            title="Read The Hoard Gazette Sunday Micro-Zine"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onOpenGazette}
+          >
+            📰 /gazette <span className="gazette-chip-pill">ZINE</span>
+          </button>
+        )}
       </div>
     </section>
   );
