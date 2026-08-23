@@ -22,6 +22,7 @@ import { StatusLine } from "@/components/StatusLine";
 import { ColdStart } from "@/components/ColdStart";
 import { GhostReaderModal } from "@/components/library/GhostReaderModal";
 import { TopicClusterHubModal } from "@/components/library/TopicClusterHubModal";
+import { HoardGazetteModal } from "@/components/gazette/HoardGazetteModal";
 import { LivingTopicCluster } from "@/lib/library/topicClustering";
 import { AppLoading } from "@/components/chrome/AppLoading";
 import { AppPage } from "@/components/chrome/AppPage";
@@ -87,6 +88,7 @@ export default function Home() {
   const [captureUrl, setCaptureUrl] = useState("");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isGazetteOpen, setIsGazetteOpen] = useState(false);
   const [ghostReaderBookmark, setGhostReaderBookmark] = useState<Bookmark | null>(null);
   const [topicHubCluster, setTopicHubCluster] = useState<LivingTopicCluster | null>(null);
   const [dischargeTarget, setDischargeTarget] = useState<Bookmark | null>(null);
@@ -306,6 +308,7 @@ export default function Home() {
         activeTopicCluster={activeTopicCluster}
         setActiveTopicCluster={setActiveTopicCluster}
         onOpenTopicHub={(cluster) => setTopicHubCluster(cluster)}
+        onOpenGazette={() => setIsGazetteOpen(true)}
         dischargeCount={dischargeCount}
         dischargePulseNonce={dischargePulseNonce}
         dischargeReducedMotion={dischargeReducedMotion}
@@ -524,6 +527,16 @@ export default function Home() {
         onToggleRead={toggleReadStatus}
         onDischarge={handleOpenDischargeModal}
         onCreateCollectionFromCluster={handleCreateCollectionFromCluster}
+      />
+
+      {/* 📰 The Hoard Gazette Weekly Micro-Zine Modal */}
+      <HoardGazetteModal
+        isOpen={isGazetteOpen}
+        bookmarks={bookmarks}
+        onClose={() => setIsGazetteOpen(false)}
+        onOpenBookmark={(id) => setOpenId(id)}
+        onGhostRead={(bm) => setGhostReaderBookmark(bm)}
+        onDischarge={handleOpenDischargeModal}
       />
 
       {/* Discharge FLIP flyers — one per in-flight discharge, independently

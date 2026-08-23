@@ -53,6 +53,7 @@ interface SidebarProps {
   activeTopicCluster?: string | null;
   setActiveTopicCluster?: (c: string | null) => void;
   onOpenTopicHub?: (cluster: LivingTopicCluster) => void;
+  onOpenGazette?: () => void;
   /** Session count of bookmarks discharged into TIL entries (SPECTACLE.md §4). */
   dischargeCount?: number;
   /** Bumped on each discharge to retrigger the counter pulse/cross-fade via key remount. */
@@ -83,6 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTopicCluster,
   setActiveTopicCluster,
   onOpenTopicHub,
+  onOpenGazette,
   dischargeCount = 0,
   dischargePulseNonce = 0,
   dischargeReducedMotion = false,
@@ -553,6 +555,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </span>
               Archive Vault
               <span className="n">{archiveCount}</span>
+            </div>
+
+            <div
+              className="ci"
+              onClick={() => {
+                if (onOpenGazette) onOpenGazette();
+                if (onCloseMobile) onCloseMobile();
+              }}
+              style={{
+                background: "var(--cream)",
+                border: "1.5px solid var(--ink)",
+                boxShadow: "2px 2px 0 var(--ink)",
+                margin: "4px 0",
+              }}
+            >
+              <span className="ic" style={{ background: "var(--yel)", color: "#000", fontWeight: 900 }}>
+                📰
+              </span>
+              The Hoard Gazette
+              <span className="n" style={{ background: "var(--lime)", color: "#000", fontSize: "9px" }}>
+                SUNDAY ZINE
+              </span>
             </div>
 
             <div className="ci">
