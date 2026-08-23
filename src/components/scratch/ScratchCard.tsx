@@ -1,0 +1,247 @@
+"use client";
+
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { ScrapRow } from "@/db/schema";
+import { ScratchMarkdown } from "./ScratchMarkdown";
+
+interface ScratchCardProps {
+  scrap: ScrapRow;
+  isOpenDefault?: boolean;
+  onUpdateNotes: (id: string, notes: string) => Promise<void> | void;
+  onPromoteTil: (id: string) => Promise<void> | void;
+  onPromoteTodo: (id: string) => Promise<void> | void;
+  onWeld: (id: string) => void;
+  onBury: (id: string) => Promise<void> | void;
+}
+
+type NoteMode = "split" | "edit" | "read";
+
+export const ScratchCard: React.FC<ScratchCardProps> = ({
+  scrap,
+  isOpenDefault = false,
+  onUpdateNotes,
+  onPromoteTil,
+  onPromoteTodo,
+  onWeld,
+  onBury,
+}) => {
+  const [isOpen, setIsOpen] = useState(isOpenDefault);
+  const [mode, setMode] = useState<NoteMode>("split");
+  const [notes, setNotes] = useState(scrap.notes || "");
+  const [savedStatus, setSavedStatus] = useState("AUTOSAVED");
+  const [copied, setCopied] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setNotes(scrap.notes || "");
+  }, [scrap.notes]);
+
+  const wordCount = notes.trim() ? notes.trim().split(/\s+/).filter(Boolean).length : 0;
+  const hasNotes = !!notes.trim();
+
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setNotes(val);
+    setSavedStatus("SAVING...");
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      await onUpdateNotes(scrap.id, val);
+      setSavedStatus("AUTOSAVED");
+    }, 600);
+  };
+
+  const handleCopyMd = () => {
+    navigator.clipboard.writeText(notes);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const toggleOpen = () => {
+    const next = !isOpen;
+    setIsOpen(next);
+    if (next && mode !== "read") {
+      setTimeout(() => textareaRef.current?.focus(), 50);
+    }
+  };
+
+  // Format creation time
+  const createdDate = new Date(scrap.createdAt);
+  const timeStr = createdDate.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  // Render formatted scrap text
+  const renderFormattedText = useCallback((text: string) => {
+    let t = text;
+    // Highlight questions
+    if (/^\?/.test(t) || /\?\s*$/.test(t)) {
+      return <span className="q">{t}</span>;
+    }
+    // Highlight quotes
+    if (/^>/.test(t)) {
+      return <em>{t}</em>;
+    }
+    // Highlight hashtags
+    const parts = t.split(/(#[\w-]+)/g);
+    return (
+      <>
+        {parts.map((p, idx) => {
+          if (p.startsWith("#")) {
+            return (
+              <mark key={idx} style={{ background: "var(--cyan)", padding: "0 2px" }}>
+                {p}
+              </mark>
+            );
+          }
+          return <React.Fragment key={idx}>{p}</React.Fragment>;
+        })}
+      </>
+    );
+  }, []);
+
+  return (
+    <article
+      id={`scrap-${scrap.id}`}
+      className={`scrap${isOpen ? " open" : ""}`}
+      style={
+        {
+          "--c": `var(--${scrap.color || "cyan"})`,
+          "--tilt": isOpen ? "0deg" : scrap.tilt || "0deg",
+        } as React.CSSProperties
+      }
+    >
+      <div className="scrap__b">
+        <span className="scrap__mk" />
+        <div className="scrap__t">{renderFormattedText(scrap.content)}</div>
+      </div>
+
+      <div className="scrap__f">
+        <span className={`k ${scrap.color === "violet" ? "is-violet" : ""}`}>
+          {scrap.kind}
+        </span>
+        <span className="when">{timeStr}</span>
+        <span className={`st ${scrap.status}`}>
+          {scrap.statusLabel || scrap.status.toUpperCase()}
+        </span>
+      </div>
+
+      {scrap.threadN && scrap.threadN > 0 && scrap.threadSummary ? (
+        <div className="thread">
+          <b>COLLIDES ×{scrap.threadN}</b>
+          <span>{scrap.threadSummary}</span>
+        </div>
+      ) : null}
+
+      <div className="scrap__p">
+        <button
+          className={`notes-btn`}
+          type="button"
+          onClick={toggleOpen}
+        >
+          {isOpen ? "NOTES ▴" : hasNotes ? "NOTES ▾" : "＋ ADD NOTES"}
+        </button>
+        <button
+          type="button"
+          onClick={() => onPromoteTil(scrap.id)}
+          title="Promote this scrap to a minted TIL entry"
+        >
+          → TIL
+        </button>
+        <button
+          type="button"
+          onClick={() => onPromoteTodo(scrap.id)}
+          title="Promote this scrap to a Todo item"
+        >
+          → TODO
+        </button>
+        <button type="button" onClick={() => onWeld(scrap.id)}>
+          WELD
+        </button>
+        <button type="button" onClick={() => onBury(scrap.id)}>
+          BURY
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="note-drawer">
+          <div className="note__bar">
+            <div className="modes">
+              <button
+                type="button"
+                data-m="split"
+                aria-pressed={mode === "split"}
+                onClick={() => setMode("split")}
+              >
+                SPLIT
+              </button>
+              <button
+                type="button"
+                data-m="edit"
+                aria-pressed={mode === "edit"}
+                onClick={() => setMode("edit")}
+              >
+                WRITE
+              </button>
+              <button
+                type="button"
+                data-m="read"
+                aria-pressed={mode === "read"}
+                onClick={() => setMode("read")}
+              >
+                READ
+              </button>
+            </div>
+
+            <div className="note__meta">
+              <span className="wc">{wordCount} WORDS</span>
+              <span>{savedStatus}</span>
+              <span>:::gotcha :::question :::action :::fact</span>
+            </div>
+
+            <div className="note__acts">
+              <button type="button" onClick={() => onPromoteTil(scrap.id)}>
+                → TIL
+              </button>
+              <button type="button" onClick={handleCopyMd}>
+                {copied ? "COPIED!" : "COPY MD"}
+              </button>
+              <button
+                className="close"
+                type="button"
+                onClick={() => setIsOpen(false)}
+              >
+                CLOSE ▴
+              </button>
+            </div>
+          </div>
+
+          <div
+            className={`note__body ${
+              mode === "split" ? "" : mode === "edit" ? "edit" : "read"
+            }`}
+          >
+            <div className="ed">
+              <textarea
+                ref={textareaRef}
+                spellCheck="false"
+                value={notes}
+                onChange={handleNotesChange}
+                placeholder="Write your note in Markdown... #tags, ```code, :::gotcha, | tables"
+              />
+            </div>
+            <div className="pv">
+              <ScratchMarkdown content={notes} />
+            </div>
+          </div>
+        </div>
+      )}
+    </article>
+  );
+};

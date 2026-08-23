@@ -585,3 +585,57 @@ export const atlases = pgTable(
   (table) => [index("atlases_user_status_updated_idx").on(table.userId, table.status, table.updatedAt.desc())]
 );
 
+export const scrapKindValues = [
+  "FRAGMENT",
+  "QUESTION",
+  "QUOTE",
+  "ACTION",
+  "RANT",
+  "IDEA",
+] as const;
+export type ScrapKind = (typeof scrapKindValues)[number];
+
+export const scrapStatusValues = ["raw", "done", "pages", "compost"] as const;
+export type ScrapStatus = (typeof scrapStatusValues)[number];
+
+export const scraps = pgTable(
+  "scraps",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    kind: varchar("kind", { length: 32 }).notNull().default("FRAGMENT"),
+    color: varchar("color", { length: 32 }).notNull().default("cyan"),
+    tilt: varchar("tilt", { length: 16 }).notNull().default("0deg"),
+    notes: text("notes").notNull().default(""),
+    status: varchar("status", { length: 32 }).notNull().default("raw"),
+    statusLabel: varchar("status_label", { length: 64 }).notNull().default("RAW"),
+    promotedTo: varchar("promoted_to", { length: 32 }),
+    promotedId: text("promoted_id"),
+    threadN: integer("thread_n").notNull().default(0),
+    threadSummary: text("thread_summary"),
+    weldedToId: text("welded_to_id").references(
+      (): AnyPgColumn => scraps.id,
+      { onDelete: "set null" }
+    ),
+    loggedFor: date("logged_for").notNull(),
+    isBuried: boolean("is_buried").notNull().default(false),
+    buriedAt: timestamp("buried_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("scraps_user_logged_for_idx").on(table.userId, table.isBuried, table.loggedFor.desc()),
+    index("scraps_user_created_idx").on(table.userId, table.isBuried, table.createdAt.desc()),
+    index("scraps_user_kind_idx").on(table.userId, table.kind),
+  ]
+);
+
+export type ScrapRow = typeof scraps.$inferSelect;
+export type NewScrapRow = typeof scraps.$inferInsert;
+
+

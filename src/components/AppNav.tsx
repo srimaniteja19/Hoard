@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/", label: "Home", match: (path: string) => path === "/" },
   { href: "/library", label: "Library", match: (path: string) => path.startsWith("/library") || path.startsWith("/session") },
   { href: "/ask", label: "Ask", match: (path: string) => path === "/ask" || path.startsWith("/ask/") },
+  { href: "/scratch", label: "Scratch", match: (path: string) => path.startsWith("/scratch") },
   { href: "/todos", label: "Todos", match: (path: string) => path.startsWith("/todos") },
   { href: "/atlas", label: "Atlas", match: (path: string) => path.startsWith("/atlas") },
   { href: "/til", label: "TIL", match: (path: string) => path.startsWith("/til") },
