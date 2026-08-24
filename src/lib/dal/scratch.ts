@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { scraps, ScrapRow, NewScrapRow, ScrapKind, ScrapStatus, todos, tilEntries } from "@/db/schema";
 import { eq, and, desc, sql, gte, inArray } from "drizzle-orm";
-import { parseSlabText, getDeterministicTilt } from "@/lib/scratch/parse";
+import { parseSlabText, getDeterministicTilt, getLocalTodayIso } from "@/lib/scratch/parse";
 import { generateShortHash, getLoggedForDate, getUserTimezone } from "@/lib/dal/til";
 import { parseTodo } from "@/lib/todos/parse";
 import crypto from "crypto";
@@ -57,11 +57,18 @@ export async function createScrap(
     kind?: ScrapKind;
     loggedFor?: string;
     occurredOn?: string;
+    clientDate?: string;
   }
 ): Promise<ScrapRow> {
   const timezone = await getUserTimezone(userId);
-  const parsed = parseSlabText(data.content);
-  const loggedFor = data.loggedFor || getLoggedForDate(timezone);
+  const now = new Date();
+  const refDate = data.clientDate ? new Date(data.clientDate + "T12:00:00") : now;
+  const parsed = parseSlabText(data.content, refDate);
+  const defaultLocal = getLocalTodayIso(now);
+  const loggedFor =
+    data.loggedFor ||
+    data.clientDate ||
+    (timezone && timezone !== "UTC" ? getLoggedForDate(timezone) : defaultLocal);
   const occurredOn = data.occurredOn || parsed.occurredOn || loggedFor;
   const wordCount = (data.notes || "").trim().split(/\s+/).filter(Boolean).length;
 

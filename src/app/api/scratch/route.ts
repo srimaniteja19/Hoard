@@ -37,6 +37,8 @@ export async function POST(req: Request) {
       notes: body.notes,
       kind: body.kind,
       loggedFor: body.loggedFor,
+      occurredOn: body.occurredOn,
+      clientDate: body.clientDate,
     });
 
     return NextResponse.json(created, { status: 201 });

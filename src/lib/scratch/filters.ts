@@ -1,4 +1,5 @@
 import { ScrapRow, ScrapKind } from "@/db/schema";
+import { getLocalTodayIso } from "./parse";
 
 export type StatusFilter = "all" | "has_notes" | "images" | "raw" | "promoted";
 
@@ -80,7 +81,7 @@ export function filterScraps(scraps: ScrapRow[], filters: ScratchFilters): Scrap
     // 3. Date filter (compares loggedFor YYYY-MM-DD or createdAt date)
     if (selectedDate) {
       const loggedIso = s.loggedFor;
-      const createdIso = new Date(s.createdAt).toISOString().slice(0, 10);
+      const createdIso = getLocalTodayIso(new Date(s.createdAt));
       if (loggedIso !== selectedDate && createdIso !== selectedDate) {
         return false;
       }
@@ -123,7 +124,7 @@ export function generateMonthCalendar(
   totalScrapsInMonth: number;
   monthName: string;
 } {
-  const currentTodayIso = todayIso || new Date().toISOString().slice(0, 10);
+  const currentTodayIso = todayIso || getLocalTodayIso(new Date());
   const monthNames = [
     "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
     "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"
@@ -134,7 +135,7 @@ export function generateMonthCalendar(
   let totalScrapsInMonth = 0;
 
   for (const s of scraps) {
-    const dateKey = s.loggedFor || new Date(s.createdAt).toISOString().slice(0, 10);
+    const dateKey = s.loggedFor || getLocalTodayIso(new Date(s.createdAt));
     const existing = activityMap.get(dateKey) || { count: 0, kinds: new Set<ScrapKind>(), hasImages: false };
     existing.count++;
     existing.kinds.add(s.kind as ScrapKind);

@@ -174,14 +174,27 @@ export function parseSlabText(input: string, referenceDate = new Date()): Parsed
   };
 }
 
+export function getLocalTodayIso(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export function formatScrapDayHeader(dateStr: string, todayIso?: string, yesterdayIso?: string): string {
   const now = new Date();
-  const currentToday = todayIso || now.toISOString().slice(0, 10);
+  const currentToday = todayIso || getLocalTodayIso(now);
   const yDate = new Date(now);
   yDate.setDate(yDate.getDate() - 1);
-  const currentYesterday = yesterdayIso || yDate.toISOString().slice(0, 10);
+  const currentYesterday = yesterdayIso || getLocalTodayIso(yDate);
 
-  const parsed = new Date(dateStr + "T00:00:00");
+  // Parse YYYY-MM-DD components directly to prevent UTC shift
+  const [yearStr, monthStrNum, dayStrNum] = dateStr.split("-");
+  const y = parseInt(yearStr, 10);
+  const m = parseInt(monthStrNum, 10) - 1;
+  const d = parseInt(dayStrNum, 10);
+  const parsed = new Date(y, m, d);
+
   const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
   const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const dayNum = parsed.getDate();

@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { ScrapRow } from "@/db/schema";
 import { buildDaySummary } from "@/lib/scratch/tallies";
-import { formatScrapDayHeader } from "@/lib/scratch/parse";
+import { formatScrapDayHeader, getLocalTodayIso } from "@/lib/scratch/parse";
 
 interface ScratchSheetProps {
   scraps: ScrapRow[];
@@ -31,7 +31,7 @@ export const ScratchSheet: React.FC<ScratchSheetProps> = ({
 
   const dayGroups = useMemo(() => {
     const today = new Date();
-    const todayIso = today.toISOString().slice(0, 10);
+    const todayIso = getLocalTodayIso(today);
 
     const map = new Map<string, ScrapRow[]>();
     for (const s of logScraps) {

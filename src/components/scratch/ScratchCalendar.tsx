@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { ScrapRow } from "@/db/schema";
 import { generateMonthCalendar, DayActivity } from "@/lib/scratch/filters";
+import { getLocalTodayIso } from "@/lib/scratch/parse";
 import { playSound } from "@/lib/sound";
 
 interface ScratchCalendarProps {
@@ -49,7 +50,7 @@ export const ScratchCalendar: React.FC<ScratchCalendarProps> = ({
     const now = new Date();
     setCurrentYear(now.getFullYear());
     setCurrentMonth(now.getMonth());
-    const todayIso = now.toISOString().slice(0, 10);
+    const todayIso = getLocalTodayIso(now);
     onSelectDate(todayIso);
   };
 

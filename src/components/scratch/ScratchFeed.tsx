@@ -90,15 +90,17 @@ export const ScratchFeed: React.FC<ScratchFeedProps> = ({
   return (
     <div id="stream">
       {groupedByDay.map((group, gIdx) => (
-        <div key={group.dayKey}>
-          <div className="day-divider">
-            <b>{group.dayHeader}</b>
-            <span />
-            <i>
-              {group.items.length} SCRAP{group.items.length === 1 ? "" : "S"}
-              {group.notesCount > 0 ? ` · ${group.notesCount} WITH NOTES` : ""}
-            </i>
-          </div>
+        <div key={group.dayKey} className="shelf-day-group">
+          {gIdx > 0 && (
+            <div className="shelf-day-divider">
+              <b>{group.dayHeader}</b>
+              <span />
+              <i>
+                {group.items.length} SCRAP{group.items.length === 1 ? "" : "S"}
+                {group.notesCount > 0 ? ` · ${group.notesCount} WITH NOTES` : ""}
+              </i>
+            </div>
+          )}
 
           {group.items.map((scrap) => (
             <ScratchCard

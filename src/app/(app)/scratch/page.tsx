@@ -14,6 +14,7 @@ import { ScrapRow } from "@/db/schema";
 import { ScratchStats } from "@/lib/dal/scratch";
 import { CollisionCandidate, CollisionHit } from "@/lib/scratch/collision";
 import { ScratchFilters, filterScraps } from "@/lib/scratch/filters";
+import { getLocalTodayIso } from "@/lib/scratch/parse";
 import { playSound } from "@/lib/sound";
 
 function ScratchPageContent() {
@@ -94,11 +95,12 @@ function ScratchPageContent() {
     if (!text.trim()) return;
     setSubmitting(true);
     try {
+      const clientDate = getLocalTodayIso();
       const res = await fetch("/api/scratch", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text }),
+        body: JSON.stringify({ content: text, clientDate }),
       });
 
       if (res.ok) {
@@ -410,12 +412,14 @@ function ScratchPageContent() {
               {/* THE SHELF */}
               <div>
                 <div className="zone">
-                  <b>The Shelf</b>
-                  <i>{shelfScraps.length} OPEN</i>
-                  <span />
-                  <span className="rule">
+                  <div className="zone__head">
+                    <b>The Shelf</b>
+                    <i>{shelfScraps.length} OPEN</i>
+                    <span className="zone__bar" />
+                  </div>
+                  <div className="zone__rule">
                     LEAVES ONLY BY PROMOTING, RESOLVING, OR COMPOSTING — THERE IS NO &quot;PUT AWAY&quot;.
-                  </span>
+                  </div>
                 </div>
                 <ScratchFeed
                   scraps={filteredShelfScraps}
@@ -432,9 +436,11 @@ function ScratchPageContent() {
               {/* SHEET RAIL */}
               <div className="rail">
                 <div className="zone">
-                  <b>The Sheet</b>
-                  <i>TODAY</i>
-                  <span />
+                  <div className="zone__head">
+                    <b>The Sheet</b>
+                    <i>TODAY</i>
+                    <span className="zone__bar" />
+                  </div>
                 </div>
                 <ScratchSheet
                   scraps={filteredSheetScraps}
@@ -466,9 +472,11 @@ function ScratchPageContent() {
               <div className="lb">
                 <div>
                   <div className="zone">
-                    <b>The Sheet</b>
-                    <i>{sheetScraps.length} TOTAL LOGGED</i>
-                    <span />
+                    <div className="zone__head">
+                      <b>The Sheet</b>
+                      <i>{sheetScraps.length} TOTAL LOGGED</i>
+                      <span className="zone__bar" />
+                    </div>
                   </div>
                   <ScratchSheet
                     scraps={filteredSheetScraps}
