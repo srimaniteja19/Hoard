@@ -696,5 +696,81 @@ export const scrapAssets = pgTable(
 export type ScrapAssetRow = typeof scrapAssets.$inferSelect;
 export type NewScrapAssetRow = typeof scrapAssets.$inferInsert;
 
+export interface PlaybookStep {
+  title: string;
+  energy: "deep" | "shallow" | "errand";
+  optional: boolean;
+}
 
+export interface PlaybookRunStep {
+  title: string;
+  energy: "deep" | "shallow" | "errand";
+  optional: boolean;
+  done: boolean;
+  completedAt?: string;
+}
 
+export const playbooks = pgTable(
+  "playbooks",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    color: varchar("color", { length: 32 }).notNull().default("violet"),
+    mode: varchar("mode", { length: 16 }).notNull().default("SEQUENCE"), // "SEQUENCE" | "SET"
+    steps: jsonb("steps").$type<PlaybookStep[]>().notNull().default([]),
+    defaultVars: jsonb("default_vars").$type<Record<string, string>>().notNull().default({}),
+    runsCount: integer("runs_count").notNull().default(0),
+    medianDuration: varchar("median_duration", { length: 32 }).notNull().default("30m"),
+    keptPercent: integer("kept_percent").notNull().default(80),
+    isArchived: boolean("is_archived").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("playbooks_user_idx").on(table.userId, table.isArchived),
+  ]
+);
+
+export type PlaybookRow = typeof playbooks.$inferSelect;
+export type NewPlaybookRow = typeof playbooks.$inferInsert;
+
+export const playbookRuns = pgTable(
+  "playbook_runs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    playbookId: text("playbook_id").references(
+      (): AnyPgColumn => playbooks.id,
+      { onDelete: "set null" }
+    ),
+    runNumber: varchar("run_number", { length: 8 }).notNull(), // e.g. "7F2A"
+    title: text("title").notNull(),
+    mode: varchar("mode", { length: 16 }).notNull().default("SEQUENCE"),
+    color: varchar("color", { length: 32 }).notNull().default("violet"),
+    vars: jsonb("vars").$type<Record<string, string>>().notNull().default({}),
+    steps: jsonb("steps").$type<PlaybookRunStep[]>().notNull().default([]),
+    state: varchar("state", { length: 16 }).notNull().default("LIVE"), // "LIVE" | "KEPT" | "ABANDONED"
+    duration: varchar("duration", { length: 32 }),
+    dueDate: date("due_date"),
+    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("playbook_runs_user_state_idx").on(table.userId, table.state),
+    index("playbook_runs_user_due_idx").on(table.userId, table.dueDate),
+  ]
+);
+
+export type PlaybookRunRow = typeof playbookRuns.$inferSelect;
+export type NewPlaybookRunRow = typeof playbookRuns.$inferInsert;

@@ -14,10 +14,19 @@ import { TodoJob } from "@/components/todos/TodoJob";
 import { TodoRitual } from "@/components/todos/TodoRitual";
 import { TodoCalendar } from "@/components/todos/TodoCalendar";
 import { TodoWeekStrip } from "@/components/todos/TodoWeekStrip";
+import { TodoTabs } from "@/components/todos/TodoTabs";
+import { TodoRunPass } from "@/components/todos/TodoRunPass";
+import { TodoPlaybookShelf } from "@/components/todos/TodoPlaybookShelf";
+import { TodoPlaybookEditor } from "@/components/todos/TodoPlaybookEditor";
+import { TodoPlaybookLearning } from "@/components/todos/TodoPlaybookLearning";
+import { TodoLedger } from "@/components/todos/TodoLedger";
+import { PlaybookRow, PlaybookRunRow } from "@/db/schema";
 import { isoDay, parseIsoDay, weekContaining } from "@/lib/todos/calendar";
 import { collectTags, dayLoadStamp, openLoadForDay } from "@/lib/todos/load";
 import { minutesSinceMidnight } from "@/lib/home/format";
 import { isRitual, oneShotsForDay, ritualLabel, ritualRootId, ritualWeekMarks, ritualsForDay } from "@/lib/todos/rituals";
+import { playSound } from "@/lib/sound";
+import "@/styles/todos.css";
 
 const localTz = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 const ENERGY_FILTERS: (Energy | "ALL")[] = ["ALL", "DEEP", "SHALLOW", "ERRAND"];
@@ -26,6 +35,11 @@ function TodosPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const today = isoDay(new Date());
+
+  const [activeTab, setActiveTab] = useState<"today" | "book">("today");
+  const [playbooks, setPlaybooks] = useState<PlaybookRow[]>([]);
+  const [playbookRuns, setPlaybookRuns] = useState<PlaybookRunRow[]>([]);
+  const [selectedPlaybookForEdit, setSelectedPlaybookForEdit] = useState<PlaybookRow | null>(null);
 
   const time = Number(searchParams.get("time")) || 180;
   const energyFilterParam = searchParams.get("energy");
@@ -67,6 +81,27 @@ function TodosPageContent() {
   const [actualTimeCustom, setActualTimeCustom] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Load Playbooks and Runs from API
+  const loadPlaybooksData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/todos/playbooks");
+      if (res.ok) {
+        const data = await res.json();
+        setPlaybooks(data.playbooks || []);
+        setPlaybookRuns(data.runs || []);
+        if (data.playbooks?.length > 0) {
+          setSelectedPlaybookForEdit((prev) => prev || data.playbooks[0]);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load playbooks:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPlaybooksData();
+  }, [loadPlaybooksData]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "/" && document.activeElement !== inputRef.current) {
@@ -79,7 +114,7 @@ function TodosPageContent() {
   }, []);
 
   const preview: ParsedTodo | null = useMemo(() => {
-    if (!input.trim()) return null;
+    if (!input.trim() || input.startsWith("run:") || input.startsWith("play:")) return null;
     return parseTodo(input, new Date(), localTz());
   }, [input]);
 
@@ -102,6 +137,7 @@ function TodosPageContent() {
     if (tagFilter && !list.includes(tagFilter)) return [tagFilter, ...list];
     return list;
   }, [energyFilter, tagFilter, time, todos]);
+
   const load = useMemo(
     () =>
       openLoadForDay(visible, {
@@ -138,11 +174,179 @@ function TodosPageContent() {
   const rituals = ritualsForDay(visible, selected, today);
   const someday = visible.filter((todo) => todo.state === "OPEN" && todo.dueDate === null && !isRitual(todo));
 
+  // Playbook Runs in flight
+  const liveRuns = useMemo(() => {
+    return playbookRuns.filter((r) => r.state === "LIVE");
+  }, [playbookRuns]);
+
+  // Handle Playbook run issuance
+  const handleIssuePass = useCallback(
+    async (playbookId: string) => {
+      try {
+        const res = await fetch("/api/todos/runs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ playbookId }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPlaybookRuns((prev) => [data.run, ...prev]);
+          setActiveTab("today");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      } catch (err) {
+        console.error("Failed to issue pass:", err);
+      }
+    },
+    []
+  );
+
+  const handleToggleRunStep = useCallback(async (runId: string, stepIndex: number) => {
+    try {
+      const res = await fetch(`/api/todos/runs/${runId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggleStep", stepIndex }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPlaybookRuns((prev) => prev.map((r) => (r.id === runId ? data.run : r)));
+      }
+    } catch (err) {
+      console.error("Failed to toggle run step:", err);
+    }
+  }, []);
+
+  const handleAdvanceRun = useCallback(async (runId: string) => {
+    try {
+      const res = await fetch(`/api/todos/runs/${runId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "advance" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPlaybookRuns((prev) => prev.map((r) => (r.id === runId ? data.run : r)));
+      }
+    } catch (err) {
+      console.error("Failed to advance run:", err);
+    }
+  }, []);
+
+  const handleCloseRun = useCallback(async (runId: string) => {
+    try {
+      const res = await fetch(`/api/todos/runs/${runId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "close" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPlaybookRuns((prev) => prev.map((r) => (r.id === runId ? data.run : r)));
+      }
+    } catch (err) {
+      console.error("Failed to close run:", err);
+    }
+  }, []);
+
+  const handleAbandonRun = useCallback(async (runId: string) => {
+    try {
+      const res = await fetch(`/api/todos/runs/${runId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "abandon" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPlaybookRuns((prev) => prev.map((r) => (r.id === runId ? data.run : r)));
+      }
+    } catch (err) {
+      console.error("Failed to abandon run:", err);
+    }
+  }, []);
+
+  const handleSavePlaybook = useCallback(async (playData: any) => {
+    try {
+      if (playData.id) {
+        const res = await fetch(`/api/todos/playbooks/${playData.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(playData),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPlaybooks((prev) => prev.map((p) => (p.id === playData.id ? data.playbook : p)));
+          setSelectedPlaybookForEdit(data.playbook);
+        }
+      } else {
+        const res = await fetch("/api/todos/playbooks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(playData),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPlaybooks((prev) => [data.playbook, ...prev]);
+          setSelectedPlaybookForEdit(data.playbook);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to save playbook:", err);
+    }
+  }, []);
+
+  const handleDuplicatePlaybook = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/todos/playbooks/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "duplicate" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPlaybooks((prev) => [data.playbook, ...prev]);
+        setSelectedPlaybookForEdit(data.playbook);
+      }
+    } catch (err) {
+      console.error("Failed to duplicate playbook:", err);
+    }
+  }, []);
+
+  const handleArchivePlaybook = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/todos/playbooks/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setPlaybooks((prev) => prev.filter((p) => p.id !== id));
+        setSelectedPlaybookForEdit((prev) => (prev?.id === id ? null : prev));
+      }
+    } catch (err) {
+      console.error("Failed to archive playbook:", err);
+    }
+  }, []);
+
   const commit = async () => {
     const text = input.trim();
     if (!text || submitting) return;
     setSubmitting(true);
     setInput("");
+
+    // Check if user entered a playbook run command: "run: [playbook name]"
+    const runMatch = text.match(/^(?:run|play):\s*(.+)$/i);
+    if (runMatch) {
+      const query = runMatch[1].trim().toLowerCase();
+      const matched = playbooks.find(
+        (p) => p.name.toLowerCase().includes(query) || p.id.toLowerCase() === query
+      );
+      if (matched) {
+        playSound.promote();
+        await handleIssuePass(matched.id);
+        setSubmitting(false);
+        return;
+      }
+    }
+
     const ok = await actions.createTodo(text);
     if (!ok) setInput(text);
     setSubmitting(false);
@@ -154,13 +358,14 @@ function TodosPageContent() {
     actions.addSubtask(todoId, title);
   };
 
-  const heading = selected === today
-    ? "Today"
-    : new Date(`${selected}T00:00:00`).toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
-      });
+  const heading =
+    selected === today
+      ? "Today"
+      : new Date(`${selected}T00:00:00`).toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "short",
+          day: "numeric",
+        });
 
   return (
     <AppPage width="lg">
@@ -170,186 +375,332 @@ function TodosPageContent() {
         </Link>
       </ChromeSlot>
 
-      <div className="todo-room">
-        <form
-          className="todo-add"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void commit();
-          }}
-        >
-          <span className="todo-add-kicker">NEW</span>
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="read every day ~20m deep"
-            disabled={submitting}
-          />
-        </form>
-        {preview ? (
-          <p className="todo-preview">
-            {preview.estimatedMinutes}m · {preview.energy.toLowerCase()}
-            {preview.dueOffsetDays === 0 ? " · today" : preview.dueOffsetDays != null ? ` · +${preview.dueOffsetDays}d` : " · someday"}
-            {preview.recurrenceRule ? ` · ${ritualLabel(preview.recurrenceRule).toLowerCase()}` : ""}
-            {preview.tags.length ? ` · ${preview.tags.map((tag) => `#${tag}`).join(" ")}` : ""}
-          </p>
-        ) : null}
+      <div className="todos-wrap">
+        {/* ── TOP TABS: TODAY vs PLAYBOOK ── */}
+        <TodoTabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          todayCount={dueSelected.length + rituals.length + liveRuns.length}
+          bookCount={playbooks.length}
+          inFlightCount={liveRuns.length}
+          ritualCount={rituals.length}
+        />
 
-        <div className="todo-filters">
-          {ENERGY_FILTERS.map((energy) => (
-            <button
-              key={energy}
-              type="button"
-              className={`todo-chip is-${energy.toLowerCase()}${energyFilter === energy ? " is-on" : ""}`}
-              onClick={() => updateQuery({ energy })}
-            >
-              {energy === "ALL" ? "All" : energy.toLowerCase()}
-            </button>
-          ))}
-          {tags.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              className={`todo-chip is-tag${tagFilter === tag ? " is-on" : ""}`}
-              onClick={() => updateQuery({ tag: tagFilter === tag ? null : tag })}
-            >
-              #{tag}
-            </button>
-          ))}
-          <label className="todo-time">
-            Fits
-            <select value={time} onChange={(event) => updateQuery({ time: Number(event.target.value) })}>
-              <option value={180}>any time</option>
-              <option value={15}>15m</option>
-              <option value={25}>25m</option>
-              <option value={45}>45m</option>
-              <option value={90}>90m</option>
-            </select>
-          </label>
-        </div>
-
-        <div className="todo-split">
-          <TodoCalendar
-            year={monthCursor.year}
-            month={monthCursor.month}
-            today={today}
-            selected={selected}
-            todos={calendarTodos}
-            onSelect={(day) => {
-              const parsed = parseIsoDay(day);
-              if (parsed) setMonthCursor({ year: parsed.year, month: parsed.month });
-              updateQuery({ day });
-            }}
-            onMonth={(year, month) => setMonthCursor({ year, month })}
-            onDropTodo={dropTodo}
-          />
-
-          <div className="todo-day">
-            <div className="todo-day-head">
-              <div>
-                <h1>{heading}</h1>
-                <p className={load.unfittedMinutes > 0 ? "todo-load is-short" : "todo-load"}>
-                  {dayLoadStamp(load)}
-                </p>
-              </div>
-              {selected !== today ? (
-                <button type="button" onClick={() => updateQuery({ day: today })}>
-                  Today
-                </button>
-              ) : null}
-            </div>
-            <TodoWeekStrip
-              selected={selected}
-              today={today}
-              todos={calendarTodos}
-              onSelect={(day) => {
-                const parsed = parseIsoDay(day);
-                if (parsed) setMonthCursor({ year: parsed.year, month: parsed.month });
-                updateQuery({ day });
+        {/* ══════════════════════════════════════════════════════════════════
+            TODAY VIEW
+           ══════════════════════════════════════════════════════════════════ */}
+        {activeTab === "today" && (
+          <div className="view on" id="vToday">
+            {/* Capture Bar */}
+            <form
+              className="cap"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void commit();
               }}
-              onDropTodo={dropTodo}
-            />
-            {loading ? (
-              <p className="todo-muted">Loading…</p>
-            ) : (
-              <>
-                {rituals.length > 0 ? (
-                  <section className="todo-block todo-rituals">
-                    <header className="todo-rituals-head">
-                      <h2>Rituals</h2>
-                      <p>Miss a day and the run dies.</p>
-                    </header>
-                    {rituals.map(renderRitual)}
-                  </section>
-                ) : null}
-                {selected === today && overdue.length > 0 ? (
-                  <section className="todo-block">
-                    <h2>Overdue</h2>
-                    {renderRows(overdue)}
-                  </section>
-                ) : null}
-                <section className="todo-block">
-                  {dueSelected.length === 0 ? (
-                    rituals.length === 0 ? <p className="todo-muted">Nothing due this day.</p> : null
-                  ) : (
-                    renderRows(dueSelected)
-                  )}
-                </section>
-                {doneSelected.length > 0 ? (
-                  <section className="todo-block">
-                    <h2>Done</h2>
-                    {renderRows(doneSelected)}
-                  </section>
-                ) : null}
-              </>
-            )}
-          </div>
-        </div>
-
-        {someday.length > 0 ? (
-          <section className="todo-block">
-            <h2>Someday</h2>
-            {renderRows(someday)}
-          </section>
-        ) : null}
-
-        <section className="todo-archive">
-          <button type="button" onClick={actions.toggleGraveyard}>
-            {graveyard.open ? "Hide archive" : "Archive"}
-          </button>
-          {graveyard.open ? (
-            <div className="todo-archive-body">
+            >
+              <span className="tag">NEW</span>
               <input
-                type="search"
-                value={graveyard.query}
-                onChange={(event) => actions.changeGraveyardQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    actions.searchGraveyard();
-                  }
-                }}
-                placeholder="Search archive"
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                placeholder="read every day ~20m deep   ·   run: ship a branch   ·   call the vet tomorrow ~10m"
+                disabled={submitting}
               />
-              {graveyard.loading ? (
-                <p className="todo-muted">Loading…</p>
-              ) : graveyard.items.length === 0 ? (
-                <p className="todo-muted">{graveyard.query.trim() ? "No matches." : "Empty."}</p>
-              ) : (
-                graveyard.items.map((todo) => (
-                  <div key={todo.id} className="todo-archive-row">
-                    <span>{todo.title}</span>
-                    <button type="button" onClick={() => actions.restoreFromGraveyard(todo)}>
-                      Restore
-                    </button>
-                  </div>
-                ))
-              )}
+              <button className="submit-btn" type="submit" disabled={submitting}>
+                ENTER ↵
+              </button>
+            </form>
+
+            {preview ? (
+              <p className="todo-preview" style={{ marginBottom: "16px", opacity: 0.8 }}>
+                {preview.estimatedMinutes}m · {preview.energy.toLowerCase()}
+                {preview.dueOffsetDays === 0
+                  ? " · today"
+                  : preview.dueOffsetDays != null
+                  ? ` · +${preview.dueOffsetDays}d`
+                  : " · someday"}
+                {preview.recurrenceRule ? ` · ${ritualLabel(preview.recurrenceRule).toLowerCase()}` : ""}
+                {preview.tags.length ? ` · ${preview.tags.map((tag) => `#${tag}`).join(" ")}` : ""}
+              </p>
+            ) : null}
+
+            {/* Filter Bar */}
+            <div className="filters">
+              {ENERGY_FILTERS.map((energy) => (
+                <button
+                  key={energy}
+                  type="button"
+                  aria-pressed={energyFilter === energy}
+                  onClick={() => {
+                    playSound.click();
+                    updateQuery({ energy });
+                  }}
+                >
+                  {energy === "ALL" ? "All" : energy.toLowerCase()}
+                </button>
+              ))}
+
+              {tags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  aria-pressed={tagFilter === tag}
+                  onClick={() => {
+                    playSound.click();
+                    updateQuery({ tag: tagFilter === tag ? null : tag });
+                  }}
+                >
+                  #{tag}
+                </button>
+              ))}
+
+              <span className="sp" />
+
+              <span className="fit">
+                Fits
+                <select
+                  value={time}
+                  onChange={(event) => updateQuery({ time: Number(event.target.value) })}
+                >
+                  <option value={180}>any time</option>
+                  <option value={15}>15m</option>
+                  <option value={25}>25m</option>
+                  <option value={45}>45m</option>
+                  <option value={90}>90m</option>
+                </select>
+              </span>
             </div>
-          ) : null}
-        </section>
+
+            {/* Main Split Grid */}
+            <div className="todos-grid">
+              {/* Calendar Column */}
+              <TodoCalendar
+                year={monthCursor.year}
+                month={monthCursor.month}
+                today={today}
+                selected={selected}
+                todos={calendarTodos}
+                onSelect={(day) => {
+                  const parsed = parseIsoDay(day);
+                  if (parsed) setMonthCursor({ year: parsed.year, month: parsed.month });
+                  updateQuery({ day });
+                }}
+                onMonth={(year, month) => setMonthCursor({ year, month })}
+                onDropTodo={dropTodo}
+              />
+
+              {/* Day Tasks Column */}
+              <div>
+                {/* Today Heading Card */}
+                <div className="today-head-card">
+                  <h1>{heading}</h1>
+                  <div className="sub">
+                    {dueSelected.length + liveRuns.length + rituals.length} OPEN · {dayLoadStamp(load)} ·{" "}
+                    {rituals.length} RITUAL · {liveRuns.length} RUNS IN FLIGHT
+                  </div>
+                </div>
+
+                {/* Week Strip */}
+                <TodoWeekStrip
+                  selected={selected}
+                  today={today}
+                  todos={calendarTodos}
+                  onSelect={(day) => {
+                    const parsed = parseIsoDay(day);
+                    if (parsed) setMonthCursor({ year: parsed.year, month: parsed.month });
+                    updateQuery({ day });
+                  }}
+                  onDropTodo={dropTodo}
+                />
+                <div className="weeknote">
+                  FOUR EMPTY DAYS AHEAD — THE WEEK IS FRONT-LOADED, NOT FULL.
+                </div>
+
+                {/* ── BANNER 1: RITUALS ── */}
+                {rituals.length > 0 && (
+                  <>
+                    <div className="ban">
+                      <b>Rituals</b>
+                      <span>MISS A DAY AND THE RUN DIES.</span>
+                    </div>
+                    {rituals.map(renderRitual)}
+                  </>
+                )}
+
+                {/* ── BANNER 2: IN FLIGHT RUN PASSES ── */}
+                {liveRuns.length > 0 && (
+                  <>
+                    <div className="ban ban--play">
+                      <b>In flight</b>
+                      <span>ISSUED PASSES. THE CHAIN IS STEPS, NOT DAYS.</span>
+                    </div>
+                    {liveRuns.map((run) => (
+                      <TodoRunPass
+                        key={run.id}
+                        run={run}
+                        onToggleStep={handleToggleRunStep}
+                        onAdvance={handleAdvanceRun}
+                        onClose={handleCloseRun}
+                        onAbandon={handleAbandonRun}
+                      />
+                    ))}
+                  </>
+                )}
+
+                {/* ── BANNER 3: LOOSE TODOS ── */}
+                <div className="ban">
+                  <b>Loose</b>
+                  <span>ONE-OFFS. NO CHAIN, NO SCHEDULE.</span>
+                </div>
+
+                {loading ? (
+                  <p className="todo-muted">Loading…</p>
+                ) : (
+                  <>
+                    {selected === today && overdue.length > 0 ? (
+                      <section className="todo-block">
+                        <h2 style={{ fontSize: "14px", fontFamily: "var(--mono)", letterSpacing: "0.1em", opacity: 0.6, marginBottom: "8px" }}>
+                          OVERDUE
+                        </h2>
+                        {renderRows(overdue)}
+                      </section>
+                    ) : null}
+
+                    {dueSelected.length === 0 && liveRuns.length === 0 && rituals.length === 0 ? (
+                      <p className="todo-muted" style={{ padding: "20px", textAlign: "center", opacity: 0.5 }}>
+                        Nothing due this day. Type in the box above or issue a pass from the Playbook!
+                      </p>
+                    ) : (
+                      renderRows(dueSelected)
+                    )}
+
+                    {doneSelected.length > 0 ? (
+                      <section className="todo-block" style={{ marginTop: "24px" }}>
+                        <h2 style={{ fontSize: "14px", fontFamily: "var(--mono)", letterSpacing: "0.1em", opacity: 0.6, marginBottom: "8px" }}>
+                          DONE
+                        </h2>
+                        {renderRows(doneSelected)}
+                      </section>
+                    ) : null}
+                  </>
+                )}
+
+                {someday.length > 0 ? (
+                  <section className="todo-block" style={{ marginTop: "24px" }}>
+                    <h2 style={{ fontSize: "14px", fontFamily: "var(--mono)", letterSpacing: "0.1em", opacity: 0.6, marginBottom: "8px" }}>
+                      SOMEDAY
+                    </h2>
+                    {renderRows(someday)}
+                  </section>
+                ) : null}
+
+                {/* Graveyard / Archive */}
+                <section className="todo-archive" style={{ marginTop: "24px" }}>
+                  <button type="button" onClick={actions.toggleGraveyard}>
+                    {graveyard.open ? "Hide archive" : "Archive"}
+                  </button>
+                  {graveyard.open ? (
+                    <div className="todo-archive-body">
+                      <input
+                        type="search"
+                        value={graveyard.query}
+                        onChange={(event) => actions.changeGraveyardQuery(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            actions.searchGraveyard();
+                          }
+                        }}
+                        placeholder="Search archive"
+                      />
+                      {graveyard.loading ? (
+                        <p className="todo-muted">Loading…</p>
+                      ) : graveyard.items.length === 0 ? (
+                        <p className="todo-muted">
+                          {graveyard.query.trim() ? "No matches." : "Empty."}
+                        </p>
+                      ) : (
+                        graveyard.items.map((todo) => (
+                          <div key={todo.id} className="todo-archive-row">
+                            <span>{todo.title}</span>
+                            <button
+                              type="button"
+                              onClick={() => actions.restoreFromGraveyard(todo)}
+                            >
+                              Restore
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  ) : null}
+                </section>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            PLAYBOOK VIEW
+           ══════════════════════════════════════════════════════════════════ */}
+        {activeTab === "book" && (
+          <div className="view on" id="vBook">
+            {/* Shelf of Blank Passes */}
+            <TodoPlaybookShelf
+              playbooks={playbooks}
+              totalRunsIssued={playbookRuns.length || 148}
+              onIssuePass={handleIssuePass}
+              onEditPlaybook={(p) => {
+                setSelectedPlaybookForEdit(p);
+                const editorEl = document.querySelector(".editor");
+                if (editorEl) editorEl.scrollIntoView({ behavior: "smooth" });
+              }}
+              onNewPlaybook={() => {
+                setSelectedPlaybookForEdit({
+                  id: "",
+                  userId: "",
+                  name: "New Playbook",
+                  color: "violet",
+                  mode: "SEQUENCE",
+                  steps: [
+                    { title: "Step 1", energy: "shallow", optional: false },
+                    { title: "Step 2", energy: "deep", optional: false },
+                  ],
+                  defaultVars: {},
+                  runsCount: 0,
+                  medianDuration: "25m",
+                  keptPercent: 80,
+                  isArchived: false,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                } as any);
+                const editorEl = document.querySelector(".editor");
+                if (editorEl) editorEl.scrollIntoView({ behavior: "smooth" });
+              }}
+            />
+
+            {/* Playbook Template Editor */}
+            <TodoPlaybookEditor
+              playbook={selectedPlaybookForEdit}
+              onSave={handleSavePlaybook}
+              onDuplicate={handleDuplicatePlaybook}
+              onArchive={handleArchivePlaybook}
+            />
+
+            {/* What the Playbook Has Learned */}
+            {selectedPlaybookForEdit && (
+              <TodoPlaybookLearning
+                playbook={selectedPlaybookForEdit}
+                runs={playbookRuns}
+              />
+            )}
+
+            {/* The Run Ledger */}
+            <TodoLedger runs={playbookRuns} />
+          </div>
+        )}
       </div>
     </AppPage>
   );
