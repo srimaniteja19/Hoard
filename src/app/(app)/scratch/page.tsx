@@ -6,12 +6,15 @@ import { AppLoading } from "@/components/chrome/AppLoading";
 import { ScratchSlab } from "@/components/scratch/ScratchSlab";
 import { ScratchFilterBar } from "@/components/scratch/ScratchFilterBar";
 import { ScratchFeed } from "@/components/scratch/ScratchFeed";
+import { ScratchSheet } from "@/components/scratch/ScratchSheet";
+import { ScratchYearWall } from "@/components/scratch/ScratchYearWall";
 import { ScratchSidePanels } from "@/components/scratch/ScratchSidePanels";
 import { ScratchWeldModal } from "@/components/scratch/ScratchWeldModal";
 import { ScrapRow } from "@/db/schema";
 import { ScratchStats } from "@/lib/dal/scratch";
 import { CollisionCandidate, CollisionHit } from "@/lib/scratch/collision";
 import { ScratchFilters, filterScraps } from "@/lib/scratch/filters";
+import { playSound } from "@/lib/sound";
 
 function ScratchPageContent() {
   const [scraps, setScraps] = useState<ScrapRow[]>([]);
@@ -19,6 +22,7 @@ function ScratchPageContent() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"stream" | "logbook">("stream");
 
   // Filters state
   const [filters, setFilters] = useState<ScratchFilters>({
@@ -58,7 +62,7 @@ function ScratchPageContent() {
         setStats(data.stats || null);
       }
     } catch (_) {
-      // silent — stats refresh is best-effort
+      // silent
     }
   }, []);
 
@@ -100,7 +104,7 @@ function ScratchPageContent() {
       if (res.ok) {
         const created: ScrapRow = await res.json();
         setScraps((prev) => [created, ...prev]);
-        showToast("✓ Scrap filed to stream");
+        showToast(created.kind === "LOG" ? "✓ Log filed to The Sheet" : "✓ Scrap filed to The Shelf");
         void refreshStats();
       }
     } catch (err) {
@@ -159,7 +163,7 @@ function ScratchPageContent() {
       if (res.ok) {
         const { scrap } = await res.json();
         setScraps((prev) => prev.map((s) => (s.id === id ? { ...s, ...scrap } : s)));
-        showToast("✓ Filed to Todos");
+        showToast("✓ Promoted to Todo item");
         void refreshStats();
       }
     } catch (err) {
@@ -167,68 +171,65 @@ function ScratchPageContent() {
     }
   };
 
-  // 5. Open weld modal
+  // 5. Open Weld Modal
   const handleOpenWeldModal = (id: string) => {
-    const target = scraps.find((s) => s.id === id) || null;
+    const target = scraps.find((s) => s.id === id);
     if (target) {
       setWeldTargetScrap(target);
       setIsWeldModalOpen(true);
     }
   };
 
-  // 6. Confirm weld action
-  const handleConfirmWeld = async (targetId: string, sourceIdOrText: string) => {
-    try {
-      const res = await fetch(`/api/scratch/${targetId}/weld`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ summary: sourceIdOrText }),
-      });
-
-      if (res.ok) {
-        const updated: ScrapRow = await res.json();
-        setScraps((prev) => prev.map((s) => (s.id === targetId ? { ...s, ...updated } : s)));
-        showToast("✓ Scraps welded together");
-      }
-    } catch (err) {
-      console.error("Failed to weld scrap", err);
+  // 6. Direct weld from collision banner in Slab
+  const handleWeldFromSlab = (candidate: CollisionHit, currentSlabText: string) => {
+    const target = scraps.find((s) => s.id === candidate.id);
+    if (target) {
+      const mergedNotes = target.notes
+        ? `${target.notes}\n\n---\n\n${currentSlabText}`
+        : currentSlabText;
+      void handleUpdateNotes(target.id, mergedNotes);
+      showToast("✓ Welded into existing scrap notes");
     }
   };
 
-  // 7. Weld directly from Slab collision hit
-  const handleWeldFromSlab = async (hit: CollisionHit, currentSlabText: string) => {
-    if (currentSlabText.trim()) {
-      const res = await fetch("/api/scratch", {
+  // 7. Confirm weld from modal
+  const handleConfirmWeld = async (sourceId: string, targetId: string) => {
+    try {
+      const res = await fetch("/api/scratch/weld", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: currentSlabText.trim() }),
+        body: JSON.stringify({ sourceId, targetId }),
       });
 
       if (res.ok) {
-        const created: ScrapRow = await res.json();
-        await handleConfirmWeld(created.id, hit.content.slice(0, 40));
+        const { updatedTarget } = await res.json();
+        setScraps((prev) =>
+          prev
+            .filter((s) => s.id !== sourceId)
+            .map((s) => (s.id === targetId ? { ...s, ...updatedTarget } : s))
+        );
+        setIsWeldModalOpen(false);
+        setWeldTargetScrap(null);
+        showToast("✓ Welded scraps together");
         void refreshStats();
       }
-    } else {
-      handleOpenWeldModal(hit.id);
+    } catch (err) {
+      console.error("Failed to weld scraps", err);
     }
   };
 
-  // 8. Bury single scrap
+  // 8. Bury / Soft Delete
   const handleBury = async (id: string) => {
     try {
       const res = await fetch(`/api/scratch/${id}`, {
-        method: "PATCH",
+        method: "DELETE",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isBuried: true, status: "compost", statusLabel: "BURIED" }),
       });
 
       if (res.ok) {
         setScraps((prev) => prev.filter((s) => s.id !== id));
-        showToast("✓ Scrap buried");
+        showToast("✓ Buried scrap");
         void refreshStats();
       }
     } catch (err) {
@@ -292,10 +293,18 @@ function ScratchPageContent() {
     }));
   }, [scraps]);
 
-  // Compute filtered scraps
-  const filteredScraps = useMemo(() => {
-    return filterScraps(scraps, filters);
-  }, [scraps, filters]);
+  // Split into Shelf (non-LOG) and Sheet (LOG) scraps
+  const shelfScraps = useMemo(() => scraps.filter((s) => s.kind !== "LOG"), [scraps]);
+  const sheetScraps = useMemo(() => scraps.filter((s) => s.kind === "LOG"), [scraps]);
+
+  // Apply filters
+  const filteredShelfScraps = useMemo(() => {
+    return filterScraps(shelfScraps, filters);
+  }, [shelfScraps, filters]);
+
+  const filteredSheetScraps = useMemo(() => {
+    return filterScraps(sheetScraps, filters);
+  }, [sheetScraps, filters]);
 
   const hasActiveFilters =
     !!filters.query ||
@@ -308,32 +317,37 @@ function ScratchPageContent() {
     <AppPage width="wide">
       <div className="scratch-page-root">
         <div className="scratch-wrap">
-          {/* ── TOP HEADER & STATS ── */}
-          <div className="scratch-top">
+          {/* ── TOP HEADER & VIEW SWITCHER ── */}
+          <div className="top">
             <div>
               <h1>Scratch</h1>
               <div className="sub">
-                Half-thoughts, questions, and things you&apos;d lose otherwise. Nothing
-                here has to be finished — that&apos;s what TIL is for. Add notes to any
-                scrap when it starts turning into something.
+                TWO ZONES. THE SHEET HOLDS WHAT HAPPENED — CLOSED ON ARRIVAL, SINKS INTO ITS DAY. THE SHELF HOLDS WHAT&apos;S OPEN — QUESTIONS, BUGS, DRAFTS — UNTIL IT PROMOTES, RESOLVES, OR COMPOSTS. NOTHING IS EVER FILED.
               </div>
             </div>
-            <div className="scratch-mini">
-              <span>
-                TOTAL <b>{scraps.length}</b>
-              </span>
-              <span>
-                THIS WEEK <b>{stats?.thisWeek ?? 0}</b>
-              </span>
-              <span>
-                PROMOTED <b>{stats?.promoted ?? 0}</b>
-              </span>
-              <span>
-                OPEN QUESTIONS <b>{stats?.openQuestions ?? 0}</b>
-              </span>
-              <span className="warn">
-                GOING COLD <b>{stats?.goingCold ?? 0}</b>
-              </span>
+            <div className="views" id="views">
+              <button
+                type="button"
+                data-v="stream"
+                aria-pressed={viewMode === "stream"}
+                onClick={() => {
+                  playSound.click();
+                  setViewMode("stream");
+                }}
+              >
+                STREAM
+              </button>
+              <button
+                type="button"
+                data-v="logbook"
+                aria-pressed={viewMode === "logbook"}
+                onClick={() => {
+                  playSound.click();
+                  setViewMode("logbook");
+                }}
+              >
+                LOGBOOK
+              </button>
             </div>
           </div>
 
@@ -371,13 +385,13 @@ function ScratchPageContent() {
           <ScratchFilterBar
             scraps={scraps}
             totalCount={scraps.length}
-            filteredCount={filteredScraps.length}
+            filteredCount={filteredShelfScraps.length + filteredSheetScraps.length}
             filters={filters}
             onFilterChange={handleFilterChange}
             onResetFilters={handleResetFilters}
           />
 
-          {/* ── MAIN CONTENT (FEED + SIDE PANELS) ── */}
+          {/* ── MAIN CONTENT (STREAM OR LOGBOOK) ── */}
           {loading ? (
             <div
               style={{
@@ -390,30 +404,90 @@ function ScratchPageContent() {
             >
               LOADING SCRATCH MEMORY...
             </div>
-          ) : (
-            <div className="scratch-cols">
-              <ScratchFeed
-                scraps={filteredScraps}
-                hasActiveFilters={hasActiveFilters}
-                onResetFilters={handleResetFilters}
-                onUpdateNotes={handleUpdateNotes}
-                onPromoteTil={handlePromoteTil}
-                onPromoteTodo={handlePromoteTodo}
-                onWeld={handleOpenWeldModal}
-                onBury={handleBury}
-              />
+          ) : viewMode === "stream" ? (
+            /* ═══ STREAM VIEW: SHELF + SHEET RAIL + SIDE PANELS ═══ */
+            <div className="stream" id="streamView">
+              {/* THE SHELF */}
+              <div>
+                <div className="zone">
+                  <b>The Shelf</b>
+                  <i>{shelfScraps.length} OPEN</i>
+                  <span />
+                  <span className="rule">
+                    LEAVES ONLY BY PROMOTING, RESOLVING, OR COMPOSTING — THERE IS NO &quot;PUT AWAY&quot;.
+                  </span>
+                </div>
+                <ScratchFeed
+                  scraps={filteredShelfScraps}
+                  hasActiveFilters={hasActiveFilters}
+                  onResetFilters={handleResetFilters}
+                  onUpdateNotes={handleUpdateNotes}
+                  onPromoteTil={handlePromoteTil}
+                  onPromoteTodo={handlePromoteTodo}
+                  onWeld={handleOpenWeldModal}
+                  onBury={handleBury}
+                />
+              </div>
 
+              {/* SHEET RAIL */}
+              <div className="rail">
+                <div className="zone">
+                  <b>The Sheet</b>
+                  <i>TODAY</i>
+                  <span />
+                </div>
+                <ScratchSheet
+                  scraps={filteredSheetScraps}
+                  isRail={true}
+                  onTagClick={(tag) => handleFilterChange({ tag })}
+                />
+              </div>
+
+              {/* SIDE PANELS */}
               <ScratchSidePanels
                 scraps={scraps}
                 stats={stats}
-                selectedDate={filters.date || null}
+                mode="stream"
                 selectedTag={filters.tag || null}
-                onSelectDate={(date) => handleFilterChange({ date })}
                 onSelectTag={(tag) => handleFilterChange({ tag })}
                 onSelectQuestion={handleSelectQuestion}
                 onBuryCompost={handleBuryCompost}
                 onKeepCompost={handleKeepCompost}
               />
+            </div>
+          ) : (
+            /* ═══ LOGBOOK VIEW: YEAR WALL + FULL SHEET + LOGBOOK SIDE PANELS ═══ */
+            <div className="logbook on" id="logbookView">
+              <ScratchYearWall
+                scraps={scraps}
+                onSelectDate={(date) => handleFilterChange({ date })}
+              />
+
+              <div className="lb">
+                <div>
+                  <div className="zone">
+                    <b>The Sheet</b>
+                    <i>{sheetScraps.length} TOTAL LOGGED</i>
+                    <span />
+                  </div>
+                  <ScratchSheet
+                    scraps={filteredSheetScraps}
+                    isRail={false}
+                    onTagClick={(tag) => handleFilterChange({ tag })}
+                  />
+                </div>
+
+                <ScratchSidePanels
+                  scraps={scraps}
+                  stats={stats}
+                  mode="logbook"
+                  selectedTag={filters.tag || null}
+                  onSelectTag={(tag) => handleFilterChange({ tag })}
+                  onSelectQuestion={handleSelectQuestion}
+                  onBuryCompost={handleBuryCompost}
+                  onKeepCompost={handleKeepCompost}
+                />
+              </div>
             </div>
           )}
         </div>

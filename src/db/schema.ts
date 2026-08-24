@@ -592,11 +592,31 @@ export const scrapKindValues = [
   "ACTION",
   "RANT",
   "IDEA",
+  "LOG",
 ] as const;
 export type ScrapKind = (typeof scrapKindValues)[number];
 
 export const scrapStatusValues = ["raw", "done", "pages", "compost"] as const;
 export type ScrapStatus = (typeof scrapStatusValues)[number];
+
+export interface ScrapEntities {
+  verb?: string;
+  label?: string; // "Film" | "Movement" | "Person" | "Book" | "Food" | "Place" | "Made" | "Game" | "Audio"
+  glyph?: string; // "▶" | "◈" | "◉" | "▤" | "◍" | "◆" | "⚒" | "🎮" | "♫" | "·"
+  color?: string; // "violet" | "lime" | "pink" | "cyan" | "orange" | "yellow"
+  title?: string;
+  measure?: string; // "10"
+  unit?: string; // "MILES"
+  person?: string; // "Sam"
+  place?: string; // "Half Moon Bay"
+  rating?: string; // "9/10"
+  note?: string;
+  tally?: string;
+  isFirst?: boolean;
+  firstLabel?: string; // "FIRST VISIT" | "FIRST TIME IN 6 WEEKS"
+  shiftNote?: string; // e.g. "LOGGED SUN · HAPPENED SAT"
+  isPlain?: boolean;
+}
 
 export const scraps = pgTable(
   "scraps",
@@ -623,6 +643,9 @@ export const scraps = pgTable(
       { onDelete: "set null" }
     ),
     loggedFor: date("logged_for").notNull(),
+    occurredOn: date("occurred_on"),
+    entities: jsonb("entities").$type<ScrapEntities>(),
+    tags: jsonb("tags").$type<string[]>().default([]),
     isBuried: boolean("is_buried").notNull().default(false),
     buriedAt: timestamp("buried_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -630,6 +653,7 @@ export const scraps = pgTable(
   },
   (table) => [
     index("scraps_user_logged_for_idx").on(table.userId, table.isBuried, table.loggedFor.desc()),
+    index("scraps_user_occurred_on_idx").on(table.userId, table.isBuried, table.occurredOn.desc()),
     index("scraps_user_created_idx").on(table.userId, table.isBuried, table.createdAt.desc()),
     index("scraps_user_kind_idx").on(table.userId, table.kind),
   ]

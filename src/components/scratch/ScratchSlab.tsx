@@ -34,9 +34,11 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
     return parseSlabText(value);
   }, [value]);
 
+  // Collisions are shelf-only: disabled for log entries
   const collisions = useMemo(() => {
+    if (parsed.isLog) return [];
     return findCollisions(value, existingScraps, 3);
-  }, [value, existingScraps]);
+  }, [value, existingScraps, parsed.isLog]);
 
   const handleCommit = useCallback(async () => {
     const trimmed = value.trim();
@@ -101,7 +103,7 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
 
   return (
     <div>
-      <div className={`slab${isDragOver ? " drag-over" : ""}`}>
+      <div className={`slab${parsed.isLog ? " islog" : ""}${isDragOver ? " drag-over" : ""}`}>
         <textarea
           ref={textareaRef}
           id="slab"
@@ -113,7 +115,7 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
           onDragOver={handleDragOver}
           onDragLeave={() => setIsDragOver(false)}
           onDrop={handleDrop}
-          placeholder="Start typing or paste a screenshot (Cmd+V). ? question · > quote · → action · !! rant · #tag"
+          placeholder="Type anything.  walked 10 miles yesterday #fitness  ·  ? why does this keep happening  ·  → try isolation: isolate"
           disabled={submitting || uploadingImage}
         />
         {uploadingImage && (
@@ -172,7 +174,7 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
           {parsed.chips.map((chip, idx) => (
             <span
               key={idx}
-              className={`pchip ${chip.type}${parsed.isGhost ? " ghost" : ""}`}
+              className={`pchip ${chip.type}${chip.isSheet ? " sheet" : ""}${parsed.isGhost ? " ghost" : ""}`}
             >
               {chip.label}
             </span>
@@ -190,6 +192,10 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
             FILE IT ⌘↵
           </button>
         </div>
+      </div>
+
+      <div className="grammar">
+        TWO RULES, THAT&apos;S ALL. A VERB OR PREFIX SETS THE KIND · #TAG SETS THE TOPIC. VERBS: WATCHED READ PLAYED WALKED RAN SWAM ATE COOKED WENT SAW MADE LISTENED. PREFIXES: ~ LOG · ? QUESTION · &gt; QUOTE · → ACTION · !! RANT.
       </div>
 
       {collisions.length > 0 && (

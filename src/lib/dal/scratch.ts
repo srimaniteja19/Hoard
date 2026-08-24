@@ -28,7 +28,10 @@ export async function getScraps(
     .select()
     .from(scraps)
     .where(and(...conditions))
-    .orderBy(desc(scraps.loggedFor), desc(scraps.createdAt));
+    .orderBy(
+      desc(sql`COALESCE(${scraps.occurredOn}, ${scraps.loggedFor})`),
+      desc(scraps.createdAt)
+    );
 
   if (options?.limit) {
     query.limit(options.limit);
@@ -53,17 +56,22 @@ export async function createScrap(
     notes?: string;
     kind?: ScrapKind;
     loggedFor?: string;
+    occurredOn?: string;
   }
 ): Promise<ScrapRow> {
   const timezone = await getUserTimezone(userId);
   const parsed = parseSlabText(data.content);
   const loggedFor = data.loggedFor || getLoggedForDate(timezone);
+  const occurredOn = data.occurredOn || parsed.occurredOn || loggedFor;
   const wordCount = (data.notes || "").trim().split(/\s+/).filter(Boolean).length;
 
   let status: ScrapStatus = "raw";
   let statusLabel = "RAW";
 
-  if (data.notes && data.notes.trim()) {
+  if (parsed.kind === "LOG") {
+    status = "done";
+    statusLabel = "LOGGED";
+  } else if (data.notes && data.notes.trim()) {
     status = "pages";
     statusLabel = `NOTES · ${wordCount} WORDS`;
   }
@@ -80,6 +88,9 @@ export async function createScrap(
       status,
       statusLabel,
       loggedFor,
+      occurredOn,
+      entities: parsed.entities,
+      tags: parsed.tags,
     })
     .returning();
 

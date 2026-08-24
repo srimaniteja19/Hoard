@@ -1,4 +1,5 @@
-import { ScrapKind } from "@/db/schema";
+import { ScrapKind, ScrapEntities } from "@/db/schema";
+import { parseLogEntry, LOG_VERBS } from "./logParser";
 
 export const STOP_WORDS = new Set(
   (
@@ -9,8 +10,9 @@ export const STOP_WORDS = new Set(
 );
 
 export interface ParseChip {
-  type: "kind" | "tag" | "act" | "ghost";
+  type: "dest" | "kind" | "tag" | "meas" | "who" | "when" | "act" | "ghost";
   label: string;
+  isSheet?: boolean;
 }
 
 export interface ParsedSlab {
@@ -21,6 +23,9 @@ export interface ParsedSlab {
   chips: ParseChip[];
   wordCount: number;
   isGhost: boolean;
+  isLog: boolean;
+  occurredOn?: string;
+  entities?: ScrapEntities;
 }
 
 const TILTS = ["-.5deg", ".4deg", "-.3deg", ".55deg", "-.4deg", ".35deg", "-.25deg", ".5deg", "-.35deg"];
@@ -38,7 +43,7 @@ export function extractKeywords(text: string): string[] {
   return Array.from(new Set(matches.filter((w) => !STOP_WORDS.has(w))));
 }
 
-export function parseSlabText(input: string): ParsedSlab {
+export function parseSlabText(input: string, referenceDate = new Date()): ParsedSlab {
   const raw = input.trim();
   const wordCount = raw ? raw.split(/\s+/).filter(Boolean).length : 0;
   const isGhost = !raw;
@@ -49,12 +54,74 @@ export function parseSlabText(input: string): ParsedSlab {
       color: "cyan",
       tilt: "0deg",
       tags: [],
-      chips: [{ type: "kind", label: "FRAGMENT" }],
+      chips: [
+        { type: "dest", label: "→ THE SHELF" },
+        { type: "kind", label: "FRAGMENT" },
+      ],
       wordCount: 0,
       isGhost: true,
+      isLog: false,
     };
   }
 
+  // Check for LOG entry first
+  const logParsed = parseLogEntry(raw, referenceDate);
+  if (logParsed.isLog) {
+    const chips: ParseChip[] = [{ type: "dest", label: "→ THE SHEET", isSheet: true }];
+    const label = logParsed.entities.label;
+
+    chips.push({
+      type: "kind",
+      label: label ? `LOG · ${label.toUpperCase()}` : "LOG",
+    });
+
+    if (logParsed.entities.shiftNote) {
+      chips.push({
+        type: "when",
+        label: logParsed.entities.shiftNote,
+      });
+    }
+
+    if (logParsed.entities.measure && logParsed.entities.unit) {
+      chips.push({
+        type: "meas",
+        label: `${logParsed.entities.measure} ${logParsed.entities.unit}`,
+      });
+    }
+
+    if (logParsed.entities.person) {
+      chips.push({
+        type: "who",
+        label: logParsed.entities.person.toUpperCase(),
+      });
+    }
+
+    for (const tag of logParsed.tags) {
+      chips.push({ type: "tag", label: tag });
+    }
+
+    if (logParsed.entities.isPlain) {
+      chips.push({
+        type: "ghost",
+        label: "NO ENTITY — FILES AS A PLAIN DAY NOTE",
+      });
+    }
+
+    return {
+      kind: "LOG",
+      color: "orange",
+      tilt: getDeterministicTilt(raw),
+      tags: logParsed.tags,
+      chips,
+      wordCount,
+      isGhost: false,
+      isLog: true,
+      occurredOn: logParsed.occurredOn,
+      entities: logParsed.entities,
+    };
+  }
+
+  // General Shelf Scraps
   let kind: ScrapKind = "FRAGMENT";
   let color = "cyan";
 
@@ -75,19 +142,22 @@ export function parseSlabText(input: string): ParsedSlab {
     color = "cyan";
   }
 
-  const tags = (raw.match(/#[\w-]+/g) || []).map((t) => t.toLowerCase());
+  const tags = (raw.match(/#[a-zA-Z][\w-]*/g) || []).map((t) => t.toLowerCase());
 
-  const chips: ParseChip[] = [{ type: "kind", label: kind }];
+  const chips: ParseChip[] = [
+    { type: "dest", label: "→ THE SHELF" },
+    { type: "kind", label: kind },
+  ];
 
   for (const tag of tags) {
     chips.push({ type: "tag", label: tag });
   }
 
   if (kind === "ACTION") {
-    chips.push({ type: "act", label: "WILL OFFER AS A TODO" });
+    chips.push({ type: "ghost", label: "WILL OFFER AS A TODO" });
   }
   if (kind === "QUESTION") {
-    chips.push({ type: "act", label: "STAYS OPEN UNTIL ANSWERED" });
+    chips.push({ type: "ghost", label: "STAYS OPEN UNTIL ANSWERED IN TIL" });
   }
 
   return {
@@ -98,6 +168,9 @@ export function parseSlabText(input: string): ParsedSlab {
     chips,
     wordCount,
     isGhost: false,
+    isLog: false,
+    occurredOn: logParsed.occurredOn,
+    entities: {},
   };
 }
 
@@ -110,14 +183,16 @@ export function formatScrapDayHeader(dateStr: string, todayIso?: string, yesterd
 
   const parsed = new Date(dateStr + "T00:00:00");
   const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const dayNum = parsed.getDate();
   const monthStr = monthNames[parsed.getMonth()] || "";
+  const weekdayStr = dayNames[parsed.getDay()] || "";
 
   if (dateStr === currentToday) {
-    return `TODAY · ${dayNum} ${monthStr}`;
+    return `TODAY · ${weekdayStr} ${dayNum} ${monthStr}`;
   }
   if (dateStr === currentYesterday) {
-    return "YESTERDAY";
+    return `YESTERDAY · ${weekdayStr} ${dayNum} ${monthStr}`;
   }
-  return `${dayNum} ${monthStr}`;
+  return `${weekdayStr} ${dayNum} ${monthStr}`;
 }
