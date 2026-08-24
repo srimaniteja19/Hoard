@@ -39,6 +39,10 @@ export async function POST(req: Request) {
       loggedFor: body.loggedFor,
       occurredOn: body.occurredOn,
       clientDate: body.clientDate,
+      entities: body.entities,
+      inkSvg: body.inkSvg,
+      inkStrokes: body.inkStrokes,
+      transcription: body.transcription,
     });
 
     return NextResponse.json(created, { status: 201 });

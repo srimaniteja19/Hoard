@@ -62,5 +62,26 @@ describe("renderScratchMarkdown", () => {
     const res2 = renderScratchMarkdown(inline);
     expect(res2).toContain('<span class="md-inline-img-wrap"><img src="/api/scratch/assets/456" alt="diagram"');
   });
+
+  it("handles :::ink, :::marg, and :::hand custom directives", () => {
+    const md = `:::ink stacking-context, sketched
+:::
+
+:::marg
+The three layers are the whole idea.
+:::
+
+:::hand
+if the state is invisible, the error will be too
+:::`;
+    const res = renderScratchMarkdown(md);
+    expect(res).toContain('<div class="inkblk">');
+    expect(res).toContain('<span>✎ SKETCH</span>');
+    expect(res).toContain('<div class="inkblk__f">stacking-context, sketched</div>');
+    expect(res).toContain('<div class="marg">');
+    expect(res).toContain('The three layers are the whole idea.');
+    expect(res).toContain('<div class="hwtext">');
+    expect(res).toContain('if the state is invisible, the error will be too');
+  });
 });
 

@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { scraps, ScrapRow, NewScrapRow, ScrapKind, ScrapStatus, todos, tilEntries } from "@/db/schema";
+import { scraps, ScrapRow, NewScrapRow, ScrapKind, ScrapStatus, ScrapEntities, todos, tilEntries } from "@/db/schema";
 import { eq, and, desc, sql, gte, inArray } from "drizzle-orm";
 import { parseSlabText, getDeterministicTilt, getLocalTodayIso } from "@/lib/scratch/parse";
 import { generateShortHash, getLoggedForDate, getUserTimezone } from "@/lib/dal/til";
@@ -58,12 +58,30 @@ export async function createScrap(
     loggedFor?: string;
     occurredOn?: string;
     clientDate?: string;
+    entities?: any;
+    inkSvg?: string;
+    inkStrokes?: any[];
+    transcription?: string;
   }
 ): Promise<ScrapRow> {
   const timezone = await getUserTimezone(userId);
   const now = new Date();
   const refDate = data.clientDate ? new Date(data.clientDate + "T12:00:00") : now;
-  const parsed = parseSlabText(data.content, refDate);
+  const isInk = data.kind === "INK";
+  const parsed = isInk
+    ? {
+        kind: "INK" as ScrapKind,
+        color: "lime",
+        tilt: getDeterministicTilt(data.content || "ink"),
+        tags: (data.content.match(/#[a-zA-Z][\w-]*/g) || []).map((t) => t.toLowerCase()),
+        entities: {
+          inkSvg: data.inkSvg || data.entities?.inkSvg,
+          inkStrokes: data.inkStrokes || data.entities?.inkStrokes,
+          transcription: data.transcription || data.entities?.transcription,
+        },
+        occurredOn: undefined,
+      }
+    : parseSlabText(data.content, refDate);
   const defaultLocal = getLocalTodayIso(now);
   const loggedFor =
     data.loggedFor ||
@@ -75,7 +93,13 @@ export async function createScrap(
   let status: ScrapStatus = "raw";
   let statusLabel = "RAW";
 
-  if (parsed.kind === "LOG") {
+  if (isInk) {
+    const hasTranscription = Boolean(
+      (data.transcription || data.entities?.transcription || "").trim()
+    );
+    status = hasTranscription ? "pages" : "raw";
+    statusLabel = hasTranscription ? "OPEN · TRANSCRIBED" : "NOT SEARCHABLE — ADD A LINE";
+  } else if (parsed.kind === "LOG") {
     status = "done";
     statusLabel = "LOGGED";
   } else if (data.notes && data.notes.trim()) {
@@ -83,20 +107,28 @@ export async function createScrap(
     statusLabel = `NOTES · ${wordCount} WORDS`;
   }
 
+  const mergedEntities = {
+    ...parsed.entities,
+    ...(data.entities || {}),
+    ...(data.inkSvg ? { inkSvg: data.inkSvg } : {}),
+    ...(data.inkStrokes ? { inkStrokes: data.inkStrokes } : {}),
+    ...(data.transcription ? { transcription: data.transcription } : {}),
+  };
+
   const [created] = await db
     .insert(scraps)
     .values({
       userId,
       content: data.content.trim(),
       kind: data.kind || parsed.kind,
-      color: parsed.color,
+      color: isInk ? "lime" : parsed.color,
       tilt: parsed.tilt,
       notes: data.notes || "",
       status,
       statusLabel,
       loggedFor,
       occurredOn,
-      entities: parsed.entities,
+      entities: mergedEntities,
       tags: parsed.tags,
     })
     .returning();
@@ -294,6 +326,11 @@ export interface ScratchStats {
   promoted: number;
   openQuestions: number;
   goingCold: number;
+  inkHealth: {
+    total: number;
+    transcribed: number;
+    untranscribed: number;
+  };
   whereScrapsGo: {
     til: number;
     todo: number;
@@ -334,6 +371,10 @@ export async function getScratchStats(userId: string): Promise<ScratchStats> {
   let openQuestions = 0;
   let goingCold = 0;
 
+  let inkTotal = 0;
+  let inkTranscribed = 0;
+  let inkUntranscribed = 0;
+
   let tilCount = 0;
   let todoCount = 0;
   let atlasCount = 0;
@@ -345,6 +386,16 @@ export async function getScratchStats(userId: string): Promise<ScratchStats> {
   for (const s of allScraps) {
     const created = new Date(s.createdAt);
     const diffDays = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (s.kind === "INK" && !s.isBuried) {
+      inkTotal++;
+      const ent = (s.entities || {}) as ScrapEntities;
+      if (ent.transcription && ent.transcription.trim()) {
+        inkTranscribed++;
+      } else {
+        inkUntranscribed++;
+      }
+    }
 
     if (created >= weekAgo && !s.isBuried) {
       thisWeek++;
@@ -407,6 +458,11 @@ export async function getScratchStats(userId: string): Promise<ScratchStats> {
     promoted,
     openQuestions,
     goingCold,
+    inkHealth: {
+      total: inkTotal,
+      transcribed: inkTranscribed,
+      untranscribed: inkUntranscribed,
+    },
     whereScrapsGo: {
       til: tilCount,
       todo: todoCount,

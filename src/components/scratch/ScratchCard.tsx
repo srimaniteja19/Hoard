@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ScrapRow } from "@/db/schema";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { ScrapRow, ScrapEntities } from "@/db/schema";
 import { ScratchMarkdown } from "./ScratchMarkdown";
 import {
   uploadScrapImage,
   extractImagesFromClipboard,
   extractImagesFromDragEvent,
 } from "@/lib/scratch/image";
+import { createInkEngine, SAMPLE_SKETCHES } from "@/lib/scratch/ink";
 import { playSound } from "@/lib/sound";
 
 interface ScratchCardProps {
@@ -20,7 +21,7 @@ interface ScratchCardProps {
   onBury: (id: string) => Promise<void> | void;
 }
 
-type NoteMode = "split" | "edit" | "read";
+type NoteMode = "split" | "edit" | "read" | "ink";
 
 export const ScratchCard: React.FC<ScratchCardProps> = ({
   scrap,
@@ -39,9 +40,25 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Ink Studio state
+  const [studioActivePen, setStudioActivePen] = useState(0);
+  const [studioPaper, setStudioPaper] = useState<"plain" | "dot" | "rule" | "iso">("dot");
+  const [studioStrokeCount, setStudioStrokeCount] = useState(0);
+  const [isStylusLive, setIsStylusLive] = useState(false);
+
+  // Inline Transcription editing for INK cards
+  const [editingTranscription, setEditingTranscription] = useState(false);
+  const ent = (scrap.entities || {}) as ScrapEntities;
+  const currentTranscription = ent.transcription || (scrap.kind === "INK" && scrap.content !== "Handwritten Ink Scrap" ? scrap.content : "");
+  const [transcriptionVal, setTranscriptionVal] = useState(currentTranscription);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Studio canvas ref & engine
+  const studioCanvasRef = useRef<HTMLCanvasElement>(null);
+  const studioEngineRef = useRef<ReturnType<typeof createInkEngine> | null>(null);
 
   const [aiStreaming, setAiStreaming] = useState(false);
   const [aiStreamedText, setAiStreamedText] = useState("");
@@ -49,6 +66,42 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   const [aiDone, setAiDone] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const aiPreviewRef = useRef<HTMLDivElement>(null);
+
+  const PENS = useMemo<Array<{ t: "pen" | "hi" | "er"; c: string; w: number; r: string; wt: string; name: string }>>(() => [
+    { t: "pen", c: "#0A0A0A", w: 2, r: "-3deg", wt: "2px", name: "PEN · 2PX" },
+    { t: "pen", c: "#0A0A0A", w: 5, r: "2deg", wt: "5px", name: "PEN · 5PX" },
+    { t: "pen", c: "#FF3D8A", w: 3, r: "-2deg", wt: "3px", name: "PEN · 3PX" },
+    { t: "pen", c: "#7B5CF0", w: 3, r: "3deg", wt: "3px", name: "PEN · 3PX" },
+    { t: "hi", c: "#FFE94A", w: 18, r: "2deg", wt: "18px", name: "HIGHLIGHTER · 18PX" },
+    { t: "hi", c: "#A8E85C", w: 18, r: "-3deg", wt: "18px", name: "HIGHLIGHTER · 18PX" },
+    { t: "er", c: "#000000", w: 22, r: "2deg", wt: "22px", name: "ERASER · 22PX" },
+  ], []);
+
+  // Initialize studio canvas when mode is "ink"
+  useEffect(() => {
+    if (isOpen && mode === "ink" && studioCanvasRef.current) {
+      const engine = createInkEngine(studioCanvasRef.current, {
+        onCount: (n) => setStudioStrokeCount(n),
+        onPen: () => setIsStylusLive(true),
+      });
+      studioEngineRef.current = engine;
+      engine.setTool(PENS[studioActivePen] || PENS[0]);
+
+      requestAnimationFrame(() => engine.fit());
+      const fitTimer = setTimeout(() => engine.fit(), 50);
+
+      const handleResize = () => engine.fit();
+      window.addEventListener("resize", handleResize);
+
+      return () => {
+        clearTimeout(fitTimer);
+        window.removeEventListener("resize", handleResize);
+        engine.destroy();
+        studioEngineRef.current = null;
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, mode]);
 
   useEffect(() => {
     if (aiStreaming && aiPreviewRef.current) {
@@ -85,11 +138,70 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const handleExportSvg = () => {
+    playSound.click();
+    let svg = "";
+    if (mode === "ink" && studioEngineRef.current) {
+      svg = studioEngineRef.current.toSvg();
+    } else if (ent.inkSvg) {
+      svg = ent.inkSvg;
+    } else {
+      svg = SAMPLE_SKETCHES.d;
+    }
+
+    const blob = new Blob([svg], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `scratch-sketch-${scrap.id.slice(0, 8)}.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDropInSketch = () => {
+    playSound.fileIt();
+    const engine = studioEngineRef.current;
+    if (!engine || engine.count() === 0) {
+      const dropText = "\n\n:::ink untitled sketch\n:::\n";
+      insertTextAtCursor(dropText);
+      setMode("split");
+      return;
+    }
+
+    const svg = engine.toSvg();
+    const dropBlock = `\n\n:::ink sketch\n${svg}\n:::\n`;
+    insertTextAtCursor(dropBlock);
+    setMode("split");
+  };
+
+  const handleSaveTranscription = async () => {
+    const trimmed = transcriptionVal.trim();
+    setEditingTranscription(false);
+    try {
+      await fetch(`/api/scratch/${scrap.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          entities: {
+            ...ent,
+            transcription: trimmed,
+          },
+          status: trimmed ? "pages" : "raw",
+          statusLabel: trimmed ? "OPEN · TRANSCRIBED" : "NOT SEARCHABLE — ADD A LINE",
+        }),
+      });
+      playSound.fileIt();
+    } catch (err) {
+      console.error("Failed to save transcription", err);
+    }
+  };
+
   const toggleOpen = () => {
     const next = !isOpen;
     playSound.toggle(next);
     setIsOpen(next);
-    if (next && mode !== "read") {
+    if (next && mode !== "read" && mode !== "ink") {
       setTimeout(() => textareaRef.current?.focus(), 50);
     }
   };
@@ -180,7 +292,6 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
     if (files && files.length > 0) {
       void processImageFile(files[0]);
     }
-    // reset input
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -273,8 +384,10 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
     hour12: false,
   });
 
+  const isInk = scrap.kind === "INK";
+  const hasTranscription = Boolean(currentTranscription);
+
   const renderFormattedText = useCallback((text: string) => {
-    // If scrap content contains markdown images, render with ScratchMarkdown
     if (/!\[([^\]]*)\]\(([^)]+)\)/.test(text)) {
       return <ScratchMarkdown content={text} className="md-card-content" />;
     }
@@ -310,23 +423,78 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
       className={`scrap${isOpen ? " open" : ""}`}
       style={
         {
-          "--c": `var(--${scrap.color || "cyan"})`,
+          "--c": `var(--${scrap.color || (isInk ? "lime" : "cyan")})`,
           "--tilt": isOpen ? "0deg" : scrap.tilt || "0deg",
         } as React.CSSProperties
       }
     >
+      {/* ── CARD BODY (TEXT OR VECTOR INK) ── */}
       <div className="scrap__b">
         <span className="scrap__mk" />
-        <div className="scrap__t">{renderFormattedText(scrap.content)}</div>
+        {isInk ? (
+          <div
+            className="scrap__ink"
+            dangerouslySetInnerHTML={{
+              __html: ent.inkSvg || SAMPLE_SKETCHES.d,
+            }}
+          />
+        ) : (
+          <div className="scrap__t">{renderFormattedText(scrap.content)}</div>
+        )}
       </div>
 
+      {/* ── INK TRANSCRIPTION SAYS BAR ── */}
+      {isInk && hasTranscription && (
+        <div className="trans">
+          <b>SAYS</b>
+          <span>{currentTranscription}</span>
+        </div>
+      )}
+
+      {/* ── INLINE TRANSCRIPTION EDITOR ── */}
+      {isInk && editingTranscription && (
+        <div className="trans-editor" style={{ padding: "8px 16px 10px 35px", display: "flex", gap: "8px" }}>
+          <input
+            type="text"
+            className="cap2"
+            value={transcriptionVal}
+            onChange={(e) => setTranscriptionVal(e.target.value)}
+            placeholder="one line — what does it say?"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void handleSaveTranscription();
+              if (e.key === "Escape") setEditingTranscription(false);
+            }}
+            style={{ flex: 1 }}
+          />
+          <button
+            type="button"
+            className="file"
+            onClick={() => void handleSaveTranscription()}
+            style={{ padding: "6px 12px", fontSize: "10px" }}
+          >
+            SAVE
+          </button>
+        </div>
+      )}
+
+      {/* ── CARD FOOTER ── */}
       <div className="scrap__f">
-        <span className={`k ${scrap.color === "violet" ? "is-violet" : ""}`}>
-          {scrap.kind}
+        <span className={`k${isInk ? " ink" : scrap.color === "violet" ? " is-violet" : ""}`}>
+          {isInk ? "✎ INK" : scrap.kind}
         </span>
+        {(scrap.tags || []).map((t) => (
+          <span key={t} className="tg">
+            {t}
+          </span>
+        ))}
         <span className="when">{timeStr}</span>
-        <span className={`st ${scrap.status}`}>
-          {scrap.statusLabel || scrap.status.toUpperCase()}
+        <span className={`st ${isInk && !hasTranscription ? "nosearch" : isInk ? "pages" : scrap.status}`}>
+          {isInk
+            ? hasTranscription
+              ? "OPEN · TRANSCRIBED"
+              : "NOT SEARCHABLE — ADD A LINE"
+            : scrap.statusLabel || scrap.status.toUpperCase()}
         </span>
       </div>
 
@@ -337,24 +505,39 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
         </div>
       ) : null}
 
+      {/* ── ACTIONS BAR ── */}
       <div className="scrap__p">
         <button
           className="notes-btn"
           type="button"
           onClick={toggleOpen}
         >
-          {isOpen ? "NOTES ▴" : hasNotes ? "NOTES ▾" : "＋ ADD NOTES"}
+          {isOpen ? "NOTES ▴" : hasNotes ? "NOTES ▾" : "＋ NOTES"}
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            playSound.promote();
-            void onPromoteTil(scrap.id);
-          }}
-          title="Promote this scrap to a minted TIL entry"
-        >
-          → TIL
-        </button>
+
+        {isInk && !hasTranscription ? (
+          <button
+            type="button"
+            onClick={() => {
+              playSound.click();
+              setEditingTranscription((prev) => !prev);
+            }}
+          >
+            TRANSCRIBE
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              playSound.promote();
+              void onPromoteTil(scrap.id);
+            }}
+            title="Promote this scrap to a minted TIL entry"
+          >
+            → TIL
+          </button>
+        )}
+
         <button
           type="button"
           onClick={() => {
@@ -381,10 +564,11 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
             void onBury(scrap.id);
           }}
         >
-          BURY
+          COMPOST
         </button>
       </div>
 
+      {/* ── EXPANDED NOTES & INK STUDIO DRAWER ── */}
       {isOpen && (
         <div className="note-drawer">
           <div className="note__bar">
@@ -422,45 +606,61 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
               >
                 READ
               </button>
+              <button
+                type="button"
+                data-m="ink"
+                aria-pressed={mode === "ink"}
+                onClick={() => {
+                  playSound.click();
+                  setMode("ink");
+                }}
+              >
+                ✎ INK
+              </button>
             </div>
 
             <div className="note__meta">
               <span className="wc">{wordCount} WORDS</span>
+              {mode === "ink" && <span className="ic">{studioStrokeCount} STROKES</span>}
               <span>{savedStatus}</span>
-              <span className="cheat">:::gotcha :::question :::action :::fact</span>
+              <span className="cheat">:::ink :::marg :::hand :::gotcha</span>
             </div>
 
             <div className="note__acts">
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
-                style={{ display: "none" }}
-                onChange={handleFileInputChange}
-              />
-              <button
-                type="button"
-                className="img-btn"
-                onClick={() => {
-                  playSound.click();
-                  fileInputRef.current?.click();
-                }}
-                disabled={uploadingImage}
-                title="Paste, drag-and-drop, or click to upload screenshots and images"
-              >
-                {uploadingImage ? "⏳ UPLOADING..." : "📷 IMAGE"}
-              </button>
-              <button
-                type="button"
-                className={`ai-expand-btn${aiStreaming ? " streaming" : ""}`}
-                onClick={() => {
-                  playSound.click();
-                  void handleAiExpand();
-                }}
-                title={aiStreaming ? "Stop AI generation" : "AI: expand this scrap into structured notes"}
-              >
-                {aiStreaming ? "◼ STOP" : "✦ EXPAND"}
-              </button>
+              {mode !== "ink" && (
+                <>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                    style={{ display: "none" }}
+                    onChange={handleFileInputChange}
+                  />
+                  <button
+                    type="button"
+                    className="img-btn"
+                    onClick={() => {
+                      playSound.click();
+                      fileInputRef.current?.click();
+                    }}
+                    disabled={uploadingImage}
+                    title="Upload screenshot or image"
+                  >
+                    {uploadingImage ? "⏳ UPLOADING..." : "📷 IMAGE"}
+                  </button>
+                  <button
+                    type="button"
+                    className={`ai-expand-btn${aiStreaming ? " streaming" : ""}`}
+                    onClick={() => {
+                      playSound.click();
+                      void handleAiExpand();
+                    }}
+                    title={aiStreaming ? "Stop AI generation" : "AI: expand this scrap into structured notes"}
+                  >
+                    {aiStreaming ? "◼ STOP" : "✦ EXPAND"}
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -469,6 +669,9 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
                 }}
               >
                 → TIL
+              </button>
+              <button type="button" onClick={handleExportSvg}>
+                EXPORT SVG
               </button>
               <button type="button" onClick={handleCopyMd}>
                 {copied ? "COPIED!" : "COPY MD"}
@@ -484,7 +687,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
           </div>
 
           {/* ── AI STREAMING PANEL ── */}
-          {showAiPanel && (
+          {showAiPanel && mode !== "ink" && (
             <div className="ai-panel">
               <div className="ai-panel__header">
                 <span className="ai-panel__badge">
@@ -560,38 +763,139 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
             </div>
           )}
 
-          <div
-            className={`note__body ${
-              mode === "split" ? "" : mode === "edit" ? "edit" : "read"
-            }`}
-          >
-            <div className={`ed${isDragOver ? " drag-over" : ""}`}>
-              <textarea
-                ref={textareaRef}
-                spellCheck="false"
-                value={notes}
-                onChange={handleNotesChange}
-                onPaste={handlePaste}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                placeholder="Write in Markdown... Paste screenshots (Cmd+V), drop images, #tags, ```code, :::gotcha, | tables"
-              />
-              {uploadingImage && (
-                <div className="ed-upload-overlay">
-                  <span>⏳ COMPRESSING &amp; UPLOADING IMAGE...</span>
-                </div>
-              )}
-              {isDragOver && (
-                <div className="ed-drag-overlay">
-                  <span>📷 DROP IMAGE TO UPLOAD</span>
-                </div>
-              )}
+          {/* ── SPLIT / WRITE / READ PANES ── */}
+          {mode !== "ink" ? (
+            <div
+              className={`note__body ${
+                mode === "split" ? "" : mode === "edit" ? "edit" : "read"
+              }`}
+            >
+              <div className={`ed${isDragOver ? " drag-over" : ""}`}>
+                <textarea
+                  ref={textareaRef}
+                  spellCheck="false"
+                  value={notes}
+                  onChange={handleNotesChange}
+                  onPaste={handlePaste}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  placeholder="Write in Markdown... :::ink, :::marg, :::hand, :::gotcha, #tags, ```code"
+                />
+                {uploadingImage && (
+                  <div className="ed-upload-overlay">
+                    <span>⏳ COMPRESSING &amp; UPLOADING IMAGE...</span>
+                  </div>
+                )}
+                {isDragOver && (
+                  <div className="ed-drag-overlay">
+                    <span>📷 DROP IMAGE TO UPLOAD</span>
+                  </div>
+                )}
+              </div>
+              <div className="pv">
+                <ScratchMarkdown content={notes} />
+              </div>
             </div>
-            <div className="pv">
-              <ScratchMarkdown content={notes} />
+          ) : (
+            /* ── FULL INK STUDIO PANE ── */
+            <div className="pane paneInk on">
+              <div className="studio">
+                <div className="tray">
+                  <div className="tray__lab">NIB</div>
+                  <div className="pens">
+                    {PENS.map((p, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className={`pen${p.t === "hi" ? " hi" : ""}${p.t === "er" ? " er" : ""}`}
+                        style={
+                          {
+                            "--n": p.c,
+                            "--wt": p.wt,
+                            "--r": p.r,
+                          } as React.CSSProperties
+                        }
+                        data-t={p.t}
+                        aria-pressed={studioActivePen === idx}
+                        onClick={() => {
+                          playSound.pop();
+                          setStudioActivePen(idx);
+                          studioEngineRef.current?.setTool(p);
+                        }}
+                        title={p.name}
+                      >
+                        <span className="w" />
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="tray__lab">SHEET</div>
+                  <div className="papers">
+                    {(["plain", "dot", "rule", "iso"] as const).map((pap) => (
+                      <button
+                        key={pap}
+                        type="button"
+                        data-p={pap}
+                        aria-pressed={studioPaper === pap}
+                        onClick={() => {
+                          playSound.click();
+                          setStudioPaper(pap);
+                        }}
+                      >
+                        {pap.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="tray__lab">DO</div>
+                  <div className="tools">
+                    <button
+                      className="undo"
+                      type="button"
+                      onClick={() => {
+                        playSound.click();
+                        studioEngineRef.current?.undo();
+                      }}
+                    >
+                      UNDO
+                    </button>
+                    <button
+                      className="clear"
+                      type="button"
+                      onClick={() => {
+                        playSound.click();
+                        studioEngineRef.current?.clear();
+                        setStudioStrokeCount(0);
+                      }}
+                    >
+                      CLEAR
+                    </button>
+                    <button
+                      className="drop"
+                      type="button"
+                      onClick={handleDropInSketch}
+                      title="Insert this sketch into notes as :::ink block"
+                    >
+                      DROP IN
+                    </button>
+                  </div>
+                </div>
+
+                <div className="board" data-paper={studioPaper}>
+                  <div className="board__paper" />
+                  <canvas ref={studioCanvasRef} style={{ touchAction: "none" }} />
+                  <div className="board__hud">
+                    <span className="hudT">{PENS[studioActivePen]?.name || "PEN"}</span>
+                    <span className="hudC">{studioStrokeCount} STROKES</span>
+                    <span className={`hudP${isStylusLive ? "" : " warn"}`}>
+                      {isStylusLive ? "PRESSURE LIVE — STYLUS" : "NO PRESSURE — MOUSE"}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </article>

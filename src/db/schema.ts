@@ -593,6 +593,7 @@ export const scrapKindValues = [
   "RANT",
   "IDEA",
   "LOG",
+  "INK",
 ] as const;
 export type ScrapKind = (typeof scrapKindValues)[number];
 
@@ -616,6 +617,9 @@ export interface ScrapEntities {
   firstLabel?: string; // "FIRST VISIT" | "FIRST TIME IN 6 WEEKS"
   shiftNote?: string; // e.g. "LOGGED SUN · HAPPENED SAT"
   isPlain?: boolean;
+  inkSvg?: string;
+  inkStrokes?: any[];
+  transcription?: string;
 }
 
 export const scraps = pgTable(

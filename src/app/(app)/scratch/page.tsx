@@ -10,7 +10,7 @@ import { ScratchSheet } from "@/components/scratch/ScratchSheet";
 import { ScratchYearWall } from "@/components/scratch/ScratchYearWall";
 import { ScratchSidePanels } from "@/components/scratch/ScratchSidePanels";
 import { ScratchWeldModal } from "@/components/scratch/ScratchWeldModal";
-import { ScrapRow } from "@/db/schema";
+import { ScrapRow, ScrapKind } from "@/db/schema";
 import { ScratchStats } from "@/lib/dal/scratch";
 import { CollisionCandidate, CollisionHit } from "@/lib/scratch/collision";
 import { ScratchFilters, filterScraps } from "@/lib/scratch/filters";
@@ -91,7 +91,15 @@ function ScratchPageContent() {
   };
 
   // 1. File new scrap from Slab
-  const handleFileScrap = async (text: string) => {
+  const handleFileScrap = async (
+    text: string,
+    options?: {
+      kind?: ScrapKind;
+      inkSvg?: string;
+      inkStrokes?: any[];
+      transcription?: string;
+    }
+  ) => {
     if (!text.trim()) return;
     setSubmitting(true);
     try {
@@ -100,13 +108,26 @@ function ScratchPageContent() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text, clientDate }),
+        body: JSON.stringify({
+          content: text,
+          clientDate,
+          kind: options?.kind,
+          inkSvg: options?.inkSvg,
+          inkStrokes: options?.inkStrokes,
+          transcription: options?.transcription,
+        }),
       });
 
       if (res.ok) {
         const created: ScrapRow = await res.json();
         setScraps((prev) => [created, ...prev]);
-        showToast(created.kind === "LOG" ? "✓ Log filed to The Sheet" : "✓ Scrap filed to The Shelf");
+        showToast(
+          created.kind === "LOG"
+            ? "✓ Log filed to The Sheet"
+            : created.kind === "INK"
+            ? "✓ Ink scrap filed to The Shelf"
+            : "✓ Scrap filed to The Shelf"
+        );
         void refreshStats();
       }
     } catch (err) {

@@ -209,6 +209,26 @@ export const ScratchSidePanels: React.FC<ScratchSidePanelsProps> = ({
         </div>
       )}
 
+      {/* ── PANEL 2.5: INK HEALTH ── */}
+      <div className="panel">
+        <div className="panel__h">
+          <span>INK HEALTH</span>
+          <span>
+            {stats?.inkHealth?.total ?? scraps.filter((s) => s.kind === "INK").length} SCRAPS
+          </span>
+        </div>
+        <div className="q__r">
+          <p style={{ fontFamily: "var(--mono)", fontSize: "12px", fontWeight: 700, letterSpacing: "0.06em" }}>
+            {stats?.inkHealth?.transcribed ?? scraps.filter((s) => s.kind === "INK" && s.entities?.transcription).length} TRANSCRIBED ·{" "}
+            {stats?.inkHealth?.untranscribed ?? scraps.filter((s) => s.kind === "INK" && !s.entities?.transcription).length} NOT
+          </p>
+          <span>UNTRANSCRIBED INK IS INVISIBLE TO SEARCH AND COLLISION</span>
+        </div>
+        <div className="panel__f">
+          ONE LINE IS ENOUGH. THE STROKES STAY — THE CAPTION JUST MAKES THEM FINDABLE.
+        </div>
+      </div>
+
       {/* ── PANEL 3: WHERE SHELF SCRAPS GO ── */}
       {stats && (
         <div className="panel">
