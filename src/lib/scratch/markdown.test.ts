@@ -72,7 +72,7 @@ The three layers are the whole idea.
 :::
 
 :::hand
-if the state is invisible, the error will be too
+if the **state** is invisible, the error will be too
 :::`;
     const res = renderScratchMarkdown(md);
     expect(res).toContain('<div class="inkblk">');
@@ -81,7 +81,22 @@ if the state is invisible, the error will be too
     expect(res).toContain('<div class="marg">');
     expect(res).toContain('The three layers are the whole idea.');
     expect(res).toContain('<div class="hwtext">');
-    expect(res).toContain('if the state is invisible, the error will be too');
+    expect(res).toContain('if the <strong>state</strong> is invisible, the error will be too');
+  });
+
+  it("handles :::infographic and :::diagram with inline SVG", () => {
+    const md = `:::infographic Feedback Loop
+<svg viewBox="0 0 500 100" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="10" width="100" height="50" fill="#FFE500" />
+  <text x="60" y="35">Step 1</text>
+</svg>
+:::`;
+    const res = renderScratchMarkdown(md);
+    expect(res).toContain('<span>📊 INFOGRAPHIC</span>');
+    expect(res).toContain('viewBox="0 0 500 100"');
+    expect(res).toContain('<rect x="10" y="10" width="100" height="50" fill="#FFE500" />');
+    expect(res).toContain('<div class="inkblk__f">Feedback Loop</div>');
   });
 });
+
 

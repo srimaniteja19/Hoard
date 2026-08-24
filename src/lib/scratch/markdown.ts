@@ -182,16 +182,23 @@ export function renderScratchMarkdown(md: string): string {
         i++; // Skip closing :::
       }
 
-      // 1. INK SKETCH BLOCK (:::ink <title>)
-      if (cType === "ink") {
-        const bodyContent = calloutBuffer.join("\n").trim();
+      // 1. INK / DIAGRAM / INFOGRAPHIC / SKETCH BLOCK (:::ink, :::diagram, :::infographic, :::sketch, :::chart <title>)
+      if (["ink", "diagram", "infographic", "sketch", "chart", "flowchart"].includes(cType)) {
+        const rawBody = calloutBuffer.join("\n").trim();
+        const bodyContent = rawBody.replace(/^```(?:svg|xml|html)?\s*/i, "").replace(/\s*```$/i, "").trim();
         let svgMarkup = "";
         let strokeCount = 0;
 
-        if (bodyContent.startsWith("<svg") || bodyContent.includes("<svg")) {
-          svgMarkup = bodyContent;
-          const pathMatches = bodyContent.match(/<path/g);
-          strokeCount = pathMatches ? pathMatches.length : 12;
+        if (bodyContent.includes("<svg")) {
+          const svgStart = bodyContent.indexOf("<svg");
+          const svgEnd = bodyContent.lastIndexOf("</svg>");
+          if (svgStart !== -1 && svgEnd !== -1) {
+            svgMarkup = bodyContent.substring(svgStart, svgEnd + 6);
+          } else {
+            svgMarkup = bodyContent;
+          }
+          const elemMatches = svgMarkup.match(/<(path|rect|circle|line|polyline|polygon|text|g|ellipse)/g);
+          strokeCount = elemMatches ? elemMatches.length : 12;
         } else {
           // Check standard sample sketches
           const key = cTitle.toLowerCase();
@@ -210,8 +217,9 @@ export function renderScratchMarkdown(md: string): string {
           }
         }
 
+        const tagLabel = cType === "infographic" ? "📊 INFOGRAPHIC" : cType === "diagram" || cType === "chart" || cType === "flowchart" ? "📐 DIAGRAM" : "✎ SKETCH";
         out.push(
-          `<div class="inkblk"><div class="inkblk__h"><span>✎ SKETCH</span><span>${strokeCount} STROKES</span></div><div class="inkblk__c">${svgMarkup}</div>${
+          `<div class="inkblk"><div class="inkblk__h"><span>${tagLabel}</span><span>${strokeCount} ELEMENTS</span></div><div class="inkblk__c">${svgMarkup}</div>${
             cTitle ? `<div class="inkblk__f">${escapeHtml(cTitle)}</div>` : ""
           }</div>`
         );
@@ -235,7 +243,7 @@ export function renderScratchMarkdown(md: string): string {
       if (cType === "hand") {
         const handText = calloutBuffer
           .filter((x) => x.trim())
-          .map((x) => escapeHtml(x))
+          .map((x) => inlineMarkdown(x))
           .join("<br>");
         out.push(`<div class="hwtext">${handText}</div>`);
         continue;
