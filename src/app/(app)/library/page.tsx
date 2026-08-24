@@ -32,6 +32,7 @@ import { Bookmark } from "@/types";
 import { TilType } from "@/db/schema";
 import { useReducedMotion } from "@/lib/useReducedMotion";
 import { computeFlipDelta, flipArrivalTransform, formatReceiptLine } from "@/lib/til/flipAnimation";
+import { usePWA } from "@/components/PWAProvider";
 
 export default function Home() {
   const {
@@ -86,6 +87,7 @@ export default function Home() {
     purgeBookmark,
   } = useBookmarks();
 
+  const { sharedContent, clearSharedContent } = usePWA();
   const [captureUrl, setCaptureUrl] = useState("");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -103,6 +105,19 @@ export default function Home() {
   const [dischargeReceiptLines, setDischargeReceiptLines] = useState<string[]>([]);
   const dischargeReducedMotion = useReducedMotion();
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!sharedContent) return;
+    const incoming = sharedContent.url || sharedContent.text || sharedContent.title || "";
+    if (incoming || sharedContent.action === "capture" || sharedContent.action === "stash") {
+      const timer = setTimeout(() => {
+        if (incoming) setCaptureUrl(incoming);
+        setIsCaptureOpen(true);
+        clearSharedContent();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [sharedContent, clearSharedContent, setIsCaptureOpen]);
 
   const handleOpenCaptureWithUrl = React.useCallback(
     (url: string) => {

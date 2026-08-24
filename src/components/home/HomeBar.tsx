@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { HomeCapture } from "@/components/home/HomeCapture";
+import { usePWA } from "@/components/PWAProvider";
 import { kindChip } from "@/lib/home/deskModel";
 import { filterFindHits, type FindHit } from "@/lib/library/parseQuery";
 import type { Bookmark } from "@/types";
@@ -24,6 +25,7 @@ function toFindHit(bookmark: Bookmark): FindHit {
 
 export function HomeBar({ onOpenGazette }: { onOpenGazette?: () => void } = {}) {
   const router = useRouter();
+  const { sharedContent, clearSharedContent } = usePWA();
   const [mode, setMode] = useState<"find" | "stash">("find");
   const [query, setQuery] = useState("");
   const [catalog, setCatalog] = useState<FindHit[] | null>(null);
@@ -32,6 +34,22 @@ export function HomeBar({ onOpenGazette }: { onOpenGazette?: () => void } = {}) 
   const [stashSeed, setStashSeed] = useState("");
   const findRef = useRef<HTMLInputElement>(null);
   const stashRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!sharedContent) return;
+    const incoming = sharedContent.url || sharedContent.text || sharedContent.title || "";
+    if (incoming || sharedContent.action === "stash" || sharedContent.action === "capture") {
+      const timer = setTimeout(() => {
+        setMode("stash");
+        if (incoming) {
+          setStashSeed(incoming);
+        }
+        stashRef.current?.focus();
+        clearSharedContent();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [sharedContent, clearSharedContent]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {

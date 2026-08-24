@@ -6,7 +6,7 @@ import { DuotoneFilters } from "@/components/covers/DuotoneFilters";
 import { CommandPalette } from "@/components/library/CommandPalette";
 
 export const metadata: Metadata = {
-  title: "HOARD — Bookmark Manager",
+  title: "HOARD — Contextual Bookmark Manager",
   description: "Neo-brutalist contextual bookmark manager for articles, videos, repos, papers, and apps.",
   manifest: "/manifest.json",
   applicationName: "HOARD",
@@ -15,14 +15,19 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "HOARD",
   },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
     icon: [
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
       { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon-192.svg", sizes: "192x192", type: "image/svg+xml" },
-      { url: "/icon-512.svg", sizes: "512x512", type: "image/svg+xml" },
     ],
     apple: [
-      { url: "/icon-192.svg", sizes: "192x192", type: "image/svg+xml" },
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
 };
@@ -30,8 +35,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 5,
   viewportFit: "cover",
-  themeColor: "#FFE600",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FFE600" },
+    { media: "(prefers-color-scheme: dark)", color: "#121212" },
+  ],
 };
 
 export default function RootLayout({
@@ -51,5 +60,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-
