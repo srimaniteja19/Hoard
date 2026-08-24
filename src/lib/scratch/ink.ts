@@ -241,6 +241,7 @@ export function createInkEngine(
 
   function onPointerDown(e: PointerEvent) {
     if (e.button !== 0) return; // Primary button only
+    e.preventDefault();
     try {
       canvas.setPointerCapture(e.pointerId);
     } catch (_) {
@@ -262,6 +263,7 @@ export function createInkEngine(
 
   function onPointerMove(e: PointerEvent) {
     if (!drawing || !cur) return;
+    e.preventDefault();
     const p = getPoint(e);
     const last = cur.pts[cur.pts.length - 1];
     if (last && Math.hypot(p.x - last.x, p.y - last.y) < 1.0) return;
@@ -271,6 +273,7 @@ export function createInkEngine(
 
   function onPointerEnd(e: PointerEvent) {
     if (!drawing) return;
+    e.preventDefault();
     try {
       if (canvas.hasPointerCapture(e.pointerId)) {
         canvas.releasePointerCapture(e.pointerId);
@@ -289,6 +292,12 @@ export function createInkEngine(
   canvas.addEventListener("pointerup", onPointerEnd);
   canvas.addEventListener("pointercancel", onPointerEnd);
   canvas.addEventListener("pointerleave", onPointerEnd);
+
+  const resizeObserver =
+    typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => fit())
+      : null;
+  resizeObserver?.observe(canvas);
 
   return {
     fit,
@@ -322,6 +331,7 @@ export function createInkEngine(
       return strokesToSvg(strokes, r.width || 600, r.height || 200);
     },
     destroy() {
+      resizeObserver?.disconnect();
       canvas.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerup", onPointerEnd);

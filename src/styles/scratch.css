@@ -269,6 +269,8 @@
   position: relative;
   background: var(--card);
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
   background-image: repeating-linear-gradient(transparent 0 33px, rgba(10, 10, 10, 0.14) 33px 34px);
 }
 
@@ -277,6 +279,9 @@
   width: 100%;
   height: 170px;
   cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .strip__ph {
@@ -287,6 +292,8 @@
   font-size: 27px;
   color: rgba(10, 10, 10, 0.22);
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .strip.dirty .strip__ph {
@@ -739,7 +746,52 @@
   color: #fff;
 }
 
-/* ── THE NOTE DRAWER ── */
+/* ── CARD NOTE PREVIEW BADGE ── */
+.scrap__note-preview {
+  margin: 0 14px 12px 37px;
+  padding: 8px 12px;
+  background: rgba(123, 92, 240, 0.08);
+  border: 2px dashed var(--violet);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.scrap__note-preview:hover {
+  background: rgba(123, 92, 240, 0.16);
+  border-style: solid;
+}
+
+.scrap__note-preview-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--violet);
+  margin-bottom: 4px;
+}
+
+.scrap__note-preview-h .expand-hint {
+  background: var(--violet);
+  color: #fff;
+  padding: 1px 5px;
+  letter-spacing: 0.08em;
+}
+
+.scrap__note-preview-t {
+  font-family: var(--body);
+  font-size: 13px;
+  line-height: 1.35;
+  color: rgba(10, 10, 10, 0.8);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* ── THE NOTE DRAWER (INLINE IN CARD) ── */
 .note-drawer {
   border-top: var(--b) solid var(--ink);
   background: var(--card);
@@ -825,6 +877,16 @@
   background: var(--cyan);
 }
 
+.note__acts .expand-modal-btn {
+  background: var(--yellow);
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.note__acts .expand-modal-btn:hover {
+  background: var(--lime);
+}
+
 .note__acts .close {
   background: var(--ink);
   color: var(--paper);
@@ -833,6 +895,318 @@
 .note__acts .close:hover {
   background: var(--pink);
   color: #fff;
+}
+
+/* Ensure inline card drawer is readable without squishing into 140px strips */
+.scrap .note-drawer .note__body {
+  grid-template-columns: 1fr !important;
+}
+
+.scrap .note-drawer .note__body .ed {
+  border-right: none;
+  border-bottom: var(--b) solid var(--ink);
+}
+
+.scrap .note-drawer .note__body .ed textarea {
+  min-height: 180px;
+}
+
+.scrap .note-drawer .note__body .pv {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* ── NOTE STUDIO MODAL DIALOG (SPACIOUS FULL EXPERIENCE) ── */
+.note-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.82);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(14px, 3vw, 32px);
+  animation: noteModalFadeIn 0.15s ease-out;
+}
+
+@keyframes noteModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.note-modal-window {
+  background: var(--card);
+  border: 4px solid var(--ink);
+  box-shadow: 12px 12px 0 var(--ink);
+  width: 100%;
+  max-width: 1240px;
+  height: 90vh;
+  max-height: 900px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: noteModalSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes noteModalSlideUp {
+  from { transform: translateY(16px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* ── TOP BAR 1: CONTEXT & CLOSE ── */
+.note-modal-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 16px;
+  border-bottom: 3px solid var(--ink);
+  background: var(--shelf);
+  flex-wrap: wrap;
+}
+
+.note-modal-topbar__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+.note-modal-scrap-text {
+  font-family: var(--body);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-modal-topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.note-modal-close {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  background: var(--ink);
+  color: var(--yellow);
+  border: 2px solid var(--ink);
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.note-modal-close:hover {
+  background: var(--pink);
+  color: #fff;
+}
+
+/* ── TOP BAR 2: MODE TABS + DIRECTIVES + TOOLS ── */
+.note-modal-controls {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  border-bottom: 3px solid var(--ink);
+  background: var(--card);
+}
+
+.note-modal-modes {
+  display: flex;
+}
+
+.note-modal-modes button {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  background: transparent;
+  color: var(--ink);
+  border: none;
+  border-right: 2px solid var(--ink);
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.note-modal-modes button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--yellow);
+}
+
+.note-modal-modes button[data-m="ink"][aria-pressed="true"] {
+  color: var(--lime);
+}
+
+.note-modal-modes button:hover:not([aria-pressed="true"]) {
+  background: var(--yellow);
+}
+
+.note-modal-directives {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  flex-wrap: wrap;
+}
+
+.note-modal-directives .dir-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  opacity: 0.45;
+}
+
+.note-modal-directives button {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 4px 7px;
+  border: 1.5px solid var(--ink);
+  background: var(--shelf);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.note-modal-directives button:hover {
+  background: var(--yellow);
+}
+
+.note-modal-acts {
+  display: flex;
+}
+
+.note-modal-acts button {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  background: transparent;
+  color: var(--ink);
+  border: none;
+  border-left: 2px solid var(--ink);
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.note-modal-acts button:hover {
+  background: var(--cyan);
+}
+
+.note-modal-acts .ai-expand-btn {
+  background: var(--violet);
+  color: #fff;
+}
+
+.note-modal-acts .ai-expand-btn:hover {
+  background: var(--pink);
+}
+
+/* ── MODAL BODY: SPLIT, WRITE, READ, INK ── */
+.note-modal-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--card);
+}
+
+.note-modal-body .note__body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  height: 100%;
+}
+
+.note-modal-body .note__body.split {
+  grid-template-columns: 1fr 1fr !important;
+}
+
+.note-modal-body .note__body.edit {
+  grid-template-columns: 1fr !important;
+}
+
+.note-modal-body .note__body.read {
+  grid-template-columns: 1fr !important;
+}
+
+.note-modal-body .note__body .ed {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-right: 3px solid var(--ink);
+  position: relative;
+}
+
+.note-modal-body .note__body.edit .ed {
+  border-right: none;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.note-modal-body .note__body .ed textarea {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: var(--mono);
+  font-size: 14.5px;
+  line-height: 1.65;
+  padding: 24px;
+  background: var(--card);
+  color: var(--ink);
+}
+
+.note-modal-body .note__body .pv {
+  height: 100%;
+  overflow-y: auto;
+  padding: 28px 36px;
+  background: var(--card);
+}
+
+.note-modal-body .note__body.read .pv {
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.note-modal-body .paneInk {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.note-modal-body .studio {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+}
+
+.note-modal-body .board {
+  height: 100%;
+  position: relative;
+}
+
+.note-modal-body .board canvas {
+  height: 100%;
+  min-height: 520px;
+  display: block;
+  width: 100%;
 }
 
 /* ── full ink studio in the drawer ── */
@@ -1002,6 +1376,8 @@
   position: relative;
   background: var(--card);
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
   overflow: hidden;
 }
 
@@ -1009,6 +1385,8 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .board[data-paper="dot"] .board__paper {
@@ -1035,6 +1413,9 @@
   height: 440px;
   cursor: crosshair;
   position: relative;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .board__hud {

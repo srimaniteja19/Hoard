@@ -55,9 +55,9 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inkEngineRef = useRef<ReturnType<typeof createInkEngine> | null>(null);
 
-  // Initialize ink engine ONLY on mode switch to "ink"
+  // Initialize ink engine ONCE on canvas mount
   useEffect(() => {
-    if (mode === "ink" && canvasRef.current) {
+    if (canvasRef.current) {
       const engine = createInkEngine(canvasRef.current, {
         onCount: (n) => setStrokeCount(n),
         onDirty: () => setInkDirty(true),
@@ -65,7 +65,6 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
       inkEngineRef.current = engine;
       engine.setTool(SLAB_NIBS[activeNibIndex] || SLAB_NIBS[0]);
 
-      // Ensure canvas is properly sized
       requestAnimationFrame(() => engine.fit());
       const fitTimer = setTimeout(() => engine.fit(), 50);
 
@@ -80,7 +79,7 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, []);
 
   const parsed = useMemo(() => {
     return parseSlabText(value);
@@ -221,6 +220,7 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
             onClick={() => {
               playSound.click();
               setMode("ink");
+              requestAnimationFrame(() => inkEngineRef.current?.fit());
             }}
           >
             ✎ WRITE BY HAND
@@ -230,114 +230,108 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
         </div>
 
         {/* ── TYPE MODE TEXTAREA ── */}
-        {mode === "type" && (
-          <>
-            <textarea
-              ref={textareaRef}
-              id="ta"
-              rows={3}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              onDragOver={handleDragOver}
-              onDragLeave={() => setIsDragOver(false)}
-              onDrop={handleDrop}
-              placeholder="walked 10 miles yesterday #fitness  ·  ? why does this keep happening  ·  → try isolation: isolate"
-              disabled={submitting || uploadingImage}
-            />
-            {uploadingImage && (
-              <div className="slab-upload-indicator">
-                <span>⏳ COMPRESSING &amp; UPLOADING IMAGE...</span>
-              </div>
-            )}
-            {(() => {
-              const match = value.match(/!\[([^\]]*)\]\(([^)]+)\)/);
-              if (!match) return null;
-              const imgUrl = match[2];
-              const imgAlt = match[1];
-              return (
-                <div className="slab-img-preview">
-                  <div className="slab-img-preview__wrap">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imgUrl} alt={imgAlt || "Image"} />
-                    <button
-                      type="button"
-                      className="slab-img-preview__remove"
-                      onClick={() => {
-                        playSound.click();
-                        setValue((prev) =>
-                          prev.replace(/!\[([^\]]*)\]\(([^)]+)\)\n?/, "").trim()
-                        );
-                      }}
-                      title="Remove image"
-                    >
-                      ✕ REMOVE
-                    </button>
-                  </div>
-                </div>
-              );
-            })()}
-          </>
-        )}
-
-        {/* ── INK MODE DRAWING STRIP ── */}
-        {mode === "ink" && (
-          <div className="slabink">
-            <div className="slabink__row">
-              <div className="miniTray" id="miniTray">
-                {SLAB_NIBS.map((nib, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className={`nib${nib.t === "er" ? " er" : ""}`}
-                    style={
-                      {
-                        "--n": nib.c,
-                        "--r": nib.r,
-                      } as React.CSSProperties
-                    }
-                    data-t={nib.t}
-                    aria-pressed={activeNibIndex === idx}
-                    onClick={() => handleSelectNib(idx)}
-                    title={nib.t === "er" ? "Eraser" : nib.t === "hi" ? "Highlighter" : "Pen"}
-                  />
-                ))}
-                <button
-                  className="u"
-                  id="sUndo"
-                  type="button"
-                  onClick={() => {
-                    playSound.click();
-                    inkEngineRef.current?.undo();
-                  }}
-                  title="Undo last stroke"
-                >
-                  UNDO
-                </button>
-                <button
-                  className="u"
-                  id="sClear"
-                  type="button"
-                  onClick={() => {
-                    playSound.click();
-                    inkEngineRef.current?.clear();
-                    setInkDirty(false);
-                    setStrokeCount(0);
-                  }}
-                  title="Clear canvas"
-                >
-                  CLR
-                </button>
-              </div>
-
-              <div className={`strip${inkDirty || strokeCount > 0 ? " dirty" : ""}`} id="strip">
-                <canvas ref={canvasRef} id="scv" style={{ touchAction: "none" }} />
-                <div className="strip__ph">write here — ruled like a notebook</div>
-              </div>
-            </div>
+        <textarea
+          ref={textareaRef}
+          id="ta"
+          rows={3}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          onDragOver={handleDragOver}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={handleDrop}
+          placeholder="walked 10 miles yesterday #fitness  ·  ? why does this keep happening  ·  → try isolation: isolate"
+          disabled={submitting || uploadingImage}
+        />
+        {uploadingImage && (
+          <div className="slab-upload-indicator">
+            <span>⏳ COMPRESSING &amp; UPLOADING IMAGE...</span>
           </div>
         )}
+        {(() => {
+          const match = value.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+          if (!match) return null;
+          const imgUrl = match[2];
+          const imgAlt = match[1];
+          return (
+            <div className="slab-img-preview">
+              <div className="slab-img-preview__wrap">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imgUrl} alt={imgAlt || "Image"} />
+                <button
+                  type="button"
+                  className="slab-img-preview__remove"
+                  onClick={() => {
+                    playSound.click();
+                    setValue((prev) =>
+                      prev.replace(/!\[([^\]]*)\]\(([^)]+)\)\n?/, "").trim()
+                    );
+                  }}
+                  title="Remove image"
+                >
+                  ✕ REMOVE
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── INK MODE DRAWING STRIP ── */}
+        <div className="slabink">
+          <div className="slabink__row">
+            <div className="miniTray" id="miniTray">
+              {SLAB_NIBS.map((nib, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`nib${nib.t === "er" ? " er" : ""}`}
+                  style={
+                    {
+                      "--n": nib.c,
+                      "--r": nib.r,
+                    } as React.CSSProperties
+                  }
+                  data-t={nib.t}
+                  aria-pressed={activeNibIndex === idx}
+                  onClick={() => handleSelectNib(idx)}
+                  title={nib.t === "er" ? "Eraser" : nib.t === "hi" ? "Highlighter" : "Pen"}
+                />
+              ))}
+              <button
+                className="u"
+                id="sUndo"
+                type="button"
+                onClick={() => {
+                  playSound.click();
+                  inkEngineRef.current?.undo();
+                }}
+                title="Undo last stroke"
+              >
+                UNDO
+              </button>
+              <button
+                className="u"
+                id="sClear"
+                type="button"
+                onClick={() => {
+                  playSound.click();
+                  inkEngineRef.current?.clear();
+                  setInkDirty(false);
+                  setStrokeCount(0);
+                }}
+                title="Clear canvas"
+              >
+                CLR
+              </button>
+            </div>
+
+            <div className={`strip${inkDirty || strokeCount > 0 ? " dirty" : ""}`} id="strip">
+              <canvas ref={canvasRef} id="scv" style={{ touchAction: "none" }} />
+              <div className="strip__ph">write here — ruled like a notebook</div>
+            </div>
+          </div>
+        </div>
 
         <div className="slab__tear" />
 

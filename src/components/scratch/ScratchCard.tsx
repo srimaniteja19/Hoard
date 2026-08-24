@@ -9,6 +9,7 @@ import {
   extractImagesFromDragEvent,
 } from "@/lib/scratch/image";
 import { createInkEngine, SAMPLE_SKETCHES } from "@/lib/scratch/ink";
+import { ScratchNoteModal } from "./ScratchNoteModal";
 import { playSound } from "@/lib/sound";
 
 interface ScratchCardProps {
@@ -33,6 +34,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   onBury,
 }) => {
   const [isOpen, setIsOpen] = useState(isOpenDefault);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [mode, setMode] = useState<NoteMode>("split");
   const [notes, setNotes] = useState(scrap.notes || "");
   const [savedStatus, setSavedStatus] = useState("AUTOSAVED");
@@ -505,14 +507,39 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
         </div>
       ) : null}
 
+      {/* ── CARD NOTE PREVIEW BADGE (IF SCRAP HAS NOTES) ── */}
+      {hasNotes && (
+        <div
+          className="scrap__note-preview"
+          onClick={(e) => {
+            e.stopPropagation();
+            playSound.click();
+            setIsModalOpen(true);
+          }}
+          title="Click to open Full Note Studio (Spacious View)"
+        >
+          <div className="scrap__note-preview-h">
+            <span>📝 NOTES ({wordCount} WORDS)</span>
+            <span className="expand-hint">STUDIO ⤢</span>
+          </div>
+          <div className="scrap__note-preview-t">
+            {notes.slice(0, 160)}
+          </div>
+        </div>
+      )}
+
       {/* ── ACTIONS BAR ── */}
       <div className="scrap__p">
         <button
           className="notes-btn"
           type="button"
-          onClick={toggleOpen}
+          onClick={() => {
+            playSound.click();
+            setIsModalOpen(true);
+          }}
+          title="Open rich note studio & drawing board"
         >
-          {isOpen ? "NOTES ▴" : hasNotes ? "NOTES ▾" : "＋ NOTES"}
+          {hasNotes ? `📝 NOTES (${wordCount}w) ⤢` : "＋ NOTES ⤢"}
         </button>
 
         {isInk && !hasTranscription ? (
@@ -661,6 +688,17 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
                   </button>
                 </>
               )}
+              <button
+                type="button"
+                className="expand-modal-btn"
+                onClick={() => {
+                  playSound.click();
+                  setIsModalOpen(true);
+                }}
+                title="Expand note studio to full window"
+              >
+                ⤢ FULL STUDIO
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -898,6 +936,17 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
           )}
         </div>
       )}
+
+      {/* ── SPACIOUS FULL NOTE STUDIO MODAL ── */}
+      <ScratchNoteModal
+        isOpen={isModalOpen}
+        scrap={scrap}
+        notes={notes}
+        initialMode={mode}
+        onUpdateNotes={onUpdateNotes}
+        onClose={() => setIsModalOpen(false)}
+        onPromoteTil={onPromoteTil}
+      />
     </article>
   );
 };
