@@ -287,9 +287,10 @@ export const ScratchNoteModal: React.FC<ScratchNoteModalProps> = ({
     abortRef.current = controller;
 
     try {
-      const res = await fetch(`/api/scratch/${scrap.id}/expand-notes`, {
+      const res = await fetch(`/api/scratch/${scrap.id}/expand`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ existingNotes: notes }),
         signal: controller.signal,
       });

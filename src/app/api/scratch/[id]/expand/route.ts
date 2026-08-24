@@ -1,6 +1,6 @@
 import { streamText, smoothStream } from "ai";
 import { NextRequest, NextResponse } from "next/server";
-import { requireUserId } from "@/lib/session";
+import { requireUserId, AuthError } from "@/lib/session";
 import { getScrapById } from "@/lib/dal/scratch";
 import { languageModel, gatewayProviderOptions, gatewayErrorMessage } from "@/lib/ai/models";
 
@@ -47,7 +47,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = await requireUserId();
+    const userId = await requireUserId(req);
     const { id } = await params;
     const scrap = await getScrapById(userId, id);
 
@@ -55,10 +55,20 @@ export async function POST(
       return NextResponse.json({ error: "Scrap not found" }, { status: 404 });
     }
 
+    let existingNotes = scrap.notes;
+    try {
+      const body = await req.json();
+      if (body && typeof body.existingNotes === "string") {
+        existingNotes = body.existingNotes;
+      }
+    } catch {
+      // Body is optional
+    }
+
     const result = streamText({
       model: languageModel(EXPAND_MODEL),
       system: EXPAND_SYSTEM,
-      prompt: `Scrap kind: ${scrap.kind}\nScrap content: ${scrap.content}${scrap.notes ? `\n\nExisting notes (expand on these):\n${scrap.notes}` : ""}`,
+      prompt: `Scrap kind: ${scrap.kind}\nScrap content: ${scrap.content}${existingNotes ? `\n\nExisting notes (expand on these):\n${existingNotes}` : ""}`,
       experimental_transform: smoothStream({ chunking: "word", delayInMs: 10 }),
       maxRetries: 1,
       providerOptions: {
@@ -68,7 +78,11 @@ export async function POST(
 
     return result.toTextStreamResponse();
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const message = gatewayErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
