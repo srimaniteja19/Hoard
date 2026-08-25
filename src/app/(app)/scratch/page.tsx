@@ -256,9 +256,7 @@ function ScratchPageContent() {
       if (res.ok) {
         const updatedTarget: ScrapRow = await res.json();
         setScraps((prev) =>
-          prev
-            .filter((s) => s.id !== sourceId)
-            .map((s) => (s.id === targetId ? { ...s, ...updatedTarget } : s))
+          prev.map((s) => (s.id === targetId ? { ...s, ...updatedTarget } : s))
         );
         setIsWeldModalOpen(false);
         setWeldTargetScrap(null);
