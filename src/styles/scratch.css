@@ -4333,6 +4333,77 @@
   background: var(--yellow);
 }
 
+/* ── CORKBOARD ── */
+.corkboard-canvas {
+  position: relative;
+  width: 2000px;
+  height: 1200px;
+  overflow: auto;
+  border: var(--b) solid var(--ink);
+  background-color: var(--shelf);
+  background-image: radial-gradient(rgba(10, 10, 10, 0.12) 1.5px, transparent 1.5px);
+  background-size: 18px 18px;
+  touch-action: none;
+}
+
+.corkboard-strings {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2000px;
+  height: 1200px;
+  pointer-events: none;
+}
+.corkboard-strings line {
+  stroke: var(--violet);
+  stroke-width: 2.5;
+  opacity: 0.7;
+}
+
+.corkboard-card {
+  position: absolute;
+  width: 180px;
+  border: var(--b) solid var(--ink);
+  background: var(--card);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 10px 12px;
+  cursor: grab;
+  transform: rotate(var(--tilt, 0deg));
+  transition: box-shadow 0.1s;
+  user-select: none;
+}
+.corkboard-card:active {
+  cursor: grabbing;
+  box-shadow: 6px 6px 0 var(--violet);
+}
+.corkboard-card__pin {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--c);
+  border: 2px solid var(--ink);
+}
+.corkboard-card__kind {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+  margin-bottom: 4px;
+  color: var(--ink);
+}
+.corkboard-card__body {
+  font-family: var(--display);
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
 /* ══ THE SHEET ══ */
 .sheet__day {
   margin-bottom: 20px;
