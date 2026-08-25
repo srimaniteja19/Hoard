@@ -20,6 +20,7 @@ interface ScratchCardProps {
   onPromoteTodo: (id: string) => Promise<void> | void;
   onWeld: (id: string) => void;
   onBury: (id: string) => Promise<void> | void;
+  onTogglePin?: (id: string) => Promise<void> | void;
 }
 
 type NoteMode = "split" | "edit" | "read" | "ink";
@@ -32,6 +33,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   onPromoteTodo,
   onWeld,
   onBury,
+  onTogglePin,
 }) => {
   const [isOpen, setIsOpen] = useState(isOpenDefault);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -51,6 +53,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   // Inline Transcription editing for INK cards
   const [editingTranscription, setEditingTranscription] = useState(false);
   const ent = (scrap.entities || {}) as ScrapEntities;
+  const isPinned = Boolean(ent.isPinned);
   const currentTranscription = ent.transcription || (scrap.kind === "INK" && scrap.content !== "Handwritten Ink Scrap" ? scrap.content : "");
   const [transcriptionVal, setTranscriptionVal] = useState(currentTranscription);
 
@@ -422,7 +425,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   return (
     <article
       id={`scrap-${scrap.id}`}
-      className={`scrap${isOpen ? " open" : ""}`}
+      className={`scrap${isOpen ? " open" : ""}${isPinned ? " is-pinned" : ""}`}
       style={
         {
           "--c": `var(--${scrap.color || (isInk ? "lime" : "cyan")})`,
@@ -430,6 +433,11 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
         } as React.CSSProperties
       }
     >
+      {isPinned && (
+        <div className="scrap__pin-stamp" title="Pinned Note (Kept on Pinboard)">
+          📌 PINNED
+        </div>
+      )}
       {/* ── CARD BODY (TEXT OR VECTOR INK) ── */}
       <div className="scrap__b">
         <span className="scrap__mk" />
@@ -583,6 +591,17 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
           }}
         >
           WELD
+        </button>
+        <button
+          type="button"
+          className={`pin-btn${isPinned ? " is-pinned" : ""}`}
+          onClick={() => {
+            playSound.pin(!isPinned);
+            void onTogglePin?.(scrap.id);
+          }}
+          title={isPinned ? "Unpin this note from Pinboard" : "Pin this note to Pinboard"}
+        >
+          {isPinned ? "📌 PINNED" : "📌 PIN"}
         </button>
         <button
           type="button"
@@ -943,6 +962,8 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
         scrap={scrap}
         notes={notes}
         initialMode={mode}
+        isPinned={isPinned}
+        onTogglePin={onTogglePin}
         onUpdateNotes={onUpdateNotes}
         onClose={() => setIsModalOpen(false)}
         onPromoteTil={onPromoteTil}

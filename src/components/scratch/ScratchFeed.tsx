@@ -14,6 +14,7 @@ interface ScratchFeedProps {
   onPromoteTodo: (id: string) => Promise<void> | void;
   onWeld: (id: string) => void;
   onBury: (id: string) => Promise<void> | void;
+  onTogglePin?: (id: string) => Promise<void> | void;
 }
 
 export const ScratchFeed: React.FC<ScratchFeedProps> = ({
@@ -25,6 +26,7 @@ export const ScratchFeed: React.FC<ScratchFeedProps> = ({
   onPromoteTodo,
   onWeld,
   onBury,
+  onTogglePin,
 }) => {
   // Group scraps by loggedFor day
   const groupedByDay = useMemo(() => {
@@ -112,6 +114,7 @@ export const ScratchFeed: React.FC<ScratchFeedProps> = ({
               onPromoteTodo={onPromoteTodo}
               onWeld={onWeld}
               onBury={onBury}
+              onTogglePin={onTogglePin}
             />
           ))}
         </div>

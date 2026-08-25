@@ -4655,4 +4655,566 @@
   padding: 2px 6px;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   PINNED SCRAP & PINBOARD SYSTEM (THE PINBOARD)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Pinned View Button in Header Switcher ── */
+.views button[data-v="pinned"] {
+  position: relative;
+}
+.views button[data-v="pinned"].has-pinned-items:not([aria-pressed="true"]) {
+  background: rgba(255, 229, 0, 0.25);
+  border-color: var(--ink);
+}
+.views button[data-v="pinned"][aria-pressed="true"] {
+  background: var(--yellow) !important;
+  color: var(--ink) !important;
+  box-shadow: 4px 4px 0 var(--pink) !important;
+}
+
+/* ── Card Pinned State & Stamp ── */
+.scrap.is-pinned {
+  border-color: var(--ink) !important;
+  box-shadow: 6px 6px 0 var(--yellow), 8px 8px 0 var(--ink) !important;
+  position: relative;
+}
+.scrap.is-pinned::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  width: 22px;
+  height: 10px;
+  background: var(--pink);
+  border: 2px solid var(--ink);
+  transform: rotate(-3deg);
+  z-index: 5;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.scrap__pin-stamp {
+  position: absolute;
+  top: -9px;
+  left: 16px;
+  background: var(--yellow);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  padding: 2px 8px;
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  transform: rotate(-2deg);
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* ── Pin Toggle Buttons ── */
+.pin-btn,
+.pin-toggle-btn {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: var(--card);
+  color: var(--ink);
+  border: var(--b) solid var(--ink);
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+.pin-btn:hover,
+.pin-toggle-btn:hover {
+  background: var(--yellow);
+}
+.pin-btn.is-pinned,
+.pin-toggle-btn.is-pinned {
+  background: var(--yellow) !important;
+  color: var(--ink) !important;
+  font-weight: 800 !important;
+  border-color: var(--ink) !important;
+  box-shadow: inset 1px 1px 0 rgba(0,0,0,0.15);
+}
+
+.note-modal-pin-btn {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  background: var(--card);
+  color: var(--ink);
+  border: var(--b) solid var(--ink);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+.note-modal-pin-btn:hover {
+  background: var(--yellow);
+}
+.note-modal-pin-btn.is-pinned {
+  background: var(--yellow) !important;
+  color: var(--ink) !important;
+  font-weight: 800 !important;
+  border-color: var(--ink) !important;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* ── Pinboard Root & Banner ── */
+.scratch-pinned-root {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.pinboard-banner {
+  background: var(--ink);
+  color: var(--paper);
+  border: var(--b) solid var(--ink);
+  padding: 22px 26px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  box-shadow: 6px 6px 0 var(--yellow);
+  position: relative;
+  overflow: hidden;
+}
+.pinboard-banner::after {
+  content: "";
+  position: absolute;
+  right: -20px;
+  bottom: -20px;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle, rgba(255, 229, 0, 0.18) 2px, transparent 2px);
+  background-size: 10px 10px;
+  pointer-events: none;
+}
+.pinboard-banner__content {
+  max-width: 650px;
+}
+.pinboard-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--yellow);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  padding: 3px 8px;
+  border: 2px solid var(--ink);
+  margin-bottom: 8px;
+}
+.pinboard-banner h2 {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin: 0 0 6px;
+  color: var(--yellow);
+}
+.pinboard-banner p {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.6;
+  opacity: 0.82;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+/* ── Pinboard HUD KPI Cards ── */
+.pinboard-hud {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  min-width: 380px;
+}
+.pinboard-hud__card {
+  background: var(--card);
+  color: var(--ink);
+  border: 2px solid var(--paper);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 3px 3px 0 var(--pink);
+}
+.pinboard-hud__card .hud-val {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.pinboard-hud__card .hud-lbl {
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  opacity: 0.65;
+  margin-top: 4px;
+}
+
+/* ── Pinboard Controls Toolbar ── */
+.pinboard-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: var(--card);
+  border: var(--b) solid var(--ink);
+  padding: 10px 14px;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.pinboard-toolbar__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  padding: 6px 10px;
+  flex: 1;
+  min-width: 240px;
+  max-width: 480px;
+}
+.pinboard-toolbar__search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+  width: 100%;
+}
+.pinboard-toolbar__search .clear-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 11px;
+}
+.pinboard-toolbar__controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sort-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+.sort-group select {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  padding: 5px 8px;
+  outline: none;
+  cursor: pointer;
+}
+.layout-toggle {
+  display: flex;
+  border: 2px solid var(--ink);
+}
+.layout-toggle button {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: var(--paper);
+  color: var(--ink);
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+.layout-toggle button.active {
+  background: var(--ink);
+  color: var(--yellow);
+}
+.layout-toggle button:hover:not(.active) {
+  background: var(--yellow);
+}
+.copy-all-btn {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  background: var(--lime);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  padding: 6px 14px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: all 0.1s ease;
+}
+.copy-all-btn:hover {
+  background: var(--yellow);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* ── Kind Filter Chips ── */
+.pinboard-kind-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.kind-chip {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  background: var(--card);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  padding: 5px 12px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: all 0.1s ease;
+}
+.kind-chip:hover {
+  background: var(--yellow);
+}
+.kind-chip.active {
+  background: var(--ink);
+  color: var(--yellow);
+  box-shadow: 2px 2px 0 var(--pink);
+}
+
+/* ── Pinboard Grid Layout ── */
+.pinboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+.pinboard-item-wrap {
+  position: relative;
+}
+
+/* ── Pinboard Empty State ── */
+.pinboard-empty {
+  border: var(--b) dashed var(--ink);
+  background: var(--card);
+  padding: 48px 24px;
+  text-align: center;
+  box-shadow: 6px 6px 0 var(--yellow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 580px;
+  margin: 20px auto;
+}
+.pinboard-empty__tack {
+  font-size: 38px;
+  animation: bounceTack 1.4s infinite alternate ease-in-out;
+}
+@keyframes bounceTack {
+  0% { transform: translateY(0) rotate(-10deg); }
+  100% { transform: translateY(-8px) rotate(5deg); }
+}
+.pinboard-empty h3 {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  margin: 0;
+  color: var(--ink);
+}
+.pinboard-empty p {
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  opacity: 0.75;
+  max-width: 440px;
+  margin: 0;
+}
+.pinboard-empty__action-btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  background: var(--yellow);
+  color: var(--ink);
+  border: var(--b) solid var(--ink);
+  padding: 10px 18px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+  margin-top: 8px;
+  transition: all 0.1s ease;
+}
+.pinboard-empty__action-btn:hover {
+  background: var(--lime);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+/* ── Pinboard Docket (Master-Detail Split View) ── */
+.pinboard-docket {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.pinboard-docket__sidebar {
+  background: var(--card);
+  border: var(--b) solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  display: flex;
+  flex-direction: column;
+}
+.docket-sidebar-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--ink);
+  color: var(--yellow);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  border-bottom: 2px solid var(--ink);
+}
+.docket-sidebar-items {
+  max-height: 700px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.docket-nav-item {
+  padding: 12px 14px;
+  border-bottom: 2px solid rgba(10, 10, 10, 0.12);
+  cursor: pointer;
+  transition: background 0.1s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.docket-nav-item:hover {
+  background: rgba(255, 229, 0, 0.2);
+}
+.docket-nav-item.selected {
+  background: var(--yellow);
+  border-left: 6px solid var(--ink);
+}
+.docket-nav-item__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+}
+.docket-nav-item__top .k {
+  padding: 1px 5px;
+  border: 1.5px solid var(--ink);
+  font-size: 8.5px;
+}
+.docket-nav-item__top .date {
+  opacity: 0.6;
+}
+.docket-nav-item__title {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink);
+}
+.docket-nav-item__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  opacity: 0.75;
+}
+.unpin-mini-btn {
+  border: 1px solid var(--ink);
+  background: var(--card);
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 5px;
+  cursor: pointer;
+}
+.unpin-mini-btn:hover {
+  background: var(--pink);
+  color: #fff;
+}
+
+.pinboard-docket__canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.docket-canvas-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border: var(--b) solid var(--ink);
+  padding: 10px 14px;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.docket-canvas-head__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 800;
+}
+.docket-canvas-head__acts {
+  display: flex;
+  gap: 8px;
+}
+.docket-canvas-head__acts .studio-btn {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  background: var(--yellow);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  padding: 6px 12px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.docket-canvas-head__acts .unpin-btn {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  background: var(--card);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .pinboard-hud {
+    grid-template-columns: repeat(2, 1fr);
+    min-width: 100%;
+  }
+  .pinboard-docket {
+    grid-template-columns: 1fr;
+  }
+}
+
+
 

@@ -620,6 +620,8 @@ export interface ScrapEntities {
   inkSvg?: string;
   inkStrokes?: any[];
   transcription?: string;
+  isPinned?: boolean;
+  pinnedAt?: string;
 }
 
 export const scraps = pgTable(

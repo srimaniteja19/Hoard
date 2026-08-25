@@ -280,6 +280,42 @@ class SoundEngine {
     osc.start(t);
     osc.stop(t + 0.035);
   }
+
+  /**
+   * Tactile pushpin tack sound for pinning/unpinning scratch notes
+   */
+  public playPin(isPinned = true, volume = 0.4) {
+    if (!this.enabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+
+    // High metallic ping
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = "triangle";
+    osc1.frequency.setValueAtTime(isPinned ? 2400 : 1200, t);
+    osc1.frequency.exponentialRampToValueAtTime(isPinned ? 3600 : 600, t + 0.04);
+    gain1.gain.setValueAtTime(volume * 0.7, t);
+    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(t);
+    osc1.stop(t + 0.06);
+
+    // Low corkboard / tack thud
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(isPinned ? 160 : 220, t);
+    osc2.frequency.exponentialRampToValueAtTime(60, t + 0.05);
+    gain2.gain.setValueAtTime(volume * 0.9, t);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(t);
+    osc2.stop(t + 0.07);
+  }
 }
 
 export const sound = new SoundEngine();
@@ -292,4 +328,5 @@ export const playSound = {
   copy: (vol?: number) => sound.playCopy(vol),
   bury: (vol?: number) => sound.playBury(vol),
   toggle: (isOpen?: boolean, vol?: number) => sound.playToggle(isOpen, vol),
+  pin: (isPinned?: boolean, vol?: number) => sound.playPin(isPinned, vol),
 };

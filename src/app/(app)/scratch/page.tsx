@@ -10,10 +10,11 @@ import { ScratchSheet } from "@/components/scratch/ScratchSheet";
 import { ScratchYearWall } from "@/components/scratch/ScratchYearWall";
 import { ScratchSidePanels } from "@/components/scratch/ScratchSidePanels";
 import { ScratchWeldModal } from "@/components/scratch/ScratchWeldModal";
+import { ScratchPinnedView } from "@/components/scratch/ScratchPinnedView";
 import { ScrapRow, ScrapKind } from "@/db/schema";
 import { ScratchStats } from "@/lib/dal/scratch";
 import { CollisionCandidate, CollisionHit } from "@/lib/scratch/collision";
-import { ScratchFilters, filterScraps } from "@/lib/scratch/filters";
+import { ScratchFilters, filterScraps, isScrapPinned } from "@/lib/scratch/filters";
 import { getLocalTodayIso } from "@/lib/scratch/parse";
 import { playSound } from "@/lib/sound";
 
@@ -23,7 +24,7 @@ function ScratchPageContent() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"stream" | "logbook">("stream");
+  const [viewMode, setViewMode] = useState<"stream" | "pinned" | "logbook">("stream");
 
   // Filters state
   const [filters, setFilters] = useState<ScratchFilters>({
@@ -308,6 +309,46 @@ function ScratchPageContent() {
     }
   };
 
+  // 12. Toggle Pin status
+  const handleTogglePin = async (id: string) => {
+    try {
+      const target = scraps.find((s) => s.id === id);
+      const isCurrentlyPinned = Boolean(target?.entities?.isPinned);
+
+      // Optimistic update
+      setScraps((prev) =>
+        prev.map((s) =>
+          s.id === id
+            ? {
+                ...s,
+                entities: {
+                  ...(s.entities || {}),
+                  isPinned: !isCurrentlyPinned,
+                  pinnedAt: !isCurrentlyPinned ? new Date().toISOString() : undefined,
+                },
+              }
+            : s
+        )
+      );
+      showToast(!isCurrentlyPinned ? "📌 Pinned note to Pinboard" : "✓ Unpinned note");
+
+      const res = await fetch(`/api/scratch/${id}/pin`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        const updated: ScrapRow = await res.json();
+        setScraps((prev) => prev.map((s) => (s.id === id ? { ...s, ...updated } : s)));
+        void refreshStats();
+      }
+    } catch (err) {
+      console.error("Failed to toggle pin", err);
+    }
+  };
+
+  const pinnedCount = useMemo(() => scraps.filter(isScrapPinned).length, [scraps]);
+
   const collisionCandidates: CollisionCandidate[] = useMemo(() => {
     return scraps.map((s) => ({
       id: s.id,
@@ -359,6 +400,19 @@ function ScratchPageContent() {
                 }}
               >
                 STREAM
+              </button>
+              <button
+                type="button"
+                data-v="pinned"
+                aria-pressed={viewMode === "pinned"}
+                onClick={() => {
+                  playSound.click();
+                  setViewMode("pinned");
+                }}
+                className={pinnedCount > 0 ? "has-pinned-items" : ""}
+                title="Dedicated Pinned Notes Pinboard"
+              >
+                📌 PINNED {pinnedCount > 0 ? `(${pinnedCount})` : ""}
               </button>
               <button
                 type="button"
@@ -451,6 +505,7 @@ function ScratchPageContent() {
                   onPromoteTodo={handlePromoteTodo}
                   onWeld={handleOpenWeldModal}
                   onBury={handleBury}
+                  onTogglePin={handleTogglePin}
                 />
               </div>
 
@@ -482,6 +537,17 @@ function ScratchPageContent() {
                 onKeepCompost={handleKeepCompost}
               />
             </div>
+          ) : viewMode === "pinned" ? (
+            /* ═══ PINNED VIEW: DEDICATED PINBOARD & DOCKET ═══ */
+            <ScratchPinnedView
+              scraps={scraps}
+              onUpdateNotes={handleUpdateNotes}
+              onPromoteTil={handlePromoteTil}
+              onPromoteTodo={handlePromoteTodo}
+              onWeld={handleOpenWeldModal}
+              onBury={handleBury}
+              onTogglePin={handleTogglePin}
+            />
           ) : (
             /* ═══ LOGBOOK VIEW: YEAR WALL + FULL SHEET + LOGBOOK SIDE PANELS ═══ */
             <div className="logbook on" id="logbookView">

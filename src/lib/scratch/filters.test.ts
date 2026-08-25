@@ -84,6 +84,14 @@ describe("Scratch filters and calendar", () => {
     const withImages = filterScraps(scraps, { query: "", status: "images" });
     expect(withImages.length).toBe(1);
     expect(withImages[0].id).toBe("3");
+
+    const pinnedScraps = [
+      mockScrap({ id: "p1", entities: { isPinned: true } }),
+      mockScrap({ id: "p2", entities: { isPinned: false } }),
+    ];
+    const pinnedResults = filterScraps(pinnedScraps, { query: "", status: "pinned" });
+    expect(pinnedResults.length).toBe(1);
+    expect(pinnedResults[0].id).toBe("p1");
   });
 
   it("generates a 42-cell calendar matrix for a month", () => {

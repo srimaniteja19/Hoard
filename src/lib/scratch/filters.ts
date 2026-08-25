@@ -1,7 +1,7 @@
 import { ScrapRow, ScrapKind } from "@/db/schema";
 import { getLocalTodayIso } from "./parse";
 
-export type StatusFilter = "all" | "has_notes" | "images" | "raw" | "promoted";
+export type StatusFilter = "all" | "has_notes" | "images" | "raw" | "promoted" | "pinned";
 
 export interface ScratchFilters {
   query: string;
@@ -9,6 +9,14 @@ export interface ScratchFilters {
   tag?: string | null;
   date?: string | null; // ISO YYYY-MM-DD
   status?: StatusFilter;
+}
+
+export function isScrapPinned(scrap: ScrapRow): boolean {
+  return Boolean(scrap.entities?.isPinned);
+}
+
+export function getPinnedScraps(scraps: ScrapRow[]): ScrapRow[] {
+  return scraps.filter(isScrapPinned);
 }
 
 export interface TagCount {
@@ -65,6 +73,9 @@ export function filterScraps(scraps: ScrapRow[], filters: ScratchFilters): Scrap
     }
 
     // 2. Status filter
+    if (selectedStatus === "pinned" && !isScrapPinned(s)) {
+      return false;
+    }
     if (selectedStatus === "has_notes" && (!s.notes || !s.notes.trim())) {
       return false;
     }

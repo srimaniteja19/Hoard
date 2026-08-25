@@ -159,6 +159,21 @@ export async function updateScrap(
     }
   }
 
+  if ((patch as any).isPinned !== undefined) {
+    const isPinned = Boolean((patch as any).isPinned);
+    updates.entities = {
+      ...(existing.entities || {}),
+      ...(updates.entities || {}),
+      isPinned,
+      pinnedAt: isPinned ? (existing.entities?.pinnedAt || new Date().toISOString()) : undefined,
+    };
+  } else if (patch.entities !== undefined) {
+    updates.entities = {
+      ...(existing.entities || {}),
+      ...patch.entities,
+    };
+  }
+
   const [updated] = await db
     .update(scraps)
     .set(updates)
@@ -166,6 +181,19 @@ export async function updateScrap(
     .returning();
 
   return updated || null;
+}
+
+export async function togglePinScrap(userId: string, id: string): Promise<ScrapRow | null> {
+  const existing = await getScrapById(userId, id);
+  if (!existing) return null;
+  const nextPinned = !Boolean(existing.entities?.isPinned);
+  return await updateScrap(userId, id, {
+    entities: {
+      ...(existing.entities || {}),
+      isPinned: nextPinned,
+      pinnedAt: nextPinned ? new Date().toISOString() : undefined,
+    },
+  });
 }
 
 export async function deleteScrap(userId: string, id: string): Promise<boolean> {

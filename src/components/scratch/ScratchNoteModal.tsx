@@ -19,6 +19,8 @@ interface ScratchNoteModalProps {
   onUpdateNotes: (id: string, notes: string) => Promise<void> | void;
   onClose: () => void;
   onPromoteTil: (id: string) => Promise<void> | void;
+  onTogglePin?: (id: string) => Promise<void> | void;
+  isPinned?: boolean;
   initialMode?: "split" | "edit" | "read" | "ink";
 }
 
@@ -31,6 +33,8 @@ export const ScratchNoteModal: React.FC<ScratchNoteModalProps> = ({
   onUpdateNotes,
   onClose,
   onPromoteTil,
+  onTogglePin,
+  isPinned = false,
   initialMode = "split",
 }) => {
   const [mounted, setMounted] = useState(false);
@@ -524,6 +528,17 @@ export const ScratchNoteModal: React.FC<ScratchNoteModalProps> = ({
                 EXPORT SVG
               </button>
             )}
+            <button
+              type="button"
+              className={`note-modal-pin-btn${isPinned ? " is-pinned" : ""}`}
+              onClick={() => {
+                playSound.pin(!isPinned);
+                void onTogglePin?.(scrap.id);
+              }}
+              title={isPinned ? "Unpin this note from Pinboard" : "Pin this note to Pinboard"}
+            >
+              {isPinned ? "📌 PINNED" : "📌 PIN"}
+            </button>
             <button type="button" onClick={handleCopyMd} title="Copy Raw Markdown">
               {copied ? "COPIED!" : "COPY MD"}
             </button>
