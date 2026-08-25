@@ -3,6 +3,8 @@
 import React from "react";
 import { ScrapRow } from "@/db/schema";
 
+import { inlineMarkdown } from "@/lib/scratch/markdown";
+
 interface ScratchCorkboardCardProps {
   scrap: ScrapRow;
   x: number;
@@ -36,7 +38,11 @@ export const ScratchCorkboardCard: React.FC<ScratchCorkboardCardProps> = ({
     >
       <span className="corkboard-card__pin" aria-hidden="true" />
       <span className="corkboard-card__kind">{scrap.kind}</span>
-      <div className="corkboard-card__body">{preview}</div>
+      <div
+        className="corkboard-card__body"
+        dangerouslySetInnerHTML={{ __html: inlineMarkdown(preview) }}
+      />
     </div>
   );
 };
+

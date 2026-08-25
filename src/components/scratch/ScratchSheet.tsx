@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import { ScrapRow } from "@/db/schema";
 import { buildDaySummary } from "@/lib/scratch/tallies";
 import { formatScrapDayHeader, getLocalTodayIso } from "@/lib/scratch/parse";
+import { inlineMarkdown } from "@/lib/scratch/markdown";
 
 interface ScratchSheetProps {
   scraps: ScrapRow[];
@@ -182,7 +183,10 @@ export const ScratchSheet: React.FC<ScratchSheetProps> = ({
 
                       {/* Optional Note */}
                       {it.notes && it.notes.trim() && (
-                        <span className="note">{it.notes}</span>
+                        <span
+                          className="note"
+                          dangerouslySetInnerHTML={{ __html: inlineMarkdown(it.notes) }}
+                        />
                       )}
                     </div>
                   </div>

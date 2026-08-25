@@ -13,7 +13,7 @@ describe("renderScratchMarkdown", () => {
   it("handles unclosed streaming code blocks safely", () => {
     const md = "```ts\nconst x = 10;";
     const res = renderScratchMarkdown(md);
-    expect(res).toContain('<div class="cb">');
+    expect(res).toContain('class="cb"');
     expect(res).toContain("const x = 10;");
   });
 
@@ -97,6 +97,42 @@ if the **state** is invisible, the error will be too
     expect(res).toContain('<rect x="10" y="10" width="100" height="50" fill="#FFE500" />');
     expect(res).toContain('<div class="inkblk__f">Feedback Loop</div>');
   });
+  it("handles auto-linkification for bare URLs and named links", () => {
+    const text1 = "Check out https://github.com/hoard and http://localhost:3000 for more.";
+    const res1 = renderScratchMarkdown(text1);
+    expect(res1).toContain('class="md-link md-link--bare"');
+    expect(res1).toContain('href="https://github.com/hoard"');
+    expect(res1).toContain('github.com/hoard');
+
+    const text2 = "Read the [Documentation](https://hoard.dev/docs) here.";
+    const res2 = renderScratchMarkdown(text2);
+    expect(res2).toContain('class="md-link md-link--named"');
+    expect(res2).toContain('href="https://hoard.dev/docs"');
+    expect(res2).toContain('Documentation');
+  });
+
+  it("handles slash commands as interactive command pills", () => {
+    const text = "Use /grill-with-docs when idea is fuzzy, and /prototype or /handoff for context.";
+    const res = renderScratchMarkdown(text);
+    expect(res).toContain('<code class="md-slash-cmd">/grill-with-docs</code>');
+    expect(res).toContain('<code class="md-slash-cmd">/prototype</code>');
+    expect(res).toContain('<code class="md-slash-cmd">/handoff</code>');
+  });
+
+  it("handles auto code block detection for un-fenced multi-line code", () => {
+    const code = "import { useState } from 'react';\nconst [count, setCount] = useState(0);";
+    const res = renderScratchMarkdown(code);
+    expect(res).toContain('class="cb"');
+    expect(res).toContain('cb-copy-btn');
+    expect(res).toContain('COPY');
+  });
+
+  it("preserves intentional linebreaks within paragraphs", () => {
+    const multi = "Line 1: do this\nLine 2: do that\nLine 3: finished";
+    const res = renderScratchMarkdown(multi);
+    expect(res).toContain("<p>Line 1: do this<br>Line 2: do that<br>Line 3: finished</p>");
+  });
 });
+
 
 

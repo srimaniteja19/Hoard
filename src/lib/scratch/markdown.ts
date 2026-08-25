@@ -8,42 +8,147 @@ export function escapeHtml(s: string): string {
 export function highlightCode(code: string): string {
   let s = escapeHtml(code);
   // Comments
-  s = s.replace(/(\/\*[\s\S]*?\*\/|\/\/[^\n]*|--[^\n]*)/g, '<span class="cm">$1</span>');
+  s = s.replace(/(\/\*[\s\S]*?\*\/|\/\/[^\n]*|--[^\n]*|#[^\n]*)/g, '<span class="cm">$1</span>');
   // Keywords
   s = s.replace(
-    /\b(const|let|var|function|return|if|else|import|export|class|new|await|async|CREATE|UNIQUE|INDEX|ON|SELECT|FROM|WHERE|NULLS|NOT|DISTINCT|isolation|mix-blend-mode|opacity|transform|filter)\b/g,
+    /\b(const|let|var|function|return|if|else|import|export|from|class|new|await|async|try|catch|finally|throw|typeof|instanceof|interface|type|enum|extends|implements|public|private|protected|readonly|static|override|as|is|default|switch|case|break|continue|while|for|do|yield|def|self|lambda|elif|pass|with|CREATE|UNIQUE|INDEX|ON|SELECT|FROM|WHERE|NULLS|NOT|DISTINCT|INSERT|INTO|UPDATE|SET|DELETE|JOIN|LEFT|RIGHT|INNER|OUTER|GROUP|BY|ORDER|HAVING|LIMIT|OFFSET|npm|npx|pnpm|yarn|bun|git|docker|curl|grep|cd|echo|cat|ls|mkdir|rm|sudo|chmod|isolation|mix-blend-mode|opacity|transform|filter)\b/g,
     '<span class="kw">$1</span>'
   );
+  // Built-in types & React hooks
+  s = s.replace(
+    /\b(string|number|boolean|symbol|bigint|object|any|unknown|never|void|null|undefined|true|false|Promise|Array|Map|Set|Record|Partial|React|useState|useEffect|useCallback|useMemo|useRef)\b/g,
+    '<span class="tp">$1</span>'
+  );
   // Strings
-  s = s.replace(/(&quot;[^&]*?&quot;|'[^']*?')/g, '<span class="st">$1</span>');
+  s = s.replace(/(&quot;[^&]*?&quot;|'[^']*?'|`[^`]*?`)/g, '<span class="st">$1</span>');
   // Numbers with optional units
   s = s.replace(/\b(\d+(\.\d+)?(px|em|rem|%|s|ms)?)\b/g, '<span class="nu">$1</span>');
   return s;
 }
 
+export function formatUrlDisplay(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "");
+    const path = parsed.pathname === "/" ? "" : parsed.pathname;
+    const full = host + path;
+    return full.length > 38 ? full.slice(0, 35) + "..." : full;
+  } catch {
+    const stripped = url.replace(/^https?:\/\/(www\.)?/, "");
+    return stripped.length > 38 ? stripped.slice(0, 35) + "..." : stripped;
+  }
+}
+
 export function inlineMarkdown(s: string): string {
   if (!s) return "";
-  let res = escapeHtml(s);
-  // Images: ![alt](url)
-  res = res.replace(
-    /!\[([^\]]*)\]\(([^)]+)\)/g,
-    '<span class="md-inline-img-wrap"><img src="$2" alt="$1" class="md-img" data-full-src="$2" loading="lazy" /></span>'
-  );
-  // Code: `code`
-  res = res.replace(/`([^`]+)`/g, "<code>$1</code>");
-  // Bold: **text**
+
+  // Token storage to prevent double-processing
+  const tokens: Array<{ id: string; html: string }> = [];
+  let tokenIdx = 0;
+  function addToken(html: string): string {
+    const id = `__MD_TOKEN_${tokenIdx++}__`;
+    tokens.push({ id, html });
+    return id;
+  }
+
+  let res = s;
+
+  // 1. Extract inline code `code`
+  res = res.replace(/`([^`]+)`/g, (_m, code) => {
+    return addToken(`<code>${escapeHtml(code)}</code>`);
+  });
+
+  // 2. Extract markdown images ![alt](url)
+  res = res.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_m, alt, url) => {
+    const safeAlt = escapeHtml(alt);
+    const safeUrl = escapeHtml(url);
+    return addToken(
+      `<span class="md-inline-img-wrap"><img src="${safeUrl}" alt="${safeAlt}" class="md-img" data-full-src="${safeUrl}" loading="lazy" /></span>`
+    );
+  });
+
+  // 3. Extract markdown links [title](url)
+  res = res.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|[^\s)]+)\)/g, (_m, title, url) => {
+    const safeTitle = escapeHtml(title);
+    const safeUrl = escapeHtml(url);
+    const isExternal = safeUrl.startsWith("http://") || safeUrl.startsWith("https://");
+    return addToken(
+      `<a href="${safeUrl}" ${
+        isExternal ? 'target="_blank" rel="noopener noreferrer" class="md-link md-link--named"' : 'class="md-link"'
+      }><span class="md-link-icon">↗</span><span class="md-link-label">${safeTitle}</span></a>`
+    );
+  });
+
+  // Escape HTML of the remaining prose
+  res = escapeHtml(res);
+
+  // 4. Auto-link bare URLs (https://... or http://...)
+  res = res.replace(/(https?:\/\/[^\s<>"'`]+)/g, (url) => {
+    // Trim trailing punctuation if accidentally matched
+    let cleanUrl = url;
+    let trailing = "";
+    while (/[.,;:!?)\]]$/.test(cleanUrl)) {
+      trailing = cleanUrl.slice(-1) + trailing;
+      cleanUrl = cleanUrl.slice(0, -1);
+    }
+    const display = escapeHtml(formatUrlDisplay(cleanUrl));
+    return (
+      addToken(
+        `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="md-link md-link--bare" title="${cleanUrl}"><span class="md-link-icon">↗</span><span class="md-link-domain">${display}</span></a>`
+      ) + trailing
+    );
+  });
+
+  // 5. Slash commands: /grill-with-docs, /prototype, /handoff, /to-spec, /code-review, etc.
+  // Must be at start of line or preceded by whitespace/punctuation
+  res = res.replace(/(^|[\s([{"'])(\/[a-zA-Z][a-zA-Z0-9_-]*)(?=[\s.,;:!?)\]"']|$)/g, (_m, prefix, cmd) => {
+    return `${prefix}${addToken(`<code class="md-slash-cmd">${escapeHtml(cmd)}</code>`)}`;
+  });
+
+  // 6. Bold: **text**
   res = res.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  // Italic: *text*
+
+  // 7. Italic: *text*
   res = res.replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>");
-  // Highlight ==...==
+
+  // 8. Highlight: ==text==
   res = res.replace(/==([^=]+)==/g, "<mark>$1</mark>");
-  // Strikethrough ~~...~~
+
+  // 9. Strikethrough: ~~text~~
   res = res.replace(/~~([^~]+)~~/g, "<del>$1</del>");
-  // Links [title](url)
-  res = res.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-  // Hashtags #tag
+
+  // 10. Hashtags: #tag
   res = res.replace(/(^|\s)(#[a-zA-Z][\w-]*)/g, '$1<span class="tg">$2</span>');
+
+  // Restore all extracted tokens
+  for (const { id, html } of tokens) {
+    res = res.replace(id, html);
+  }
+
   return res;
+}
+
+export function detectCodeLanguage(code: string): string {
+  const trimmed = code.trim();
+  if (/^(import|export|const|let|var|function|interface|type|enum)\b/.test(trimmed)) {
+    return /:\s*(string|number|boolean|any|Promise|\w+\[\]|<)/.test(trimmed) ? "ts" : "js";
+  }
+  if (/^(def |class |from \w+ import|if __name__ ==)/.test(trimmed)) {
+    return "python";
+  }
+  if (/^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/i.test(trimmed)) {
+    return "sql";
+  }
+  if (/^(\{|\/\*|\.|#)[\s\S]*\{[\s\S]*\}/.test(trimmed) && !trimmed.includes("function")) {
+    return "css";
+  }
+  if (/^(\{|\[)[\s\S]*(\}|\])$/.test(trimmed) && /"[^"]+"\s*:/.test(trimmed)) {
+    return "json";
+  }
+  if (/^(npm|npx|pnpm|yarn|bun|git|docker|curl|grep|cd|ls|mkdir|chmod|sudo|export [A-Z_]+)\b/.test(trimmed)) {
+    return "bash";
+  }
+  return "text";
 }
 
 export function renderScratchMarkdown(md: string): string {
@@ -157,12 +262,13 @@ export function renderScratchMarkdown(md: string): string {
         i++; // Skip closing ```
       }
       const rawCode = codeBuffer.join("\n");
+      const lineCount = codeBuffer.length;
       out.push(
-        `<div class="cb"><div class="cb__h"><span>${escapeHtml(
+        `<div class="cb" data-lang="${escapeHtml(lang)}"><div class="cb__h"><span class="cb__lang">${escapeHtml(
           lang.toUpperCase()
-        )}</span><button type="button" class="cb-copy-btn" data-code="${escapeHtml(
+        )}</span><span class="cb__lines">${lineCount} line${lineCount === 1 ? "" : "s"}</span><button type="button" class="cb-copy-btn" data-code="${escapeHtml(
           rawCode
-        )}">COPY</button></div><pre>${highlightCode(rawCode)}</pre></div>`
+        )}">COPY</button></div><pre><code>${highlightCode(rawCode)}</code></pre></div>`
       );
       continue;
     }
@@ -315,7 +421,7 @@ export function renderScratchMarkdown(md: string): string {
         quoteBuffer.push(lines[i].replace(/^>\s?/, ""));
         i++;
       }
-      out.push(`<blockquote><p>${inlineMarkdown(quoteBuffer.join(" "))}</p></blockquote>`);
+      out.push(`<blockquote><p>${quoteBuffer.map((line) => inlineMarkdown(line)).join("<br>")}</p></blockquote>`);
       continue;
     }
 
@@ -329,6 +435,35 @@ export function renderScratchMarkdown(md: string): string {
     if (/^\s*\d+\.\s+/.test(L)) {
       out.push(parseList(true));
       continue;
+    }
+
+    // Auto-detect un-fenced multi-line code blocks
+    // If paragraph starts with obvious code keywords or commands and has 2+ lines
+    if (
+      /^(import\s|export\s|const\s|let\s|function\s|class\s|def\s|curl\s|git\s|docker\s|npm\s|npx\s|pnpm\s|SELECT\s|CREATE\s)/.test(
+        L.trim()
+      )
+    ) {
+      const detectedLang = detectCodeLanguage(L);
+      if (detectedLang !== "text") {
+        const rawCodeLines: string[] = [L];
+        i++;
+        while (i < lines.length) {
+          const next = lines[i];
+          if (!next.trim()) break;
+          if (/^(#{1,6}\s|>|```|:::|-{3,}|\s*[-*]\s+|\s*\d+\.\s+)/.test(next)) break;
+          rawCodeLines.push(next);
+          i++;
+        }
+        const fullCode = rawCodeLines.join("\n");
+        const lineCount = rawCodeLines.length;
+        out.push(
+          `<div class="cb" data-lang="${detectedLang}"><div class="cb__h"><span class="cb__lang">${detectedLang.toUpperCase()}</span><span class="cb__lines">${lineCount} line${lineCount === 1 ? "" : "s"}</span><button type="button" class="cb-copy-btn" data-code="${escapeHtml(
+            fullCode
+          )}">COPY</button></div><pre><code>${highlightCode(fullCode)}</code></pre></div>`
+        );
+        continue;
+      }
     }
 
     // Paragraph: consume current line and any continuation lines
@@ -352,7 +487,9 @@ export function renderScratchMarkdown(md: string): string {
       pBuffer.push(nextLine);
       i++;
     }
-    out.push(`<p>${inlineMarkdown(pBuffer.join(" "))}</p>`);
+
+    // Render lines in paragraph preserving intentional line breaks
+    out.push(`<p>${pBuffer.map((line) => inlineMarkdown(line)).join("<br>")}</p>`);
 
     // Absolute failsafe: guarantee loop progress
     if (i === loopStartIndex) {

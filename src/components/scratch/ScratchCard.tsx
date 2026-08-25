@@ -42,6 +42,8 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   const [notes, setNotes] = useState(scrap.notes || "");
   const [savedStatus, setSavedStatus] = useState("AUTOSAVED");
   const [copied, setCopied] = useState(false);
+  const [copiedContent, setCopiedContent] = useState(false);
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -393,32 +395,50 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   const isInk = scrap.kind === "INK";
   const hasTranscription = Boolean(currentTranscription);
 
+  const contentLength = scrap.content.length;
+  const contentWordCount = scrap.content.trim() ? scrap.content.trim().split(/\s+/).filter(Boolean).length : 0;
+  const contentLineCount = scrap.content.split("\n").length;
+  const hasCodeBlocks =
+    scrap.content.includes("```") ||
+    /^(import|export|const|let|var|function|class|def|curl|git|docker|npm|npx|SELECT|CREATE)\s/m.test(scrap.content);
+  const hasSlashCommands = /(?:^|\s)\/[a-zA-Z][a-zA-Z0-9_-]*/.test(scrap.content);
+  const urlMatches = scrap.content.match(/https?:\/\/[^\s)]+/g);
+  const urlCount = urlMatches ? urlMatches.length : 0;
+  const hasTasks = /- \[[ xX]\]/.test(scrap.content);
+
+  const isLongContent =
+    !isInk &&
+    (contentLength > 180 || contentWordCount > 28 || contentLineCount > 4 || hasCodeBlocks || hasTasks);
+
+  const structureKicker = useMemo(() => {
+    if (isInk) return null;
+    if (hasCodeBlocks) return "⌨ CODE";
+    if (hasSlashCommands) return "⚡ PLAYBOOK";
+    if (hasTasks) return "☑ TASKS";
+    if (urlCount > 1) return `🔗 ${urlCount} LINKS`;
+    if (urlCount === 1) return "🔗 LINK";
+    if (contentWordCount >= 30 || contentLineCount >= 4) return `📄 NOTE · ${contentWordCount}w`;
+    return null;
+  }, [isInk, hasCodeBlocks, hasSlashCommands, hasTasks, urlCount, contentWordCount, contentLineCount]);
+
+  const handleCopyContent = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    playSound.copy();
+    navigator.clipboard.writeText(scrap.content);
+    setCopiedContent(true);
+    setTimeout(() => setCopiedContent(false), 1500);
+  };
+
   const renderFormattedText = useCallback((text: string) => {
-    if (/!\[([^\]]*)\]\(([^)]+)\)/.test(text)) {
-      return <ScratchMarkdown content={text} className="md-card-content" />;
+    // If it's a short simple question without markdown or code
+    if ((/^\?/.test(text) || /\?\s*$/.test(text)) && text.length < 120 && !text.includes("\n") && !text.includes("```")) {
+      return <span className="q">{text}</span>;
     }
-    let t = text;
-    if (/^\?/.test(t) || /\?\s*$/.test(t)) {
-      return <span className="q">{t}</span>;
+    // If it's a short quote
+    if (/^>/.test(text) && text.length < 100 && !text.includes("\n")) {
+      return <em>{text.replace(/^>\s*/, "")}</em>;
     }
-    if (/^>/.test(t)) {
-      return <em>{t}</em>;
-    }
-    const parts = t.split(/(#[\w-]+)/g);
-    return (
-      <>
-        {parts.map((p, idx) => {
-          if (p.startsWith("#")) {
-            return (
-              <mark key={idx} style={{ background: "var(--cyan)", padding: "0 2px" }}>
-                {p}
-              </mark>
-            );
-          }
-          return <React.Fragment key={idx}>{p}</React.Fragment>;
-        })}
-      </>
-    );
+    return <ScratchMarkdown content={text} className="md-card-content" />;
   }, []);
 
   const showAiPanel = aiStreaming || aiStreamedText || aiError;
@@ -430,8 +450,8 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
     <article
       id={`scrap-${scrap.id}`}
       className={`scrap${isOpen ? " open" : ""}${isPinned ? " is-pinned" : ""}${
-        ageTier !== "fresh" ? ` scrap--ring-${ageTier}` : ""
-      }`}
+        isLongContent ? " scrap--long" : ""
+      }${ageTier !== "fresh" ? ` scrap--ring-${ageTier}` : ""}`}
       style={
         {
           "--c": `var(--${scrap.color || (isInk ? "lime" : "cyan")})`,
@@ -440,33 +460,64 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
         } as React.CSSProperties
       }
     >
-      {/* ── TOP-LEFT PAPERCLIP PIN BUTTON ── */}
-      <button
-        type="button"
-        className={`scrap__clip-pin${isPinned ? " is-pinned" : ""}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          playSound.pin(!isPinned);
-          void onTogglePin?.(scrap.id);
-        }}
-        title={isPinned ? "Unpin scrap (Remove paperclip)" : "Pin scrap (Attach paperclip)"}
-        aria-label={isPinned ? "Unpin scrap" : "Pin scrap"}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="clip-icon"
+      {/* ── CARD HEADER: PIN BUTTON + STRUCTURAL BADGE + QUICK ACTIONS ── */}
+      <div className="scrap__h-bar">
+        <button
+          type="button"
+          className={`scrap__clip-pin${isPinned ? " is-pinned" : ""}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            playSound.pin(!isPinned);
+            void onTogglePin?.(scrap.id);
+          }}
+          title={isPinned ? "Unpin scrap (Remove paperclip)" : "Pin scrap (Attach paperclip)"}
+          aria-label={isPinned ? "Unpin scrap" : "Pin scrap"}
         >
-          <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l7.88-7.88" />
-        </svg>
-      </button>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="clip-icon"
+          >
+            <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l7.88-7.88" />
+          </svg>
+        </button>
+
+        {structureKicker && (
+          <span className="scrap__structure-kicker">{structureKicker}</span>
+        )}
+
+        <div className="scrap__quick-acts">
+          {!isInk && (
+            <button
+              type="button"
+              className="scrap__quick-btn"
+              onClick={handleCopyContent}
+              title="Copy note markdown"
+            >
+              {copiedContent ? "✓ COPIED" : "📋 COPY"}
+            </button>
+          )}
+          <button
+            type="button"
+            className="scrap__quick-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              playSound.click();
+              setIsModalOpen(true);
+            }}
+            title="Open in Note Studio"
+          >
+            ⤢ STUDIO
+          </button>
+        </div>
+      </div>
 
       {/* ── CARD BODY (TEXT OR VECTOR INK) ── */}
-      <div className="scrap__b">
+      <div className={`scrap__b${isLongContent ? " scrap__b--long" : ""}`}>
         <span className="scrap__mk" />
         {isInk ? (
           <div
@@ -476,7 +527,33 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
             }}
           />
         ) : (
-          <div className="scrap__t">{renderFormattedText(scrap.content)}</div>
+          <div className="scrap__body-wrap">
+            <div
+              className={`scrap__t ${isLongContent ? "scrap__t--long" : "scrap__t--short"}${
+                isLongContent && !isContentExpanded ? " is-clamped" : ""
+              }`}
+            >
+              {renderFormattedText(scrap.content)}
+            </div>
+
+            {isLongContent && (
+              <button
+                type="button"
+                className="scrap__expand-toggle"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  playSound.click();
+                  setIsContentExpanded((prev) => !prev);
+                }}
+              >
+                {isContentExpanded ? (
+                  <span>▲ COLLAPSE NOTE</span>
+                ) : (
+                  <span>▼ SHOW FULL NOTE ({contentWordCount} WORDS · {contentLineCount} LINES)</span>
+                )}
+              </button>
+            )}
+          </div>
         )}
       </div>
 
