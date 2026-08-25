@@ -75,6 +75,41 @@ The bus was the bottleneck.
     });
     expect(smashed[0].type === "table" && smashed[0].rows).toHaveLength(3);
   });
+
+  it("parses fenced code blocks with language and preserves formatting", () => {
+    const codeMd = `Here is the SQL:
+
+\`\`\`sql
+WITH arpu_and_churn AS (
+  SELECT SUM(mrr) / COUNT(DISTINCT user_id) AS arpu
+  FROM current_subscriptions
+)
+SELECT * FROM arpu_and_churn;
+\`\`\`
+
+Done.`;
+
+    const blocks = parseAskMarkdown(codeMd);
+    expect(blocks).toHaveLength(3);
+    expect(blocks[0]).toEqual({ type: "paragraph", text: "Here is the SQL:" });
+    expect(blocks[1]).toEqual({
+      type: "code",
+      language: "sql",
+      code: `WITH arpu_and_churn AS (\n  SELECT SUM(mrr) / COUNT(DISTINCT user_id) AS arpu\n  FROM current_subscriptions\n)\nSELECT * FROM arpu_and_churn;`,
+    });
+    expect(blocks[2]).toEqual({ type: "paragraph", text: "Done." });
+  });
+
+  it("handles streaming/unclosed code blocks without crashing", () => {
+    const streamMd = `\`\`\`typescript\nconst a = 1;\nconst b = 2;`;
+    const blocks = parseAskMarkdown(streamMd);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]).toEqual({
+      type: "code",
+      language: "typescript",
+      code: "const a = 1;\nconst b = 2;",
+    });
+  });
 });
 
 describe("isThinSnippet", () => {

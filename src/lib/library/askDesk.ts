@@ -40,6 +40,8 @@ export function shelfFromAskMessage(message: AskUIMessage): AskShelfItem[] {
 export function plainAskText(markdown: string): string {
   return markdown
     .replace(/^#+\s+/gm, "")
+    .replace(/```[^\n]*\n([\s\S]*?)```/g, "$1")
+    .replace(/```[^\n]*/g, "")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/\s+/g, " ")

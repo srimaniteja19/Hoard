@@ -5,10 +5,54 @@ import { AskTable } from "@/components/library/AskTable";
 import { parseAskAnswer, parseAskMarkdown, type AskMarkdownBlock } from "@/lib/library/askAnswer";
 import { assignProvenance, plainAskText } from "@/lib/library/askDesk";
 import type { AskShelfItem } from "@/lib/library/askLibrary";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { formatLanguageLabel, highlightCode } from "@/lib/library/askCode";
 
 function Inline({ text }: { text: string }) {
   return <MarkdownLite content={text} style={{ whiteSpace: "normal" }} />;
+}
+
+function AskCodeBlock({ language, code }: { language?: string; code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // ignore
+    }
+  };
+
+  const highlighted = useMemo(() => {
+    return highlightCode(code, language);
+  }, [code, language]);
+
+  const label = formatLanguageLabel(language || "");
+
+  return (
+    <div className="ask-code">
+      <div className="ask-code-bar">
+        <span className="ask-code-lang">
+          <span className="ask-code-lang-dot" aria-hidden="true" />
+          {label}
+        </span>
+        <button
+          type="button"
+          className={copied ? "ask-code-copy-btn is-copied" : "ask-code-copy-btn"}
+          onClick={() => void handleCopy()}
+          aria-label="Copy code snippet"
+        >
+          {copied ? "COPIED" : "COPY"}
+        </button>
+      </div>
+      <pre className="ask-code-pre">
+        <code dangerouslySetInnerHTML={{ __html: highlighted }} />
+      </pre>
+    </div>
+  );
 }
 
 function ProvenanceInline({
@@ -72,6 +116,9 @@ function BlockView({
       (text: string) => <Inline text={text} />
     );
 
+  if (block.type === "code") {
+    return <AskCodeBlock language={block.language} code={block.code} />;
+  }
   if (block.type === "heading") {
     const Tag = block.level === 3 ? "h4" : "h3";
     return (

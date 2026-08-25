@@ -3,7 +3,8 @@ export type AskMarkdownBlock =
   | { type: "paragraph"; text: string }
   | { type: "list"; ordered: boolean; items: string[] }
   | { type: "quote"; text: string }
-  | { type: "table"; headers: string[]; rows: string[][] };
+  | { type: "table"; headers: string[]; rows: string[][] }
+  | { type: "code"; language: string; code: string };
 
 export function parseAskAnswer(text: string): { summary: string; body: string } {
   const trimmed = text.replace(/^\uFEFF/, "").trim();
@@ -30,7 +31,7 @@ export function parseAskAnswer(text: string): { summary: string; body: string } 
   return { summary: rest.trim(), body: "" };
 }
 
-const NEXT_BLOCK = /^(#{2,3}\s|[-*]\s|\d+\.\s|>\s?|\|)/;
+const NEXT_BLOCK = /^(#{2,3}\s|[-*]\s|\d+\.\s|>\s?|\||```|~~~)/;
 
 function isTableSep(line: string): boolean {
   const cells = splitCells(line);
@@ -83,6 +84,31 @@ export function parseAskMarkdown(content: string): AskMarkdownBlock[] {
     const line = lines[i];
     if (!line.trim()) {
       i += 1;
+      continue;
+    }
+
+    const codeFence = line.match(/^(`{3,}|~{3,})([^\s`]*)/);
+    if (codeFence) {
+      const fence = codeFence[1];
+      const fenceChar = fence[0];
+      const fenceLen = fence.length;
+      const language = (codeFence[2] || "").trim();
+      const codeLines: string[] = [];
+      i += 1;
+      while (i < lines.length) {
+        const cur = lines[i].trim();
+        if (cur.startsWith(fenceChar.repeat(fenceLen))) {
+          i += 1;
+          break;
+        }
+        codeLines.push(lines[i]);
+        i += 1;
+      }
+      blocks.push({
+        type: "code",
+        language: language.toLowerCase(),
+        code: codeLines.join("\n"),
+      });
       continue;
     }
 
