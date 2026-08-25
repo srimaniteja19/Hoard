@@ -9,7 +9,7 @@ import { XEmbed } from "@/components/til/embeds/XEmbed";
 import { GenericEmbed } from "@/components/til/embeds/GenericEmbed";
 import { AlertCircle } from "lucide-react";
 import { extractYouTubeVideoId } from "@/lib/cleanTitle";
-import { GlimpseSummaryLink } from "@/components/GlimpseSummaryLink";
+import { YouTubeDigestButton } from "@/components/youtube/YouTubeDigestButton";
 
 export type DensityOption = "inline" | "card" | "quote" | "full";
 
@@ -59,7 +59,7 @@ export const EmbedRouter: React.FC<EmbedRouterProps> = ({
             {targetUrl}
           </a>
         </div>
-        <GlimpseSummaryLink url={targetUrl} />
+        <YouTubeDigestButton url={targetUrl} variant="link" />
       </div>
     );
   }
@@ -88,7 +88,11 @@ export const EmbedRouter: React.FC<EmbedRouterProps> = ({
           durationSec={preview.durationSec}
           providerName={preview.provider as "YOUTUBE" | "VIMEO"}
         />
-        {preview.provider === "YOUTUBE" && <GlimpseSummaryLink url={targetUrl} />}
+        {preview.provider === "YOUTUBE" && (
+          <div style={{ marginTop: "6px" }}>
+            <YouTubeDigestButton url={targetUrl} title={preview.title} variant="pill" />
+          </div>
+        )}
       </div>
     );
   }
@@ -105,7 +109,9 @@ export const EmbedRouter: React.FC<EmbedRouterProps> = ({
       return (
         <div>
           <GenericEmbed preview={preview} density={effectiveDensity} />
-          <GlimpseSummaryLink url={targetUrl} />
+          <div style={{ marginTop: "6px" }}>
+            <YouTubeDigestButton url={targetUrl} title={preview.title} variant="pill" />
+          </div>
         </div>
       );
     case "VIMEO":

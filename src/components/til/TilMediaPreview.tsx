@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { LinkPreview } from "@/db/schema";
 import { extractYouTubeVideoId } from "@/lib/cleanTitle";
 import { Play, ExternalLink, Globe, BookOpen, Video } from "lucide-react";
-import { GlimpseSummaryLink } from "@/components/GlimpseSummaryLink";
+import { YouTubeDigestButton } from "@/components/youtube/YouTubeDigestButton";
 
 interface TilMediaPreviewProps {
   url: string;
@@ -67,7 +67,7 @@ export const TilMediaPreview: React.FC<TilMediaPreviewProps> = ({
             />
           </div>
           <div style={{ padding: "6px 8px", background: "var(--card, #FFFDF7)", borderTop: "1.5px solid var(--ink)" }}>
-            <GlimpseSummaryLink url={url} variant="link" />
+            <YouTubeDigestButton url={url} title={title} variant="link" />
           </div>
         </div>
       );
@@ -199,7 +199,7 @@ export const TilMediaPreview: React.FC<TilMediaPreviewProps> = ({
           </div>
 
           <div style={{ marginTop: "8px" }}>
-            <GlimpseSummaryLink url={url} variant="pill" />
+            <YouTubeDigestButton url={url} title={title} variant="pill" />
           </div>
         </div>
       </div>

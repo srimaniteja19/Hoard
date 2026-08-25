@@ -4,6 +4,7 @@ import { PWAProvider } from "@/components/PWAProvider";
 import { TodoReminderProvider } from "@/components/TodoReminderProvider";
 import { DuotoneFilters } from "@/components/covers/DuotoneFilters";
 import { CommandPalette } from "@/components/library/CommandPalette";
+import { YouTubeDigestProvider } from "@/components/youtube/YouTubeDigestProvider";
 
 export const metadata: Metadata = {
   title: "HOARD — Contextual Bookmark Manager",
@@ -53,7 +54,11 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <DuotoneFilters />
         <PWAProvider>
-          <TodoReminderProvider>{children}</TodoReminderProvider>
+          <TodoReminderProvider>
+            <YouTubeDigestProvider>
+              {children}
+            </YouTubeDigestProvider>
+          </TodoReminderProvider>
         </PWAProvider>
         <CommandPalette />
       </body>

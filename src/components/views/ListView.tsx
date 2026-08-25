@@ -9,6 +9,8 @@ import {
   getDaysAgo,
   getHorizonMetadata,
 } from "@/lib/library/timeCapsule";
+import { extractYouTubeVideoId } from "@/lib/cleanTitle";
+import { YouTubeDigestButton } from "@/components/youtube/YouTubeDigestButton";
 
 interface ListViewProps {
   items: Bookmark[];
@@ -90,6 +92,12 @@ export const ListView: React.FC<ListViewProps> = ({
                 ))}
                 <span style={{ opacity: 0.4 }}>·</span>
                 <span>#{x.tag}</span>
+                {Boolean(extractYouTubeVideoId(x.url)) && (
+                  <>
+                    <span style={{ opacity: 0.4 }}>·</span>
+                    <YouTubeDigestButton url={x.url} title={x.t} variant="link" />
+                  </>
+                )}
                 {x.ty === "ART" && x.mins > 0 && (
                   <>
                     <span style={{ opacity: 0.4 }}>·</span>

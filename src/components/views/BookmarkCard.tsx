@@ -9,6 +9,8 @@ import { CoverCanvas } from "@/components/covers/CoverCanvas";
 import { calculateSunFadeOpacity } from "@/components/covers/lib/cover-geometry";
 import { formatDuration } from "@/lib/format";
 import { formatRelativeTime } from "@/lib/library/formatRelativeTime";
+import { extractYouTubeVideoId } from "@/lib/cleanTitle";
+import { YouTubeDigestButton } from "@/components/youtube/YouTubeDigestButton";
 import {
   classifyHorizon,
   getBookmarkDate,
@@ -175,6 +177,20 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
           {isSelected ? "✕" : ""}
         </span>
         <span className="tybadge">{bookmark.ty}</span>
+        {Boolean(extractYouTubeVideoId(bookmark.url)) && (
+          <YouTubeDigestButton
+            url={bookmark.url}
+            title={bookmark.t}
+            variant="badge"
+            style={{
+              position: "absolute",
+              top: "8px",
+              right: "8px",
+              zIndex: 4,
+              boxShadow: "2px 2px 0 #000",
+            }}
+          />
+        )}
         {bookmark.isQuote && <span className="quote-badge">QUOTE</span>}
         {durationText && <span className="dur">{durationText}</span>}
       </div>
@@ -247,6 +263,10 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
           <span className="ctag" style={{ background: typeMeta.c, color: typeMeta.fg }}>
             #{bookmark.tag}
           </span>
+
+          {Boolean(extractYouTubeVideoId(bookmark.url)) && (
+            <YouTubeDigestButton url={bookmark.url} title={bookmark.t} variant="badge" />
+          )}
 
           {onOpenSynapse && (
             <button

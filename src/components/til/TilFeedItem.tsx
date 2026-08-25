@@ -12,10 +12,13 @@ import {
   stripNote,
   combineWithNote,
 } from "@/lib/til/entryParser";
-import { Edit2, Trash2, X, Check, ExternalLink, StickyNote } from "lucide-react";
+import { Edit2, Trash2, X, Check, ExternalLink, StickyNote, Sparkles } from "lucide-react";
 import { tilTypeColorVar } from "@/lib/til/typeColorTokens";
 import { TilMediaPreview } from "@/components/til/TilMediaPreview";
-import { GlimpseSummaryLink } from "@/components/GlimpseSummaryLink";
+import { useYouTubeDigest } from "@/components/youtube/YouTubeDigestProvider";
+import { extractYouTubeVideoId } from "@/lib/cleanTitle";
+import { DigestJsonViewer } from "@/components/youtube/DigestJsonViewer";
+import { DigestJson } from "@/lib/youtube/digest";
 
 export interface TilItem {
   id: string;
@@ -61,6 +64,9 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isNoteOpen, setIsNoteOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState(parseNote(item.body) || "");
+  const [isDigestOpen, setIsDigestOpen] = useState(false);
+  const [savedDigestData, setSavedDigestData] = useState<{ title?: string; content: string } | null>(null);
+  const [loadingDigest, setLoadingDigest] = useState(false);
   const [editBody, setEditBody] = useState(item.body || "");
   const [editCode, setEditCode] = useState(item.code || "");
   const [editCodeLang, setEditCodeLang] = useState(item.codeLang || "typescript");
@@ -70,6 +76,42 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+
+  const { openYouTubeDigest, isDigestSaved } = useYouTubeDigest();
+  const ytVideoId = item.linkUrl ? extractYouTubeVideoId(item.linkUrl) : null;
+  const isSavedDigest = Boolean(ytVideoId && typeof isDigestSaved === "function" && isDigestSaved(ytVideoId));
+
+  const handleToggleDigest = async () => {
+    if (!item.linkUrl) return;
+
+    if (!isDigestOpen) {
+      if (!savedDigestData) {
+        setLoadingDigest(true);
+        try {
+          const res = await fetch(`/api/youtube/saved?url=${encodeURIComponent(item.linkUrl)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.saved && data.digest) {
+              setSavedDigestData(data.digest);
+              setIsDigestOpen(true);
+              setLoadingDigest(false);
+              return;
+            }
+          }
+        } catch {
+          // ignore
+        }
+        setLoadingDigest(false);
+      }
+
+      if (!savedDigestData && !isSavedDigest) {
+        openYouTubeDigest(item.linkUrl, item.linkPreview?.title || item.body?.slice(0, 40));
+        return;
+      }
+    }
+
+    setIsDigestOpen((v) => !v);
+  };
 
   const note = parseNote(item.body);
 
@@ -513,6 +555,162 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                 </span>
               </div>
             ) : null}
+
+            {/* Inline Saved Digest Drawer on the Entry */}
+            {isDigestOpen && (
+              <div
+                style={{
+                  marginTop: "14px",
+                  padding: "16px 18px",
+                  background: "var(--card, #FFFDF7)",
+                  border: "2.5px solid var(--ink)",
+                  boxShadow: "4px 4px 0 var(--ink)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    borderBottom: "1.5px solid var(--ink)",
+                    paddingBottom: "8px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      letterSpacing: "0.08em",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      color: "var(--ink)",
+                    }}
+                  >
+                    <Sparkles size={13} className="text-[#FF2D8A]" />
+                    {savedDigestData?.title || "SAVED YOUTUBE DIGEST"}
+                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        item.linkUrl &&
+                        openYouTubeDigest(item.linkUrl, item.linkPreview?.title || item.body?.slice(0, 40))
+                      }
+                      style={{
+                        background: "var(--paper)",
+                        border: "1px solid var(--ink)",
+                        fontFamily: "var(--mono)",
+                        fontSize: "9.5px",
+                        fontWeight: 800,
+                        padding: "3px 6px",
+                        cursor: "pointer",
+                      }}
+                      title="Open in full modal"
+                    >
+                      EXPAND MODAL ↗
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsDigestOpen(false)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--ink)",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        fontSize: "12px",
+                        padding: "2px 4px",
+                      }}
+                      title="Collapse digest"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                {loadingDigest ? (
+                  <div
+                    style={{
+                      padding: "20px 0",
+                      textAlign: "center",
+                      fontFamily: "var(--mono)",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    <Sparkles
+                      size={16}
+                      className="animate-spin text-[#FF2D8A]"
+                      style={{ margin: "0 auto 6px auto", display: "block" }}
+                    />
+                    Loading saved digest...
+                  </div>
+                ) : savedDigestData?.content ? (
+                  (() => {
+                    let parsed: DigestJson | null = null;
+                    try {
+                      const trimmed = savedDigestData.content.trim();
+                      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+                        parsed = JSON.parse(trimmed);
+                      } else {
+                        const match = trimmed.match(/\{[\s\S]*\}/);
+                        if (match) parsed = JSON.parse(match[0]);
+                      }
+                    } catch {
+                      // fallback to raw text
+                    }
+
+                    if (parsed) {
+                      return <DigestJsonViewer digest={parsed} />;
+                    }
+
+                    return (
+                      <div
+                        style={{
+                          fontFamily: "var(--body)",
+                          fontSize: "13px",
+                          lineHeight: 1.5,
+                          color: "var(--ink)",
+                          whiteSpace: "pre-wrap",
+                          maxHeight: "450px",
+                          overflowY: "auto",
+                        }}
+                      >
+                        {savedDigestData.content}
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <div style={{ padding: "12px 0", textAlign: "center" }}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        item.linkUrl &&
+                        openYouTubeDigest(item.linkUrl, item.linkPreview?.title || item.body?.slice(0, 40))
+                      }
+                      style={{
+                        background: "var(--ink)",
+                        color: "var(--yellow, #FFE94A)",
+                        border: "2px solid var(--ink)",
+                        boxShadow: "2px 2px 0 var(--pink)",
+                        fontFamily: "var(--mono)",
+                        fontSize: "11px",
+                        fontWeight: 800,
+                        padding: "6px 12px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      ✦ GENERATE DIGEST NOW
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         ) : (
           /* Inline Editing View */
@@ -757,6 +955,34 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
               <StickyNote size={11} />
               {note ? "NOTE" : "+ NOTE"}
             </button>
+
+            {/* Saved Digest Button */}
+            {ytVideoId && (
+              <button
+                type="button"
+                onClick={handleToggleDigest}
+                title={isSavedDigest ? "View saved AI digest on this entry" : "Generate/view AI digest"}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  background: isSavedDigest
+                    ? "var(--lime, #B8F04A)"
+                    : isDigestOpen
+                    ? "var(--yellow, #FFE94A)"
+                    : undefined,
+                  color: isSavedDigest ? "#000" : undefined,
+                  fontWeight: 800,
+                }}
+              >
+                {isSavedDigest ? (
+                  <Check size={11} strokeWidth={3} />
+                ) : (
+                  <Sparkles size={11} className={isSavedDigest ? "text-[#000]" : "text-[#FF2D8A]"} />
+                )}
+                {isSavedDigest ? "SAVED DIGEST" : "+ DIGEST"}
+              </button>
+            )}
 
             {/* Edit / Delete small controls */}
             <button

@@ -8,6 +8,8 @@ import {
   getDaysAgo,
   getHorizonMetadata,
 } from "@/lib/library/timeCapsule";
+import { extractYouTubeVideoId } from "@/lib/cleanTitle";
+import { YouTubeDigestButton } from "@/components/youtube/YouTubeDigestButton";
 
 interface HeadlinesViewProps {
   items: Bookmark[];
@@ -64,6 +66,9 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
                 </span>
               )}
             </span>
+            {Boolean(extractYouTubeVideoId(x.url)) && (
+              <YouTubeDigestButton url={x.url} title={x.t} variant="badge" style={{ marginLeft: 6 }} />
+            )}
             {x.isQuote && <span className="quote-badge">QUOTE</span>}
             <span className="hm hsrc">{x.src}</span>
             <span className="hm huses" style={{ textAlign: "right" }}>

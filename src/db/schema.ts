@@ -776,3 +776,30 @@ export const playbookRuns = pgTable(
 
 export type PlaybookRunRow = typeof playbookRuns.$inferSelect;
 export type NewPlaybookRunRow = typeof playbookRuns.$inferInsert;
+
+export const savedDigests = pgTable(
+  "saved_digests",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    videoId: text("video_id").notNull(),
+    url: text("url").notNull(),
+    title: text("title").notNull(),
+    author: text("author"),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("user_video_digest_idx").on(table.userId, table.videoId),
+    index("user_digest_url_idx").on(table.userId, table.url),
+  ]
+);
+
+export type SavedDigestRow = typeof savedDigests.$inferSelect;
+export type NewSavedDigestRow = typeof savedDigests.$inferInsert;
+
