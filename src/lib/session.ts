@@ -53,11 +53,6 @@ export async function requireUserId(req?: Request): Promise<string> {
     return session.user.id;
   }
 
-  // 3. Fallback for single tenant owner ID if set
-  if (process.env.SINGLE_TENANT_USER_ID) {
-    return process.env.SINGLE_TENANT_USER_ID;
-  }
-
   throw new AuthError("Unauthorized");
 }
 

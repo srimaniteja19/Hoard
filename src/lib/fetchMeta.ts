@@ -1,4 +1,5 @@
 import { cleanTitle, decodeHtmlEntities, extractYouTubeVideoId } from "@/lib/cleanTitle";
+import { validateUrlForSsrf } from "@/lib/security/ssrfGuard";
 
 export interface FetchedUrlMeta {
   title: string | null;
@@ -141,16 +142,39 @@ export async function fetchMetaForUrl(targetUrl: string): Promise<FetchedUrlMeta
 
   // ─── 5. Generic Web Scraper (HTML Head parsing with 512KB buffer) ───────────
   try {
-    const res = await fetch(targetUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 HOARD/2.0",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-      signal: AbortSignal.timeout(6000),
-    });
+    let currentUrl = targetUrl;
+    let res: Response | null = null;
+    let redirectsRemaining = 5;
 
-    if (!res.ok) {
+    while (redirectsRemaining >= 0) {
+      const ssrfCheck = await validateUrlForSsrf(currentUrl);
+      if (!ssrfCheck.allowed) {
+        return { title: cleanTitle(null, targetUrl), description: null, image: null, ogType: null };
+      }
+
+      const hop = await fetch(currentUrl, {
+        redirect: "manual",
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 HOARD/2.0",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+        signal: AbortSignal.timeout(6000),
+      });
+
+      if (hop.status >= 300 && hop.status < 400) {
+        const location = hop.headers.get("location");
+        if (!location) break;
+        currentUrl = new URL(location, currentUrl).toString();
+        redirectsRemaining--;
+        continue;
+      }
+
+      res = hop;
+      break;
+    }
+
+    if (!res || !res.ok) {
       return { title: cleanTitle(null, targetUrl), description: null, image: null, ogType: null };
     }
 

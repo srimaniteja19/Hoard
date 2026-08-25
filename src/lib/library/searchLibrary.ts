@@ -76,8 +76,10 @@ export async function searchLibrary(
   const fetchVector = deps?.fetchVector ?? defaultFetchVector;
 
   const candidateLimit = Math.max(limit, CANDIDATE_LIMIT);
-  const fts = await fetchFts(userId, query, candidateLimit);
-  const embedding = await embedQuery(query);
+  const [fts, embedding] = await Promise.all([
+    fetchFts(userId, query, candidateLimit),
+    embedQuery(query),
+  ]);
   const vector = embedding ? await fetchVector(userId, embedding, candidateLimit) : [];
   return fuseSearchLists(fts, vector).slice(0, limit);
 }

@@ -9,15 +9,20 @@ const formatUrl = (url?: string) => {
   return `https://${url}`;
 };
 
+const authSecret = process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET;
+if (!authSecret) {
+  throw new Error("BETTER_AUTH_SECRET (or AUTH_SECRET) must be set — no fallback secret is used.");
+}
+
 export const auth = betterAuth({
-  secret: process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET || "hoard_default_secret_key_9837429837",
+  secret: authSecret,
   baseURL:
     formatUrl(process.env.BETTER_AUTH_URL) ||
     formatUrl(process.env.NEXT_PUBLIC_APP_URL) ||
     formatUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL) ||
     formatUrl(process.env.VERCEL_URL) ||
     "http://localhost:3000",
-  trustedOrigins: async (request?: Request) => {
+  trustedOrigins: async () => {
     const origins = new Set<string>([
       "http://localhost:3000",
       "http://127.0.0.1:3000",
@@ -43,29 +48,6 @@ export const auth = betterAuth({
       });
     }
 
-    if (request) {
-      const originHeader = request.headers.get("origin");
-      if (originHeader) {
-        origins.add(originHeader);
-      }
-
-      const refererHeader = request.headers.get("referer");
-      if (refererHeader) {
-        try {
-          origins.add(new URL(refererHeader).origin);
-        } catch {}
-      }
-
-      const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
-      const proto = request.headers.get("x-forwarded-proto") || "https";
-      if (host) {
-        origins.add(`${proto}://${host}`);
-        if (proto !== "http") {
-          origins.add(`http://${host}`);
-        }
-      }
-    }
-
     return Array.from(origins).filter(Boolean);
   },
   database: drizzleAdapter(db, {
@@ -81,9 +63,3 @@ export const auth = betterAuth({
     enabled: true,
   },
 });
-
-export const DEFAULT_SINGLE_TENANT_USER_ID = "usr_owner_default";
-
-export async function getAuthenticatedUserId(): Promise<string> {
-  return process.env.SINGLE_TENANT_USER_ID || DEFAULT_SINGLE_TENANT_USER_ID;
-}
