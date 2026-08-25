@@ -3,7 +3,12 @@
 import React, { useState, useCallback, useRef, useMemo } from "react";
 import { ScrapRow } from "@/db/schema";
 import { getPinnedScraps } from "@/lib/scratch/filters";
-import { getBoardPosition, getWeldConnections } from "@/lib/scratch/corkboard";
+import {
+  getBoardPosition,
+  getWeldConnections,
+  BOARD_WIDTH,
+  BOARD_HEIGHT,
+} from "@/lib/scratch/corkboard";
 import { ScratchCorkboardCard } from "./ScratchCorkboardCard";
 import { ScratchNoteModal } from "./ScratchNoteModal";
 import { playSound } from "@/lib/sound";
@@ -18,6 +23,10 @@ interface ScratchCorkboardProps {
 
 const POSITION_SAVE_DEBOUNCE_MS = 400;
 const DRAG_THRESHOLD_PX = 5;
+// Rough card footprint used to keep dragged cards from being clamped
+// off the edge of the board (doesn't need to be pixel-perfect).
+const CARD_WIDTH_ESTIMATE = 180;
+const CARD_HEIGHT_ESTIMATE = 100;
 
 export const ScratchCorkboard: React.FC<ScratchCorkboardProps> = ({
   scraps,
@@ -38,6 +47,8 @@ export const ScratchCorkboard: React.FC<ScratchCorkboardProps> = ({
     offsetY: number;
     startX: number;
     startY: number;
+    x: number;
+    y: number;
   } | null>(null);
   const didDragRef = useRef(false);
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -65,6 +76,8 @@ export const ScratchCorkboard: React.FC<ScratchCorkboardProps> = ({
         offsetY: e.clientY - canvasRect.top - current.y,
         startX: e.clientX,
         startY: e.clientY,
+        x: current.x,
+        y: current.y,
       };
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
     },
@@ -85,8 +98,12 @@ export const ScratchCorkboard: React.FC<ScratchCorkboardProps> = ({
     }
 
     const canvasRect = canvas.getBoundingClientRect();
-    const x = Math.max(0, e.clientX - canvasRect.left - drag.offsetX);
-    const y = Math.max(0, e.clientY - canvasRect.top - drag.offsetY);
+    const maxX = BOARD_WIDTH - CARD_WIDTH_ESTIMATE;
+    const maxY = BOARD_HEIGHT - CARD_HEIGHT_ESTIMATE;
+    const x = Math.min(maxX, Math.max(0, e.clientX - canvasRect.left - drag.offsetX));
+    const y = Math.min(maxY, Math.max(0, e.clientY - canvasRect.top - drag.offsetY));
+    drag.x = x;
+    drag.y = y;
     setPositions((prev) => ({ ...prev, [drag.id]: { x, y } }));
   }, []);
 
@@ -94,17 +111,17 @@ export const ScratchCorkboard: React.FC<ScratchCorkboardProps> = ({
     const drag = dragRef.current;
     dragRef.current = null;
     if (!drag) return;
+    if (!didDragRef.current) return;
 
-    const finalPos = positions[drag.id];
-    if (!finalPos) return;
+    const { x, y } = drag;
 
     if (saveTimersRef.current[drag.id]) {
       clearTimeout(saveTimersRef.current[drag.id]);
     }
     saveTimersRef.current[drag.id] = setTimeout(() => {
-      void onUpdatePosition(drag.id, finalPos.x, finalPos.y);
+      void onUpdatePosition(drag.id, x, y);
     }, POSITION_SAVE_DEBOUNCE_MS);
-  }, [positions, onUpdatePosition]);
+  }, [onUpdatePosition]);
 
   if (pinnedScraps.length === 0) {
     return (
@@ -120,53 +137,55 @@ export const ScratchCorkboard: React.FC<ScratchCorkboardProps> = ({
 
   return (
     <>
-      <div
-        className="corkboard-canvas"
-        ref={canvasRef}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-      >
-        <svg className="corkboard-strings" aria-hidden="true">
-          {connections.map((conn) => {
-            const fromScrap = pinnedScraps.find((s) => s.id === conn.from);
-            const toScrap = pinnedScraps.find((s) => s.id === conn.to);
-            if (!fromScrap || !toScrap) return null;
-            const fromIdx = pinnedScraps.indexOf(fromScrap);
-            const toIdx = pinnedScraps.indexOf(toScrap);
-            const fromPos = resolvePosition(fromScrap, fromIdx);
-            const toPos = resolvePosition(toScrap, toIdx);
+      <div className="corkboard-frame">
+        <div
+          className="corkboard-canvas"
+          ref={canvasRef}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+        >
+          <svg className="corkboard-strings" aria-hidden="true">
+            {connections.map((conn) => {
+              const fromScrap = pinnedScraps.find((s) => s.id === conn.from);
+              const toScrap = pinnedScraps.find((s) => s.id === conn.to);
+              if (!fromScrap || !toScrap) return null;
+              const fromIdx = pinnedScraps.indexOf(fromScrap);
+              const toIdx = pinnedScraps.indexOf(toScrap);
+              const fromPos = resolvePosition(fromScrap, fromIdx);
+              const toPos = resolvePosition(toScrap, toIdx);
+              return (
+                <line
+                  key={`${conn.from}-${conn.to}`}
+                  x1={fromPos.x + 90}
+                  y1={fromPos.y + 40}
+                  x2={toPos.x + 90}
+                  y2={toPos.y + 40}
+                />
+              );
+            })}
+          </svg>
+
+          {pinnedScraps.map((scrap, index) => {
+            const pos = resolvePosition(scrap, index);
             return (
-              <line
-                key={`${conn.from}-${conn.to}`}
-                x1={fromPos.x + 90}
-                y1={fromPos.y + 40}
-                x2={toPos.x + 90}
-                y2={toPos.y + 40}
+              <ScratchCorkboardCard
+                key={scrap.id}
+                scrap={scrap}
+                x={pos.x}
+                y={pos.y}
+                onPointerDownDrag={handlePointerDownDrag}
+                onOpen={(s) => {
+                  if (didDragRef.current) {
+                    didDragRef.current = false;
+                    return;
+                  }
+                  playSound.click();
+                  setModalScrap(s);
+                }}
               />
             );
           })}
-        </svg>
-
-        {pinnedScraps.map((scrap, index) => {
-          const pos = resolvePosition(scrap, index);
-          return (
-            <ScratchCorkboardCard
-              key={scrap.id}
-              scrap={scrap}
-              x={pos.x}
-              y={pos.y}
-              onPointerDownDrag={handlePointerDownDrag}
-              onOpen={(s) => {
-                if (didDragRef.current) {
-                  didDragRef.current = false;
-                  return;
-                }
-                playSound.click();
-                setModalScrap(s);
-              }}
-            />
-          );
-        })}
+        </div>
       </div>
 
       {modalScrap && (

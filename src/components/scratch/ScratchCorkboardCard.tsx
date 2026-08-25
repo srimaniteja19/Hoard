@@ -2,7 +2,6 @@
 
 import React from "react";
 import { ScrapRow } from "@/db/schema";
-import { playSound } from "@/lib/sound";
 
 interface ScratchCorkboardCardProps {
   scrap: ScrapRow;
@@ -33,10 +32,7 @@ export const ScratchCorkboardCard: React.FC<ScratchCorkboardCardProps> = ({
         } as React.CSSProperties
       }
       onPointerDown={(e) => onPointerDownDrag(scrap.id, e)}
-      onClick={() => {
-        playSound.click();
-        onOpen(scrap);
-      }}
+      onClick={() => onOpen(scrap)}
     >
       <span className="corkboard-card__pin" aria-hidden="true" />
       <span className="corkboard-card__kind">{scrap.kind}</span>
