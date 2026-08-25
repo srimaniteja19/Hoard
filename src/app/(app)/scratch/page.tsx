@@ -13,6 +13,7 @@ import { ScratchWeldModal } from "@/components/scratch/ScratchWeldModal";
 import { ScratchPinnedView } from "@/components/scratch/ScratchPinnedView";
 import { ScratchSeance } from "@/components/scratch/ScratchSeance";
 import { ScratchCorkboard } from "@/components/scratch/ScratchCorkboard";
+import { ScratchPostcardModal } from "@/components/scratch/ScratchPostcardModal";
 import { ScrapRow, ScrapKind } from "@/db/schema";
 import { ScratchStats } from "@/lib/dal/scratch";
 import { CollisionCandidate, CollisionHit } from "@/lib/scratch/collision";
@@ -40,6 +41,9 @@ function ScratchPageContent() {
   // Weld Modal state
   const [weldTargetScrap, setWeldTargetScrap] = useState<ScrapRow | null>(null);
   const [isWeldModalOpen, setIsWeldModalOpen] = useState(false);
+
+  // Postcard modal state
+  const [isPostcardModalOpen, setIsPostcardModalOpen] = useState(false);
 
   // Séance (dig-up) banner state
   const [seanceScrap, setSeanceScrap] = useState<ScrapRow | null>(null);
@@ -650,6 +654,27 @@ function ScratchPageContent() {
                 onSelectDate={(date) => handleFilterChange({ date })}
               />
 
+              <button
+                type="button"
+                onClick={() => {
+                  playSound.click();
+                  setIsPostcardModalOpen(true);
+                }}
+                style={{
+                  fontFamily: "var(--mono)",
+                  fontWeight: 800,
+                  fontSize: "11px",
+                  padding: "10px 18px",
+                  border: "var(--b) solid var(--ink)",
+                  background: "var(--yellow)",
+                  color: "var(--ink)",
+                  cursor: "pointer",
+                  marginBottom: "18px",
+                }}
+              >
+                📮 THIS WEEK&apos;S POSTCARD
+              </button>
+
               <div className="lb">
                 <div>
                   <div className="zone">
@@ -688,6 +713,12 @@ function ScratchPageContent() {
           otherScraps={scraps}
           onClose={() => setIsWeldModalOpen(false)}
           onConfirmWeld={handleConfirmWeld}
+        />
+
+        {/* ── POSTCARD MODAL ── */}
+        <ScratchPostcardModal
+          isOpen={isPostcardModalOpen}
+          onClose={() => setIsPostcardModalOpen(false)}
         />
       </div>
     </AppPage>

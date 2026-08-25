@@ -805,3 +805,36 @@ export const savedDigests = pgTable(
 export type SavedDigestRow = typeof savedDigests.$inferSelect;
 export type NewSavedDigestRow = typeof savedDigests.$inferInsert;
 
+export const scratchPostcards = pgTable(
+  "scratch_postcards",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    weekStart: date("week_start").notNull(),
+    weekEnd: date("week_end").notNull(),
+    kindTallies: jsonb("kind_tallies").$type<Record<string, number>>().notNull(),
+    totalCount: integer("total_count").notNull(),
+    daysLogged: integer("days_logged").notNull(),
+    previousWeekTotal: integer("previous_week_total").notNull(),
+    currentStreak: integer("current_streak").notNull(),
+    highlightScrapId: text("highlight_scrap_id").references(
+      (): AnyPgColumn => scraps.id,
+      { onDelete: "set null" }
+    ),
+    highlightContent: text("highlight_content"),
+    highlightKind: varchar("highlight_kind", { length: 32 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("scratch_postcards_user_week_idx").on(table.userId, table.weekStart),
+  ]
+);
+
+export type ScratchPostcardRow = typeof scratchPostcards.$inferSelect;
+export type NewScratchPostcardRow = typeof scratchPostcards.$inferInsert;
+
+
