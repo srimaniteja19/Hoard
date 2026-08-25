@@ -20,6 +20,7 @@ import { TodoPlaybookShelf } from "@/components/todos/TodoPlaybookShelf";
 import { TodoPlaybookEditor } from "@/components/todos/TodoPlaybookEditor";
 import { TodoPlaybookLearning } from "@/components/todos/TodoPlaybookLearning";
 import { TodoLedger } from "@/components/todos/TodoLedger";
+import { TodoSpeedRunHUD } from "@/components/todos/TodoSpeedRunHUD";
 import { PlaybookRow, PlaybookRunRow } from "@/db/schema";
 import { isoDay, parseIsoDay, weekContaining } from "@/lib/todos/calendar";
 import { collectTags, dayLoadStamp, openLoadForDay } from "@/lib/todos/load";
@@ -37,6 +38,8 @@ function TodosPageContent() {
   const today = isoDay(new Date());
 
   const [activeTab, setActiveTab] = useState<"today" | "book">("today");
+  const [isSpeedRunOpen, setIsSpeedRunOpen] = useState(false);
+  const [speedRunIndex, setSpeedRunIndex] = useState(0);
   const [playbooks, setPlaybooks] = useState<PlaybookRow[]>([]);
   const [playbookRuns, setPlaybookRuns] = useState<PlaybookRunRow[]>([]);
   const [selectedPlaybookForEdit, setSelectedPlaybookForEdit] = useState<PlaybookRow | null>(null);
@@ -104,9 +107,16 @@ function TodosPageContent() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "/" && document.activeElement !== inputRef.current) {
+      const activeTag = document.activeElement?.tagName.toLowerCase();
+      const isInput = activeTag === "input" || activeTag === "textarea" || activeTag === "select";
+
+      if (event.key === "/" && !isInput && document.activeElement !== inputRef.current) {
         event.preventDefault();
         inputRef.current?.focus();
+      } else if ((event.key === "t" || event.key === "T") && !isInput) {
+        event.preventDefault();
+        playSound.toggle(true);
+        setIsSpeedRunOpen((prev) => !prev);
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -173,6 +183,24 @@ function TodosPageContent() {
   const doneSelected = oneShotsForDay(visible, selected, today, "done");
   const rituals = ritualsForDay(visible, selected, today);
   const someday = visible.filter((todo) => todo.state === "OPEN" && todo.dueDate === null && !isRitual(todo));
+
+  const openRituals = useMemo(() => {
+    return rituals.filter((r) => r.state === "OPEN");
+  }, [rituals]);
+
+  // Combined tasks queue for Speed-Run Triage
+  const allDayTasks = useMemo(() => {
+    return [...rituals, ...overdue, ...dueSelected];
+  }, [rituals, overdue, dueSelected]);
+
+  // Batch check all due rituals
+  const handleCompleteAllRituals = useCallback(async () => {
+    if (openRituals.length === 0) return;
+    playSound.promote();
+    for (const r of openRituals) {
+      await actions.toggleDone(r);
+    }
+  }, [openRituals, actions]);
 
   // Playbook Runs in flight
   const liveRuns = useMemo(() => {
@@ -495,10 +523,26 @@ function TodosPageContent() {
               <div>
                 {/* Today Heading Card */}
                 <div className="today-head-card">
-                  <h1>{heading}</h1>
-                  <div className="sub">
-                    {dueSelected.length + liveRuns.length + rituals.length} OPEN · {dayLoadStamp(load)} ·{" "}
-                    {rituals.length} RITUAL · {liveRuns.length} RUNS IN FLIGHT
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                    <div>
+                      <h1>{heading}</h1>
+                      <div className="sub">
+                        {dueSelected.length + liveRuns.length + rituals.length} OPEN · {dayLoadStamp(load)} ·{" "}
+                        {rituals.length} RITUAL · {liveRuns.length} RUNS IN FLIGHT
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-speed-run"
+                      onClick={() => {
+                        playSound.click();
+                        setIsSpeedRunOpen(true);
+                      }}
+                      title="Arcade keyboard triage (Press T)"
+                    >
+                      <span>⚡ SPEED RUN</span>
+                      <kbd>T</kbd>
+                    </button>
                   </div>
                 </div>
 
@@ -521,9 +565,21 @@ function TodosPageContent() {
                 {/* ── BANNER 1: RITUALS ── */}
                 {rituals.length > 0 && (
                   <>
-                    <div className="ban">
-                      <b>Rituals</b>
-                      <span>MISS A DAY AND THE RUN DIES.</span>
+                    <div className="ban" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                        <b>Rituals</b>
+                        <span>MISS A DAY AND THE RUN DIES.</span>
+                      </div>
+                      {openRituals.length > 0 && (
+                        <button
+                          type="button"
+                          className="btn-file-all"
+                          onClick={handleCompleteAllRituals}
+                          title="File all open rituals for today"
+                        >
+                          ✓ FILE ALL RITUALS ({openRituals.length})
+                        </button>
+                      )}
                     </div>
                     {rituals.map(renderRitual)}
                   </>
@@ -702,6 +758,17 @@ function TodosPageContent() {
           </div>
         )}
       </div>
+
+      {/* ── SPEED RUN TRIAGE MODAL ── */}
+      <TodoSpeedRunHUD
+        isOpen={isSpeedRunOpen}
+        todos={allDayTasks}
+        currentIndex={speedRunIndex}
+        onIndexChange={setSpeedRunIndex}
+        onToggleDone={actions.toggleDone}
+        onPushTodo={actions.pushTodo}
+        onClose={() => setIsSpeedRunOpen(false)}
+      />
     </AppPage>
   );
 
