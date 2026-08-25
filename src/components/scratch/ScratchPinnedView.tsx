@@ -164,7 +164,7 @@ export const ScratchPinnedView: React.FC<ScratchPinnedViewProps> = ({
       <div className="pinboard-banner">
         <div className="pinboard-banner__content">
           <div className="pinboard-badge">
-            <span className="pinboard-badge__icon">📌</span>
+            <span className="pinboard-badge__icon">📎</span>
             <span>PINBOARD VAULT</span>
           </div>
           <h2>THE PINBOARD</h2>
@@ -227,8 +227,8 @@ export const ScratchPinnedView: React.FC<ScratchPinnedViewProps> = ({
                 setSortBy(e.target.value as SortOption);
               }}
             >
-              <option value="pinned_newest">📌 NEWEST PINNED</option>
-              <option value="pinned_oldest">📌 OLDEST PINNED</option>
+              <option value="pinned_newest">📎 NEWEST PINNED</option>
+              <option value="pinned_oldest">📎 OLDEST PINNED</option>
               <option value="words_desc">📝 MOST WORDS</option>
               <option value="date_desc">⏰ OCCURRED DATE</option>
               <option value="kind">🎨 BY KIND</option>
@@ -313,7 +313,7 @@ export const ScratchPinnedView: React.FC<ScratchPinnedViewProps> = ({
           <h3>NO PINNED SCRAPS</h3>
           <p>
             {pinnedScraps.length === 0
-              ? "You haven't pinned any scraps yet. Click the 📌 PIN button on any card in The Shelf or inside the Note Studio to keep essential notes and diagrams permanently pinned here."
+              ? "You haven't pinned any scraps yet. Click the paperclip 📎 icon on the top-left of any card in The Shelf to keep essential notes and diagrams pinned here."
               : "No pinned scraps match your search and filter criteria."}
           </p>
           {pinnedScraps.length === 0 && scraps.length > 0 && (
@@ -322,7 +322,7 @@ export const ScratchPinnedView: React.FC<ScratchPinnedViewProps> = ({
               className="pinboard-empty__action-btn"
               onClick={handlePinFirstAvailable}
             >
-              📌 PIN A RECENT SCRAP TO TEST
+              📎 PIN A RECENT SCRAP TO TEST
             </button>
           )}
         </div>
@@ -386,7 +386,7 @@ export const ScratchPinnedView: React.FC<ScratchPinnedViewProps> = ({
                         }}
                         title="Unpin"
                       >
-                        📌 UNPIN
+                        📎 UNPIN
                       </button>
                     </div>
                   </div>
@@ -422,7 +422,7 @@ export const ScratchPinnedView: React.FC<ScratchPinnedViewProps> = ({
                       void onTogglePin(activeScrap.id);
                     }}
                   >
-                    📌 UNPIN
+                    📎 UNPIN
                   </button>
                 </div>
               </div>

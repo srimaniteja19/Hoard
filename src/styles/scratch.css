@@ -4673,69 +4673,71 @@
   box-shadow: 4px 4px 0 var(--pink) !important;
 }
 
-/* ── Card Pinned State & Stamp ── */
-.scrap.is-pinned {
-  border-color: var(--ink) !important;
-  box-shadow: 6px 6px 0 var(--yellow), 8px 8px 0 var(--ink) !important;
-  position: relative;
-}
-.scrap.is-pinned::before {
-  content: "";
+/* ── Card Pinned State & Top-Left Paperclip ── */
+.scrap__clip-pin {
   position: absolute;
-  top: -6px;
-  right: 18px;
-  width: 22px;
-  height: 10px;
-  background: var(--pink);
-  border: 2px solid var(--ink);
-  transform: rotate(-3deg);
-  z-index: 5;
-  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
-}
-
-.scrap__pin-stamp {
-  position: absolute;
-  top: -9px;
-  left: 16px;
-  background: var(--yellow);
-  color: var(--ink);
-  font-family: var(--mono);
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  padding: 2px 8px;
-  border: 2px solid var(--ink);
-  box-shadow: 2px 2px 0 var(--ink);
-  transform: rotate(-2deg);
-  z-index: 6;
-  pointer-events: none;
-}
-
-/* ── Pin Toggle Buttons ── */
-.pin-btn,
-.pin-toggle-btn {
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  top: -12px;
+  left: 14px;
+  width: 28px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--card);
   color: var(--ink);
-  border: var(--b) solid var(--ink);
-  padding: 5px 9px;
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  border-radius: 2px;
   cursor: pointer;
-  transition: all 0.1s ease;
+  z-index: 12;
+  transition: all 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+  opacity: 0.35;
+  transform: rotate(-4deg);
 }
-.pin-btn:hover,
-.pin-toggle-btn:hover {
+
+.scrap:hover .scrap__clip-pin,
+.scrap__clip-pin:focus-visible {
+  opacity: 0.85;
+}
+
+.scrap__clip-pin:hover {
+  opacity: 1 !important;
   background: var(--yellow);
+  color: var(--ink);
+  transform: translateY(-2px) rotate(-8deg) scale(1.12);
+  box-shadow: 3px 3px 0 var(--ink);
 }
-.pin-btn.is-pinned,
-.pin-toggle-btn.is-pinned {
-  background: var(--yellow) !important;
-  color: var(--ink) !important;
-  font-weight: 800 !important;
+
+.scrap__clip-pin .clip-icon {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  transform: rotate(45deg);
+  transition: transform 0.12s ease;
+}
+
+/* Pinned (Attached Paperclip) state */
+.scrap__clip-pin.is-pinned,
+.scrap.is-pinned .scrap__clip-pin {
+  opacity: 1 !important;
+  background: var(--yellow);
+  color: var(--ink);
+  border-color: var(--ink);
+  box-shadow: 2.5px 2.5px 0 var(--ink);
+  transform: rotate(-6deg);
+}
+
+.scrap__clip-pin.is-pinned:hover {
+  background: var(--pink);
+  color: #fff;
+  transform: translateY(-2px) rotate(0deg) scale(1.15);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.scrap.is-pinned {
   border-color: var(--ink) !important;
-  box-shadow: inset 1px 1px 0 rgba(0,0,0,0.15);
+  box-shadow: 5px 5px 0 var(--yellow), 7px 7px 0 var(--ink) !important;
 }
 
 .note-modal-pin-btn {

@@ -412,7 +412,7 @@ function ScratchPageContent() {
                 className={pinnedCount > 0 ? "has-pinned-items" : ""}
                 title="Dedicated Pinned Notes Pinboard"
               >
-                📌 PINNED {pinnedCount > 0 ? `(${pinnedCount})` : ""}
+                📎 PINNED {pinnedCount > 0 ? `(${pinnedCount})` : ""}
               </button>
               <button
                 type="button"

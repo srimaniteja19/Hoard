@@ -88,7 +88,7 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
 
   const statusOptions: Array<{ id: StatusFilter; label: string }> = [
     { id: "all", label: "ALL STATUS" },
-    { id: "pinned", label: "📌 PINNED" },
+    { id: "pinned", label: "📎 PINNED" },
     { id: "has_notes", label: "HAS NOTES" },
     { id: "images", label: "📷 IMAGES" },
     { id: "raw", label: "RAW" },

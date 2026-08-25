@@ -535,9 +535,9 @@ export const ScratchNoteModal: React.FC<ScratchNoteModalProps> = ({
                 playSound.pin(!isPinned);
                 void onTogglePin?.(scrap.id);
               }}
-              title={isPinned ? "Unpin this note from Pinboard" : "Pin this note to Pinboard"}
+              title={isPinned ? "Unpin this note (Remove paperclip)" : "Pin this note (Attach paperclip)"}
             >
-              {isPinned ? "📌 PINNED" : "📌 PIN"}
+              {isPinned ? "📎 PINNED" : "📎 PIN"}
             </button>
             <button type="button" onClick={handleCopyMd} title="Copy Raw Markdown">
               {copied ? "COPIED!" : "COPY MD"}
