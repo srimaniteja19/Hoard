@@ -11,6 +11,7 @@ import { ScratchYearWall } from "@/components/scratch/ScratchYearWall";
 import { ScratchSidePanels } from "@/components/scratch/ScratchSidePanels";
 import { ScratchWeldModal } from "@/components/scratch/ScratchWeldModal";
 import { ScratchPinnedView } from "@/components/scratch/ScratchPinnedView";
+import { ScratchSeance } from "@/components/scratch/ScratchSeance";
 import { ScrapRow, ScrapKind } from "@/db/schema";
 import { ScratchStats } from "@/lib/dal/scratch";
 import { CollisionCandidate, CollisionHit } from "@/lib/scratch/collision";
@@ -38,6 +39,9 @@ function ScratchPageContent() {
   // Weld Modal state
   const [weldTargetScrap, setWeldTargetScrap] = useState<ScrapRow | null>(null);
   const [isWeldModalOpen, setIsWeldModalOpen] = useState(false);
+
+  // Séance (dig-up) banner state
+  const [seanceScrap, setSeanceScrap] = useState<ScrapRow | null>(null);
 
   const fetchScraps = useCallback(async () => {
     try {
@@ -71,6 +75,28 @@ function ScratchPageContent() {
   useEffect(() => {
     void fetchScraps();
   }, [fetchScraps]);
+
+  // Séance: surface one buried scrap at most once per day
+  useEffect(() => {
+    const today = getLocalTodayIso();
+    const lastShown = localStorage.getItem("hoard_seance_last_shown");
+    if (lastShown === today) return;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/scratch/seance", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.scrap) {
+            setSeanceScrap(data.scrap);
+            localStorage.setItem("hoard_seance_last_shown", today);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch séance scrap", err);
+      }
+    })();
+  }, []);
 
   const showToast = (msg: string) => {
     setFeedback(msg);
@@ -219,15 +245,15 @@ function ScratchPageContent() {
   // 7. Confirm weld from modal
   const handleConfirmWeld = async (sourceId: string, targetId: string) => {
     try {
-      const res = await fetch("/api/scratch/weld", {
+      const res = await fetch(`/api/scratch/${targetId}/weld`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sourceId, targetId }),
+        body: JSON.stringify({ sourceId }),
       });
 
       if (res.ok) {
-        const { updatedTarget } = await res.json();
+        const updatedTarget: ScrapRow = await res.json();
         setScraps((prev) =>
           prev
             .filter((s) => s.id !== sourceId)
@@ -297,6 +323,27 @@ function ScratchPageContent() {
       }
     } catch (err) {
       console.error("Failed to keep compost", err);
+    }
+  };
+
+  // 10b. Restore a dug-up (séance) scrap back to the Shelf
+  const handleRestoreSeance = async (id: string) => {
+    try {
+      const res = await fetch("/api/scratch/compost", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "keep", ids: [id] }),
+      });
+
+      if (res.ok) {
+        setSeanceScrap(null);
+        showToast("✓ Restored to the Shelf");
+        void fetchScraps();
+        void refreshStats();
+      }
+    } catch (err) {
+      console.error("Failed to restore séance scrap", err);
     }
   };
 
@@ -486,6 +533,13 @@ function ScratchPageContent() {
             <div className="stream" id="streamView">
               {/* THE SHELF */}
               <div>
+                {seanceScrap && (
+                  <ScratchSeance
+                    scrap={seanceScrap}
+                    onRestore={handleRestoreSeance}
+                    onDismiss={() => setSeanceScrap(null)}
+                  />
+                )}
                 <div className="zone">
                   <div className="zone__head">
                     <b>The Shelf</b>

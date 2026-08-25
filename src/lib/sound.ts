@@ -7,12 +7,19 @@
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private enabled = true;
+  private ambienceEnabled = false;
+  private ambienceNodes: { source: AudioBufferSourceNode; gain: GainNode } | null = null;
+  private ambienceScratchTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("hoard_sfx_enabled");
       if (stored !== null) {
         this.enabled = stored === "true";
+      }
+      const storedAmbience = localStorage.getItem("hoard_ambience_enabled");
+      if (storedAmbience !== null) {
+        this.ambienceEnabled = storedAmbience === "true";
       }
     }
   }
@@ -35,6 +42,134 @@ class SoundEngine {
       this.playClick();
     }
     return next;
+  }
+
+  public isAmbienceEnabled(): boolean {
+    return this.ambienceEnabled;
+  }
+
+  public toggleAmbience(): boolean {
+    const next = !this.ambienceEnabled;
+    this.ambienceEnabled = next;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("hoard_ambience_enabled", String(next));
+    }
+    if (next) {
+      this.startAmbience();
+    } else {
+      this.stopAmbience();
+    }
+    return next;
+  }
+
+  /**
+   * Loops a very quiet filtered-noise "paper rustle" bed and schedules
+   * occasional synthesized pen-scratch ticks at randomized intervals.
+   * Pure Web Audio synthesis — no audio assets, no network overhead.
+   */
+  public startAmbience() {
+    if (!this.ambienceEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx || this.ambienceNodes) return;
+
+    const bufferSeconds = 4;
+    const bufferSize = Math.floor(ctx.sampleRate * bufferSeconds);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      // Brownian-ish noise: integrate white noise for a soft "room paper" texture
+      const white = Math.random() * 2 - 1;
+      last = (last + 0.02 * white) / 1.02;
+      data[i] = last * 3.5;
+    }
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(1200, ctx.currentTime);
+    filter.Q.setValueAtTime(0.6, ctx.currentTime);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.02, ctx.currentTime + 1.5);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    source.start();
+
+    this.ambienceNodes = { source, gain };
+    this.scheduleAmbienceScratch();
+  }
+
+  public stopAmbience() {
+    if (this.ambienceScratchTimer) {
+      clearTimeout(this.ambienceScratchTimer);
+      this.ambienceScratchTimer = null;
+    }
+    if (this.ambienceNodes && this.ctx) {
+      const { source, gain } = this.ambienceNodes;
+      const t = this.ctx.currentTime;
+      gain.gain.cancelScheduledValues(t);
+      gain.gain.setValueAtTime(gain.gain.value, t);
+      gain.gain.linearRampToValueAtTime(0, t + 0.4);
+      setTimeout(() => {
+        try {
+          source.stop();
+        } catch (_) {
+          // already stopped
+        }
+      }, 450);
+      this.ambienceNodes = null;
+    }
+  }
+
+  private scheduleAmbienceScratch() {
+    const delay = 8000 + Math.random() * 12000;
+    this.ambienceScratchTimer = setTimeout(() => {
+      if (this.ambienceEnabled && this.ambienceNodes) {
+        this.playPenScratch();
+      }
+      this.scheduleAmbienceScratch();
+    }, delay);
+  }
+
+  /**
+   * Short filtered noise burst standing in for a pen scratching paper.
+   * Independent of the tactile-click SFX toggle — part of the ambience bed.
+   */
+  private playPenScratch(volume = 0.05) {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const duration = 0.15 + Math.random() * 0.2;
+
+    const bufferSize = Math.floor(ctx.sampleRate * duration);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.setValueAtTime(2200, t);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(volume, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start(t);
+    noise.stop(t + duration);
   }
 
   private getContext(): AudioContext | null {
@@ -329,4 +464,11 @@ export const playSound = {
   bury: (vol?: number) => sound.playBury(vol),
   toggle: (isOpen?: boolean, vol?: number) => sound.playToggle(isOpen, vol),
   pin: (isPinned?: boolean, vol?: number) => sound.playPin(isPinned, vol),
+};
+
+export const ambience = {
+  isEnabled: () => sound.isAmbienceEnabled(),
+  toggle: () => sound.toggleAmbience(),
+  start: () => sound.startAmbience(),
+  stop: () => sound.stopAmbience(),
 };

@@ -335,6 +335,20 @@ export async function buryScraps(userId: string, ids: string[]): Promise<number>
   return res.length;
 }
 
+/**
+ * Picks one truly-buried scrap at random, for the "séance" dig-up surface
+ * that occasionally resurfaces something composted long ago.
+ */
+export async function getRandomBuriedScrap(userId: string): Promise<ScrapRow | null> {
+  const [row] = await db
+    .select()
+    .from(scraps)
+    .where(and(eq(scraps.userId, userId), eq(scraps.isBuried, true)))
+    .orderBy(sql`random()`)
+    .limit(1);
+  return row || null;
+}
+
 export async function keepScraps(userId: string, ids: string[]): Promise<number> {
   if (!ids.length) return 0;
   const res = await db

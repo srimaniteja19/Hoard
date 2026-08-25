@@ -11,6 +11,7 @@ import {
 import { createInkEngine, SAMPLE_SKETCHES } from "@/lib/scratch/ink";
 import { ScratchNoteModal } from "./ScratchNoteModal";
 import { playSound } from "@/lib/sound";
+import { getScrapAgeTier, getRingSeed } from "@/lib/scratch/aging";
 
 interface ScratchCardProps {
   scrap: ScrapRow;
@@ -422,14 +423,20 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
 
   const showAiPanel = aiStreaming || aiStreamedText || aiError;
 
+  const ageTier = getScrapAgeTier(scrap);
+  const ringSeed = getRingSeed(scrap.id);
+
   return (
     <article
       id={`scrap-${scrap.id}`}
-      className={`scrap${isOpen ? " open" : ""}${isPinned ? " is-pinned" : ""}`}
+      className={`scrap${isOpen ? " open" : ""}${isPinned ? " is-pinned" : ""}${
+        ageTier !== "fresh" ? ` scrap--ring-${ageTier}` : ""
+      }`}
       style={
         {
           "--c": `var(--${scrap.color || (isInk ? "lime" : "cyan")})`,
           "--tilt": isOpen ? "0deg" : scrap.tilt || "0deg",
+          "--ring-seed": ringSeed,
         } as React.CSSProperties
       }
     >

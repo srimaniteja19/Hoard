@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useMemo, useState } from "react";
 import { ScrapRow, ScrapKind, scrapKindValues } from "@/db/schema";
 import { ScratchFilters, StatusFilter, extractAllTags } from "@/lib/scratch/filters";
-import { playSound, sound } from "@/lib/sound";
+import { playSound, sound, ambience } from "@/lib/sound";
 
 interface ScratchFilterBarProps {
   scraps: ScrapRow[];
@@ -24,15 +24,44 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
 }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [sfxEnabled, setSfxEnabled] = useState(true);
+  const [ambienceEnabled, setAmbienceEnabled] = useState(false);
 
   useEffect(() => {
     setSfxEnabled(sound.isEnabled());
+    setAmbienceEnabled(ambience.isEnabled());
   }, []);
 
   const handleToggleSfx = () => {
     const next = sound.toggle();
     setSfxEnabled(next);
   };
+
+  const handleToggleAmbience = () => {
+    const next = ambience.toggle();
+    setAmbienceEnabled(next);
+  };
+
+  // Start ambience on mount if it was left on from a previous session, and
+  // always stop it on unmount so it can't keep playing off the Scratch page.
+  useEffect(() => {
+    if (ambience.isEnabled()) {
+      ambience.start();
+    }
+    return () => ambience.stop();
+  }, []);
+
+  // Pause the ambience bed while the tab is hidden so it doesn't run in the background.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        ambience.stop();
+      } else if (ambience.isEnabled()) {
+        ambience.start();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
 
   // Global '/' keyboard shortcut to focus search
   useEffect(() => {
@@ -132,6 +161,19 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
             title={sfxEnabled ? "Mute interactive click sound effects" : "Enable interactive sound effects"}
           >
             {sfxEnabled ? "🔊 SOUND ON" : "🔇 SOUND OFF"}
+          </button>
+
+          <button
+            type="button"
+            className={`scratch-ambience-toggle ${ambienceEnabled ? "on" : "off"}`}
+            onClick={handleToggleAmbience}
+            title={
+              ambienceEnabled
+                ? "Turn off the ambient desk soundscape"
+                : "Turn on a quiet ambient paper-rustle & pen-scratch soundscape"
+            }
+          >
+            {ambienceEnabled ? "🕯️ DESK ON" : "🕯️ DESK OFF"}
           </button>
 
           <span className="match-badge">
