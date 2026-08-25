@@ -12,6 +12,7 @@ import { ScratchSidePanels } from "@/components/scratch/ScratchSidePanels";
 import { ScratchWeldModal } from "@/components/scratch/ScratchWeldModal";
 import { ScratchPinnedView } from "@/components/scratch/ScratchPinnedView";
 import { ScratchSeance } from "@/components/scratch/ScratchSeance";
+import { ScratchCorkboard } from "@/components/scratch/ScratchCorkboard";
 import { ScrapRow, ScrapKind } from "@/db/schema";
 import { ScratchStats } from "@/lib/dal/scratch";
 import { CollisionCandidate, CollisionHit } from "@/lib/scratch/collision";
@@ -25,7 +26,7 @@ function ScratchPageContent() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"stream" | "pinned" | "logbook">("stream");
+  const [viewMode, setViewMode] = useState<"stream" | "pinned" | "logbook" | "corkboard">("stream");
 
   // Filters state
   const [filters, setFilters] = useState<ScratchFilters>({
@@ -394,6 +395,27 @@ function ScratchPageContent() {
     }
   };
 
+  // 13. Persist a scrap's dragged corkboard position
+  const handleUpdatePosition = async (id: string, x: number, y: number) => {
+    // Optimistic — the corkboard component already updates its own local
+    // position state on drag, so this just needs to persist silently.
+    try {
+      const res = await fetch(`/api/scratch/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entities: { boardX: x, boardY: y } }),
+      });
+
+      if (res.ok) {
+        const updated: ScrapRow = await res.json();
+        setScraps((prev) => prev.map((s) => (s.id === id ? { ...s, ...updated } : s)));
+      }
+    } catch (err) {
+      console.error("Failed to save corkboard position", err);
+    }
+  };
+
   const pinnedCount = useMemo(() => scraps.filter(isScrapPinned).length, [scraps]);
 
   const collisionCandidates: CollisionCandidate[] = useMemo(() => {
@@ -471,6 +493,17 @@ function ScratchPageContent() {
                 }}
               >
                 LOGBOOK
+              </button>
+              <button
+                type="button"
+                data-v="corkboard"
+                aria-pressed={viewMode === "corkboard"}
+                onClick={() => {
+                  playSound.click();
+                  setViewMode("corkboard");
+                }}
+              >
+                📌 CORKBOARD
               </button>
             </div>
           </div>
@@ -601,6 +634,15 @@ function ScratchPageContent() {
               onWeld={handleOpenWeldModal}
               onBury={handleBury}
               onTogglePin={handleTogglePin}
+            />
+          ) : viewMode === "corkboard" ? (
+            /* ═══ CORKBOARD VIEW: PINNED SCRAPS ON A DRAGGABLE CANVAS ═══ */
+            <ScratchCorkboard
+              scraps={scraps}
+              onUpdateNotes={handleUpdateNotes}
+              onPromoteTil={handlePromoteTil}
+              onTogglePin={handleTogglePin}
+              onUpdatePosition={handleUpdatePosition}
             />
           ) : (
             /* ═══ LOGBOOK VIEW: YEAR WALL + FULL SHEET + LOGBOOK SIDE PANELS ═══ */
