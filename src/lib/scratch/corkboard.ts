@@ -1,7 +1,7 @@
 import { ScrapRow } from "@/db/schema";
 
-const BOARD_WIDTH = 2000;
-const BOARD_HEIGHT = 1200;
+export const BOARD_WIDTH = 2000;
+export const BOARD_HEIGHT = 1200;
 const CARD_MARGIN = 40;
 
 /**
@@ -16,10 +16,9 @@ export function getBoardPosition(scrap: ScrapRow, index: number): { x: number; y
     return { x: boardX, y: boardY };
   }
 
-  const seed = `${scrap.id}:${index}`;
   let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < scrap.id.length; i++) {
+    hash = (hash * 31 + scrap.id.charCodeAt(i)) >>> 0;
   }
 
   const usableWidth = BOARD_WIDTH - CARD_MARGIN * 2;
