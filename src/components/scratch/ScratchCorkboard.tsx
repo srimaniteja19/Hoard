@@ -17,6 +17,7 @@ interface ScratchCorkboardProps {
 }
 
 const POSITION_SAVE_DEBOUNCE_MS = 400;
+const DRAG_THRESHOLD_PX = 5;
 
 export const ScratchCorkboard: React.FC<ScratchCorkboardProps> = ({
   scraps,
@@ -31,7 +32,14 @@ export const ScratchCorkboard: React.FC<ScratchCorkboardProps> = ({
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [modalScrap, setModalScrap] = useState<ScrapRow | null>(null);
 
-  const dragRef = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  const dragRef = useRef<{
+    id: string;
+    offsetX: number;
+    offsetY: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
+  const didDragRef = useRef(false);
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -50,10 +58,13 @@ export const ScratchCorkboard: React.FC<ScratchCorkboardProps> = ({
       if (!scrap) return;
       const current = resolvePosition(scrap, index);
 
+      didDragRef.current = false;
       dragRef.current = {
         id,
         offsetX: e.clientX - canvasRect.left - current.x,
         offsetY: e.clientY - canvasRect.top - current.y,
+        startX: e.clientX,
+        startY: e.clientY,
       };
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
     },
@@ -64,6 +75,15 @@ export const ScratchCorkboard: React.FC<ScratchCorkboardProps> = ({
     const drag = dragRef.current;
     const canvas = canvasRef.current;
     if (!drag || !canvas) return;
+
+    if (!didDragRef.current) {
+      const dx = e.clientX - drag.startX;
+      const dy = e.clientY - drag.startY;
+      if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD_PX) {
+        didDragRef.current = true;
+      }
+    }
+
     const canvasRect = canvas.getBoundingClientRect();
     const x = Math.max(0, e.clientX - canvasRect.left - drag.offsetX);
     const y = Math.max(0, e.clientY - canvasRect.top - drag.offsetY);
@@ -137,6 +157,10 @@ export const ScratchCorkboard: React.FC<ScratchCorkboardProps> = ({
               y={pos.y}
               onPointerDownDrag={handlePointerDownDrag}
               onOpen={(s) => {
+                if (didDragRef.current) {
+                  didDragRef.current = false;
+                  return;
+                }
                 playSound.click();
                 setModalScrap(s);
               }}
