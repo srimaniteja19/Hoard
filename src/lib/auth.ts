@@ -11,8 +11,7 @@ const formatUrl = (url?: string) => {
 
 const authSecret =
   process.env.BETTER_AUTH_SECRET ||
-  process.env.AUTH_SECRET ||
-  "hoard_fallback_build_secret_key_minimum_32_characters";
+  process.env.AUTH_SECRET;
 
 export const auth = betterAuth({
   secret: authSecret,
