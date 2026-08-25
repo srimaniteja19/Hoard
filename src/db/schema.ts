@@ -622,6 +622,8 @@ export interface ScrapEntities {
   transcription?: string;
   isPinned?: boolean;
   pinnedAt?: string;
+  boardX?: number;
+  boardY?: number;
 }
 
 export const scraps = pgTable(
