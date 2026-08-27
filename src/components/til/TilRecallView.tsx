@@ -6,7 +6,7 @@ import { MarkdownLite } from "@/components/til/MarkdownLite";
 import { EmbedRouter } from "@/components/til/embeds/EmbedRouter";
 import { maskTextWords, maskCodeLines } from "@/lib/til/masking";
 import { Rating } from "@/lib/til/confidence";
-import { RotateCcw, CheckCircle2, Eye, RefreshCw } from "lucide-react";
+import { RotateCcw, CheckCircle2, Eye, RefreshCw, Sparkles, Flame, Trophy, Layers } from "lucide-react";
 
 interface TilRecallViewProps {
   deck: TilItem[];
@@ -63,6 +63,9 @@ export const TilRecallView: React.FC<TilRecallViewProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isSessionComplete || deck.length === 0) return;
 
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+
       if (e.code === "Space") {
         e.preventDefault();
         setIsRevealed(true);
@@ -87,62 +90,25 @@ export const TilRecallView: React.FC<TilRecallViewProps> = ({
   // Empty State: Nothing due
   if (deck.length === 0) {
     return (
-      <div
-        style={{
-          background: "var(--paper)",
-          border: "var(--bd)",
-          boxShadow: "var(--sh)",
-          padding: "48px 24px",
-          textAlign: "center",
-          maxWidth: "560px",
-          margin: "32px auto",
-        }}
-      >
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "56px",
-            height: "56px",
-            background: "#B6FF3C",
-            border: "2px solid var(--ink)",
-            marginBottom: "16px",
-            boxShadow: "3px 3px 0 var(--ink)",
-          }}
-        >
-          <CheckCircle2 size={28} color="#000" />
+      <div className="til-recall-empty-card">
+        <div className="til-recall-empty-badge">
+          <CheckCircle2 size={32} strokeWidth={2.5} />
         </div>
 
-        <h2 style={{ fontFamily: "var(--mono)", fontSize: "16px", fontWeight: 900, marginBottom: "8px" }}>
-          NOTHING DUE FOR REVIEW
-        </h2>
+        <h2 className="til-recall-empty-title">ALL CAUGHT UP!</h2>
 
-        <p style={{ fontFamily: "var(--mono)", fontSize: "12px", opacity: 0.7, marginBottom: "24px" }}>
+        <p className="til-recall-empty-subtitle">
           {nextReviewInDays
-            ? `Next review scheduled in ${nextReviewInDays} ${nextReviewInDays === 1 ? "day" : "days"} (${nextReviewAt ? nextReviewAt.split("T")[0] : ""}).`
-            : "You're all caught up! Check back later."}
+            ? `Next spaced-repetition review due in ${nextReviewInDays} ${nextReviewInDays === 1 ? "day" : "days"} (${nextReviewAt ? nextReviewAt.split("T")[0] : ""}).`
+            : "No knowledge cards currently scheduled for testing. Check back later!"}
         </p>
 
         <button
           type="button"
           onClick={onRefreshDeck}
-          style={{
-            fontFamily: "var(--mono)",
-            fontSize: "11px",
-            fontWeight: 900,
-            background: "var(--paper)",
-            color: "var(--ink)",
-            border: "1.5px solid var(--ink)",
-            padding: "8px 16px",
-            cursor: "pointer",
-            boxShadow: "2px 2px 0 var(--ink)",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-          }}
+          className="til-recall-action-btn"
         >
-          <RefreshCw size={13} /> CHECK AGAIN
+          <RefreshCw size={13} /> CHECK QUEUE AGAIN
         </button>
       </div>
     );
@@ -153,58 +119,35 @@ export const TilRecallView: React.FC<TilRecallViewProps> = ({
     const gotItCount = sessionRatings.filter((r) => r.rating === "GOT_IT").length;
     const fuzzyCount = sessionRatings.filter((r) => r.rating === "FUZZY").length;
     const forgotCount = sessionRatings.filter((r) => r.rating === "FORGOT").length;
+    const total = sessionRatings.length || 1;
+    const accuracy = Math.round((gotItCount / total) * 100);
 
     return (
-      <div
-        style={{
-          background: "var(--paper)",
-          border: "var(--bd)",
-          boxShadow: "var(--sh)",
-          padding: "40px 24px",
-          textAlign: "center",
-          maxWidth: "560px",
-          margin: "32px auto",
-        }}
-      >
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "56px",
-            height: "56px",
-            background: "var(--yel, #FFE600)",
-            border: "2px solid var(--ink)",
-            marginBottom: "16px",
-            boxShadow: "3px 3px 0 var(--ink)",
-          }}
-        >
-          <RotateCcw size={28} color="#000" />
+      <div className="til-recall-complete-card">
+        <div className="til-recall-complete-icon-box">
+          <Trophy size={36} strokeWidth={2.4} />
         </div>
 
-        <h2 style={{ fontFamily: "var(--mono)", fontSize: "16px", fontWeight: 900, marginBottom: "8px" }}>
-          REVIEW SESSION COMPLETE!
-        </h2>
-
-        <p style={{ fontFamily: "var(--mono)", fontSize: "12px", opacity: 0.7, marginBottom: "24px" }}>
-          Reviewed {deck.length} cards in this session.
+        <h2 className="til-recall-complete-title">REVIEW COMPLETE!</h2>
+        <p className="til-recall-complete-subtitle">
+          Tested {deck.length} knowledge items · <b>{accuracy}% Retention Rate</b>
         </p>
 
         {/* Rating Breakdown Badges */}
-        <div style={{ display: "flex", justifyContent: "center", gap: "12px", marginBottom: "32px" }}>
-          <div style={{ background: "rgba(182, 255, 60, 0.3)", border: "1.5px solid var(--ink)", padding: "8px 14px", fontFamily: "var(--mono)" }}>
-            <div style={{ fontSize: "18px", fontWeight: 900 }}>{gotItCount}</div>
-            <div style={{ fontSize: "10px", fontWeight: 800 }}>GOT IT</div>
+        <div className="til-recall-score-grid">
+          <div className="til-recall-score-box got-it">
+            <span className="score-num">{gotItCount}</span>
+            <span className="score-label">GOT IT</span>
           </div>
 
-          <div style={{ background: "rgba(255, 230, 0, 0.3)", border: "1.5px solid var(--ink)", padding: "8px 14px", fontFamily: "var(--mono)" }}>
-            <div style={{ fontSize: "18px", fontWeight: 900 }}>{fuzzyCount}</div>
-            <div style={{ fontSize: "10px", fontWeight: 800 }}>FUZZY</div>
+          <div className="til-recall-score-box fuzzy">
+            <span className="score-num">{fuzzyCount}</span>
+            <span className="score-label">FUZZY</span>
           </div>
 
-          <div style={{ background: "rgba(255, 0, 122, 0.2)", border: "1.5px solid var(--ink)", padding: "8px 14px", fontFamily: "var(--mono)" }}>
-            <div style={{ fontSize: "18px", fontWeight: 900 }}>{forgotCount}</div>
-            <div style={{ fontSize: "10px", fontWeight: 800 }}>FORGOT</div>
+          <div className="til-recall-score-box forgot">
+            <span className="score-num">{forgotCount}</span>
+            <span className="score-label">FORGOT</span>
           </div>
         </div>
 
@@ -216,22 +159,9 @@ export const TilRecallView: React.FC<TilRecallViewProps> = ({
             setIsRevealed(false);
             onRefreshDeck();
           }}
-          style={{
-            fontFamily: "var(--mono)",
-            fontSize: "12px",
-            fontWeight: 900,
-            background: "var(--yel, #FFE600)",
-            color: "#000",
-            border: "2px solid var(--ink)",
-            padding: "8px 24px",
-            cursor: "pointer",
-            boxShadow: "3px 3px 0 var(--ink)",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-          }}
+          className="til-recall-restart-btn"
         >
-          START ANOTHER DECK <RefreshCw size={13} />
+          <RotateCcw size={14} /> REPLAY SESSION / TEST MORE
         </button>
       </div>
     );
@@ -242,271 +172,182 @@ export const TilRecallView: React.FC<TilRecallViewProps> = ({
   const codeMask = currentCard.code ? maskCodeLines(currentCard.code) : null;
 
   return (
-    <div style={{ maxWidth: "680px", margin: "16px auto" }}>
-      {/* Progress Strip at top */}
-      <div
-        style={{
-          display: "flex",
-          gap: "6px",
-          marginBottom: "16px",
-          alignItems: "center",
-        }}
-      >
-        {deck.map((item, idx) => {
-          const ratingObj = sessionRatings.find((r) => r.id === item.id);
-          let segColor = "rgba(0,0,0,0.1)";
+    <div className="til-recall-container">
+      {/* Multi-Segment Progress Strip */}
+      <div className="til-recall-progress-strip">
+        <div className="til-recall-progress-meta">
+          <span className="til-recall-step-badge">
+            CARD {currentIndex + 1} OF {deck.length}
+          </span>
+          <span className="til-recall-hotkey-hint">
+            [SPACE] TO REVEAL · [1..3] TO RATE
+          </span>
+        </div>
 
-          if (ratingObj) {
-            if (ratingObj.rating === "GOT_IT") segColor = "#B6FF3C";
-            else if (ratingObj.rating === "FUZZY") segColor = "#FFE600";
-            else if (ratingObj.rating === "FORGOT") segColor = "#FF007A";
-          } else if (idx === currentIndex) {
-            segColor = "var(--ink)";
-          }
+        <div className="til-recall-segments">
+          {deck.map((item, idx) => {
+            const ratingObj = sessionRatings.find((r) => r.id === item.id);
+            let segClass = "untested";
+            if (ratingObj) {
+              if (ratingObj.rating === "GOT_IT") segClass = "got-it";
+              else if (ratingObj.rating === "FUZZY") segClass = "fuzzy";
+              else if (ratingObj.rating === "FORGOT") segClass = "forgot";
+            } else if (idx === currentIndex) {
+              segClass = "active";
+            }
 
-          return (
-            <div
-              key={item.id}
-              style={{
-                flex: 1,
-                height: "6px",
-                background: segColor,
-                border: "1px solid var(--ink)",
-                transition: "background 0.2s ease",
-              }}
-              title={`Card ${idx + 1} of ${deck.length}`}
-            />
-          );
-        })}
+            return (
+              <div
+                key={item.id}
+                className={`til-recall-seg ${segClass}`}
+                title={`Card ${idx + 1}: #${item.shortHash} (${item.type})`}
+              />
+            );
+          })}
+        </div>
       </div>
 
-      {/* Main Card Surface */}
-      <div
-        style={{
-          background: "var(--paper)",
-          border: "var(--bd)",
-          boxShadow: "var(--sh)",
-          padding: "24px",
-          marginBottom: "20px",
-          minHeight: "280px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-        }}
-      >
-        <div>
-          {/* Card Header metadata */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "16px",
-              paddingBottom: "8px",
-              borderBottom: "1px solid var(--ink)",
-              flexWrap: "wrap",
-              gap: "8px",
-            }}
-          >
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <span
-                style={{
-                  fontFamily: "var(--mono)",
-                  fontSize: "10px",
-                  fontWeight: 900,
-                  background: "#00F0FF",
-                  color: "#000",
-                  padding: "1px 6px",
-                  border: "1px solid var(--ink)",
-                }}
-              >
-                {currentCard.type}
-              </span>
-              <span style={{ fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 800, opacity: 0.7 }}>
-                #{currentCard.shortHash}
-              </span>
+      {/* 3D Stacked Deck Visual Wrapper */}
+      <div className="til-recall-deck-stack">
+        <div className="til-recall-card-underlay underlay-2" />
+        <div className="til-recall-card-underlay underlay-1" />
+
+        {/* Main Active Card Surface */}
+        <div className={`til-recall-card-surface ${isRevealed ? "revealed" : "masked"}`}>
+          {/* Card Header Bar */}
+          <div className="til-recall-card-header">
+            <div className="til-recall-card-types">
+              <span className="til-recall-type-chip">{currentCard.type}</span>
+              <span className="til-recall-hash">#{currentCard.shortHash}</span>
             </div>
 
-            <span style={{ fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 800 }}>
-              CARD {currentIndex + 1} OF {deck.length}
-            </span>
+            <div className="til-recall-card-state-pill">
+              {isRevealed ? (
+                <span className="state-revealed">
+                  <Sparkles size={11} /> REVEALED
+                </span>
+              ) : (
+                <span className="state-active-test">
+                  <Eye size={11} /> TEST IN PROGRESS
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Card Content Body */}
-          <div style={{ fontSize: "15px", lineHeight: "1.6", color: "var(--ink)", marginBottom: "16px" }}>
+          {/* Card Main Body */}
+          <div className="til-recall-card-body">
             {isRevealed ? (
               // Full Unmasked Reveal
-              <div>
-                {currentCard.body && <MarkdownLite content={currentCard.body} validHashes={validHashes} />}
+              <div className="til-recall-unmasked-content">
+                {currentCard.body && (
+                  <div className="til-recall-revealed-body">
+                    <MarkdownLite content={currentCard.body} validHashes={validHashes} />
+                  </div>
+                )}
                 {currentCard.code && (
-                  <div
-                    style={{
-                      background: "#1E1E1E",
-                      color: "#FFF",
-                      fontFamily: "var(--mono)",
-                      padding: "12px",
-                      marginTop: "12px",
-                      border: "1.5px solid var(--ink)",
-                      overflowX: "auto",
-                      fontSize: "13px",
-                    }}
-                  >
-                    <pre style={{ margin: 0 }}>{currentCard.code}</pre>
+                  <div className="til-recall-code-block">
+                    <pre>{currentCard.code}</pre>
                   </div>
                 )}
                 {currentCard.linkUrl && currentCard.linkPreview && (
-                  <div style={{ marginTop: "12px" }}>
-                    <EmbedRouter preview={currentCard.linkPreview} density={(currentCard.linkDensity as "card" | "inline" | "quote" | "full") || "card"} />
+                  <div className="til-recall-embed-wrap">
+                    <EmbedRouter
+                      preview={currentCard.linkPreview}
+                      density={(currentCard.linkDensity as "card" | "inline" | "quote" | "full") || "card"}
+                    />
                   </div>
                 )}
               </div>
             ) : (
-              // Masked View (First ~28% revealed, rest black filled blocks)
-              <div>
+              // Masked View (First ~28% revealed, rest redacted blocks)
+              <div className="til-recall-masked-content">
                 {textMask && textMask.revealedText && (
-                  <div style={{ marginBottom: "8px" }}>
-                    <span>{textMask.revealedText} </span>
+                  <div className="til-recall-mask-text">
+                    <span className="revealed-portion">{textMask.revealedText} </span>
                     <span
-                      style={{
-                        background: "var(--ink)",
-                        color: "var(--ink)",
-                        userSelect: "none",
-                        padding: "0 6px",
-                        letterSpacing: "2px",
-                      }}
-                      title={`${textMask.maskedWordsCount} words masked`}
+                      className="redacted-block"
+                      title={`${textMask.maskedWordsCount} words hidden`}
                     >
-                      {"█".repeat(Math.min(30, Math.max(10, textMask.maskedWordsCount * 2)))}
+                      {"█".repeat(Math.min(32, Math.max(12, textMask.maskedWordsCount * 2)))}
                     </span>
                   </div>
                 )}
 
                 {codeMask && codeMask.revealedLines.length > 0 && (
-                  <div
-                    style={{
-                      background: "#1E1E1E",
-                      color: "#FFF",
-                      fontFamily: "var(--mono)",
-                      padding: "12px",
-                      marginTop: "12px",
-                      border: "1.5px solid var(--ink)",
-                      fontSize: "13px",
-                    }}
-                  >
+                  <div className="til-recall-code-mask">
                     {codeMask.revealedLines.map((line, idx) => (
-                      <div key={idx}>{line}</div>
+                      <div key={idx} className="code-revealed-line">{line}</div>
                     ))}
                     <div
-                      style={{
-                        background: "#000",
-                        height: `${codeMask.maskedLinesCount * 20}px`,
-                        marginTop: "4px",
-                        border: "1px dashed rgba(255,255,255,0.3)",
-                      }}
-                    />
+                      className="code-redacted-box"
+                      style={{ height: `${Math.max(36, codeMask.maskedLinesCount * 22)}px` }}
+                    >
+                      <span>{codeMask.maskedLinesCount} code lines hidden</span>
+                    </div>
                   </div>
                 )}
               </div>
             )}
           </div>
-        </div>
 
-        {/* Footer Interaction Area */}
-        <div style={{ borderTop: "1.5px solid var(--ink)", paddingTop: "14px", marginTop: "16px" }}>
-          {!isRevealed ? (
-            <button
-              type="button"
-              onClick={() => setIsRevealed(true)}
-              style={{
-                width: "100%",
-                fontFamily: "var(--mono)",
-                fontSize: "13px",
-                fontWeight: 900,
-                background: "var(--yel, #FFE600)",
-                color: "#000",
-                border: "2px solid var(--ink)",
-                padding: "10px",
-                cursor: "pointer",
-                boxShadow: "3px 3px 0 var(--ink)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-              }}
-            >
-              <Eye size={16} /> REVEAL CARD (PRESS SPACE)
-            </button>
-          ) : (
-            <div>
-              <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 800, textAlign: "center", marginBottom: "8px", opacity: 0.7 }}>
-                RATE YOUR RECALL (PRESS 1, 2, OR 3):
+          {/* Card Footer Interaction Surface */}
+          <div className="til-recall-card-footer">
+            {!isRevealed ? (
+              <button
+                type="button"
+                onClick={() => setIsRevealed(true)}
+                className="til-recall-reveal-btn"
+              >
+                <Eye size={16} strokeWidth={2.5} />
+                <span>REVEAL HIDDEN ANSWER</span>
+                <span className="kbd-pill">SPACE</span>
+              </button>
+            ) : (
+              <div className="til-recall-rating-section">
+                <div className="til-recall-rating-label">
+                  RATE YOUR MEMORY RECALL:
+                </div>
+
+                <div className="til-recall-arcade-buttons">
+                  <button
+                    type="button"
+                    onClick={() => handleRate("FORGOT")}
+                    disabled={submitting}
+                    className="til-arcade-btn btn-forgot"
+                  >
+                    <span className="btn-key">[1]</span>
+                    <span className="btn-txt">FORGOT</span>
+                    <span className="btn-sub">Review Soon</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRate("FUZZY")}
+                    disabled={submitting}
+                    className="til-arcade-btn btn-fuzzy"
+                  >
+                    <span className="btn-key">[2]</span>
+                    <span className="btn-txt">FUZZY</span>
+                    <span className="btn-sub">+3 Days</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRate("GOT_IT")}
+                    disabled={submitting}
+                    className="til-arcade-btn btn-got-it"
+                  >
+                    <span className="btn-key">[3]</span>
+                    <span className="btn-txt">GOT IT</span>
+                    <span className="btn-sub">+7 Days</span>
+                  </button>
+                </div>
               </div>
-
-              <div className="recall-rate-row">
-                <button
-                  type="button"
-                  onClick={() => handleRate("FORGOT")}
-                  disabled={submitting}
-                  style={{
-                    flex: 1,
-                    fontFamily: "var(--mono)",
-                    fontSize: "11px",
-                    fontWeight: 900,
-                    background: "#FF007A",
-                    color: "#FFF",
-                    border: "1.5px solid var(--ink)",
-                    padding: "8px 4px",
-                    cursor: "pointer",
-                    boxShadow: "2px 2px 0 var(--ink)",
-                  }}
-                >
-                  FORGOT [1]
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleRate("FUZZY")}
-                  disabled={submitting}
-                  style={{
-                    flex: 1,
-                    fontFamily: "var(--mono)",
-                    fontSize: "11px",
-                    fontWeight: 900,
-                    background: "#FFE600",
-                    color: "#000",
-                    border: "1.5px solid var(--ink)",
-                    padding: "8px 4px",
-                    cursor: "pointer",
-                    boxShadow: "2px 2px 0 var(--ink)",
-                  }}
-                >
-                  FUZZY [2]
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleRate("GOT_IT")}
-                  disabled={submitting}
-                  style={{
-                    flex: 1,
-                    fontFamily: "var(--mono)",
-                    fontSize: "11px",
-                    fontWeight: 900,
-                    background: "#B6FF3C",
-                    color: "#000",
-                    border: "1.5px solid var(--ink)",
-                    padding: "8px 4px",
-                    cursor: "pointer",
-                    boxShadow: "2px 2px 0 var(--ink)",
-                  }}
-                >
-                  GOT IT [3]
-                </button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
+

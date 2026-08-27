@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import { StreakData, HeatmapData } from "@/lib/dal/til";
+import { Flame, ShieldAlert, Sparkles, Calendar } from "lucide-react";
 
 interface TilHeaderSummaryProps {
   streak: StreakData;
@@ -52,13 +53,15 @@ export const TilHeaderSummary: React.FC<TilHeaderSummaryProps> = ({
       <div>
         <h1>Today I Learned</h1>
         <div className="facts">
-          <span>
+          <span className="fact-streak-pill">
+            <Flame size={13} className={streak.currentStreak > 0 ? "text-amber-500 fill-amber-500" : ""} />
             STREAK <b>{streak.currentStreak}</b> {streak.currentStreak === 1 ? "DAY" : "DAYS"}
           </span>
           <span>
             SKIPS LEFT <b>{skipsLeft}</b> OF 2
           </span>
           <span className={needsTending > 0 ? "warn" : ""}>
+            {needsTending > 0 && <ShieldAlert size={12} style={{ marginRight: 3 }} />}
             NEEDS TENDING <b>{needsTending}</b>
           </span>
           <span>
@@ -69,7 +72,7 @@ export const TilHeaderSummary: React.FC<TilHeaderSummaryProps> = ({
 
       <div
         className="strip"
-        title="26-Week Dense Activity Strip"
+        title="26-Week Dense Activity Strip (Click any day to filter)"
         style={{ cursor: onSelectDay ? "pointer" : "default" }}
       >
         {stripCells.map((cell, idx) => {
@@ -79,7 +82,7 @@ export const TilHeaderSummary: React.FC<TilHeaderSummaryProps> = ({
               key={idx}
               className={cell.cssClass}
               onClick={() => onSelectDay && onSelectDay(isSelected ? null : cell.dateStr)}
-              style={isSelected ? { outline: "2px solid var(--pink)", zIndex: 2 } : {}}
+              style={isSelected ? { outline: "2px solid var(--pink, #FF007A)", zIndex: 2, transform: "scale(1.3)" } : {}}
               title={`${cell.dateStr}: ${cell.count} ${cell.count === 1 ? "entry" : "entries"}`}
             />
           );
@@ -91,3 +94,4 @@ export const TilHeaderSummary: React.FC<TilHeaderSummaryProps> = ({
     </div>
   );
 };
+

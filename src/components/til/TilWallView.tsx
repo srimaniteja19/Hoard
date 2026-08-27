@@ -391,57 +391,64 @@ export function TilWallView() {
   };
 
   return (
-    <div>
-      <div
-        style={{
-          border: "var(--bd)",
-          background: "var(--paper)",
-          boxShadow: "var(--sh)",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            alignItems: "center",
-            flexWrap: "wrap",
-            padding: "11px 14px",
-            borderBottom: "var(--bd)",
-            background: "var(--cream)",
-          }}
-        >
-          <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.13em", opacity: 0.6 }}>
-            ZOOM
-          </span>
-          <input
-            type="range"
-            min={WALL_ZOOM_MIN}
-            max={WALL_ZOOM_MAX}
-            value={zoom}
-            onChange={(e) => scheduleZoomUpdate(clampWallZoom(Number(e.target.value)))}
-            className="wall-zoom-slider"
-            aria-label="Wall zoom"
-          />
-          <span style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 800 }}>
-            {zoom}px · {mode.toUpperCase()}
-          </span>
-          <span className="wall-zoom-meta" style={{ fontFamily: "var(--mono)", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.13em", opacity: 0.6 }}>
-            {days.length} DAYS · {totalEntries} ENTRIES · {activeDays} ACTIVE
-          </span>
+    <div className="til-wall-container">
+      <div className="til-wall-card">
+        {/* Cyber HUD Header */}
+        <div className="til-wall-hud-header">
+          <div className="til-wall-hud-left">
+            <span className="til-wall-hud-label">WALL ZOOM</span>
+            <input
+              type="range"
+              min={WALL_ZOOM_MIN}
+              max={WALL_ZOOM_MAX}
+              value={zoom}
+              onChange={(e) => scheduleZoomUpdate(clampWallZoom(Number(e.target.value)))}
+              className="wall-zoom-slider"
+              aria-label="Wall zoom"
+            />
+            <span className="til-wall-zoom-val">{zoom}PX</span>
+          </div>
+
+          {/* Mode Switcher Buttons */}
+          <div className="til-wall-modes">
+            <button
+              type="button"
+              className={`til-wall-mode-btn ${mode === "rhythm" ? "on" : ""}`}
+              onClick={() => setZoom(zoomForMode("rhythm"))}
+              title="Rhythm view (heat blocks)"
+            >
+              RHYTHM [1]
+            </button>
+            <button
+              type="button"
+              className={`til-wall-mode-btn ${mode === "composition" ? "on" : ""}`}
+              onClick={() => setZoom(zoomForMode("composition"))}
+              title="Composition view (type initials)"
+            >
+              COMPOSITION [2]
+            </button>
+            <button
+              type="button"
+              className={`til-wall-mode-btn ${mode === "content" ? "on" : ""}`}
+              onClick={() => setZoom(zoomForMode("content"))}
+              title="Content view (snippets & claim text)"
+            >
+              CONTENT [3]
+            </button>
+          </div>
+
+          <div className="til-wall-hud-meta">
+            <span><b>{days.length}</b> DAYS</span>
+            <span className="hud-sep">•</span>
+            <span><b>{totalEntries}</b> ENTRIES</span>
+            <span className="hud-sep">•</span>
+            <span className="hud-highlight"><b>{activeDays}</b> ACTIVE</span>
+          </div>
         </div>
 
         {loading ? (
-          <div
-            style={{
-              padding: "48px 16px",
-              textAlign: "center",
-              fontFamily: "var(--mono)",
-              fontSize: 13,
-              fontWeight: 800,
-            }}
-          >
-            LOADING YEAR WALL...
+          <div className="til-wall-loading">
+            LOADING 365-DAY KNOWLEDGE WALL...
           </div>
         ) : (
           <div
@@ -450,6 +457,7 @@ export function TilWallView() {
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
+            className="til-wall-viewport"
             style={{
               padding: 14,
               maxHeight: 520,
@@ -479,22 +487,12 @@ export function TilWallView() {
           </div>
         )}
       </div>
-      <div
-        style={{
-          fontFamily: "var(--mono)",
-          fontSize: 11.5,
-          lineHeight: 1.7,
-          borderLeft: "5px solid var(--pink)",
-          background: "var(--paper)",
-          border: "2px solid var(--ink)",
-          borderLeftWidth: 5,
-          padding: "11px 13px",
-          marginTop: 16,
-        }}
-      >
-        {WALL_VIRTUALIZE_THRESHOLD}px+ tiles virtualize to the visible viewport plus one screen of buffer.
-        Below that, all {days.length} days render at once. Content-mode bodies are fetched only for days
-        currently in view.
+
+      <div className="til-wall-info-banner">
+        <span className="til-info-tag">VIRTUALIZATION ENGINE</span>
+        <span>
+          {WALL_VIRTUALIZE_THRESHOLD}px+ tiles virtualize seamlessly for high-density rendering. Press keys <b>[1]</b>, <b>[2]</b>, or <b>[3]</b> to instantly jump between Rhythm, Composition, and Content views.
+        </span>
       </div>
     </div>
   );
