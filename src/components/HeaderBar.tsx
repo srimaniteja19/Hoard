@@ -50,38 +50,42 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             background: showMobileFilters ? "var(--lime)" : "var(--paper)",
             border: "2px solid var(--ink)",
             color: "var(--ink)",
-            padding: "5px 7px",
+            height: "32px",
+            padding: "0 10px",
             fontWeight: 800,
             fontSize: "11px",
             fontFamily: "var(--mono)",
             cursor: "pointer",
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
-            gap: "2px",
+            gap: "5px",
             boxShadow: "2px 2px 0 var(--ink)",
+            whiteSpace: "nowrap",
           }}
           title="Search & View Settings"
         >
-          <Search size={13} /> {showMobileFilters ? "✕" : "FIND"}
+          <Search size={13} /> {showMobileFilters ? "✕ CLOSE" : "FIND"}
         </button>
 
-        <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
           <Link
             href="/session"
             style={{
               background: "#FFE600",
               color: "#000",
               border: "2px solid var(--ink)",
-              padding: "5px 7px",
+              height: "32px",
+              padding: "0 10px",
               fontWeight: 900,
               fontSize: "11px",
               fontFamily: "var(--mono)",
               cursor: "pointer",
-              display: "flex",
+              display: "inline-flex",
               alignItems: "center",
-              gap: "2px",
+              gap: "4px",
               boxShadow: "2px 2px 0 var(--ink)",
               textDecoration: "none",
+              whiteSpace: "nowrap",
             }}
           >
             <Zap size={12} fill="#000" /> SESSION
@@ -91,6 +95,15 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <button
               className="mobile-add-btn"
               onClick={onOpenCapture}
+              style={{
+                height: "32px",
+                padding: "0 10px",
+                fontSize: "11px",
+                fontWeight: 900,
+                display: "inline-flex",
+                alignItems: "center",
+                whiteSpace: "nowrap",
+              }}
               aria-label="Save link"
             >
               + LINK

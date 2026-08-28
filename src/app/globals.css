@@ -2095,29 +2095,46 @@ input[type=range]::-moz-range-thumb {
   .app-header-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand actions"
+      "nav nav";
     align-items: center;
     gap: 8px 10px;
     padding: 8px 12px;
   }
 
   .app-header-brand {
+    grid-area: brand;
     min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
   .app-header-actions {
+    grid-area: actions;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     flex-wrap: nowrap;
+    justify-content: flex-end;
   }
 
   .app-header .app-nav {
-    grid-column: 1 / -1;
+    grid-area: nav;
     flex: none;
     width: 100%;
     max-width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 4px;
     flex-wrap: nowrap;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
+    padding-bottom: 2px;
+    margin-top: 2px;
   }
 
   .app-header .app-nav::-webkit-scrollbar {
@@ -2126,6 +2143,8 @@ input[type=range]::-moz-range-thumb {
 
   .app-header .app-nav a {
     flex: 0 0 auto;
+    font-size: 10.5px;
+    padding: 4px 7px;
   }
 
   .bar {
