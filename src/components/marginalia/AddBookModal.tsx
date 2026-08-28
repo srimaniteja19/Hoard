@@ -46,6 +46,47 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // AI Cover Alchemist State
+  const [alchemistSvg, setAlchemistSvg] = useState<string | null>(null);
+  const [alchemistPrompt, setAlchemistPrompt] = useState("");
+  const [alchemistLoading, setAlchemistLoading] = useState(false);
+  const [alchemistEpigraph, setAlchemistEpigraph] = useState<string | null>(null);
+
+  const handleAlchemizeCover = async () => {
+    if (!title.trim()) {
+      setError("Please enter a title first");
+      return;
+    }
+    try {
+      setAlchemistLoading(true);
+      playSound.click();
+      const res = await fetch("/api/books/generate-cover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          author: author.trim() || undefined,
+          userPrompt: alchemistPrompt.trim() || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const generated = data.cover;
+        setAlchemistSvg(generated.svgMarkup);
+        if (generated.accentColor) setSelectedAccent(generated.accentColor);
+        if (generated.fgColor) setSelectedFg(generated.fgColor);
+        if (generated.epigraph) setAlchemistEpigraph(generated.epigraph);
+        setCoverSource("ALCHEMIST");
+        playSound.fileIt();
+      }
+    } catch {
+      setError("Failed to generate AI cover");
+    } finally {
+      setAlchemistLoading(false);
+    }
+  };
+
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-seed house style when title or author changes
@@ -620,7 +661,12 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
                   background: "var(--shade)",
                 }}
               >
-                {coverSource === "POSTER" ? (
+                {coverSource === "ALCHEMIST" && alchemistSvg ? (
+                  <div
+                    style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
+                    dangerouslySetInnerHTML={{ __html: alchemistSvg }}
+                  />
+                ) : coverSource === "POSTER" ? (
                   <PosterCover
                     title={title || "TITLE HERE"}
                     author={author || "Author Name"}
@@ -643,6 +689,23 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
                 <div className="cv__spine" />
                 <span className="cv__fmt">{format}</span>
               </div>
+
+              {alchemistEpigraph && (
+                <div
+                  style={{
+                    marginTop: "8px",
+                    maxWidth: "160px",
+                    fontFamily: "var(--quote)",
+                    fontStyle: "italic",
+                    fontSize: "11px",
+                    lineHeight: 1.3,
+                    textAlign: "center",
+                    opacity: 0.85,
+                  }}
+                >
+                  "{alchemistEpigraph}"
+                </div>
+              )}
 
               {/* Cover Source Selector */}
               <div style={{ marginTop: "12px", width: "100%" }}>
@@ -697,6 +760,26 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
                     }}
                   >
                     POSTER (ILLUSTRATED)
+                  </button>
+
+                  {/* AI Cover Alchemist Generator Button */}
+                  <button
+                    type="button"
+                    onClick={handleAlchemizeCover}
+                    disabled={alchemistLoading}
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "8.5px",
+                      fontWeight: 800,
+                      padding: "4px 6px",
+                      textAlign: "left",
+                      border: "1.5px solid var(--ink)",
+                      background: coverSource === "ALCHEMIST" ? "var(--lime)" : "var(--yellow)",
+                      color: "#0A0A0A",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {alchemistLoading ? "✨ ALCHEMIZING..." : "✨ AI DREAM COVER"}
                   </button>
 
                   <button

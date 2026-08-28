@@ -1,9 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { BookRow, MarginaliaRow, MarginaliaPendingMarkRow, MarginaliaKind, BookStatus } from "@/db/schema";
 import { BookCoverFrame } from "./BookCoverFrame";
+import { ReadingSynthesisModal } from "./ReadingSynthesisModal";
 import { playSound } from "@/lib/sound";
+
+type GhostPersona = "SOCRATES" | "NIETZSCHE" | "FEYNMAN" | "MARCUS_AURELIUS" | "AUTHOR";
+
+const PERSONA_CONFIG: Record<GhostPersona, { label: string; icon: string; bg: string }> = {
+  SOCRATES: { label: "SOCRATES", icon: "🧙‍♂️", bg: "#FBBF24" },
+  NIETZSCHE: { label: "NIETZSCHE", icon: "⚡", bg: "#EF4444" },
+  FEYNMAN: { label: "FEYNMAN", icon: "🔬", bg: "#38BDF8" },
+  MARCUS_AURELIUS: { label: "MARCUS AURELIUS", icon: "🏛️", bg: "#34D399" },
+  AUTHOR: { label: "AUTHOR", icon: "✍️", bg: "#A78BFA" },
+};
 
 interface BookDetailViewProps {
   book: BookRow;
@@ -38,6 +49,21 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
   // Filter / Chapter view
   const [filterChapter, setFilterChapter] = useState<number | "ALL">("ALL");
   const [feedback, setFeedback] = useState<string | null>(null);
+
+  // ── AI FEATURE: GHOST READER SPARRING ──
+  const [sparringNote, setSparringNote] = useState<MarginaliaRow | null>(null);
+  const [selectedPersona, setSelectedPersona] = useState<GhostPersona>("SOCRATES");
+  const [ghostResponse, setGhostResponse] = useState<string>("");
+  const [ghostLoading, setGhostLoading] = useState(false);
+
+  // ── AI FEATURE: VISION OCR PAGE SNAPPER ──
+  const [ocrScanning, setOcrScanning] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── AI FEATURE: READING SYNTHESIS & ZINE ──
+  const [synthesisModalOpen, setSynthesisModalOpen] = useState(false);
+  const [synthesisData, setSynthesisData] = useState<any>(null);
+  const [synthesisLoading, setSynthesisLoading] = useState(false);
 
   // Fetch full notes & marks on mount
   useEffect(() => {
@@ -129,7 +155,6 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
         playSound.fileIt();
         showToast("✓ Note bound to marginalia");
 
-        // Update local book stats
         setBook((prev) => ({
           ...prev,
           notesCount: (prev.notesCount || 0) + 1,
@@ -139,6 +164,174 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
       showToast("Error saving note");
     } finally {
       setSubmittingNote(false);
+    }
+  };
+
+  // ── GHOST READER SPARRING HANDLER ──
+  const handleStartSparring = async (note: MarginaliaRow, persona?: GhostPersona) => {
+    const activePersona = persona || selectedPersona;
+    setSparringNote(note);
+    setSelectedPersona(activePersona);
+    setGhostResponse("");
+    setGhostLoading(true);
+    playSound.click();
+
+    try {
+      const res = await fetch(`/api/books/${book.id}/marginalia/ghost-reader`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          noteContent: note.note,
+          quote: note.quote,
+          chapter: note.chapter,
+          persona: activePersona,
+        }),
+      });
+
+      if (res.ok && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulated = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          accumulated += chunk;
+          setGhostResponse(accumulated);
+        }
+        playSound.fileIt();
+      }
+    } catch {
+      showToast("Ghost Reader unavailable");
+    } finally {
+      setGhostLoading(false);
+    }
+  };
+
+  const handleSaveGhostNote = async () => {
+    if (!ghostResponse || !sparringNote) return;
+    try {
+      playSound.click();
+      const res = await fetch(`/api/books/${book.id}/marginalia`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "COUNTER",
+          quote: sparringNote.quote || sparringNote.note,
+          note: `[${PERSONA_CONFIG[selectedPersona].icon} ${selectedPersona}]: ${ghostResponse}`,
+          chapter: sparringNote.chapter,
+          page: sparringNote.page,
+        }),
+      });
+
+      if (res.ok) {
+        const created: MarginaliaRow = await res.json();
+        setNotes((prev) => [created, ...prev]);
+        setSparringNote(null);
+        setGhostResponse("");
+        playSound.fileIt();
+        showToast("✓ Ghost critique added as counter-note");
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  // ── VISION OCR IMAGE SCANNER ──
+  const handleOcrFile = async (file: File) => {
+    try {
+      setOcrScanning(true);
+      playSound.click();
+      showToast("Scanning page with Vision AI...");
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        const res = await fetch("/api/books/ocr-snapper", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageBase64: base64,
+            mimeType: file.type,
+            bookTitle: book.title,
+            bookAuthor: book.author,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const scan = data.result;
+          if (scan.quote) setQuoteInput(scan.quote);
+          if (scan.pageNumber) setPageInput(String(scan.pageNumber));
+          if (scan.chapterTitle) {
+            const match = scan.chapterTitle.match(/\d+/);
+            if (match) setChapterInput(match[0]);
+          }
+          if (scan.suggestedReflection) {
+            setNoteInput(scan.suggestedReflection);
+          }
+          setCaptureMode("VERBATIM");
+          playSound.fileIt();
+          showToast("✓ Highlight & Page parsed via OCR!");
+        } else {
+          showToast("Could not scan text from image");
+        }
+        setOcrScanning(false);
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setOcrScanning(false);
+      showToast("OCR scanning failed");
+    }
+  };
+
+  // Clipboard paste detection for screenshots
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            handleOcrFile(file);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [book.title, book.author]);
+
+  // ── READING SYNTHESIS GENERATOR ──
+  const handleOpenSynthesis = async () => {
+    setSynthesisModalOpen(true);
+    if (!synthesisData) {
+      await fetchSynthesis();
+    }
+  };
+
+  const fetchSynthesis = async () => {
+    try {
+      setSynthesisLoading(true);
+      playSound.click();
+      const res = await fetch(`/api/books/${book.id}/synthesis`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSynthesisData(data.synthesis);
+        playSound.fileIt();
+      } else {
+        const err = await res.json();
+        showToast(err.error || "Synthesis failed");
+      }
+    } catch {
+      showToast("Error creating reading synthesis");
+    } finally {
+      setSynthesisLoading(false);
     }
   };
 
@@ -229,7 +422,6 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
     setTimestampInput(mark.timestamp);
     if (mark.chapter) setChapterInput(String(mark.chapter));
     if (mark.note) setNoteInput(mark.note);
-    // Dismiss mark
     fetch(`/api/books/${book.id}/pending-marks`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -253,7 +445,7 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
         } as React.CSSProperties
       }
     >
-      {/* ── TOP NAV BAR ── */}
+      {/* ── TOP NAV BAR WITH AI SYNTHESIS TRIGGER ── */}
       <div className="book-studio-head">
         <button
           type="button"
@@ -276,20 +468,40 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
           ← THE SHELF
         </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {/* AI Synthesis Trigger */}
+          <button
+            type="button"
+            onClick={handleOpenSynthesis}
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "10.5px",
+              fontWeight: 800,
+              padding: "6px 14px",
+              background: "var(--yellow)",
+              color: "#0A0A0A",
+              border: "1.5px solid var(--ink)",
+              boxShadow: "2px 2px 0 var(--ink)",
+              cursor: "pointer",
+            }}
+          >
+            🔮 READING SYNTHESIS &amp; ZINE
+          </button>
+
           <span
             style={{
               fontFamily: "var(--mono)",
               fontSize: "10px",
               fontWeight: 800,
               letterSpacing: "0.1em",
-              background: "var(--yellow)",
-              padding: "2px 6px",
+              background: "var(--shade)",
+              padding: "4px 8px",
               border: "1px solid var(--ink)",
             }}
           >
             {book.format}
           </span>
+
           <select
             value={book.status}
             onChange={(e) => handleUpdateProgress(book.currentChapter || 1, e.target.value as BookStatus)}
@@ -297,7 +509,7 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
               fontFamily: "var(--mono)",
               fontSize: "10px",
               fontWeight: 800,
-              padding: "4px 8px",
+              padding: "5px 8px",
               border: "1.5px solid var(--ink)",
               background: "var(--card)",
               color: "var(--ink)",
@@ -323,6 +535,7 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
             fontSize: "11px",
             fontWeight: 800,
             marginBottom: "16px",
+            color: "#0A0A0A",
           }}
         >
           {feedback}
@@ -549,29 +762,66 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
         <div className="book-studio-main">
           {/* Capture Box */}
           <div className="capture-box">
-            {/* Mode Switcher */}
-            <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
-              <button
-                type="button"
-                className={`note-mode-tab ${captureMode === "VERBATIM" ? "active" : ""}`}
-                onClick={() => setCaptureMode("VERBATIM")}
-              >
-                &ldquo; VERBATIM (QUOTE)
-              </button>
-              <button
-                type="button"
-                className={`note-mode-tab ${captureMode === "PARAPHRASE" ? "active" : ""}`}
-                onClick={() => setCaptureMode("PARAPHRASE")}
-              >
-                ✎ PARAPHRASE
-              </button>
-              <button
-                type="button"
-                className={`note-mode-tab ${captureMode === "THOUGHT" ? "active" : ""}`}
-                onClick={() => setCaptureMode("THOUGHT")}
-              >
-                💡 THOUGHT
-              </button>
+            {/* Mode Switcher + OCR Trigger */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "14px" }}>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className={`note-mode-tab ${captureMode === "VERBATIM" ? "active" : ""}`}
+                  onClick={() => setCaptureMode("VERBATIM")}
+                >
+                  &ldquo; VERBATIM (QUOTE)
+                </button>
+                <button
+                  type="button"
+                  className={`note-mode-tab ${captureMode === "PARAPHRASE" ? "active" : ""}`}
+                  onClick={() => setCaptureMode("PARAPHRASE")}
+                >
+                  ✎ PARAPHRASE
+                </button>
+                <button
+                  type="button"
+                  className={`note-mode-tab ${captureMode === "THOUGHT" ? "active" : ""}`}
+                  onClick={() => setCaptureMode("THOUGHT")}
+                >
+                  💡 THOUGHT
+                </button>
+              </div>
+
+              {/* 📸 Vision OCR Snapper Button */}
+              <div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleOcrFile(file);
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={ocrScanning}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    fontFamily: "var(--mono)",
+                    fontSize: "9.5px",
+                    fontWeight: 800,
+                    padding: "6px 10px",
+                    border: "1.5px solid var(--ink)",
+                    background: ocrScanning ? "var(--yellow)" : "var(--card)",
+                    color: "var(--ink)",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                  }}
+                  title="Upload page photo or paste screenshot with Cmd+V"
+                >
+                  {ocrScanning ? "🔄 SCANNING OCR..." : "📸 SNAP / PASTE PAGE"}
+                </button>
+              </div>
             </div>
 
             <form onSubmit={handleAddNote} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -582,7 +832,7 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
                     rows={3}
                     value={quoteInput}
                     onChange={(e) => setQuoteInput(e.target.value)}
-                    placeholder="Enter the verbatim passage or quote..."
+                    placeholder="Enter the verbatim passage or paste a page screenshot..."
                     required
                     style={{
                       width: "100%",
@@ -712,6 +962,118 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
             </form>
           </div>
 
+          {/* ── GHOST READER SPARRING ACTIVE ARENA ── */}
+          {sparringNote && (
+            <div
+              style={{
+                border: "var(--b) solid var(--ink)",
+                background: "var(--card)",
+                boxShadow: "6px 6px 0 var(--ink)",
+                padding: "18px 20px",
+                marginBottom: "20px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <div style={{ fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 800, letterSpacing: "0.12em" }}>
+                  🧙‍♂️ INTELLECTUAL SPARRING: {sparringNote.quote ? `"${sparringNote.quote.slice(0, 45)}..."` : "Note"}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSparringNote(null)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    fontFamily: "var(--mono)",
+                    fontSize: "12px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  ✕ CLOSE
+                </button>
+              </div>
+
+              {/* Persona Selector Pills */}
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "14px" }}>
+                {(Object.keys(PERSONA_CONFIG) as GhostPersona[]).map((p) => {
+                  const cfg = PERSONA_CONFIG[p];
+                  const isSel = selectedPersona === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => handleStartSparring(sparringNote, p)}
+                      style={{
+                        fontFamily: "var(--mono)",
+                        fontSize: "9.5px",
+                        fontWeight: 800,
+                        padding: "5px 9px",
+                        border: "1.5px solid var(--ink)",
+                        background: isSel ? cfg.bg : "var(--card)",
+                        color: isSel ? "#0A0A0A" : "var(--ink)",
+                        boxShadow: isSel ? "2px 2px 0 var(--ink)" : "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {cfg.icon} {cfg.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Ghost commentary bubble */}
+              <div
+                style={{
+                  background: "var(--shade)",
+                  border: "2px dashed var(--ink)",
+                  padding: "14px 18px",
+                  marginBottom: "12px",
+                  minHeight: "65px",
+                }}
+              >
+                {ghostLoading && !ghostResponse ? (
+                  <div style={{ fontFamily: "var(--mono)", fontSize: "11px", opacity: 0.7 }}>
+                    {PERSONA_CONFIG[selectedPersona].icon} {selectedPersona} is dissecting your note...
+                  </div>
+                ) : (
+                  <p
+                    style={{
+                      fontFamily: "var(--body)",
+                      fontSize: "14.5px",
+                      lineHeight: 1.5,
+                      margin: 0,
+                      color: "var(--ink)",
+                    }}
+                  >
+                    {ghostResponse}
+                  </p>
+                )}
+              </div>
+
+              {ghostResponse && (
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={handleSaveGhostNote}
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      padding: "6px 14px",
+                      border: "2px solid var(--ink)",
+                      background: "var(--lime)",
+                      color: "#0A0A0A",
+                      boxShadow: "2px 2px 0 var(--ink)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ✓ BIND AS COUNTER-NOTE
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Chapter Filter Pills */}
           <div
             style={{
@@ -792,7 +1154,7 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
                 opacity: 0.6,
               }}
             >
-              NO MARGINALIA RECORDED YET. CAPTURE YOUR FIRST PASSAGE ABOVE.
+              NO MARGINALIA RECORDED YET. CAPTURE YOUR FIRST PASSAGE ABOVE OR PASTE A SCREENSHOT (CMD+V).
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -805,6 +1167,8 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
                       alignItems: "center",
                       justifyContent: "space-between",
                       marginBottom: "8px",
+                      flexWrap: "wrap",
+                      gap: "6px",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -819,8 +1183,10 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
                               ? "var(--b-theme)"
                               : note.kind === "PARAPHRASE"
                               ? "var(--cyan)"
+                              : note.kind === "COUNTER"
+                              ? "var(--lime)"
                               : "var(--yellow)",
-                          color: note.kind === "VERBATIM" ? "#fff" : "var(--ink)",
+                          color: note.kind === "VERBATIM" ? "#fff" : "#0A0A0A",
                           border: "1px solid var(--ink)",
                         }}
                       >
@@ -840,8 +1206,27 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
                       </span>
                     </div>
 
-                    {/* Promotion Badges or Actions */}
+                    {/* Spar & Promotion Actions */}
                     <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                      {/* Ghost Reader Sparring Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => handleStartSparring(note)}
+                        style={{
+                          fontFamily: "var(--mono)",
+                          fontSize: "8.5px",
+                          fontWeight: 800,
+                          background: "var(--yellow)",
+                          color: "#0A0A0A",
+                          border: "1px solid var(--ink)",
+                          padding: "2px 6px",
+                          cursor: "pointer",
+                        }}
+                        title="Spar with Ghost Reader"
+                      >
+                        🧙‍♂️ SPAR
+                      </button>
+
                       {note.promotedTo ? (
                         <span
                           style={{
@@ -851,6 +1236,7 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
                             background: "var(--lime)",
                             border: "1px solid var(--ink)",
                             padding: "2px 6px",
+                            color: "#0A0A0A",
                           }}
                         >
                           ✓ MINTED TO {note.promotedTo}
@@ -926,6 +1312,16 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* ── READING SYNTHESIS MODAL ── */}
+      <ReadingSynthesisModal
+        isOpen={synthesisModalOpen}
+        book={book}
+        synthesis={synthesisData}
+        loading={synthesisLoading}
+        onClose={() => setSynthesisModalOpen(false)}
+        onRefresh={fetchSynthesis}
+      />
     </div>
   );
 };
