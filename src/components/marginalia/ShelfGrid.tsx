@@ -3,12 +3,13 @@
 import React, { useMemo } from "react";
 import { BookRow } from "@/db/schema";
 import { BookCoverFrame } from "./BookCoverFrame";
-import { CoverViewMode } from "@/lib/marginalia/types";
+import { CoverViewMode, PosterSeries } from "@/lib/marginalia/types";
 import { playSound } from "@/lib/sound";
 
 interface ShelfGridProps {
   books: BookRow[];
   coverMode: CoverViewMode;
+  posterSeries?: PosterSeries;
   onSelectBook: (book: BookRow) => void;
   onAddVolume: () => void;
   onSearchAgain?: (book: BookRow) => void;
@@ -19,6 +20,7 @@ interface ShelfGridProps {
 export const ShelfGrid: React.FC<ShelfGridProps> = ({
   books,
   coverMode,
+  posterSeries = "daylight",
   onSelectBook,
   onAddVolume,
   onSearchAgain,
@@ -64,6 +66,7 @@ export const ShelfGrid: React.FC<ShelfGridProps> = ({
             <BookCoverFrame
               book={book}
               mode={coverMode}
+              posterSeries={posterSeries}
               tiltDeg={bookTilts[book.id] || 0}
               onSearchAgain={onSearchAgain}
               onPasteUrl={onPasteUrl}

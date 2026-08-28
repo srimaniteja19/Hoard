@@ -7,7 +7,7 @@ import { BookRow } from "@/db/schema";
 import { ShelfGrid } from "@/components/marginalia/ShelfGrid";
 import { AddBookModal } from "@/components/marginalia/AddBookModal";
 import { BookDetailView } from "@/components/marginalia/BookDetailView";
-import { CoverViewMode, PaperTheme, BookStatsSummary } from "@/lib/marginalia/types";
+import { CoverViewMode, PaperTheme, PosterSeries, BookStatsSummary } from "@/lib/marginalia/types";
 import { playSound } from "@/lib/sound";
 
 const SAMPLE_BOOKS = [
@@ -131,6 +131,7 @@ function MarginaliaPageContent() {
   const [loading, setLoading] = useState(true);
   const [paperTheme, setPaperTheme] = useState<PaperTheme>("cream");
   const [coverMode, setCoverMode] = useState<CoverViewMode>("jackets");
+  const [posterSeries, setPosterSeries] = useState<PosterSeries>("daylight");
   const [selectedBook, setSelectedBook] = useState<BookRow | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
@@ -143,8 +144,12 @@ function MarginaliaPageContent() {
         setPaperTheme(savedPaper);
       }
       const savedMode = localStorage.getItem("hoard-marginalia-cover-mode") as CoverViewMode | null;
-      if (savedMode && ["jackets", "house"].includes(savedMode)) {
+      if (savedMode && ["jackets", "poster", "house"].includes(savedMode)) {
         setCoverMode(savedMode);
+      }
+      const savedSeries = localStorage.getItem("hoard-marginalia-poster-series") as PosterSeries | null;
+      if (savedSeries && ["daylight", "neon", "mixed"].includes(savedSeries)) {
+        setPosterSeries(savedSeries);
       }
     } catch {
       // ignore
@@ -192,6 +197,15 @@ function MarginaliaPageContent() {
       // ignore
     }
   }, [coverMode]);
+
+  // Save poster series to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("hoard-marginalia-poster-series", posterSeries);
+    } catch {
+      // ignore
+    }
+  }, [posterSeries]);
 
   const handleSeedSamples = async () => {
     try {
@@ -336,11 +350,66 @@ function MarginaliaPageContent() {
                     HOUSE
                   </button>
                 </span>
+
+                {/* Poster Series Sub-Toggle */}
+                {coverMode === "poster" && (
+                  <span className="m-seg" id="poster-series" style={{ marginLeft: "4px" }}>
+                    <button
+                      data-s="daylight"
+                      aria-pressed={posterSeries === "daylight"}
+                      suppressHydrationWarning
+                      type="button"
+                      onClick={() => {
+                        playSound.click();
+                        setPosterSeries("daylight");
+                      }}
+                      title="Daylight: Pale grounds, dark ink type, zero glow"
+                    >
+                      DAYLIGHT
+                    </button>
+                    <button
+                      data-s="neon"
+                      aria-pressed={posterSeries === "neon"}
+                      suppressHydrationWarning
+                      type="button"
+                      onClick={() => {
+                        playSound.click();
+                        setPosterSeries("neon");
+                      }}
+                      title="Neon: Dark ground, glowing saturated ink & authentic sign flicker"
+                    >
+                      NEON
+                    </button>
+                    <button
+                      data-s="mixed"
+                      aria-pressed={posterSeries === "mixed"}
+                      suppressHydrationWarning
+                      type="button"
+                      onClick={() => {
+                        playSound.click();
+                        setPosterSeries("mixed");
+                      }}
+                      title="Mixed: Dynamic blend of Daylight and Neon series"
+                    >
+                      MIXED
+                    </button>
+                  </span>
+                )}
               </div>
             </div>
 
             <div className="m-note">
-              JACKETS PULLS REAL PUBLISHER ART · POSTER RENDERS MODERN ILLUSTRATED EDITORIAL JACKETS · HOUSE REBINDS IN UNIFIED GEOMETRIC MINIMALISM.
+              {coverMode === "poster" ? (
+                posterSeries === "neon" ? (
+                  <>NEON SERIES · NEAR-BLACK GROUNDS WITH SATURATED GLOWING INK &amp; REAL SIGN FLICKER.</>
+                ) : posterSeries === "daylight" ? (
+                  <>DAYLIGHT SERIES · PALE GROUNDS, DARK INK TYPE, FLAT COLOUR &amp; PIN-SHARP THUMBNAIL READABILITY.</>
+                ) : (
+                  <>MIXED SERIES · DYNAMIC DETERMINISTIC DUAL-SERIES PALETTES PER TITLE.</>
+                )
+              ) : (
+                <>JACKETS PULLS REAL PUBLISHER ART · POSTER RENDERS MODERN ILLUSTRATED EDITORIAL JACKETS · HOUSE REBINDS IN UNIFIED GEOMETRIC MINIMALISM.</>
+              )}
             </div>
 
             {/* Empty State Banner with 1-click Seed Sample */}
@@ -422,6 +491,7 @@ function MarginaliaPageContent() {
               <ShelfGrid
                 books={books}
                 coverMode={coverMode}
+                posterSeries={posterSeries}
                 onSelectBook={(b) => setSelectedBook(b)}
                 onAddVolume={() => setIsAddModalOpen(true)}
                 onSearchAgain={(b) => {

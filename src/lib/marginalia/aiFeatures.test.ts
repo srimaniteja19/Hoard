@@ -1,26 +1,52 @@
 import { describe, it, expect } from "vitest";
-import { POSTER_PALETTES, seedPosterStyle, renderPosterIllustration } from "./posterMotifs";
+import {
+  DAYLIGHT_PALETTES,
+  NEON_PALETTES,
+  seedPosterStyle,
+  renderPosterIllustration,
+  matchPosterMotif,
+  PosterMotif,
+} from "./posterMotifs";
 
 describe("AI Poster & Cover Features", () => {
-  it("seeds valid poster styles for arbitrary titles", () => {
-    const theme1 = seedPosterStyle("Genius Makers", "Cade Metz");
-    expect(theme1).toBeDefined();
-    expect(theme1.bgGradient).toContain("linear-gradient");
-    expect(theme1.accent).toBeDefined();
+  it("seeds valid poster styles for arbitrary titles across Daylight and Neon series", () => {
+    const daylight = seedPosterStyle("Genius Makers", "Cade Metz", "daylight");
+    expect(daylight).toBeDefined();
+    expect(daylight.series).toBe("daylight");
+    expect(daylight.tokens.g).toBeDefined();
+    expect(daylight.tokens.a).toBeDefined();
+    expect(daylight.tokens.b).toBeDefined();
+    expect(daylight.tokens.isNeon).toBe(false);
 
-    const theme2 = seedPosterStyle("Designing Data-Intensive Applications", "Martin Kleppmann");
-    expect(theme2).toBeDefined();
-    expect(theme2.motif).toBeDefined();
+    const neon = seedPosterStyle("Designing Data-Intensive Applications", "Martin Kleppmann", "neon");
+    expect(neon).toBeDefined();
+    expect(neon.series).toBe("neon");
+    expect(neon.tokens.isNeon).toBe(true);
   });
 
-  it("renders rich animated SVG vector art for all motifs", () => {
-    const motifs = Object.keys(POSTER_PALETTES) as Array<keyof typeof POSTER_PALETTES>;
+  it("semantically matches motifs based on book title keywords", () => {
+    expect(matchPosterMotif("Make Time")).toBe("cyber_grid");
+    expect(matchPosterMotif("Offshore")).toBe("cosmic_orbit");
+    expect(matchPosterMotif("The Little Book of Indian Business")).toBe("monument_arch");
+    expect(matchPosterMotif("Indian Superfoods")).toBe("botanical_lush");
+    expect(matchPosterMotif("Life After Cars")).toBe("dune_wanderer");
+    expect(matchPosterMotif("Tiny Experiments")).toBe("pop_starburst");
+    expect(matchPosterMotif("The Man's Guide to Women")).toBe("optical_prism");
+  });
+
+  it("renders 3-token vector art for all motifs in Daylight and Neon", () => {
+    const motifs = Object.keys(DAYLIGHT_PALETTES) as PosterMotif[];
     for (const motif of motifs) {
-      const theme = POSTER_PALETTES[motif];
-      const svg = renderPosterIllustration(motif, theme);
-      expect(svg).toContain("<svg");
-      expect(svg).toContain("</svg>");
-      expect(svg).toContain("viewBox=\"0 0 200 300\"");
+      const daylightTokens = DAYLIGHT_PALETTES[motif];
+      const svgDaylight = renderPosterIllustration(motif, daylightTokens);
+      expect(svgDaylight).toContain("<svg");
+      expect(svgDaylight).toContain("viewBox=\"0 0 200 300\"");
+      expect(svgDaylight).toContain(daylightTokens.g);
+
+      const neonTokens = NEON_PALETTES[motif];
+      const svgNeon = renderPosterIllustration(motif, neonTokens);
+      expect(svgNeon).toContain("<svg");
+      expect(svgNeon).toContain(neonTokens.g);
     }
   });
 });

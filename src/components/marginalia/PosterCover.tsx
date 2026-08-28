@@ -5,13 +5,14 @@ import {
   PosterMotif,
   seedPosterStyle,
   renderPosterIllustration,
-  POSTER_PALETTES,
 } from "@/lib/marginalia/posterMotifs";
+import { PosterSeries } from "@/lib/marginalia/types";
 
 interface PosterCoverProps {
   title: string;
   author: string;
   motif?: PosterMotif | null;
+  series?: PosterSeries;
   className?: string;
 }
 
@@ -19,35 +20,35 @@ export const PosterCover: React.FC<PosterCoverProps> = ({
   title,
   author,
   motif,
+  series = "daylight",
   className = "",
 }) => {
   const theme = useMemo(() => {
-    if (motif && POSTER_PALETTES[motif]) {
-      return POSTER_PALETTES[motif];
-    }
-    return seedPosterStyle(title, author);
-  }, [title, author, motif]);
+    return seedPosterStyle(title, author, series);
+  }, [title, author, series]);
 
   const illustrationSvg = useMemo(() => {
-    return renderPosterIllustration(theme.motif, theme);
+    return renderPosterIllustration(theme.motif, theme.tokens);
   }, [theme]);
 
   const displayTitle = title.trim();
+  const isNeon = theme.series === "neon";
 
   return (
     <div
-      className={`poster-cover ${className}`}
+      className={`poster-cover ${isNeon ? "poster-cover--neon" : "poster-cover--daylight"} ${className}`}
       style={
         {
-          background: theme.bgGradient,
-          "--p-fg": theme.fg,
-          "--p-accent": theme.accent,
-          "--p-sub": theme.subColor,
-          "--p-foil": theme.foilColor,
+          background: theme.tokens.g,
+          "--p-g": theme.tokens.g,
+          "--p-a": theme.tokens.a,
+          "--p-b": theme.tokens.b,
+          "--p-fg": theme.tokens.fg,
+          "--p-accent": theme.tokens.a,
         } as React.CSSProperties
       }
     >
-      {/* ── FULL-BLEED LIVING VECTOR ART ── */}
+      {/* ── FULL-BLEED LIVING VECTOR ART (3 TOKENS: a, b, g) ── */}
       <div
         className="poster-art-full"
         aria-hidden="true"
@@ -57,7 +58,7 @@ export const PosterCover: React.FC<PosterCoverProps> = ({
       {/* ── TOP ARCHIVAL MASTHEAD ── */}
       <div className="poster-masthead">
         <span className="poster-masthead-label">✦ HOARD MONOGRAPH</span>
-        <span className="poster-masthead-code">{theme.editionCode}</span>
+        <span className="poster-masthead-code">{theme.tokens.editionCode}</span>
       </div>
 
       {/* ── EDITORIAL TYPOGRAPHY OVERLAY ── */}
@@ -90,7 +91,7 @@ export const PosterCover: React.FC<PosterCoverProps> = ({
         </div>
       </div>
 
-      {/* ── 3D BOOK SPINE SHADOW & GLOSS SHEEN ── */}
+      {/* ── 3D BOOK SPINE SHADOW & SHEEN ── */}
       <div className="poster-sheen" aria-hidden="true" />
       <div className="poster-spine" aria-hidden="true" />
     </div>

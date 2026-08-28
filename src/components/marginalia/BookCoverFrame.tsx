@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { BookRow, BookMotif } from "@/db/schema";
 import { HouseCover } from "./HouseCover";
 import { PosterCover } from "./PosterCover";
-import { CoverViewMode } from "@/lib/marginalia/types";
+import { CoverViewMode, PosterSeries } from "@/lib/marginalia/types";
+import { seedPosterStyle } from "@/lib/marginalia/posterMotifs";
 
 interface BookCoverFrameProps {
   book: BookRow;
   mode?: CoverViewMode;
+  posterSeries?: PosterSeries;
   tiltDeg?: number;
   onSearchAgain?: (book: BookRow) => void;
   onPasteUrl?: (book: BookRow) => void;
@@ -19,6 +21,7 @@ interface BookCoverFrameProps {
 export const BookCoverFrame: React.FC<BookCoverFrameProps> = ({
   book,
   mode = "jackets",
+  posterSeries = "daylight",
   tiltDeg = 0,
   onSearchAgain,
   onPasteUrl,
@@ -42,17 +45,25 @@ export const BookCoverFrame: React.FC<BookCoverFrameProps> = ({
   const hasRealCover = Boolean(book.coverUrl && !imgError);
   const isMissingState = !isHouseMode && !isPosterMode && !hasRealCover && !book.isbn;
 
+  const posterTheme = useMemo(() => {
+    if (!isPosterMode) return null;
+    return seedPosterStyle(book.title, book.author, posterSeries);
+  }, [isPosterMode, book.title, book.author, posterSeries]);
+
+  const isNeon = isPosterMode && posterTheme?.series === "neon";
+
   return (
     <div
-      className={`cv ${className}`}
+      className={`cv ${isNeon ? "cv--neon" : ""} ${className}`}
       style={
         {
           "--r": `${tiltDeg}deg`,
+          ...(isNeon ? { "--p-accent": posterTheme?.tokens.a } : {}),
         } as React.CSSProperties
       }
     >
       {isPosterMode ? (
-        <PosterCover title={book.title} author={book.author} />
+        <PosterCover title={book.title} author={book.author} series={posterSeries} />
       ) : isHouseMode ? (
         <HouseCover
           title={book.title}
