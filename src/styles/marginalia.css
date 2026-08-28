@@ -378,8 +378,10 @@ html[data-paper="ink"] .app-nav a {
   color: var(--p-fg, #FFFFFF);
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   overflow: hidden;
   user-select: none;
+  border-radius: 1px;
 }
 
 .poster-art-full {
@@ -391,43 +393,132 @@ html[data-paper="ink"] .app-nav a {
   pointer-events: none;
 }
 
+.poster-masthead {
+  position: relative;
+  z-index: 3;
+  padding: 10px 14px 4px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, transparent 100%);
+}
+
+.poster-masthead-label {
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  color: var(--p-foil, #FDE047);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  text-transform: uppercase;
+}
+
+.poster-masthead-code {
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 1px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
 .poster-header {
   position: relative;
   z-index: 3;
-  padding: 18px 14px 12px 24px;
+  padding: 6px 14px 12px 22px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.25) 60%, transparent 100%);
+  gap: 3px;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
 }
 
 .poster-title {
   margin: 0;
   font-family: var(--display);
-  font-weight: 800;
-  font-size: clamp(15px, 2.3vw, 20px);
-  line-height: 1.08;
-  letter-spacing: -0.03em;
+  font-weight: 900;
+  font-size: clamp(16px, 2.4vw, 21px);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
   color: #FFFFFF;
   word-break: break-word;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 0, 0, 0.4);
 }
 
 .poster-author {
-  font-family: var(--body);
+  font-family: var(--quote);
+  font-style: italic;
   font-weight: 600;
-  font-size: 11.5px;
-  line-height: 1.25;
-  color: #FFFFFF;
-  opacity: 0.92;
-  margin-top: 2px;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  font-size: 12.5px;
+  line-height: 1.2;
+  color: var(--p-sub, #FFFFFF);
+  opacity: 0.95;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.poster-author-dash {
+  font-style: normal;
+  color: var(--p-foil, #FDE047);
+}
+
+.poster-footer {
+  position: relative;
+  z-index: 3;
+  padding: 8px 14px 8px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.55) 0%, transparent 100%);
+}
+
+.poster-footer-seal {
+  font-family: var(--mono);
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.poster-footer-dot {
+  color: var(--p-foil, #FDE047);
+}
+
+.poster-footer-barcode {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 12px;
+  opacity: 0.7;
+}
+
+.poster-footer-barcode i {
+  display: block;
+  background: #FFFFFF;
+  width: 1.5px;
+  height: 100%;
+}
+.poster-footer-barcode i:nth-child(2n) {
+  width: 2.5px;
+  height: 80%;
+}
+.poster-footer-barcode i:nth-child(3n) {
+  width: 1px;
+  height: 90%;
 }
 
 .poster-sheen {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 30%, transparent 60%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 30%, transparent 60%);
   pointer-events: none;
   z-index: 4;
 }
@@ -438,7 +529,7 @@ html[data-paper="ink"] .app-nav a {
   top: 0;
   bottom: 0;
   width: 15px;
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.45) 0%, rgba(255, 255, 255, 0.18) 30%, rgba(0, 0, 0, 0.15) 100%);
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0%, rgba(255, 255, 255, 0.2) 30%, rgba(0, 0, 0, 0.15) 100%);
   box-shadow: inset 2px 0 4px rgba(0, 0, 0, 0.4);
   pointer-events: none;
   z-index: 5;
