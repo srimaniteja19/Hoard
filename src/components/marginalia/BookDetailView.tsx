@@ -263,13 +263,14 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
       const generated = data.cover;
       const svgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(generated.svgMarkup)}`;
 
+      const originalIsHttp = book.coverUrl && !book.coverUrl.startsWith("data:image/svg+xml");
       const patchRes = await fetch(`/api/books/${book.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          coverUrl: svgDataUri,
-          coverSource: "ALCHEMIST",
           customCoverUrl: svgDataUri,
+          coverUrl: originalIsHttp ? book.coverUrl : svgDataUri,
+          coverSource: originalIsHttp ? book.coverSource : "ALCHEMIST",
           accentColor: generated.accentColor || book.accentColor,
           fgColor: generated.fgColor || book.fgColor,
         }),

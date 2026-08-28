@@ -13,6 +13,8 @@ interface BookCoverFrameProps {
   mode?: CoverViewMode;
   posterSeries?: PosterSeries;
   tiltDeg?: number;
+  isAlchemizing?: boolean;
+  onAlchemize?: (book: BookRow) => void;
   onSearchAgain?: (book: BookRow) => void;
   onPasteUrl?: (book: BookRow) => void;
   onUpload?: (book: BookRow) => void;
@@ -24,6 +26,8 @@ export const BookCoverFrame: React.FC<BookCoverFrameProps> = ({
   mode = "jackets",
   posterSeries = "daylight",
   tiltDeg = 0,
+  isAlchemizing = false,
+  onAlchemize,
   onSearchAgain,
   onPasteUrl,
   onUpload,
@@ -44,8 +48,25 @@ export const BookCoverFrame: React.FC<BookCoverFrameProps> = ({
   const isHouseMode = mode === "house";
   const isPosterMode = mode === "poster";
   const isDreamMode = mode === "dream";
-  const hasRealCover = Boolean(book.coverUrl && !imgError);
-  const isMissingState = !isHouseMode && !isPosterMode && !isDreamMode && !hasRealCover && !book.isbn;
+
+  // In JACKETS mode, strictly show ONLY original publisher jackets (http/https or uploads, never SVG data URIs)
+  const originalJacketUrl =
+    book.coverUrl && !book.coverUrl.startsWith("data:image/svg+xml")
+      ? book.coverUrl
+      : book.customCoverUrl && !book.customCoverUrl.startsWith("data:image/svg+xml")
+      ? book.customCoverUrl
+      : null;
+
+  const hasOriginalJacket = Boolean(originalJacketUrl && !imgError);
+  const isMissingState = !isHouseMode && !isPosterMode && !isDreamMode && !hasOriginalJacket && !book.isbn;
+
+  // In AI DREAM mode, retrieve the bespoke Gemini vector SVG
+  const dreamCoverUrl =
+    book.customCoverUrl && book.customCoverUrl.startsWith("data:image/svg+xml")
+      ? book.customCoverUrl
+      : book.coverUrl && book.coverUrl.startsWith("data:image/svg+xml")
+      ? book.coverUrl
+      : null;
 
   const posterTheme = useMemo(() => {
     if (!isPosterMode) return null;
@@ -68,8 +89,10 @@ export const BookCoverFrame: React.FC<BookCoverFrameProps> = ({
         <DreamCover
           title={book.title}
           author={book.author}
-          coverUrl={book.coverUrl}
-          coverSource={book.coverSource}
+          coverUrl={dreamCoverUrl}
+          coverSource={dreamCoverUrl ? "ALCHEMIST" : book.coverSource}
+          isAlchemizing={isAlchemizing}
+          onAlchemize={onAlchemize ? () => onAlchemize(book) : undefined}
         />
       ) : isPosterMode ? (
         <PosterCover title={book.title} author={book.author} series={posterSeries} />
@@ -81,6 +104,28 @@ export const BookCoverFrame: React.FC<BookCoverFrameProps> = ({
           fgColor={book.fgColor}
           motif={(book.motif as BookMotif) || "arcs"}
         />
+      ) : hasOriginalJacket ? (
+        <>
+          <img
+            src={originalJacketUrl!}
+            alt={`Original publisher cover for ${book.title}`}
+            onError={() => setImgError(true)}
+            loading="lazy"
+          />
+          {book.coverSource &&
+            book.coverSource !== "HOUSE" &&
+            book.coverSource !== "ALCHEMIST" && (
+              <span className="cv__src">
+                {book.coverSource === "OPEN_LIBRARY"
+                  ? "OPEN LIBRARY"
+                  : book.coverSource === "GOOGLE_BOOKS"
+                  ? "GOOGLE BOOKS"
+                  : book.coverSource === "ITUNES"
+                  ? "iTUNES"
+                  : "UPLOAD"}
+              </span>
+            )}
+        </>
       ) : isMissingState ? (
         <div className="cv__miss">
           <b>NO JACKET FOUND</b>
@@ -114,28 +159,6 @@ export const BookCoverFrame: React.FC<BookCoverFrameProps> = ({
             </button>
           </div>
         </div>
-      ) : hasRealCover ? (
-        <>
-          <img
-            src={book.coverUrl!}
-            alt={`Cover for ${book.title}`}
-            onError={() => setImgError(true)}
-            loading="lazy"
-          />
-          {book.coverSource && book.coverSource !== "HOUSE" && (
-            <span className="cv__src">
-              {book.coverSource === "OPEN_LIBRARY"
-                ? "OPEN LIBRARY"
-                : book.coverSource === "GOOGLE_BOOKS"
-                ? "GOOGLE BOOKS"
-                : book.coverSource === "ITUNES"
-                ? "iTUNES"
-                : book.coverSource === "ALCHEMIST"
-                ? "✨ AI DREAM"
-                : "UPLOAD"}
-            </span>
-          )}
-        </>
       ) : (
         <HouseCover
           title={book.title}

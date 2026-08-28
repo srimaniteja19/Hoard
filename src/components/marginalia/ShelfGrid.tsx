@@ -13,6 +13,8 @@ interface ShelfGridProps {
   coverMode: CoverViewMode;
   posterSeries?: PosterSeries;
   statusFilter?: ShelfStatusFilter;
+  alchemizingBookId?: string | null;
+  onAlchemize?: (book: BookRow) => void;
   onSelectBook: (book: BookRow) => void;
   onAddVolume: (defaultStatus?: BookStatus) => void;
   onSearchAgain?: (book: BookRow) => void;
@@ -38,6 +40,8 @@ export const ShelfGrid: React.FC<ShelfGridProps> = ({
   coverMode,
   posterSeries = "daylight",
   statusFilter = "ALL",
+  alchemizingBookId = null,
+  onAlchemize,
   onSelectBook,
   onAddVolume,
   onSearchAgain,
@@ -139,6 +143,8 @@ export const ShelfGrid: React.FC<ShelfGridProps> = ({
           mode={coverMode}
           posterSeries={posterSeries}
           tiltDeg={bookTilts[book.id] || 0}
+          isAlchemizing={alchemizingBookId === book.id}
+          onAlchemize={onAlchemize}
           onSearchAgain={onSearchAgain}
           onPasteUrl={onPasteUrl}
           onUpload={onUpload}

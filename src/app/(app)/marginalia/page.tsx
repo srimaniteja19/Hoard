@@ -137,6 +137,8 @@ function MarginaliaPageContent() {
   const [selectedBook, setSelectedBook] = useState<BookRow | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [alchemizingBookId, setAlchemizingBookId] = useState<string | null>(null);
+  const [alchemizingAll, setAlchemizingAll] = useState(false);
 
   // Live shelf status counts
   const readingCount = useMemo(() => books.filter((b) => b.status === "READING").length, [books]);
@@ -154,7 +156,7 @@ function MarginaliaPageContent() {
         setPaperTheme(savedPaper);
       }
       const savedMode = localStorage.getItem("hoard-marginalia-cover-mode") as CoverViewMode | null;
-      if (savedMode && ["jackets", "poster", "house"].includes(savedMode)) {
+      if (savedMode && ["jackets", "poster", "dream", "house"].includes(savedMode)) {
         setCoverMode(savedMode);
       }
       const savedSeries = localStorage.getItem("hoard-marginalia-poster-series") as PosterSeries | null;
@@ -216,6 +218,104 @@ function MarginaliaPageContent() {
       // ignore
     }
   }, [posterSeries]);
+
+  const handleGenerateAiCoverForBook = async (book: BookRow) => {
+    try {
+      setAlchemizingBookId(book.id);
+      playSound.click();
+      const res = await fetch("/api/books/generate-cover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: book.title,
+          author: book.author,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to generate cover");
+
+      const data = await res.json();
+      const generated = data.cover;
+      const svgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(generated.svgMarkup)}`;
+
+      const originalIsHttp = book.coverUrl && !book.coverUrl.startsWith("data:image/svg+xml");
+      const patchRes = await fetch(`/api/books/${book.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customCoverUrl: svgDataUri,
+          coverUrl: originalIsHttp ? book.coverUrl : svgDataUri,
+          coverSource: originalIsHttp ? book.coverSource : "ALCHEMIST",
+          accentColor: generated.accentColor || book.accentColor,
+          fgColor: generated.fgColor || book.fgColor,
+        }),
+      });
+
+      if (patchRes.ok) {
+        const updated: BookRow = await patchRes.json();
+        setBooks((prev) => prev.map((b) => (b.id === book.id ? updated : b)));
+        playSound.fileIt();
+      }
+    } catch {
+      // ignore
+    } finally {
+      setAlchemizingBookId(null);
+    }
+  };
+
+  const handleGenerateAllAiCovers = async () => {
+    const ungenerated = books.filter(
+      (b) =>
+        (!b.customCoverUrl || !b.customCoverUrl.startsWith("data:image/svg+xml")) &&
+        (!b.coverUrl || !b.coverUrl.startsWith("data:image/svg+xml"))
+    );
+    if (ungenerated.length === 0) return;
+
+    try {
+      setAlchemizingAll(true);
+      playSound.click();
+
+      for (const book of ungenerated) {
+        setAlchemizingBookId(book.id);
+        const res = await fetch("/api/books/generate-cover", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: book.title,
+            author: book.author,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const generated = data.cover;
+          const svgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(generated.svgMarkup)}`;
+
+          const originalIsHttp = book.coverUrl && !book.coverUrl.startsWith("data:image/svg+xml");
+          const patchRes = await fetch(`/api/books/${book.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customCoverUrl: svgDataUri,
+              coverUrl: originalIsHttp ? book.coverUrl : svgDataUri,
+              coverSource: originalIsHttp ? book.coverSource : "ALCHEMIST",
+              accentColor: generated.accentColor || book.accentColor,
+              fgColor: generated.fgColor || book.fgColor,
+            }),
+          });
+
+          if (patchRes.ok) {
+            const updated: BookRow = await patchRes.json();
+            setBooks((prev) => prev.map((b) => (b.id === book.id ? updated : b)));
+            playSound.fileIt();
+          }
+        }
+      }
+    } finally {
+      setAlchemizingAll(false);
+      setAlchemizingBookId(null);
+    }
+  };
 
   const handleSeedSamples = async () => {
     try {
@@ -456,6 +556,36 @@ function MarginaliaPageContent() {
                   </button>
                 </span>
 
+                {/* AI Dream Batch Trigger */}
+                {coverMode === "dream" && (
+                  <button
+                    type="button"
+                    disabled={alchemizingAll}
+                    onClick={handleGenerateAllAiCovers}
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "9.5px",
+                      fontWeight: 900,
+                      letterSpacing: "0.08em",
+                      height: "32px",
+                      padding: "0 10px",
+                      marginLeft: "6px",
+                      background: "linear-gradient(135deg, #FFE600 0%, #00F0FF 100%)",
+                      color: "#000000",
+                      border: "1.5px solid var(--ink)",
+                      boxShadow: "2px 2px 0 var(--ink)",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      whiteSpace: "nowrap",
+                    }}
+                    title="Batch synthesize bespoke AI Dream vector jackets with Gemini for ungenerated volumes"
+                  >
+                    {alchemizingAll ? "✨ ALCHEMIZING..." : "✨ ALCHEMIZE ALL"}
+                  </button>
+                )}
+
                 {/* Poster Series Sub-Toggle */}
                 {coverMode === "poster" && (
                   <span className="m-seg" id="poster-series" style={{ marginLeft: "4px" }}>
@@ -600,6 +730,8 @@ function MarginaliaPageContent() {
                 coverMode={coverMode}
                 posterSeries={posterSeries}
                 statusFilter={statusFilter}
+                alchemizingBookId={alchemizingBookId}
+                onAlchemize={handleGenerateAiCoverForBook}
                 onSelectBook={(b) => setSelectedBook(b)}
                 onAddVolume={(defaultStatus) => {
                   setAddModalStatus(defaultStatus || "READING");
