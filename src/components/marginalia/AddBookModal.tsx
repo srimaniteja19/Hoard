@@ -126,6 +126,9 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
         if (generated.accentColor) setSelectedAccent(generated.accentColor);
         if (generated.fgColor) setSelectedFg(generated.fgColor);
         if (generated.epigraph) setAlchemistEpigraph(generated.epigraph);
+        const svgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(generated.svgMarkup)}`;
+        setCoverUrl(svgDataUri);
+        setCustomCoverUrl(svgDataUri);
         setCoverSource("ALCHEMIST");
         playSound.fileIt();
       }

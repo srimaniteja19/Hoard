@@ -78,6 +78,7 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
   // ── TABLE OF CONTENTS STATE ──
   const [tocModalOpen, setTocModalOpen] = useState(false);
   const [resolvingToc, setResolvingToc] = useState(false);
+  const [generatingCover, setGeneratingCover] = useState(false);
 
   const chapters: ChapterItem[] = (book.chapters as ChapterItem[]) || [];
   const currentChapterObj = chapters.find((c) => c.number === (book.currentChapter || 1));
@@ -236,6 +237,55 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
       showToast("Error saving note");
     } finally {
       setSubmittingNote(false);
+    }
+  };
+
+  const handleGenerateAiCover = async () => {
+    try {
+      setGeneratingCover(true);
+      playSound.click();
+      showToast("✨ Alchemizing AI Dream Cover...");
+
+      const res = await fetch("/api/books/generate-cover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: book.title,
+          author: book.author,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to generate AI cover");
+      }
+
+      const data = await res.json();
+      const generated = data.cover;
+      const svgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(generated.svgMarkup)}`;
+
+      const patchRes = await fetch(`/api/books/${book.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          coverUrl: svgDataUri,
+          coverSource: "ALCHEMIST",
+          customCoverUrl: svgDataUri,
+          accentColor: generated.accentColor || book.accentColor,
+          fgColor: generated.fgColor || book.fgColor,
+        }),
+      });
+
+      if (patchRes.ok) {
+        const updated: BookRow = await patchRes.json();
+        setBook(updated);
+        onUpdateBook(updated);
+        playSound.fileIt();
+        showToast("✨ AI Dream Cover successfully bound!");
+      }
+    } catch {
+      showToast("Failed to generate AI Dream Cover");
+    } finally {
+      setGeneratingCover(false);
     }
   };
 
@@ -733,8 +783,36 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
       <div className="book-studio-grid">
         {/* ── LEFT SIDEBAR: COVER & PROGRESS ── */}
         <div className="book-studio-sidebar">
-          <div style={{ width: "190px", margin: "0 auto 18px" }}>
+          <div style={{ width: "190px", margin: "0 auto 12px" }}>
             <BookCoverFrame book={book} mode="jackets" tiltDeg={-1} />
+          </div>
+
+          <div style={{ width: "190px", margin: "0 auto 18px", textAlign: "center" }}>
+            <button
+              type="button"
+              onClick={handleGenerateAiCover}
+              disabled={generatingCover}
+              style={{
+                width: "100%",
+                fontFamily: "var(--mono)",
+                fontSize: "10px",
+                fontWeight: 900,
+                letterSpacing: "0.08em",
+                padding: "6px 10px",
+                background: "linear-gradient(135deg, #FFE600 0%, #00F0FF 100%)",
+                color: "#000000",
+                border: "1.5px solid var(--ink)",
+                boxShadow: "2px 2px 0 var(--ink)",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "4px",
+              }}
+              title="Generate a bespoke AI vector artwork jacket for this book"
+            >
+              {generatingCover ? "✨ ALCHEMIZING..." : "✨ AI DREAM COVER"}
+            </button>
           </div>
 
           <h2

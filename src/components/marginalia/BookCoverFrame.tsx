@@ -121,6 +121,8 @@ export const BookCoverFrame: React.FC<BookCoverFrameProps> = ({
                 ? "GOOGLE BOOKS"
                 : book.coverSource === "ITUNES"
                 ? "iTUNES"
+                : book.coverSource === "ALCHEMIST"
+                ? "✨ AI DREAM"
                 : "UPLOAD"}
             </span>
           )}
