@@ -20,10 +20,13 @@ interface LookupOptions {
   motif?: BookMotif;
 }
 
+import { ChapterItem } from "./types";
+
 export interface ProviderResult {
   coverUrl: string | null;
   pageCount?: number | null;
   chapterCount?: number | null;
+  chapters?: ChapterItem[] | null;
   audioDuration?: string | null;
   author?: string | null;
   isbn?: string | null;
@@ -67,6 +70,7 @@ export async function lookupOpenLibrary(
   let coverUrl: string | null = null;
   let pageCount: number | null = null;
   let chapterCount: number | null = null;
+  let chapters: ChapterItem[] | null = null;
   let foundIsbn: string | null = normIsbn;
   let foundAuthor: string | null = null;
 
@@ -83,7 +87,25 @@ export async function lookupOpenLibrary(
         const data = await res.json();
         if (data.number_of_pages) pageCount = Number(data.number_of_pages);
         if (Array.isArray(data.table_of_contents)) {
-          chapterCount = data.table_of_contents.length;
+          const parsed: ChapterItem[] = [];
+          data.table_of_contents.forEach((item: any, idx: number) => {
+            if (typeof item === "string") {
+              const clean = item.replace(/^(Chapter\s*\d+[:.\s-]*|\d+[:.\s-]*)/i, "").trim() || item;
+              parsed.push({ number: idx + 1, title: clean });
+            } else if (item && typeof item === "object") {
+              const t = item.title || item.label || `Chapter ${idx + 1}`;
+              const p = item.pagenum ? parseInt(String(item.pagenum), 10) : undefined;
+              parsed.push({
+                number: idx + 1,
+                title: t.replace(/^(Chapter\s*\d+[:.\s-]*|\d+[:.\s-]*)/i, "").trim() || t,
+                page: isNaN(p as any) ? undefined : p,
+              });
+            }
+          });
+          if (parsed.length > 0) {
+            chapters = parsed;
+            chapterCount = parsed.length;
+          }
         }
       }
     } catch {
@@ -130,6 +152,7 @@ export async function lookupOpenLibrary(
     coverUrl,
     pageCount,
     chapterCount,
+    chapters,
     isbn: foundIsbn,
     author: foundAuthor,
   };
@@ -274,6 +297,11 @@ export async function resolveBookCover(opts: LookupOptions): Promise<ResolvedCov
     chapterCount = Math.max(1, Math.min(50, Math.round(pageCount / 26)));
   }
 
+  const chapters = olRes.chapters || itunesRes.chapters || null;
+  if (chapters && chapters.length > 0) {
+    chapterCount = chapters.length;
+  }
+
   const audioDuration = itunesRes.audioDuration || null;
   const suggestedAuthor = author || gbRes.author || olRes.author || itunesRes.author || null;
   const suggestedIsbn = isbn || gbRes.isbn || olRes.isbn || null;
@@ -281,6 +309,7 @@ export async function resolveBookCover(opts: LookupOptions): Promise<ResolvedCov
   const metadata: BookMetadataLookup = {
     pageCount,
     chapterCount,
+    chapters,
     audioDuration,
     suggestedAuthor,
     suggestedIsbn,

@@ -880,6 +880,7 @@ export const books = pgTable(
     customCoverUrl: text("custom_cover_url"),
     notesCount: integer("notes_count").default(0),
     promotedCount: integer("promoted_count").default(0),
+    chapters: jsonb("chapters").$type<Array<{ number: number; title: string; page?: number; duration?: string }>>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

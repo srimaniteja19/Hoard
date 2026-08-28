@@ -7,6 +7,8 @@ import { HouseCover } from "./HouseCover";
 import { PosterCover } from "./PosterCover";
 import { playSound } from "@/lib/sound";
 
+import { ChapterItem } from "@/lib/marginalia/types";
+
 interface AddBookModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -33,6 +35,11 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
   const [audioDuration, setAudioDuration] = useState("");
   const [customCoverUrl, setCustomCoverUrl] = useState("");
 
+  // Chapters & Table of Contents State
+  const [chapters, setChapters] = useState<ChapterItem[]>([]);
+  const [loadingChapters, setLoadingChapters] = useState(false);
+  const [showTocDrawer, setShowTocDrawer] = useState(false);
+
   // House Styling choices
   const [selectedAccent, setSelectedAccent] = useState("#7B5CF0");
   const [selectedFg, setSelectedFg] = useState("#FFFFFF");
@@ -51,6 +58,35 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
   const [alchemistPrompt, setAlchemistPrompt] = useState("");
   const [alchemistLoading, setAlchemistLoading] = useState(false);
   const [alchemistEpigraph, setAlchemistEpigraph] = useState<string | null>(null);
+
+  const handleFetchChapters = async () => {
+    if (!title.trim()) {
+      setError("Please enter a title first");
+      return;
+    }
+    try {
+      setLoadingChapters(true);
+      playSound.click();
+      const res = await fetch("/api/books/lookup-chapters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, author: author.trim() || undefined }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.chapters && data.chapters.length > 0) {
+          setChapters(data.chapters);
+          setTotalChapters(String(data.chapters.length));
+          setShowTocDrawer(true);
+          playSound.fileIt();
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingChapters(false);
+    }
+  };
 
   const handleAlchemizeCover = async () => {
     if (!title.trim()) {
@@ -141,6 +177,9 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
             if (meta.suggestedIsbn && !isbn.trim()) {
               setIsbn(meta.suggestedIsbn);
             }
+            if (meta.chapters && meta.chapters.length > 0) {
+              setChapters(meta.chapters);
+            }
 
             const notices: string[] = [];
             if (meta.pageCount) notices.push(`${meta.pageCount} pages`);
@@ -194,6 +233,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
           coverUrl: coverSource === "HOUSE" ? null : coverUrl,
           coverSource,
           customCoverUrl: customCoverUrl.trim() || undefined,
+          chapters: chapters.length > 0 ? chapters : undefined,
         }),
       });
 
@@ -492,6 +532,42 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
                       color: "var(--ink)",
                     }}
                   />
+                  <div style={{ display: "flex", gap: "6px", marginTop: "6px", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={handleFetchChapters}
+                      disabled={loadingChapters || !title.trim()}
+                      style={{
+                        fontFamily: "var(--mono)",
+                        fontSize: "9px",
+                        fontWeight: 800,
+                        padding: "3px 6px",
+                        background: "var(--shade)",
+                        border: "1px solid var(--ink)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {loadingChapters ? "⏳ RESOLVING..." : "⚡ AUTO-DETECT TOC"}
+                    </button>
+                    {chapters.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowTocDrawer(!showTocDrawer)}
+                        style={{
+                          fontFamily: "var(--mono)",
+                          fontSize: "9px",
+                          fontWeight: 800,
+                          padding: "3px 6px",
+                          background: "var(--yellow)",
+                          color: "#0A0A0A",
+                          border: "1px solid var(--ink)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {showTocDrawer ? "▲ HIDE TOC" : `▼ TOC (${chapters.length})`}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -543,6 +619,96 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
                   )}
                 </div>
               </div>
+
+              {/* Expandable Table of Contents Preview Drawer */}
+              {showTocDrawer && chapters.length > 0 && (
+                <div
+                  style={{
+                    background: "var(--card)",
+                    border: "2px solid var(--ink)",
+                    padding: "12px",
+                    maxHeight: "180px",
+                    overflowY: "auto",
+                    boxShadow: "3px 3px 0 var(--ink)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    <span style={{ fontFamily: "var(--mono)", fontSize: "9.5px", fontWeight: 800, letterSpacing: "0.1em" }}>
+                      TABLE OF CONTENTS ({chapters.length} CHAPTERS)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextNum = chapters.length + 1;
+                        setChapters([...chapters, { number: nextNum, title: `Chapter ${nextNum}` }]);
+                        setTotalChapters(String(nextNum));
+                      }}
+                      style={{
+                        fontFamily: "var(--mono)",
+                        fontSize: "9px",
+                        fontWeight: 800,
+                        padding: "2px 6px",
+                        background: "var(--lime)",
+                        border: "1px solid var(--ink)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      + ADD CH
+                    </button>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {chapters.map((ch, idx) => (
+                      <div key={idx} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <span style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 800, width: "38px" }}>
+                          CH {ch.number}
+                        </span>
+                        <input
+                          type="text"
+                          value={ch.title}
+                          onChange={(e) => {
+                            const newChs = [...chapters];
+                            newChs[idx] = { ...newChs[idx], title: e.target.value };
+                            setChapters(newChs);
+                          }}
+                          placeholder="Chapter title..."
+                          style={{
+                            flex: 1,
+                            fontFamily: "var(--body)",
+                            fontSize: "12px",
+                            padding: "3px 6px",
+                            border: "1px solid var(--ink)",
+                            background: "var(--paper)",
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newChs = chapters.filter((_, i) => i !== idx).map((c, i) => ({ ...c, number: i + 1 }));
+                            setChapters(newChs);
+                            setTotalChapters(String(newChs.length));
+                          }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            opacity: 0.5,
+                            fontSize: "11px",
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Custom Cover URL */}
               <div>

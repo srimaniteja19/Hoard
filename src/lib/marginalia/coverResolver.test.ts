@@ -112,4 +112,39 @@ describe("resolveBookCover", () => {
 
     fetchSpy.mockRestore();
   });
+
+  it("extracts and parses structured Table of Contents from Open Library", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const urlStr = String(url);
+      if (urlStr.includes("openlibrary.org/isbn/9781449373320.json")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            number_of_pages: 560,
+            table_of_contents: [
+              { title: "Chapter 1: Reliable, Scalable, and Maintainable Applications", pagenum: "3" },
+              { title: "Chapter 2: Data Models and Query Languages", pagenum: "27" },
+              { title: "Chapter 3: Storage and Retrieval", pagenum: "69" },
+            ],
+          }),
+        } as Response;
+      }
+      return { ok: false, status: 404, json: async () => ({}) } as Response;
+    });
+
+    const res = await resolveBookCover({
+      title: "Designing Data-Intensive Applications",
+      isbn: "978-1-4493-7332-0",
+    });
+
+    expect(res.metadata?.pageCount).toBe(560);
+    expect(res.metadata?.chapterCount).toBe(3);
+    expect(res.metadata?.chapters).toHaveLength(3);
+    expect(res.metadata?.chapters?.[0].title).toBe("Reliable, Scalable, and Maintainable Applications");
+    expect(res.metadata?.chapters?.[0].number).toBe(1);
+    expect(res.metadata?.chapters?.[0].page).toBe(3);
+
+    fetchSpy.mockRestore();
+  });
 });

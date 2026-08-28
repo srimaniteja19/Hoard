@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { BookRow, MarginaliaRow, MarginaliaPendingMarkRow, MarginaliaKind, BookStatus } from "@/db/schema";
 import { BookCoverFrame } from "./BookCoverFrame";
 import { ReadingSynthesisModal } from "./ReadingSynthesisModal";
+import { TableOfContentsModal } from "./TableOfContentsModal";
+import { ChapterItem } from "@/lib/marginalia/types";
 import { playSound } from "@/lib/sound";
 
 type GhostPersona = "SOCRATES" | "NIETZSCHE" | "FEYNMAN" | "MARCUS_AURELIUS" | "AUTHOR";
@@ -67,6 +69,14 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
   const [synthesisData, setSynthesisData] = useState<any>(null);
   const [synthesisLoading, setSynthesisLoading] = useState(false);
 
+  // ── TABLE OF CONTENTS STATE ──
+  const [tocModalOpen, setTocModalOpen] = useState(false);
+  const [resolvingToc, setResolvingToc] = useState(false);
+
+  const chapters: ChapterItem[] = (book.chapters as ChapterItem[]) || [];
+  const currentChapterObj = chapters.find((c) => c.number === (book.currentChapter || 1));
+  const currentChapterTitle = currentChapterObj?.title || null;
+
   // Fetch full notes & marks on mount
   useEffect(() => {
     let active = true;
@@ -95,6 +105,30 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
   const showToast = (msg: string) => {
     setFeedback(msg);
     setTimeout(() => setFeedback(null), 2500);
+  };
+
+  const handleAutoResolveToc = async () => {
+    try {
+      setResolvingToc(true);
+      playSound.click();
+      showToast("Resolving Table of Contents via AI...");
+      const res = await fetch(`/api/books/${book.id}/chapters`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBook(data.book);
+        onUpdateBook(data.book);
+        playSound.fileIt();
+        showToast(`✓ Resolved ${data.chapters.length} chapter titles!`);
+      } else {
+        showToast("Could not resolve chapter names");
+      }
+    } catch {
+      showToast("Error resolving chapters");
+    } finally {
+      setResolvingToc(false);
+    }
   };
 
   // Progress Updater
@@ -471,6 +505,25 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
         </button>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {/* Table of Contents Trigger */}
+          <button
+            type="button"
+            onClick={() => setTocModalOpen(true)}
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "10.5px",
+              fontWeight: 800,
+              padding: "6px 12px",
+              background: "var(--card)",
+              color: "var(--ink)",
+              border: "1.5px solid var(--ink)",
+              boxShadow: "2px 2px 0 var(--ink)",
+              cursor: "pointer",
+            }}
+          >
+            📑 TOC ({chapters.length > 0 ? chapters.length : "DETECT"})
+          </button>
+
           {/* AI Synthesis Trigger */}
           <button
             type="button"
@@ -633,6 +686,21 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
               </span>
             </div>
 
+            {currentChapterTitle && (
+              <div
+                style={{
+                  fontFamily: "var(--display)",
+                  fontSize: "13px",
+                  fontWeight: 800,
+                  lineHeight: 1.25,
+                  marginBottom: "8px",
+                  color: "var(--ink)",
+                }}
+              >
+                “{currentChapterTitle}”
+              </div>
+            )}
+
             <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
               <button
                 type="button"
@@ -681,6 +749,25 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
                 ▶
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setTocModalOpen(true)}
+              style={{
+                marginTop: "10px",
+                width: "100%",
+                fontFamily: "var(--mono)",
+                fontSize: "9px",
+                fontWeight: 800,
+                padding: "4px 8px",
+                border: "1px solid var(--ink)",
+                background: "var(--shade)",
+                cursor: "pointer",
+                textAlign: "center",
+              }}
+            >
+              {chapters.length > 0 ? `📑 VIEW TABLE OF CONTENTS (${chapters.length})` : "⚡ AUTO-DETECT CHAPTER TITLES"}
+            </button>
           </div>
 
           {/* Quick Audio Timestamp Bookmarks */}
@@ -929,20 +1016,44 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
                     }}
                   >
                     CH
-                    <input
-                      type="number"
-                      min="1"
-                      value={chapterInput}
-                      onChange={(e) => setChapterInput(e.target.value)}
-                      style={{
-                        width: "48px",
-                        marginLeft: "4px",
-                        padding: "3px 5px",
-                        fontFamily: "var(--mono)",
-                        fontSize: "11px",
-                        border: "1.5px solid var(--ink)",
-                      }}
-                    />
+                    {chapters.length > 0 ? (
+                      <select
+                        value={chapterInput}
+                        onChange={(e) => setChapterInput(e.target.value)}
+                        style={{
+                          marginLeft: "4px",
+                          maxWidth: "170px",
+                          padding: "3px 6px",
+                          fontFamily: "var(--mono)",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          border: "1.5px solid var(--ink)",
+                          background: "var(--paper)",
+                          color: "var(--ink)",
+                        }}
+                      >
+                        {chapters.map((c) => (
+                          <option key={c.number} value={c.number}>
+                            {c.number}. {c.title}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="number"
+                        min="1"
+                        value={chapterInput}
+                        onChange={(e) => setChapterInput(e.target.value)}
+                        style={{
+                          width: "48px",
+                          marginLeft: "4px",
+                          padding: "3px 5px",
+                          fontFamily: "var(--mono)",
+                          fontSize: "11px",
+                          border: "1.5px solid var(--ink)",
+                        }}
+                      />
+                    )}
                   </label>
 
                   <label
@@ -1149,25 +1260,28 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
 
             {Array.from(new Set(notes.map((n) => n.chapter)))
               .sort((a, b) => a - b)
-              .map((ch) => (
-                <button
-                  key={ch}
-                  type="button"
-                  onClick={() => setFilterChapter(ch)}
-                  style={{
-                    fontFamily: "var(--mono)",
-                    fontSize: "9.5px",
-                    fontWeight: 800,
-                    padding: "3px 8px",
-                    border: "1.5px solid var(--ink)",
-                    background: filterChapter === ch ? "var(--b-theme)" : "var(--card)",
-                    color: filterChapter === ch ? "#fff" : "var(--ink)",
-                    cursor: "pointer",
-                  }}
-                >
-                  CH {ch} ({notes.filter((n) => n.chapter === ch).length})
-                </button>
-              ))}
+              .map((ch) => {
+                const chInfo = chapters.find((c) => c.number === ch);
+                return (
+                  <button
+                    key={ch}
+                    type="button"
+                    onClick={() => setFilterChapter(ch)}
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "9.5px",
+                      fontWeight: 800,
+                      padding: "3px 8px",
+                      border: "1.5px solid var(--ink)",
+                      background: filterChapter === ch ? "var(--b-theme)" : "var(--card)",
+                      color: filterChapter === ch ? "#fff" : "var(--ink)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    CH {ch}{chInfo ? ` · ${chInfo.title}` : ""} ({notes.filter((n) => n.chapter === ch).length})
+                  </button>
+                );
+              })}
           </div>
 
           {/* Marginalia Notes Stream */}
@@ -1346,6 +1460,21 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* ── TABLE OF CONTENTS MODAL ── */}
+      <TableOfContentsModal
+        isOpen={tocModalOpen}
+        book={book}
+        chapters={chapters}
+        currentChapter={book.currentChapter || 1}
+        resolving={resolvingToc}
+        onClose={() => setTocModalOpen(false)}
+        onSelectChapter={(ch) => {
+          handleUpdateProgress(ch);
+          setChapterInput(String(ch));
+        }}
+        onAutoResolveToc={handleAutoResolveToc}
+      />
 
       {/* ── READING SYNTHESIS MODAL ── */}
       <ReadingSynthesisModal

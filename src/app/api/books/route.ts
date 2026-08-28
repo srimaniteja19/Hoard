@@ -43,6 +43,8 @@ export async function POST(req: Request) {
     let resolvedIsbn = body.isbn || null;
     let resolvedAuthor = author || "Unknown Author";
 
+    let chapters = body.chapters || null;
+
     if (!body.skipLookup) {
       const resolved = await resolveBookCover({
         title,
@@ -62,6 +64,9 @@ export async function POST(req: Request) {
       if (!totalPages && resolved.metadata?.pageCount) {
         totalPages = resolved.metadata.pageCount;
       }
+      if (!chapters && resolved.metadata?.chapters) {
+        chapters = resolved.metadata.chapters;
+      }
       if (!totalChapters && resolved.metadata?.chapterCount) {
         totalChapters = resolved.metadata.chapterCount;
       }
@@ -74,6 +79,10 @@ export async function POST(req: Request) {
       if (resolvedAuthor === "Unknown Author" && resolved.metadata?.suggestedAuthor) {
         resolvedAuthor = resolved.metadata.suggestedAuthor;
       }
+    }
+
+    if (chapters && Array.isArray(chapters) && chapters.length > 0) {
+      totalChapters = chapters.length;
     }
 
     const created = await createBook({
@@ -97,6 +106,7 @@ export async function POST(req: Request) {
       coverUrl,
       coverSource,
       customCoverUrl: body.customCoverUrl || null,
+      chapters,
     });
 
     return NextResponse.json(created, { status: 201 });

@@ -14,6 +14,13 @@ export type CoverSource = "UPLOAD" | "OPEN_LIBRARY" | "GOOGLE_BOOKS" | "ITUNES" 
 export type CoverViewMode = "jackets" | "poster" | "house";
 export type PaperTheme = "cream" | "sand" | "ink";
 
+export interface ChapterItem {
+  number: number;
+  title: string;
+  page?: number;
+  duration?: string;
+}
+
 export interface BookMetadataLookup {
   pageCount?: number | null;
   chapterCount?: number | null;
@@ -21,6 +28,7 @@ export interface BookMetadataLookup {
   suggestedAuthor?: string | null;
   suggestedIsbn?: string | null;
   suggestedTitle?: string | null;
+  chapters?: ChapterItem[] | null;
 }
 
 export interface ResolvedCoverResult {
