@@ -10,8 +10,8 @@ export type {
   MarginaliaKind,
 };
 
-export type CoverSource = "UPLOAD" | "OPEN_LIBRARY" | "GOOGLE_BOOKS" | "ITUNES" | "HOUSE";
-export type CoverViewMode = "jackets" | "poster" | "house";
+export type CoverSource = "UPLOAD" | "OPEN_LIBRARY" | "GOOGLE_BOOKS" | "ITUNES" | "HOUSE" | "ALCHEMIST";
+export type CoverViewMode = "jackets" | "poster" | "dream" | "house";
 export type PaperTheme = "cream" | "sand" | "ink";
 export type PosterSeries = "daylight" | "neon" | "mixed";
 

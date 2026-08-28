@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import { BookRow, BookMotif } from "@/db/schema";
 import { HouseCover } from "./HouseCover";
 import { PosterCover } from "./PosterCover";
+import { DreamCover } from "./DreamCover";
 import { CoverViewMode, PosterSeries } from "@/lib/marginalia/types";
 import { seedPosterStyle } from "@/lib/marginalia/posterMotifs";
 
@@ -42,8 +43,9 @@ export const BookCoverFrame: React.FC<BookCoverFrameProps> = ({
 
   const isHouseMode = mode === "house";
   const isPosterMode = mode === "poster";
+  const isDreamMode = mode === "dream";
   const hasRealCover = Boolean(book.coverUrl && !imgError);
-  const isMissingState = !isHouseMode && !isPosterMode && !hasRealCover && !book.isbn;
+  const isMissingState = !isHouseMode && !isPosterMode && !isDreamMode && !hasRealCover && !book.isbn;
 
   const posterTheme = useMemo(() => {
     if (!isPosterMode) return null;
@@ -62,7 +64,14 @@ export const BookCoverFrame: React.FC<BookCoverFrameProps> = ({
         } as React.CSSProperties
       }
     >
-      {isPosterMode ? (
+      {isDreamMode ? (
+        <DreamCover
+          title={book.title}
+          author={book.author}
+          coverUrl={book.coverUrl}
+          coverSource={book.coverSource}
+        />
+      ) : isPosterMode ? (
         <PosterCover title={book.title} author={book.author} series={posterSeries} />
       ) : isHouseMode ? (
         <HouseCover

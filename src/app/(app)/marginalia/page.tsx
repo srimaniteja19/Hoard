@@ -431,6 +431,18 @@ function MarginaliaPageContent() {
                     POSTER
                   </button>
                   <button
+                    data-j="dream"
+                    aria-pressed={coverMode === "dream"}
+                    suppressHydrationWarning
+                    type="button"
+                    onClick={() => {
+                      playSound.click();
+                      setCoverMode("dream");
+                    }}
+                  >
+                    AI DREAM
+                  </button>
+                  <button
                     data-j="house"
                     aria-pressed={coverMode === "house"}
                     suppressHydrationWarning
@@ -500,8 +512,10 @@ function MarginaliaPageContent() {
                 ) : (
                   <>MIXED SERIES · DYNAMIC DETERMINISTIC DUAL-SERIES PALETTES PER TITLE.</>
                 )
+              ) : coverMode === "dream" ? (
+                <>AI DREAM EDITION · BESPOKE GEMINI VECTOR JACKETS &amp; CONCEPTUAL ESSENCE SYNTHESIS.</>
               ) : (
-                <>JACKETS PULLS REAL PUBLISHER ART · POSTER RENDERS MODERN ILLUSTRATED EDITORIAL JACKETS · HOUSE REBINDS IN UNIFIED GEOMETRIC MINIMALISM.</>
+                <>JACKETS PULLS REAL PUBLISHER ART · POSTER RENDERS MODERN ILLUSTRATED EDITORIAL JACKETS · AI DREAM SYNTHESIZES BESPOKE VECTOR ART · HOUSE REBINDS IN UNIFIED GEOMETRIC MINIMALISM.</>
               )}
             </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { BookFormat, BookMotif, BookRow } from "@/db/schema";
 import { EDITORIAL_PALETTE, MOTIFS, seedHouseStyle } from "@/lib/marginalia/houseMotifs";
 import { HouseCover } from "./HouseCover";
@@ -39,12 +39,6 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
   const [audioDuration, setAudioDuration] = useState("");
   const [customCoverUrl, setCustomCoverUrl] = useState("");
 
-  useEffect(() => {
-    if (initialStatus) {
-      setStatus(initialStatus);
-    }
-  }, [initialStatus]);
-
   // Chapters & Table of Contents State
   const [chapters, setChapters] = useState<ChapterItem[]>([]);
   const [loadingChapters, setLoadingChapters] = useState(false);
@@ -68,6 +62,42 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
   const [alchemistPrompt, setAlchemistPrompt] = useState("");
   const [alchemistLoading, setAlchemistLoading] = useState(false);
   const [alchemistEpigraph, setAlchemistEpigraph] = useState<string | null>(null);
+
+  const resetForm = useCallback(() => {
+    setTitle("");
+    setAuthor("");
+    setIsbn("");
+    setFormat("AUDIO");
+    setStatus(initialStatus || "READING");
+    setTotalChapters("12");
+    setTotalPages("");
+    setAudioDuration("");
+    setCustomCoverUrl("");
+    setChapters([]);
+    setLoadingChapters(false);
+    setShowTocDrawer(false);
+    setSelectedAccent("#7B5CF0");
+    setSelectedFg("#FFFFFF");
+    setSelectedMotif("arcs");
+    setCoverUrl(null);
+    setCoverSource("HOUSE");
+    setCandidates([]);
+    setAutoDetectedNotice(null);
+    setLookingUp(false);
+    setSubmitting(false);
+    setError(null);
+    setAlchemistSvg(null);
+    setAlchemistPrompt("");
+    setAlchemistLoading(false);
+    setAlchemistEpigraph(null);
+  }, [initialStatus]);
+
+  // Reset form whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      resetForm();
+    }
+  }, [isOpen, resetForm]);
 
   const handleFetchChapters = async () => {
     if (!title.trim()) {
@@ -260,6 +290,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
 
       const created: BookRow = await res.json();
       playSound.fileIt();
+      resetForm();
       onBookCreated(created);
       onClose();
     } catch (err: any) {
