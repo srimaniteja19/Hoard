@@ -85,6 +85,13 @@
       "when": 1787600000000,
       "tag": "0019_add_book_chapters",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787700000000,
+      "tag": "0020_add_book_summary",
+      "breakpoints": true
     }
   ]
 }

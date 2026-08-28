@@ -881,6 +881,7 @@ export const books = pgTable(
     notesCount: integer("notes_count").default(0),
     promotedCount: integer("promoted_count").default(0),
     chapters: jsonb("chapters").$type<Array<{ number: number; title: string; page?: number; duration?: string }>>(),
+    summary: jsonb("summary").$type<import("@/lib/marginalia/types").BookSummaryData>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

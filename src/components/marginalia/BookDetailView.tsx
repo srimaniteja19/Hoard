@@ -5,6 +5,7 @@ import { BookRow, MarginaliaRow, MarginaliaPendingMarkRow, MarginaliaKind, BookS
 import { BookCoverFrame } from "./BookCoverFrame";
 import { ReadingSynthesisModal } from "./ReadingSynthesisModal";
 import { TableOfContentsModal } from "./TableOfContentsModal";
+import { BookSummaryModal } from "./BookSummaryModal";
 import { ChapterItem } from "@/lib/marginalia/types";
 import { cleanChapterTitle } from "@/lib/marginalia/chapterExtractor";
 import { playSound } from "@/lib/sound";
@@ -70,6 +71,10 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
   const [synthesisData, setSynthesisData] = useState<any>(null);
   const [synthesisLoading, setSynthesisLoading] = useState(false);
 
+  // ── AI FEATURE: CHAPTER-BY-CHAPTER BRIEFING ──
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
   // ── TABLE OF CONTENTS STATE ──
   const [tocModalOpen, setTocModalOpen] = useState(false);
   const [resolvingToc, setResolvingToc] = useState(false);
@@ -129,6 +134,36 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
       showToast("Error resolving chapters");
     } finally {
       setResolvingToc(false);
+    }
+  };
+
+  // ── CHAPTER BRIEFING HANDLERS ──
+  const handleOpenSummary = () => {
+    playSound.click();
+    setSummaryModalOpen(true);
+  };
+
+  const handleGenerateSummary = async () => {
+    try {
+      setSummaryLoading(true);
+      playSound.click();
+      showToast("Synthesizing Executive Chapter Briefing...");
+      const res = await fetch(`/api/books/${book.id}/summary`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBook(data.book);
+        onUpdateBook(data.book);
+        playSound.fileIt();
+        showToast("✓ Executive Chapter Briefing generated!");
+      } else {
+        showToast("Failed to generate chapter summary");
+      }
+    } catch {
+      showToast("Error generating chapter summary");
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
@@ -506,6 +541,25 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
         </button>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {/* Chapter Briefing Trigger */}
+          <button
+            type="button"
+            onClick={handleOpenSummary}
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "10.5px",
+              fontWeight: 800,
+              padding: "6px 14px",
+              background: book.summary ? "var(--lime)" : "var(--card)",
+              color: "#0A0A0A",
+              border: "1.5px solid var(--ink)",
+              boxShadow: "2px 2px 0 var(--ink)",
+              cursor: "pointer",
+            }}
+          >
+            ⚡ CHAPTER BRIEFING {book.summary ? "✓ SAVED" : ""}
+          </button>
+
           {/* Table of Contents Trigger */}
           <button
             type="button"
@@ -768,6 +822,27 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
               }}
             >
               {chapters.length > 0 ? `📑 VIEW TABLE OF CONTENTS (${chapters.length})` : "⚡ AUTO-DETECT CHAPTER TITLES"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleOpenSummary}
+              style={{
+                marginTop: "6px",
+                width: "100%",
+                fontFamily: "var(--mono)",
+                fontSize: "9px",
+                fontWeight: 800,
+                padding: "5px 8px",
+                border: "1.5px solid var(--ink)",
+                background: book.summary ? "var(--lime)" : "var(--card)",
+                color: "#0A0A0A",
+                cursor: "pointer",
+                textAlign: "center",
+                boxShadow: "1px 1px 0 var(--ink)",
+              }}
+            >
+              {book.summary ? "⚡ VIEW CHAPTER BRIEFING (SAVED)" : "⚡ GENERATE CHAPTER BRIEFING"}
             </button>
           </div>
 
@@ -1485,6 +1560,16 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
         loading={synthesisLoading}
         onClose={() => setSynthesisModalOpen(false)}
         onRefresh={fetchSynthesis}
+      />
+
+      {/* ── CHAPTER-BY-CHAPTER BRIEFING MODAL ── */}
+      <BookSummaryModal
+        isOpen={summaryModalOpen}
+        book={book}
+        summary={book.summary || null}
+        loading={summaryLoading}
+        onClose={() => setSummaryModalOpen(false)}
+        onGenerate={handleGenerateSummary}
       />
     </div>
   );

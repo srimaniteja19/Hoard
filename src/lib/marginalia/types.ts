@@ -53,3 +53,39 @@ export interface BookStatsSummary {
   readingCount: number;
   finishedCount: number;
 }
+
+export type PointCategory =
+  | "CORE_IDEA"
+  | "MENTAL_MODEL"
+  | "TACTIC"
+  | "PROVOCATION"
+  | "HISTORICAL"
+  | "EVIDENCE";
+
+export interface ChapterSummaryPoint {
+  category: PointCategory;
+  point: string;
+  detail?: string;
+}
+
+export interface ChapterSummaryItem {
+  chapterNumber: number;
+  chapterTitle: string;
+  thesis: string;
+  points: ChapterSummaryPoint[];
+  keyQuote?: string;
+  takeaway: string;
+}
+
+export interface BookSummaryData {
+  bookTitle: string;
+  author: string;
+  oneLiner: string;
+  executiveSummary: string;
+  readingTimeMinutes?: number;
+  coreThemes: string[];
+  chapters: ChapterSummaryItem[];
+  overallTakeaway: string;
+  generatedAt: string;
+}
+
