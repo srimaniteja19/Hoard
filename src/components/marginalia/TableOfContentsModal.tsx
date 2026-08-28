@@ -5,6 +5,8 @@ import { BookRow } from "@/db/schema";
 import { ChapterItem } from "@/lib/marginalia/types";
 import { playSound } from "@/lib/sound";
 
+import { cleanChapterTitle } from "@/lib/marginalia/chapterExtractor";
+
 interface TableOfContentsModalProps {
   isOpen: boolean;
   book: BookRow;
@@ -149,6 +151,7 @@ export const TableOfContentsModal: React.FC<TableOfContentsModalProps> = ({
           ) : (
             chapters.map((ch) => {
               const isCurrent = ch.number === currentChapter;
+              const displayTitle = cleanChapterTitle(ch.title) || `Chapter ${ch.number}`;
               return (
                 <div
                   key={ch.number}
@@ -185,7 +188,7 @@ export const TableOfContentsModal: React.FC<TableOfContentsModalProps> = ({
                       CH {ch.number}
                     </span>
                     <span style={{ fontFamily: "var(--body)", fontSize: "14.5px", fontWeight: isCurrent ? 800 : 600 }}>
-                      {ch.title}
+                      {displayTitle}
                     </span>
                   </div>
 

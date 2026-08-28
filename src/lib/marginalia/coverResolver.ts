@@ -118,29 +118,31 @@ export async function lookupOpenLibrary(
       const q = new URLSearchParams({
         title,
         ...(author ? { author } : {}),
-        limit: "1",
+        limit: "5",
       });
       const res = await fetch(`https://openlibrary.org/search.json?${q.toString()}`, {
         headers: { "User-Agent": "Hoard-Shelf/1.0" },
       });
       if (res.ok) {
         const data = await res.json();
-        const doc = data.docs?.[0];
-        if (doc) {
+        const docs = Array.isArray(data.docs) ? data.docs : [];
+        for (const doc of docs) {
           if (!coverUrl && doc.cover_i) {
             const url = `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg?default=false`;
             const ok = await testImageUrl(url);
             if (ok) coverUrl = url;
           }
-          if (!pageCount && doc.number_of_pages_median) {
-            pageCount = Number(doc.number_of_pages_median);
+          if (!pageCount) {
+            if (doc.number_of_pages_median) pageCount = Number(doc.number_of_pages_median);
+            else if (doc.number_of_pages) pageCount = Number(doc.number_of_pages);
           }
           if (!foundIsbn && Array.isArray(doc.isbn) && doc.isbn.length > 0) {
             foundIsbn = doc.isbn[0];
           }
-          if (Array.isArray(doc.author_name) && doc.author_name.length > 0) {
+          if (!foundAuthor && Array.isArray(doc.author_name) && doc.author_name.length > 0) {
             foundAuthor = doc.author_name[0];
           }
+          if (coverUrl && pageCount) break;
         }
       }
     } catch {
@@ -166,49 +168,72 @@ export async function lookupGoogleBooks(
 ): Promise<ProviderResult> {
   try {
     const normIsbn = cleanIsbn(isbn);
-    const query = normIsbn
-      ? `isbn:${normIsbn}`
-      : `intitle:${encodeURIComponent(title)}${author ? `+inauthor:${encodeURIComponent(author)}` : ""}`;
+    const queries = [
+      normIsbn ? `isbn:${normIsbn}` : `intitle:${encodeURIComponent(title)}${author ? `+inauthor:${encodeURIComponent(author)}` : ""}`,
+      `${encodeURIComponent(title)}${author ? `+${encodeURIComponent(author)}` : ""}`,
+    ];
 
-    const res = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1`,
-      { headers: { "User-Agent": "Hoard-Shelf/1.0" } }
-    );
+    for (const query of queries) {
+      const res = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=5`,
+        { headers: { "User-Agent": "Hoard-Shelf/1.0" } }
+      );
 
-    if (res.ok) {
-      const data = await res.json();
-      const item = data.items?.[0];
-      const vol = item?.volumeInfo;
-      const links = vol?.imageLinks;
-      const rawThumbnail =
-        links?.extraLarge || links?.large || links?.medium || links?.thumbnail || links?.smallThumbnail;
+      if (res.ok) {
+        const data = await res.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        if (items.length === 0) continue;
 
-      let coverUrl: string | null = null;
-      if (rawThumbnail) {
-        coverUrl = rawThumbnail.replace(/^http:\/\//, "https://");
-        if (coverUrl && coverUrl.includes("&zoom=")) {
-          coverUrl = coverUrl.replace(/&zoom=[0-9]/, "&zoom=1");
+        let coverUrl: string | null = null;
+        let pageCount: number | null = null;
+        let foundIsbn = normIsbn;
+        let foundAuthor: string | null = null;
+        let foundTitle: string | null = null;
+
+        for (const item of items) {
+          const vol = item?.volumeInfo;
+          if (!vol) continue;
+
+          if (!coverUrl) {
+            const links = vol.imageLinks;
+            const rawThumbnail =
+              links?.extraLarge || links?.large || links?.medium || links?.thumbnail || links?.smallThumbnail;
+            if (rawThumbnail) {
+              const cleaned = rawThumbnail.replace(/^http:\/\//, "https://");
+              coverUrl = cleaned.includes("&zoom=") ? cleaned.replace(/&zoom=[0-9]/, "&zoom=1") : cleaned;
+            }
+          }
+
+          if (!pageCount && (vol.pageCount || vol.printedPageCount)) {
+            pageCount = Number(vol.pageCount || vol.printedPageCount);
+          }
+
+          if (!foundIsbn && Array.isArray(vol.industryIdentifiers)) {
+            const isbn13 = vol.industryIdentifiers.find((i: any) => i.type === "ISBN_13");
+            const isbn10 = vol.industryIdentifiers.find((i: any) => i.type === "ISBN_10");
+            foundIsbn = (isbn13 || isbn10)?.identifier || null;
+          }
+
+          if (!foundAuthor && Array.isArray(vol.authors) && vol.authors.length > 0) {
+            foundAuthor = vol.authors[0];
+          }
+
+          if (!foundTitle && vol.title) {
+            foundTitle = vol.title;
+          }
+
+          if (coverUrl && pageCount) break;
         }
+
+        return {
+          coverUrl,
+          pageCount,
+          chapterCount: null,
+          isbn: foundIsbn,
+          author: foundAuthor,
+          title: foundTitle,
+        };
       }
-
-      const pageCount = vol?.pageCount || vol?.printedPageCount || null;
-      let foundIsbn = normIsbn;
-      if (!foundIsbn && Array.isArray(vol?.industryIdentifiers)) {
-        const isbn13 = vol.industryIdentifiers.find((i: any) => i.type === "ISBN_13");
-        const isbn10 = vol.industryIdentifiers.find((i: any) => i.type === "ISBN_10");
-        foundIsbn = (isbn13 || isbn10)?.identifier || null;
-      }
-
-      const foundAuthor = Array.isArray(vol?.authors) && vol.authors.length > 0 ? vol.authors[0] : null;
-
-      return {
-        coverUrl,
-        pageCount: pageCount ? Number(pageCount) : null,
-        chapterCount: null,
-        isbn: foundIsbn,
-        author: foundAuthor,
-        title: vol?.title || null,
-      };
     }
   } catch {
     // fallback

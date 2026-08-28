@@ -6,6 +6,7 @@ import { BookCoverFrame } from "./BookCoverFrame";
 import { ReadingSynthesisModal } from "./ReadingSynthesisModal";
 import { TableOfContentsModal } from "./TableOfContentsModal";
 import { ChapterItem } from "@/lib/marginalia/types";
+import { cleanChapterTitle } from "@/lib/marginalia/chapterExtractor";
 import { playSound } from "@/lib/sound";
 
 type GhostPersona = "SOCRATES" | "NIETZSCHE" | "FEYNMAN" | "MARCUS_AURELIUS" | "AUTHOR";
@@ -1034,7 +1035,7 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
                       >
                         {chapters.map((c) => (
                           <option key={c.number} value={c.number}>
-                            {c.number}. {c.title}
+                            {c.number}. {cleanChapterTitle(c.title)}
                           </option>
                         ))}
                       </select>

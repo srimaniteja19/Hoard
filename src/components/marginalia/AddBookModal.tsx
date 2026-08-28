@@ -80,6 +80,9 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
           setShowTocDrawer(true);
           playSound.fileIt();
         }
+        if (data.totalPages) {
+          setTotalPages(String(data.totalPages));
+        }
       }
     } catch {
       // ignore
@@ -162,7 +165,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
 
           const meta = data.metadata;
           if (meta) {
-            if (meta.pageCount && (!totalPages || totalPages === "380")) {
+            if (meta.pageCount) {
               setTotalPages(String(meta.pageCount));
             }
             if (meta.chapterCount) {

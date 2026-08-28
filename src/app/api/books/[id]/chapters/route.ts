@@ -1,23 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUserId, AuthError } from "@/lib/session";
 import { getBookById, updateBook } from "@/lib/dal/marginalia";
-import { generateObject } from "ai";
-import { z } from "zod";
-import { languageModel, gatewayProviderOptions, gatewayErrorMessage } from "@/lib/ai/models";
+import { gatewayErrorMessage } from "@/lib/ai/models";
 import { ChapterItem } from "@/lib/marginalia/types";
-
-const CHAPTERS_MODEL = "google/gemini-3.5-flash";
-
-const ChaptersSchema = z.object({
-  chapters: z.array(
-    z.object({
-      number: z.number(),
-      title: z.string(),
-      page: z.number().optional(),
-      duration: z.string().optional(),
-    })
-  ),
-});
+import { resolveAuthenticChapters, cleanChapterTitle } from "@/lib/marginalia/chapterExtractor";
 
 export async function GET(
   req: NextRequest,
@@ -59,28 +45,25 @@ export async function POST(
       return NextResponse.json({ error: "Book not found" }, { status: 404 });
     }
 
-    const prompt = `Provide the authentic Table of Contents and chapter titles for the book "${book.title}" by ${book.author}. Return all sequential chapters with their real titles.`;
+    const { chapters: resolvedChapters, totalPages } = await resolveAuthenticChapters(
+      book.title,
+      book.author !== "Unknown Author" ? book.author : undefined
+    );
 
-    const result = await generateObject({
-      model: languageModel(CHAPTERS_MODEL),
-      system: "You are a bibliographical reference librarian. Return the authentic Table of Contents chapter list for this published book.",
-      prompt,
-      schema: ChaptersSchema,
-      providerOptions: {
-        ...gatewayProviderOptions(CHAPTERS_MODEL, ["feature:marginalia-chapter-resolve"]),
-      },
-    });
-
-    const resolvedChapters = result.object.chapters;
-
-    const updated = await updateBook(userId, id, {
+    const updatePayload: Record<string, any> = {
       chapters: resolvedChapters,
       totalChapters: resolvedChapters.length,
-    });
+    };
+    if (totalPages && !book.totalPages) {
+      updatePayload.totalPages = totalPages;
+    }
+
+    const updated = await updateBook(userId, id, updatePayload);
 
     return NextResponse.json({
       book: updated,
       chapters: resolvedChapters,
+      totalPages: updated?.totalPages || totalPages || null,
     });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -106,14 +89,21 @@ export async function PATCH(
       return NextResponse.json({ error: "Chapters must be an array" }, { status: 400 });
     }
 
+    const cleaned = chapters.map((c: any, idx: number) => ({
+      number: c.number || idx + 1,
+      title: cleanChapterTitle(c.title || `Chapter ${idx + 1}`),
+      page: c.page ? Number(c.page) : undefined,
+      duration: c.duration || undefined,
+    }));
+
     const updated = await updateBook(userId, id, {
-      chapters,
-      totalChapters: chapters.length,
+      chapters: cleaned,
+      totalChapters: cleaned.length,
     });
 
     return NextResponse.json({
       book: updated,
-      chapters,
+      chapters: cleaned,
     });
   } catch (error) {
     if (error instanceof AuthError) {
