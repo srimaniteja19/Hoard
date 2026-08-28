@@ -32,15 +32,15 @@ html[data-paper="sand"],
   --b: 3px;
 }
 
-/* ── INK THEME (DARK PAPER) ── */
+/* ── INK THEME (MATTE BLACK) ── */
 html[data-paper="ink"],
 [data-paper="ink"] {
-  --paper: #14120F;
-  --card: #1D1A16;
-  --shade: #272320;
-  --shelf: #272320;
-  --ink: #F0EDE4;
-  --fg: #F0EDE4;
+  --paper: #0A0A0A;
+  --card: #141414;
+  --shade: #222222;
+  --shelf: #181818;
+  --ink: #F4F4F5;
+  --fg: #F4F4F5;
   --b: 3px;
 }
 
@@ -59,8 +59,8 @@ html[data-paper] .app-page-flush {
 }
 
 html[data-paper="ink"] .app-header {
-  background-color: var(--card) !important;
-  border-bottom-color: var(--shade) !important;
+  background-color: #0A0A0A !important;
+  border-bottom-color: #27272A !important;
   color: var(--ink) !important;
 }
 
@@ -68,6 +68,36 @@ html[data-paper="ink"] .app-wordmark,
 html[data-paper="ink"] .page-badge,
 html[data-paper="ink"] .app-nav a {
   color: var(--ink);
+}
+
+html[data-paper="ink"] .m-seg button,
+html[data-paper="ink"] .jack .m-seg button {
+  border-color: #3F3F46;
+}
+
+html[data-paper="ink"] .m-seg button[aria-pressed="true"],
+html[data-paper="ink"] .jack .m-seg button[aria-pressed="true"] {
+  background: #F4F4F5 !important;
+  color: #0A0A0A !important;
+  border-color: #F4F4F5 !important;
+}
+
+html[data-paper="ink"] .cv {
+  border-color: #3F3F46;
+  box-shadow: 7px 7px 0 #181818;
+}
+
+html[data-paper="ink"] .vol:hover .cv {
+  box-shadow: 12px 12px 0 #27272A;
+}
+
+html[data-paper="ink"] .vol--new .cv {
+  border-color: #3F3F46 !important;
+}
+
+html[data-paper="ink"] .vol--new:hover .cv {
+  border-color: #F4F4F5 !important;
+  box-shadow: 6px 6px 0 #27272A !important;
 }
 
 .marginalia-wrap {
