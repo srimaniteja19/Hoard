@@ -247,11 +247,11 @@ html[data-paper="ink"] .vol--new:hover .cv {
   color: var(--ink);
 }
 
-/* ══ SEPARATE SHELF TIERS & BOOKCASE ══ */
+/* ══ SEPARATE SHELF TIERS & 3D LIBRARY DECKS ══ */
 .shelf-bookcase {
   display: flex;
   flex-direction: column;
-  gap: 52px;
+  gap: 64px;
   margin-top: 10px;
 }
 
@@ -268,7 +268,7 @@ html[data-paper="ink"] .vol--new:hover .cv {
   gap: 12px;
   flex-wrap: wrap;
   padding-bottom: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   border-bottom: var(--b) solid var(--ink);
 }
 
@@ -280,12 +280,17 @@ html[data-paper="ink"] .vol--new:hover .cv {
 }
 
 .shelf-tier-dot {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   border: 2px solid var(--ink);
   box-shadow: 1.5px 1.5px 0 var(--ink);
   flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.shelf-tier:hover .shelf-tier-dot {
+  transform: scale(1.2);
 }
 
 .shelf-tier-title {
@@ -302,9 +307,9 @@ html[data-paper="ink"] .vol--new:hover .cv {
   font-size: 8.5px;
   font-weight: 900;
   letter-spacing: 0.14em;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border: 1.5px solid var(--ink);
-  box-shadow: 1.5px 1.5px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
   color: #000;
 }
 
@@ -343,36 +348,63 @@ html[data-paper="ink"] .vol--new:hover .cv {
 }
 
 .shelf-tier-empty {
-  padding: 16px 0;
+  padding: 20px 0;
 }
 
 .shelf-tier-empty-text {
   font-family: var(--mono);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  opacity: 0.55;
+  letter-spacing: 0.14em;
+  opacity: 0.5;
   color: var(--ink);
 }
 
-/* THE PHYSICAL SHELF PLANK LEDGE */
-.shelf-plank-ledge {
+/* ── MINIMALIST 3D FLOATING SHELF DECK ── */
+.shelf-deck {
   position: relative;
-  height: 14px;
-  margin-top: 32px;
-  background: var(--shelf, #1A1A1A);
-  border: 2px solid var(--ink);
-  box-shadow: 4px 6px 0 var(--ink);
+  width: 100%;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
 }
 
-.shelf-plank-ledge::after {
+/* Radiant Minimal Accent Edge Strip */
+.shelf-deck__edge {
+  height: 4px;
+  width: 100%;
+  border-top: 1.5px solid var(--ink);
+  border-left: 2px solid var(--ink);
+  border-right: 2px solid var(--ink);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+  transition: filter 0.2s ease;
+  z-index: 2;
+}
+
+.shelf-tier:hover .shelf-deck__edge {
+  filter: brightness(1.25);
+}
+
+/* Polished Minimal 3D Floating Plank */
+.shelf-deck__plank {
+  position: relative;
+  height: 12px;
+  background: var(--shelf, #18181B);
+  border: 2px solid var(--ink);
+  border-top: none;
+  box-shadow: 4px 5px 0 var(--ink);
+  z-index: 1;
+}
+
+.shelf-deck__plank::before {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
   top: 0;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.2);
+  height: 2px;
+  background: rgba(255, 255, 255, 0.22);
   pointer-events: none;
 }
 

@@ -27,6 +27,8 @@ interface ShelfTierConfig {
   badge: string;
   badgeBg: string;
   dotColor: string;
+  glowColor: string;
+  accentColor: string;
   defaultStatus: BookStatus;
   books: BookRow[];
 }
@@ -69,6 +71,8 @@ export const ShelfGrid: React.FC<ShelfGridProps> = ({
         badge: "ACTIVE",
         badgeBg: "var(--yellow)",
         dotColor: "#FFE600",
+        glowColor: "rgba(255, 230, 0, 0.35)",
+        accentColor: "#FFE600",
         defaultStatus: "READING",
         books: readingBooks,
       },
@@ -79,6 +83,8 @@ export const ShelfGrid: React.FC<ShelfGridProps> = ({
         badge: "QUEUED",
         badgeBg: "var(--cyan)",
         dotColor: "#38BDF8",
+        glowColor: "rgba(56, 189, 248, 0.35)",
+        accentColor: "#38BDF8",
         defaultStatus: "UNSTARTED",
         books: queueBooks,
       },
@@ -89,6 +95,8 @@ export const ShelfGrid: React.FC<ShelfGridProps> = ({
         badge: "COMPLETED",
         badgeBg: "var(--lime)",
         dotColor: "#A3E635",
+        glowColor: "rgba(163, 230, 53, 0.35)",
+        accentColor: "#A3E635",
         defaultStatus: "FINISHED",
         books: finishedBooks,
       },
@@ -162,7 +170,7 @@ export const ShelfGrid: React.FC<ShelfGridProps> = ({
             <div className="shelf-tier-title-group">
               <span
                 className="shelf-tier-dot"
-                style={{ background: tier.dotColor }}
+                style={{ background: tier.dotColor, boxShadow: `0 0 8px ${tier.glowColor}` }}
                 aria-hidden="true"
               />
               <h2 className="shelf-tier-title">{tier.title}</h2>
@@ -201,8 +209,17 @@ export const ShelfGrid: React.FC<ShelfGridProps> = ({
             </div>
           )}
 
-          {/* ── ARCHITECTURAL SHELF PLANK LEDGE ── */}
-          <div className="shelf-plank-ledge" aria-hidden="true" />
+          {/* ── MINIMALIST 3D FLOATING SHELF PLANK ── */}
+          <div className="shelf-deck" aria-hidden="true">
+            <div
+              className="shelf-deck__edge"
+              style={{
+                background: tier.accentColor,
+                boxShadow: `0 0 10px ${tier.glowColor}`,
+              }}
+            />
+            <div className="shelf-deck__plank" />
+          </div>
         </section>
       ))}
     </div>
