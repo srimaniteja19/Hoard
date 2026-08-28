@@ -517,30 +517,79 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
         } as React.CSSProperties
       }
     >
-      {/* ── TOP NAV BAR WITH AI SYNTHESIS TRIGGER ── */}
+      {/* ── TOP NAV BAR WITH AI & VOLUME CONTROLS ── */}
       <div className="book-studio-head">
-        <button
-          type="button"
-          onClick={() => {
-            playSound.click();
-            onBack();
-          }}
-          style={{
-            fontFamily: "var(--mono)",
-            fontSize: "11px",
-            fontWeight: 800,
-            letterSpacing: "0.1em",
-            padding: "6px 12px",
-            background: "var(--card)",
-            border: "1.5px solid var(--ink)",
-            boxShadow: "2px 2px 0 var(--ink)",
-            cursor: "pointer",
-          }}
-        >
-          ← THE SHELF
-        </button>
+        {/* Left: Navigation & Volume State */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              playSound.click();
+              onBack();
+            }}
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "11px",
+              fontWeight: 800,
+              letterSpacing: "0.08em",
+              height: "32px",
+              padding: "0 12px",
+              background: "var(--card)",
+              color: "var(--ink)",
+              border: "1.5px solid var(--ink)",
+              boxShadow: "2px 2px 0 var(--ink)",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+            }}
+          >
+            ← THE SHELF
+          </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <span
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "10px",
+              fontWeight: 800,
+              letterSpacing: "0.1em",
+              height: "32px",
+              padding: "0 10px",
+              background: "var(--shade)",
+              border: "1.5px solid var(--ink)",
+              display: "inline-flex",
+              alignItems: "center",
+              color: "var(--ink)",
+            }}
+          >
+            {book.format}
+          </span>
+
+          <select
+            value={book.status}
+            onChange={(e) => handleUpdateProgress(book.currentChapter || 1, e.target.value as BookStatus)}
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "10.5px",
+              fontWeight: 800,
+              height: "32px",
+              padding: "0 8px",
+              border: "1.5px solid var(--ink)",
+              background: "var(--card)",
+              color: "var(--ink)",
+              cursor: "pointer",
+              boxShadow: "2px 2px 0 var(--ink)",
+            }}
+          >
+            <option value="READING">📖 READING</option>
+            <option value="FINISHED">✓ FINISHED</option>
+            <option value="UNSTARTED">⏸ NOT STARTED</option>
+            <option value="PAUSED">⏳ PAUSED</option>
+            <option value="WANT_TO_READ">🔖 WANT TO READ</option>
+          </select>
+        </div>
+
+        {/* Right: AI Intelligence Suite & Volume Actions */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           {/* Chapter Briefing Trigger */}
           <button
             type="button"
@@ -549,15 +598,33 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
               fontFamily: "var(--mono)",
               fontSize: "10.5px",
               fontWeight: 800,
-              padding: "6px 14px",
+              letterSpacing: "0.06em",
+              height: "32px",
+              padding: "0 12px",
               background: book.summary ? "var(--lime)" : "var(--card)",
               color: "#0A0A0A",
               border: "1.5px solid var(--ink)",
               boxShadow: "2px 2px 0 var(--ink)",
               cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
             }}
           >
-            ⚡ CHAPTER BRIEFING {book.summary ? "✓ SAVED" : ""}
+            <span>⚡ BRIEFING</span>
+            {book.summary && (
+              <span
+                style={{
+                  fontSize: "9px",
+                  background: "#0A0A0A",
+                  color: "#FFFFFF",
+                  padding: "1px 4px",
+                  fontWeight: 900,
+                }}
+              >
+                SAVED
+              </span>
+            )}
           </button>
 
           {/* Table of Contents Trigger */}
@@ -568,12 +635,16 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
               fontFamily: "var(--mono)",
               fontSize: "10.5px",
               fontWeight: 800,
-              padding: "6px 12px",
+              letterSpacing: "0.06em",
+              height: "32px",
+              padding: "0 12px",
               background: "var(--card)",
               color: "var(--ink)",
               border: "1.5px solid var(--ink)",
               boxShadow: "2px 2px 0 var(--ink)",
               cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
             }}
           >
             📑 TOC ({chapters.length > 0 ? chapters.length : "DETECT"})
@@ -587,51 +658,20 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
               fontFamily: "var(--mono)",
               fontSize: "10.5px",
               fontWeight: 800,
-              padding: "6px 14px",
+              letterSpacing: "0.06em",
+              height: "32px",
+              padding: "0 12px",
               background: "var(--yellow)",
               color: "#0A0A0A",
               border: "1.5px solid var(--ink)",
               boxShadow: "2px 2px 0 var(--ink)",
               cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
             }}
           >
-            🔮 READING SYNTHESIS &amp; ZINE
+            🔮 SYNTHESIS
           </button>
-
-          <span
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: "10px",
-              fontWeight: 800,
-              letterSpacing: "0.1em",
-              background: "var(--shade)",
-              padding: "4px 8px",
-              border: "1px solid var(--ink)",
-            }}
-          >
-            {book.format}
-          </span>
-
-          <select
-            value={book.status}
-            onChange={(e) => handleUpdateProgress(book.currentChapter || 1, e.target.value as BookStatus)}
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: "10px",
-              fontWeight: 800,
-              padding: "5px 8px",
-              border: "1.5px solid var(--ink)",
-              background: "var(--card)",
-              color: "var(--ink)",
-              cursor: "pointer",
-            }}
-          >
-            <option value="READING">📖 READING</option>
-            <option value="FINISHED">✓ FINISHED</option>
-            <option value="UNSTARTED">⏸ NOT STARTED</option>
-            <option value="PAUSED">⏳ PAUSED</option>
-            <option value="WANT_TO_READ">🔖 WANT TO READ</option>
-          </select>
 
           {/* Remove Book Button */}
           <button
@@ -652,17 +692,22 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
             }}
             style={{
               fontFamily: "var(--mono)",
-              fontSize: "10px",
+              fontSize: "12px",
               fontWeight: 800,
-              padding: "5px 8px",
+              height: "32px",
+              padding: "0 10px",
               border: "1.5px solid var(--ink)",
               background: "var(--card)",
               color: "#EF4444",
+              boxShadow: "2px 2px 0 var(--ink)",
               cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
             title="Remove volume from shelf"
           >
-            🗑️ REMOVE
+            🗑️
           </button>
         </div>
       </div>
