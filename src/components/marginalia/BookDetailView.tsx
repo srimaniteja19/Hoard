@@ -20,12 +20,14 @@ interface BookDetailViewProps {
   book: BookRow;
   onBack: () => void;
   onUpdateBook: (updated: BookRow) => void;
+  onDeleteBook?: (bookId: string) => void;
 }
 
 export const BookDetailView: React.FC<BookDetailViewProps> = ({
   book: initialBook,
   onBack,
   onUpdateBook,
+  onDeleteBook,
 }) => {
   const [book, setBook] = useState<BookRow>(initialBook);
   const [notes, setNotes] = useState<MarginaliaRow[]>([]);
@@ -522,6 +524,38 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
             <option value="PAUSED">⏳ PAUSED</option>
             <option value="WANT_TO_READ">🔖 WANT TO READ</option>
           </select>
+
+          {/* Remove Book Button */}
+          <button
+            type="button"
+            onClick={async () => {
+              if (window.confirm(`Are you sure you want to remove "${book.title}" and all its notes from your shelf?`)) {
+                try {
+                  playSound.bury();
+                  const res = await fetch(`/api/books/${book.id}`, { method: "DELETE" });
+                  if (res.ok) {
+                    onDeleteBook?.(book.id);
+                    onBack();
+                  }
+                } catch {
+                  showToast("Failed to remove volume");
+                }
+              }
+            }}
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "10px",
+              fontWeight: 800,
+              padding: "5px 8px",
+              border: "1.5px solid var(--ink)",
+              background: "var(--card)",
+              color: "#EF4444",
+              cursor: "pointer",
+            }}
+            title="Remove volume from shelf"
+          >
+            🗑️ REMOVE
+          </button>
         </div>
       </div>
 

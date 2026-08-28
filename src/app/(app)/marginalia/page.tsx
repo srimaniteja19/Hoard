@@ -232,6 +232,11 @@ function MarginaliaPageContent() {
               setSelectedBook(updated);
               setBooks((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
             }}
+            onDeleteBook={(deletedId) => {
+              setSelectedBook(null);
+              setBooks((prev) => prev.filter((b) => b.id !== deletedId));
+              fetchBooks();
+            }}
           />
         ) : (
           <>
