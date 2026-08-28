@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { DUOTONE_PALETTES, getDuotoneTableValues } from "@/lib/covers/duotone";
 import { KindType } from "@/types";

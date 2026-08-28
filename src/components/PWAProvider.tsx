@@ -100,51 +100,66 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Register Service Worker and listen for updates
+    // Register Service Worker in production, unregister in development to prevent stale chunk errors
     if ("serviceWorker" in navigator) {
-      const registerSW = async () => {
-        try {
-          const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-          console.log("[PWA] Service Worker registered with scope:", registration.scope);
-
-          // Check if an updated worker is already waiting
-          if (registration.waiting) {
-            setWaitingWorker(registration.waiting);
-            setIsUpdateAvailable(true);
+      if (process.env.NODE_ENV === "development" || window.location.hostname === "localhost") {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const registration of registrations) {
+            registration.unregister();
           }
-
-          // Listen for new service worker installation
-          registration.addEventListener("updatefound", () => {
-            const installingWorker = registration.installing;
-            if (!installingWorker) return;
-
-            installingWorker.addEventListener("statechange", () => {
-              if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
-                // New update is ready and waiting to activate
-                setWaitingWorker(installingWorker);
-                setIsUpdateAvailable(true);
-              }
-            });
+        });
+        if (typeof caches !== "undefined") {
+          caches.keys().then((keys) => {
+            for (const key of keys) {
+              caches.delete(key);
+            }
           });
-        } catch (error) {
-          console.warn("[PWA] Service Worker registration failed:", error);
         }
-      };
-
-      if (document.readyState === "complete") {
-        registerSW();
       } else {
-        window.addEventListener("load", registerSW);
-      }
+        const registerSW = async () => {
+          try {
+            const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+            console.log("[PWA] Service Worker registered with scope:", registration.scope);
 
-      // Handle controller change (when new SW takes over)
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
+            // Check if an updated worker is already waiting
+            if (registration.waiting) {
+              setWaitingWorker(registration.waiting);
+              setIsUpdateAvailable(true);
+            }
+
+            // Listen for new service worker installation
+            registration.addEventListener("updatefound", () => {
+              const installingWorker = registration.installing;
+              if (!installingWorker) return;
+
+              installingWorker.addEventListener("statechange", () => {
+                if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
+                  // New update is ready and waiting to activate
+                  setWaitingWorker(installingWorker);
+                  setIsUpdateAvailable(true);
+                }
+              });
+            });
+          } catch (error) {
+            console.warn("[PWA] Service Worker registration failed:", error);
+          }
+        };
+
+        if (document.readyState === "complete") {
+          registerSW();
+        } else {
+          window.addEventListener("load", registerSW);
         }
-      });
+
+        // Handle controller change (when new SW takes over)
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
+      }
     }
 
     // Listen for PWA installation prompt (Chromium / Android)

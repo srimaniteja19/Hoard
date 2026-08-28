@@ -8,9 +8,11 @@ import { PosterCover } from "./PosterCover";
 import { playSound } from "@/lib/sound";
 
 import { ChapterItem } from "@/lib/marginalia/types";
+import { BookStatus } from "@/db/schema";
 
 interface AddBookModalProps {
   isOpen: boolean;
+  initialStatus?: BookStatus;
   onClose: () => void;
   onBookCreated: (newBook: BookRow) => void;
 }
@@ -23,6 +25,7 @@ interface CoverCandidate {
 
 export const AddBookModal: React.FC<AddBookModalProps> = ({
   isOpen,
+  initialStatus = "READING",
   onClose,
   onBookCreated,
 }) => {
@@ -30,10 +33,17 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
   const [author, setAuthor] = useState("");
   const [isbn, setIsbn] = useState("");
   const [format, setFormat] = useState<BookFormat>("AUDIO");
+  const [status, setStatus] = useState<BookStatus>(initialStatus);
   const [totalChapters, setTotalChapters] = useState("12");
   const [totalPages, setTotalPages] = useState("");
   const [audioDuration, setAudioDuration] = useState("");
   const [customCoverUrl, setCustomCoverUrl] = useState("");
+
+  useEffect(() => {
+    if (initialStatus) {
+      setStatus(initialStatus);
+    }
+  }, [initialStatus]);
 
   // Chapters & Table of Contents State
   const [chapters, setChapters] = useState<ChapterItem[]>([]);
@@ -227,6 +237,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
           author: author.trim() || "Unknown Author",
           isbn: isbn.trim() || undefined,
           format,
+          status,
           totalChapters: totalChapters ? parseInt(totalChapters, 10) : 1,
           totalPages: totalPages ? parseInt(totalPages, 10) : undefined,
           audioDuration: audioDuration.trim() || undefined,
@@ -434,6 +445,39 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
                       marginBottom: "4px",
                     }}
                   >
+                    SHELF PLACEMENT
+                  </label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as BookStatus)}
+                    style={{
+                      width: "100%",
+                      padding: "8px 10px",
+                      fontFamily: "var(--mono)",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      border: "2px solid var(--ink)",
+                      background: "var(--paper)",
+                      color: "var(--ink)",
+                    }}
+                  >
+                    <option value="READING">⚡ CURRENTLY READING</option>
+                    <option value="UNSTARTED">⏳ QUEUE / TO READ</option>
+                    <option value="FINISHED">🏆 FINISHED / ARCHIVED</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontFamily: "var(--mono)",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      letterSpacing: "0.12em",
+                      marginBottom: "4px",
+                    }}
+                  >
                     FORMAT
                   </label>
                   <select
@@ -455,36 +499,36 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
                     <option value="EBOOK">📱 EBOOK</option>
                   </select>
                 </div>
+              </div>
 
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontFamily: "var(--mono)",
-                      fontSize: "10px",
-                      fontWeight: 800,
-                      letterSpacing: "0.12em",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    ISBN / OLID (OPTIONAL)
-                  </label>
-                  <input
-                    type="text"
-                    value={isbn}
-                    onChange={(e) => setIsbn(e.target.value)}
-                    placeholder="9781449373320"
-                    style={{
-                      width: "100%",
-                      padding: "8px 10px",
-                      fontFamily: "var(--mono)",
-                      fontSize: "12px",
-                      border: "2px solid var(--ink)",
-                      background: "var(--paper)",
-                      color: "var(--ink)",
-                    }}
-                  />
-                </div>
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontFamily: "var(--mono)",
+                    fontSize: "10px",
+                    fontWeight: 800,
+                    letterSpacing: "0.12em",
+                    marginBottom: "4px",
+                  }}
+                >
+                  ISBN / OLID (OPTIONAL)
+                </label>
+                <input
+                  type="text"
+                  value={isbn}
+                  onChange={(e) => setIsbn(e.target.value)}
+                  placeholder="9781449373320"
+                  style={{
+                    width: "100%",
+                    padding: "8px 10px",
+                    fontFamily: "var(--mono)",
+                    fontSize: "12px",
+                    border: "2px solid var(--ink)",
+                    background: "var(--paper)",
+                    color: "var(--ink)",
+                  }}
+                />
               </div>
 
               {autoDetectedNotice && (

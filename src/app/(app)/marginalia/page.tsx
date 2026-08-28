@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { AppPage } from "@/components/chrome/AppPage";
 import { AppLoading } from "@/components/chrome/AppLoading";
-import { BookRow } from "@/db/schema";
-import { ShelfGrid } from "@/components/marginalia/ShelfGrid";
+import { BookRow, BookStatus } from "@/db/schema";
+import { ShelfGrid, ShelfStatusFilter } from "@/components/marginalia/ShelfGrid";
 import { AddBookModal } from "@/components/marginalia/AddBookModal";
 import { BookDetailView } from "@/components/marginalia/BookDetailView";
 import { CoverViewMode, PaperTheme, PosterSeries, BookStatsSummary } from "@/lib/marginalia/types";
@@ -132,9 +132,19 @@ function MarginaliaPageContent() {
   const [paperTheme, setPaperTheme] = useState<PaperTheme>("cream");
   const [coverMode, setCoverMode] = useState<CoverViewMode>("jackets");
   const [posterSeries, setPosterSeries] = useState<PosterSeries>("daylight");
+  const [statusFilter, setStatusFilter] = useState<ShelfStatusFilter>("ALL");
+  const [addModalStatus, setAddModalStatus] = useState<BookStatus>("READING");
   const [selectedBook, setSelectedBook] = useState<BookRow | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
+
+  // Live shelf status counts
+  const readingCount = useMemo(() => books.filter((b) => b.status === "READING").length, [books]);
+  const queueCount = useMemo(
+    () => books.filter((b) => b.status === "UNSTARTED" || b.status === "WANT_TO_READ" || b.status === "PAUSED").length,
+    [books]
+  );
+  const finishedCount = useMemo(() => books.filter((b) => b.status === "FINISHED").length, [books]);
 
   // Restore saved theme and mode from localStorage
   useEffect(() => {
@@ -257,7 +267,90 @@ function MarginaliaPageContent() {
             {/* ── SUB-NAV RAIL ── */}
             <div className="m-rail">
               <span style={{ fontWeight: 900, color: "var(--ink)" }}>MARGINALIA</span>
+
+              {/* Status Shelf Filter Tabs */}
+              <span className="m-seg" id="shelf-filter" style={{ marginLeft: "6px" }}>
+                <button
+                  data-f="all"
+                  aria-pressed={statusFilter === "ALL"}
+                  type="button"
+                  onClick={() => {
+                    playSound.click();
+                    setStatusFilter("ALL");
+                  }}
+                  title="View all categorized status shelves"
+                >
+                  ALL SHELVES ({books.length})
+                </button>
+                <button
+                  data-f="reading"
+                  aria-pressed={statusFilter === "READING"}
+                  type="button"
+                  onClick={() => {
+                    playSound.click();
+                    setStatusFilter("READING");
+                  }}
+                  title="View Currently Reading volumes"
+                >
+                  ⚡ READING ({readingCount})
+                </button>
+                <button
+                  data-f="queue"
+                  aria-pressed={statusFilter === "QUEUE"}
+                  type="button"
+                  onClick={() => {
+                    playSound.click();
+                    setStatusFilter("QUEUE");
+                  }}
+                  title="View Queue and To-Read volumes"
+                >
+                  ⏳ TO READ ({queueCount})
+                </button>
+                <button
+                  data-f="finished"
+                  aria-pressed={statusFilter === "FINISHED"}
+                  type="button"
+                  onClick={() => {
+                    playSound.click();
+                    setStatusFilter("FINISHED");
+                  }}
+                  title="View Completed volumes"
+                >
+                  🏆 FINISHED ({finishedCount})
+                </button>
+              </span>
+
               <span className="sp" />
+
+              {/* Top ADD VOLUME Button */}
+              <button
+                type="button"
+                className="m-top-add-btn"
+                onClick={() => {
+                  playSound.click();
+                  setAddModalStatus("READING");
+                  setIsAddModalOpen(true);
+                }}
+                style={{
+                  fontFamily: "var(--mono)",
+                  fontSize: "10.5px",
+                  fontWeight: 900,
+                  padding: "5px 12px",
+                  border: "var(--b) solid var(--ink)",
+                  background: "var(--yellow)",
+                  color: "#0A0A0A",
+                  boxShadow: "2px 2px 0 var(--ink)",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  marginRight: "8px",
+                  whiteSpace: "nowrap",
+                }}
+                title="Add a new volume to your library"
+              >
+                ＋ ADD VOLUME
+              </button>
 
               {/* Paper Theme Switcher */}
               <span className="m-seg" id="papers">
@@ -492,8 +585,12 @@ function MarginaliaPageContent() {
                 books={books}
                 coverMode={coverMode}
                 posterSeries={posterSeries}
+                statusFilter={statusFilter}
                 onSelectBook={(b) => setSelectedBook(b)}
-                onAddVolume={() => setIsAddModalOpen(true)}
+                onAddVolume={(defaultStatus) => {
+                  setAddModalStatus(defaultStatus || "READING");
+                  setIsAddModalOpen(true);
+                }}
                 onSearchAgain={(b) => {
                   setSelectedBook(b);
                 }}
@@ -505,65 +602,13 @@ function MarginaliaPageContent() {
                 }}
               />
             )}
-
-            {/* ── HOW A JACKET IS FOUND (PROVENANCE RESOLVER) ── */}
-            <div className="chain">
-              <div className="chain__h">
-                <span>HOW A JACKET IS FOUND</span>
-                <span>FIRST HIT WINS · CACHED LOCALLY AFTER</span>
-              </div>
-              <div className="chain__r">
-                <span className="n">1</span>
-                <span className="src">YOUR UPLOAD</span>
-                <span className="d">
-                  A file you dropped in, or a URL you pasted. Always wins — nothing overrides a cover you chose.
-                </span>
-                <span className="st ok">ALWAYS WORKS</span>
-              </div>
-              <div className="chain__r">
-                <span className="n">2</span>
-                <span className="src">OPEN LIBRARY</span>
-                <span className="d">
-                  Free, no key, by ISBN or OLID. Best licensing position of any source. Coverage is patchy on recent and self-published titles.
-                </span>
-                <span className="st ok">NO KEY</span>
-              </div>
-              <div className="chain__r">
-                <span className="n">3</span>
-                <span className="src">GOOGLE BOOKS</span>
-                <span className="d">
-                  Broadest catalogue. Thumbnails are small unless you raise the zoom parameter. Their terms require you use the API rather than hotlink.
-                </span>
-                <span className="st warn">TERMS APPLY</span>
-              </div>
-              <div className="chain__r">
-                <span className="n">4</span>
-                <span className="src">iTUNES SEARCH</span>
-                <span className="d">
-                  The one that actually knows audiobooks. Artwork URL size is swappable — request 600×600 instead of the default 100.
-                </span>
-                <span className="st ok">BEST FOR AUDIO</span>
-              </div>
-              <div className="chain__r">
-                <span className="n">5</span>
-                <span className="src">HOUSE EDITION</span>
-                <span className="d">
-                  Generated from title, author and a colour seeded off the title. Never fails, never 404s, never needs a licence.
-                </span>
-                <span className="st ok">GUARANTEED</span>
-              </div>
-              <div className="chain__f">
-                COVER ART IS COPYRIGHTED. USING IT TO IDENTIFY A BOOK IN YOUR OWN PRIVATE LIBRARY IS THE SAFEST POSSIBLE USE,
-                BUT IT IS STILL SOMEONE ELSE&apos;S ARTWORK — SO THE FALLBACK ISN&apos;T A NICETY, IT&apos;S THE FLOOR.
-                IF YOU EVER MAKE A SHELF PUBLIC, HOUSE MODE IS THE ONE TO SHIP.
-              </div>
-            </div>
           </>
         )}
 
         {/* ── ADD BOOK MODAL ── */}
         <AddBookModal
           isOpen={isAddModalOpen}
+          initialStatus={addModalStatus}
           onClose={() => setIsAddModalOpen(false)}
           onBookCreated={(newBook) => {
             setBooks((prev) => [newBook, ...prev]);

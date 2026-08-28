@@ -99,6 +99,16 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // 0. Completely ignore localhost / dev server and Turbopack hot reload chunks
+  if (
+    url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
+    url.pathname.includes('turbopack') ||
+    url.pathname.includes('hot-update')
+  ) {
+    return;
+  }
+
   // 1. Ignore non-GET requests or unsupported schemes
   if (request.method !== 'GET' || !request.url.startsWith('http')) {
     return;
@@ -109,7 +119,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Immutable Next.js static bundles & fonts — Cache-First with revalidate
+  // 3. Immutable Next.js static bundles & fonts in production — Cache-First with revalidate
   if (url.pathname.startsWith('/_next/static/') || url.pathname.match(/\.(woff2?|ttf|otf|eot)$/)) {
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
