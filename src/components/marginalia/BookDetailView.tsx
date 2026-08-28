@@ -1,0 +1,931 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { BookRow, MarginaliaRow, MarginaliaPendingMarkRow, MarginaliaKind, BookStatus } from "@/db/schema";
+import { BookCoverFrame } from "./BookCoverFrame";
+import { playSound } from "@/lib/sound";
+
+interface BookDetailViewProps {
+  book: BookRow;
+  onBack: () => void;
+  onUpdateBook: (updated: BookRow) => void;
+}
+
+export const BookDetailView: React.FC<BookDetailViewProps> = ({
+  book: initialBook,
+  onBack,
+  onUpdateBook,
+}) => {
+  const [book, setBook] = useState<BookRow>(initialBook);
+  const [notes, setNotes] = useState<MarginaliaRow[]>([]);
+  const [pendingMarks, setPendingMarks] = useState<MarginaliaPendingMarkRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Capture State
+  const [captureMode, setCaptureMode] = useState<MarginaliaKind>("VERBATIM");
+  const [quoteInput, setQuoteInput] = useState("");
+  const [noteInput, setNoteInput] = useState("");
+  const [chapterInput, setChapterInput] = useState(String(book.currentChapter || 1));
+  const [pageInput, setPageInput] = useState(book.currentPage ? String(book.currentPage) : "");
+  const [timestampInput, setTimestampInput] = useState("");
+  const [submittingNote, setSubmittingNote] = useState(false);
+
+  // Pending mark state
+  const [newMarkTime, setNewMarkTime] = useState("");
+  const [newMarkNote, setNewMarkNote] = useState("");
+  const [addingMark, setAddingMark] = useState(false);
+
+  // Filter / Chapter view
+  const [filterChapter, setFilterChapter] = useState<number | "ALL">("ALL");
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  // Fetch full notes & marks on mount
+  useEffect(() => {
+    let active = true;
+    async function loadData() {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/books/${book.id}`);
+        if (res.ok && active) {
+          const data = await res.json();
+          setBook(data.book);
+          setNotes(data.marginalia || []);
+          setPendingMarks(data.pendingMarks || []);
+        }
+      } catch {
+        // ignore
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, [book.id]);
+
+  const showToast = (msg: string) => {
+    setFeedback(msg);
+    setTimeout(() => setFeedback(null), 2500);
+  };
+
+  // Progress Updater
+  const handleUpdateProgress = async (newChapter: number, newStatus?: BookStatus) => {
+    try {
+      playSound.click();
+      const payload: Partial<BookRow> = {
+        currentChapter: newChapter,
+        ...(newStatus ? { status: newStatus } : {}),
+      };
+      if (newChapter >= (book.totalChapters || 1)) {
+        payload.status = "FINISHED";
+      }
+
+      const res = await fetch(`/api/books/${book.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setBook(updated);
+        onUpdateBook(updated);
+        setChapterInput(String(updated.currentChapter || 1));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  // Create Marginalia Note
+  const handleAddNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quoteInput.trim() && !noteInput.trim()) return;
+
+    try {
+      setSubmittingNote(true);
+      playSound.click();
+
+      const res = await fetch(`/api/books/${book.id}/marginalia`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: captureMode,
+          quote: quoteInput.trim() || undefined,
+          note: noteInput.trim() || undefined,
+          chapter: parseInt(chapterInput, 10) || (book.currentChapter || 1),
+          page: pageInput ? parseInt(pageInput, 10) : undefined,
+          timestamp: timestampInput.trim() || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        const created: MarginaliaRow = await res.json();
+        setNotes((prev) => [created, ...prev]);
+        setQuoteInput("");
+        setNoteInput("");
+        setTimestampInput("");
+        playSound.fileIt();
+        showToast("✓ Note bound to marginalia");
+
+        // Update local book stats
+        setBook((prev) => ({
+          ...prev,
+          notesCount: (prev.notesCount || 0) + 1,
+        }));
+      }
+    } catch {
+      showToast("Error saving note");
+    } finally {
+      setSubmittingNote(false);
+    }
+  };
+
+  // Promote Note to TIL or Todo
+  const handlePromote = async (noteId: string, target: "TIL" | "TODO") => {
+    try {
+      playSound.click();
+      const res = await fetch(`/api/books/${book.id}/marginalia/${noteId}/promote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setNotes((prev) =>
+          prev.map((n) => (n.id === noteId ? { ...n, promotedTo: target, promotedId: data.tilId || data.todoId } : n))
+        );
+        playSound.pin(true);
+        showToast(target === "TIL" ? `✓ Minted as TIL #${data.shortHash}` : "✓ Added to Todos");
+
+        setBook((prev) => ({
+          ...prev,
+          promotedCount: (prev.promotedCount || 0) + 1,
+        }));
+      }
+    } catch {
+      showToast("Failed to promote note");
+    }
+  };
+
+  // Delete Note
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      playSound.bury();
+      const res = await fetch(`/api/books/${book.id}/marginalia/${noteId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setNotes((prev) => prev.filter((n) => n.id !== noteId));
+        setBook((prev) => ({
+          ...prev,
+          notesCount: Math.max(0, (prev.notesCount || 0) - 1),
+        }));
+        showToast("Note deleted");
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  // Add Quick Audio Bookmark
+  const handleAddPendingMark = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMarkTime.trim()) return;
+
+    try {
+      setAddingMark(true);
+      playSound.click();
+
+      const res = await fetch(`/api/books/${book.id}/pending-marks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          timestamp: newMarkTime.trim(),
+          chapter: parseInt(chapterInput, 10) || book.currentChapter,
+          note: newMarkNote.trim() || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        const created: MarginaliaPendingMarkRow = await res.json();
+        setPendingMarks((prev) => [...prev, created]);
+        setNewMarkTime("");
+        setNewMarkNote("");
+        showToast("✓ Timestamp bookmarked");
+      }
+    } catch {
+      // ignore
+    } finally {
+      setAddingMark(false);
+    }
+  };
+
+  // Convert Pending Mark into Note
+  const handleConvertMark = (mark: MarginaliaPendingMarkRow) => {
+    playSound.click();
+    setTimestampInput(mark.timestamp);
+    if (mark.chapter) setChapterInput(String(mark.chapter));
+    if (mark.note) setNoteInput(mark.note);
+    // Dismiss mark
+    fetch(`/api/books/${book.id}/pending-marks`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ markId: mark.id, status: "PROCESSED" }),
+    }).then(() => {
+      setPendingMarks((prev) => prev.filter((m) => m.id !== mark.id));
+    });
+  };
+
+  const filteredNotes =
+    filterChapter === "ALL"
+      ? notes
+      : notes.filter((n) => n.chapter === filterChapter);
+
+  return (
+    <div
+      className="book-studio"
+      style={
+        {
+          "--book-accent": book.accentColor || "#7B5CF0",
+        } as React.CSSProperties
+      }
+    >
+      {/* ── TOP NAV BAR ── */}
+      <div className="book-studio-head">
+        <button
+          type="button"
+          onClick={() => {
+            playSound.click();
+            onBack();
+          }}
+          style={{
+            fontFamily: "var(--mono)",
+            fontSize: "11px",
+            fontWeight: 800,
+            letterSpacing: "0.1em",
+            padding: "6px 12px",
+            background: "var(--card)",
+            border: "1.5px solid var(--ink)",
+            boxShadow: "2px 2px 0 var(--ink)",
+            cursor: "pointer",
+          }}
+        >
+          ← THE SHELF
+        </button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <span
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "10px",
+              fontWeight: 800,
+              letterSpacing: "0.1em",
+              background: "var(--yellow)",
+              padding: "2px 6px",
+              border: "1px solid var(--ink)",
+            }}
+          >
+            {book.format}
+          </span>
+          <select
+            value={book.status}
+            onChange={(e) => handleUpdateProgress(book.currentChapter || 1, e.target.value as BookStatus)}
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "10px",
+              fontWeight: 800,
+              padding: "4px 8px",
+              border: "1.5px solid var(--ink)",
+              background: "var(--card)",
+              color: "var(--ink)",
+              cursor: "pointer",
+            }}
+          >
+            <option value="READING">📖 READING</option>
+            <option value="FINISHED">✓ FINISHED</option>
+            <option value="UNSTARTED">⏸ NOT STARTED</option>
+            <option value="PAUSED">⏳ PAUSED</option>
+            <option value="WANT_TO_READ">🔖 WANT TO READ</option>
+          </select>
+        </div>
+      </div>
+
+      {feedback && (
+        <div
+          style={{
+            padding: "8px 14px",
+            background: "var(--yellow)",
+            border: "2px solid var(--ink)",
+            fontFamily: "var(--mono)",
+            fontSize: "11px",
+            fontWeight: 800,
+            marginBottom: "16px",
+          }}
+        >
+          {feedback}
+        </div>
+      )}
+
+      {/* ── STUDIO LAYOUT ── */}
+      <div className="book-studio-grid">
+        {/* ── LEFT SIDEBAR: COVER & PROGRESS ── */}
+        <div className="book-studio-sidebar">
+          <div style={{ width: "190px", margin: "0 auto 18px" }}>
+            <BookCoverFrame book={book} mode="jackets" tiltDeg={-1} />
+          </div>
+
+          <h2
+            style={{
+              fontFamily: "var(--display)",
+              fontSize: "20px",
+              fontWeight: 800,
+              lineHeight: 1.1,
+              letterSpacing: "-0.02em",
+              margin: "0 0 4px",
+            }}
+          >
+            {book.title}
+          </h2>
+          <div
+            style={{
+              fontFamily: "var(--quote)",
+              fontStyle: "italic",
+              fontSize: "15px",
+              opacity: 0.7,
+              marginBottom: "16px",
+            }}
+          >
+            by {book.author}
+          </div>
+
+          {/* Reading Progress Stepper */}
+          <div
+            style={{
+              borderTop: "2px solid rgba(10, 10, 10, 0.14)",
+              paddingTop: "14px",
+              marginBottom: "18px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                fontFamily: "var(--mono)",
+                fontSize: "10px",
+                fontWeight: 800,
+                marginBottom: "8px",
+              }}
+            >
+              <span>CURRENT CHAPTER</span>
+              <span style={{ color: "var(--b-theme)" }}>
+                {book.currentChapter || 1} / {book.totalChapters || 1}
+              </span>
+            </div>
+
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <button
+                type="button"
+                disabled={(book.currentChapter || 1) <= 1}
+                onClick={() => handleUpdateProgress(Math.max(1, (book.currentChapter || 1) - 1))}
+                style={{
+                  fontFamily: "var(--mono)",
+                  fontWeight: 900,
+                  fontSize: "12px",
+                  padding: "4px 10px",
+                  border: "1.5px solid var(--ink)",
+                  background: "var(--card)",
+                  cursor: "pointer",
+                }}
+              >
+                ◀
+              </button>
+
+              <input
+                type="range"
+                min="1"
+                max={book.totalChapters || 12}
+                value={book.currentChapter || 1}
+                onChange={(e) => handleUpdateProgress(parseInt(e.target.value, 10))}
+                style={{ flex: 1, accentColor: book.accentColor || "#7B5CF0" }}
+              />
+
+              <button
+                type="button"
+                disabled={(book.currentChapter || 1) >= (book.totalChapters || 1)}
+                onClick={() =>
+                  handleUpdateProgress(
+                    Math.min(book.totalChapters || 1, (book.currentChapter || 1) + 1)
+                  )
+                }
+                style={{
+                  fontFamily: "var(--mono)",
+                  fontWeight: 900,
+                  fontSize: "12px",
+                  padding: "4px 10px",
+                  border: "1.5px solid var(--ink)",
+                  background: "var(--card)",
+                  cursor: "pointer",
+                }}
+              >
+                ▶
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Audio Timestamp Bookmarks */}
+          {book.format === "AUDIO" && (
+            <div
+              style={{
+                borderTop: "2px solid rgba(10, 10, 10, 0.14)",
+                paddingTop: "14px",
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "var(--mono)",
+                  fontSize: "10px",
+                  fontWeight: 800,
+                  letterSpacing: "0.1em",
+                  marginBottom: "8px",
+                }}
+              >
+                🎧 AUDIO BOOKMARKS
+              </div>
+
+              <form onSubmit={handleAddPendingMark} style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
+                <input
+                  type="text"
+                  placeholder="01:24:15"
+                  value={newMarkTime}
+                  onChange={(e) => setNewMarkTime(e.target.value)}
+                  style={{
+                    width: "70px",
+                    fontFamily: "var(--mono)",
+                    fontSize: "11px",
+                    padding: "4px 6px",
+                    border: "1.5px solid var(--ink)",
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="Memo..."
+                  value={newMarkNote}
+                  onChange={(e) => setNewMarkNote(e.target.value)}
+                  style={{
+                    flex: 1,
+                    fontFamily: "var(--body)",
+                    fontSize: "12px",
+                    padding: "4px 6px",
+                    border: "1.5px solid var(--ink)",
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={addingMark}
+                  style={{
+                    fontFamily: "var(--mono)",
+                    fontSize: "10px",
+                    fontWeight: 800,
+                    padding: "4px 8px",
+                    border: "1.5px solid var(--ink)",
+                    background: "var(--yellow)",
+                    cursor: "pointer",
+                  }}
+                >
+                  +
+                </button>
+              </form>
+
+              {pendingMarks.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                  {pendingMarks.map((m) => (
+                    <div
+                      key={m.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "4px 8px",
+                        background: "var(--shelf)",
+                        border: "1px solid var(--ink)",
+                        fontFamily: "var(--mono)",
+                        fontSize: "10px",
+                      }}
+                    >
+                      <span>
+                        ⏱ <b>{m.timestamp}</b> {m.note ? `— ${m.note}` : ""}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleConvertMark(m)}
+                        style={{
+                          fontSize: "8.5px",
+                          fontWeight: 800,
+                          padding: "2px 5px",
+                          background: "var(--card)",
+                          border: "1px solid var(--ink)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        EXPAND
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontFamily: "var(--mono)", fontSize: "9.5px", opacity: 0.5 }}>
+                  No pending audio marks.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── RIGHT MAIN STUDIO: 3 CAPTURE MODES + NOTES STREAM ── */}
+        <div className="book-studio-main">
+          {/* Capture Box */}
+          <div className="capture-box">
+            {/* Mode Switcher */}
+            <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
+              <button
+                type="button"
+                className={`note-mode-tab ${captureMode === "VERBATIM" ? "active" : ""}`}
+                onClick={() => setCaptureMode("VERBATIM")}
+              >
+                &ldquo; VERBATIM (QUOTE)
+              </button>
+              <button
+                type="button"
+                className={`note-mode-tab ${captureMode === "PARAPHRASE" ? "active" : ""}`}
+                onClick={() => setCaptureMode("PARAPHRASE")}
+              >
+                ✎ PARAPHRASE
+              </button>
+              <button
+                type="button"
+                className={`note-mode-tab ${captureMode === "THOUGHT" ? "active" : ""}`}
+                onClick={() => setCaptureMode("THOUGHT")}
+              >
+                💡 THOUGHT
+              </button>
+            </div>
+
+            <form onSubmit={handleAddNote} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {/* Quote Input (for Verbatim or reference) */}
+              {captureMode === "VERBATIM" && (
+                <div>
+                  <textarea
+                    rows={3}
+                    value={quoteInput}
+                    onChange={(e) => setQuoteInput(e.target.value)}
+                    placeholder="Enter the verbatim passage or quote..."
+                    required
+                    style={{
+                      width: "100%",
+                      fontFamily: "var(--quote)",
+                      fontSize: "16px",
+                      fontStyle: "italic",
+                      padding: "10px 12px",
+                      border: "2px solid var(--ink)",
+                      background: "var(--paper)",
+                      color: "var(--ink)",
+                      lineHeight: 1.4,
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Reader Note Input */}
+              <div>
+                <textarea
+                  rows={captureMode === "VERBATIM" ? 2 : 3}
+                  value={noteInput}
+                  onChange={(e) => setNoteInput(e.target.value)}
+                  placeholder={
+                    captureMode === "VERBATIM"
+                      ? "Add your commentary, synthesis, or notes on this quote..."
+                      : captureMode === "PARAPHRASE"
+                      ? "Restate the core concept in your own words..."
+                      : "Record your reflection, hypothesis, or insight..."
+                  }
+                  required={captureMode !== "VERBATIM"}
+                  style={{
+                    width: "100%",
+                    fontFamily: "var(--body)",
+                    fontSize: "14px",
+                    padding: "10px 12px",
+                    border: "2px solid var(--ink)",
+                    background: "var(--paper)",
+                    color: "var(--ink)",
+                  }}
+                />
+              </div>
+
+              {/* Location Bar & Submit */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "10px",
+                  marginTop: "4px",
+                }}
+              >
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <label
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                    }}
+                  >
+                    CH
+                    <input
+                      type="number"
+                      min="1"
+                      value={chapterInput}
+                      onChange={(e) => setChapterInput(e.target.value)}
+                      style={{
+                        width: "48px",
+                        marginLeft: "4px",
+                        padding: "3px 5px",
+                        fontFamily: "var(--mono)",
+                        fontSize: "11px",
+                        border: "1.5px solid var(--ink)",
+                      }}
+                    />
+                  </label>
+
+                  <label
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                    }}
+                  >
+                    {book.format === "AUDIO" ? "TIME" : "PAGE"}
+                    <input
+                      type="text"
+                      placeholder={book.format === "AUDIO" ? "00:15:30" : "142"}
+                      value={book.format === "AUDIO" ? timestampInput : pageInput}
+                      onChange={(e) =>
+                        book.format === "AUDIO"
+                          ? setTimestampInput(e.target.value)
+                          : setPageInput(e.target.value)
+                      }
+                      style={{
+                        width: "65px",
+                        marginLeft: "4px",
+                        padding: "3px 5px",
+                        fontFamily: "var(--mono)",
+                        fontSize: "11px",
+                        border: "1.5px solid var(--ink)",
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingNote}
+                  style={{
+                    fontFamily: "var(--mono)",
+                    fontWeight: 800,
+                    fontSize: "11px",
+                    letterSpacing: "0.1em",
+                    padding: "8px 18px",
+                    border: "2px solid var(--ink)",
+                    boxShadow: "2px 2px 0 var(--ink)",
+                    background: "var(--b-theme)",
+                    color: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  {submittingNote ? "SAVING..." : "＋ BIND NOTE"}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Chapter Filter Pills */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              flexWrap: "wrap",
+              borderBottom: "2px solid var(--ink)",
+              paddingBottom: "12px",
+            }}
+          >
+            <span
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "10px",
+                fontWeight: 800,
+                opacity: 0.6,
+              }}
+            >
+              FILTER:
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setFilterChapter("ALL")}
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "9.5px",
+                fontWeight: 800,
+                padding: "3px 8px",
+                border: "1.5px solid var(--ink)",
+                background: filterChapter === "ALL" ? "var(--ink)" : "var(--card)",
+                color: filterChapter === "ALL" ? "var(--paper)" : "var(--ink)",
+                cursor: "pointer",
+              }}
+            >
+              ALL CHAPTERS ({notes.length})
+            </button>
+
+            {Array.from(new Set(notes.map((n) => n.chapter)))
+              .sort((a, b) => a - b)
+              .map((ch) => (
+                <button
+                  key={ch}
+                  type="button"
+                  onClick={() => setFilterChapter(ch)}
+                  style={{
+                    fontFamily: "var(--mono)",
+                    fontSize: "9.5px",
+                    fontWeight: 800,
+                    padding: "3px 8px",
+                    border: "1.5px solid var(--ink)",
+                    background: filterChapter === ch ? "var(--b-theme)" : "var(--card)",
+                    color: filterChapter === ch ? "#fff" : "var(--ink)",
+                    cursor: "pointer",
+                  }}
+                >
+                  CH {ch} ({notes.filter((n) => n.chapter === ch).length})
+                </button>
+              ))}
+          </div>
+
+          {/* Marginalia Notes Stream */}
+          {loading ? (
+            <div style={{ fontFamily: "var(--mono)", fontSize: "12px", padding: "20px" }}>
+              LOADING MARGINALIA...
+            </div>
+          ) : filteredNotes.length === 0 ? (
+            <div
+              style={{
+                padding: "36px",
+                textAlign: "center",
+                background: "var(--card)",
+                border: "var(--b) dashed var(--ink)",
+                fontFamily: "var(--mono)",
+                fontSize: "11px",
+                fontWeight: 700,
+                opacity: 0.6,
+              }}
+            >
+              NO MARGINALIA RECORDED YET. CAPTURE YOUR FIRST PASSAGE ABOVE.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {filteredNotes.map((note) => (
+                <div key={note.id} className="marginalia-card">
+                  {/* Note Header & Badges */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span
+                        style={{
+                          fontFamily: "var(--mono)",
+                          fontSize: "8.5px",
+                          fontWeight: 800,
+                          padding: "2px 6px",
+                          background:
+                            note.kind === "VERBATIM"
+                              ? "var(--b-theme)"
+                              : note.kind === "PARAPHRASE"
+                              ? "var(--cyan)"
+                              : "var(--yellow)",
+                          color: note.kind === "VERBATIM" ? "#fff" : "var(--ink)",
+                          border: "1px solid var(--ink)",
+                        }}
+                      >
+                        {note.kind}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: "var(--mono)",
+                          fontSize: "9px",
+                          fontWeight: 700,
+                          opacity: 0.6,
+                        }}
+                      >
+                        CH {note.chapter}
+                        {note.page ? ` · P. ${note.page}` : ""}
+                        {note.timestamp ? ` · ⏱ ${note.timestamp}` : ""}
+                      </span>
+                    </div>
+
+                    {/* Promotion Badges or Actions */}
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                      {note.promotedTo ? (
+                        <span
+                          style={{
+                            fontFamily: "var(--mono)",
+                            fontSize: "8.5px",
+                            fontWeight: 800,
+                            background: "var(--lime)",
+                            border: "1px solid var(--ink)",
+                            padding: "2px 6px",
+                          }}
+                        >
+                          ✓ MINTED TO {note.promotedTo}
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handlePromote(note.id, "TIL")}
+                            style={{
+                              fontFamily: "var(--mono)",
+                              fontSize: "8.5px",
+                              fontWeight: 800,
+                              background: "var(--card)",
+                              border: "1px solid var(--ink)",
+                              padding: "2px 6px",
+                              cursor: "pointer",
+                            }}
+                            title="Mint to TIL Wall"
+                          >
+                            ＋ TIL
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePromote(note.id, "TODO")}
+                            style={{
+                              fontFamily: "var(--mono)",
+                              fontSize: "8.5px",
+                              fontWeight: 800,
+                              background: "var(--card)",
+                              border: "1px solid var(--ink)",
+                              padding: "2px 6px",
+                              cursor: "pointer",
+                            }}
+                            title="Promote to Todo item"
+                          >
+                            ＋ TODO
+                          </button>
+                        </>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteNote(note.id)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          opacity: 0.4,
+                          fontSize: "12px",
+                          marginLeft: "4px",
+                        }}
+                        title="Delete note"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Verbatim Quote Body */}
+                  {note.quote && (
+                    <div>
+                      <span className="quote-mark">&ldquo;</span>
+                      <div className="quote-text">{note.quote}</div>
+                    </div>
+                  )}
+
+                  {/* Commentary / Note Body */}
+                  {note.note && <div className="note-text">{note.note}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

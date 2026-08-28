@@ -837,4 +837,117 @@ export const scratchPostcards = pgTable(
 export type ScratchPostcardRow = typeof scratchPostcards.$inferSelect;
 export type NewScratchPostcardRow = typeof scratchPostcards.$inferInsert;
 
+export const bookFormatValues = ["AUDIO", "PHYSICAL", "EBOOK", "PRINT"] as const;
+export type BookFormat = (typeof bookFormatValues)[number];
+
+export const bookStatusValues = ["READING", "FINISHED", "UNSTARTED", "PAUSED", "WANT_TO_READ"] as const;
+export type BookStatus = (typeof bookStatusValues)[number];
+
+export const bookMotifValues = ["arcs", "grid", "strata", "rules", "blocks", "diag"] as const;
+export type BookMotif = (typeof bookMotifValues)[number];
+
+export const marginaliaKindValues = ["VERBATIM", "PARAPHRASE", "THOUGHT"] as const;
+export type MarginaliaKind = (typeof marginaliaKindValues)[number];
+
+export const books = pgTable(
+  "books",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    author: text("author").notNull(),
+    isbn: varchar("isbn", { length: 32 }),
+    format: varchar("format", { length: 16 }).notNull().default("AUDIO"),
+    accentColor: varchar("accent_color", { length: 16 }).notNull().default("#7B5CF0"),
+    fgColor: varchar("fg_color", { length: 16 }).notNull().default("#FFFFFF"),
+    motif: varchar("motif", { length: 16 }).notNull().default("arcs"),
+    initial: varchar("initial", { length: 8 }).notNull().default("B"),
+    totalChapters: integer("total_chapters").notNull().default(1),
+    currentChapter: integer("current_chapter").notNull().default(1),
+    totalPages: integer("total_pages"),
+    currentPage: integer("current_page"),
+    audioDuration: varchar("audio_duration", { length: 32 }),
+    audioCurrentTime: varchar("audio_current_time", { length: 32 }),
+    startedDate: varchar("started_date", { length: 64 }),
+    completedDate: varchar("completed_date", { length: 64 }),
+    status: varchar("status", { length: 16 }).notNull().default("READING"),
+    coverUrl: text("cover_url"),
+    coverSource: varchar("cover_source", { length: 32 }).default("HOUSE"),
+    customCoverUrl: text("custom_cover_url"),
+    notesCount: integer("notes_count").default(0),
+    promotedCount: integer("promoted_count").default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("books_user_idx").on(table.userId, table.updatedAt.desc()),
+  ]
+);
+
+export type BookRow = typeof books.$inferSelect;
+export type NewBookRow = typeof books.$inferInsert;
+
+export const marginalia = pgTable(
+  "marginalia",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    bookId: text("book_id")
+      .notNull()
+      .references(() => books.id, { onDelete: "cascade" }),
+    kind: varchar("kind", { length: 16 }).notNull().default("VERBATIM"),
+    quote: text("quote"),
+    note: text("note"),
+    chapter: integer("chapter").notNull().default(1),
+    page: integer("page"),
+    timestamp: varchar("timestamp", { length: 32 }),
+    promotedTo: varchar("promoted_to", { length: 16 }),
+    promotedId: text("promoted_id"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("marginalia_book_user_idx").on(table.bookId, table.userId, table.chapter, table.createdAt.desc()),
+    index("marginalia_user_created_idx").on(table.userId, table.createdAt.desc()),
+  ]
+);
+
+export type MarginaliaRow = typeof marginalia.$inferSelect;
+export type NewMarginaliaRow = typeof marginalia.$inferInsert;
+
+export const marginaliaPendingMarks = pgTable(
+  "marginalia_pending_marks",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    bookId: text("book_id")
+      .notNull()
+      .references(() => books.id, { onDelete: "cascade" }),
+    timestamp: varchar("timestamp", { length: 32 }).notNull(),
+    chapter: integer("chapter"),
+    note: text("note"),
+    status: varchar("status", { length: 16 }).notNull().default("PENDING"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("marginalia_pending_book_idx").on(table.bookId, table.userId, table.status, table.createdAt.asc()),
+  ]
+);
+
+export type MarginaliaPendingMarkRow = typeof marginaliaPendingMarks.$inferSelect;
+export type NewMarginaliaPendingMarkRow = typeof marginaliaPendingMarks.$inferInsert;
+
+
 
