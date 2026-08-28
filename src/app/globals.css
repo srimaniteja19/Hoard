@@ -36,6 +36,33 @@
   --sh-sm: 3px 3px 0 #000000;
 }
 
+[data-theme="matte_black"],
+[data-theme="matte-black"],
+[data-theme="obsidian"] {
+  --cream: #0A0A0A;
+  --paper: #0D0D0D;
+  --surface: #141414;
+  --card: #161616;
+  --shelf: #1A1A1A;
+  --fg: #F4F4F5;
+  --ink: #F4F4F5;
+  --cover-ink: #F4F4F5;
+  --cover-mix: 25%;
+  --yel: #FACC15;
+  --yellow: #FDE047;
+  --pink: #F43F5E;
+  --cyan: #38BDF8;
+  --lime: #A3E635;
+  --orange: #FB923C;
+  --violet: #C084FC;
+  --mint: #34D399;
+  --bd: 2.5px solid #27272A;
+  --b: 2.5px;
+  --sh: 5px 5px 0 #000000;
+  --sh-lg: 8px 8px 0 #000000;
+  --sh-sm: 2.5px 2.5px 0 #000000;
+}
+
 [data-theme="cyberpunk"] {
   --cream: #0D0E15;
   --paper: #161925;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 
-export type ThemeId = "default" | "cyberpunk" | "nordic" | "tokyo" | "matcha";
+export type ThemeId = "default" | "matte_black" | "cyberpunk" | "nordic" | "tokyo" | "matcha";
 
 export interface ThemeOption {
   id: ThemeId;
@@ -13,11 +13,12 @@ export interface ThemeOption {
 }
 
 export const THEMES: ThemeOption[] = [
-  { id: "default",   name: "Neo Brutalist", badge: "LIGHT",  color: "#FFE600", accent: "#FF007A" },
-  { id: "cyberpunk", name: "Cyberpunk",     badge: "DARK",   color: "#00F0FF", accent: "#FF007A" },
-  { id: "nordic",    name: "Nordic Fog",    badge: "SLATE",  color: "#319795", accent: "#667EEA" },
-  { id: "tokyo",     name: "Tokyo Night",   badge: "MIDNIGHT", color: "#7AA2F7", accent: "#F7768E" },
-  { id: "matcha",    name: "Matcha Latte",  badge: "WARM",   color: "#A3B18A", accent: "#D9822B" },
+  { id: "default",     name: "Neo Brutalist", badge: "LIGHT",    color: "#FFE600", accent: "#FF007A" },
+  { id: "matte_black", name: "Matte Black",   badge: "MATTE",    color: "#0A0A0A", accent: "#FDE047" },
+  { id: "cyberpunk",   name: "Cyberpunk",     badge: "DARK",     color: "#00F0FF", accent: "#FF007A" },
+  { id: "nordic",      name: "Nordic Fog",    badge: "SLATE",    color: "#319795", accent: "#667EEA" },
+  { id: "tokyo",       name: "Tokyo Night",   badge: "MIDNIGHT", color: "#7AA2F7", accent: "#F7768E" },
+  { id: "matcha",      name: "Matcha Latte",  badge: "WARM",     color: "#A3B18A", accent: "#D9822B" },
 ];
 
 const THEME_STORAGE_KEY = "hoard_theme_v1";
