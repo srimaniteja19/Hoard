@@ -1,6 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
 import { cleanIsbn, resolveBookCover } from "./coverResolver";
 import { seedHouseStyle, renderMotifSvg, hashString } from "./houseMotifs";
+import { cleanChapterTitle } from "./chapterExtractor";
+
+describe("cleanChapterTitle", () => {
+  it("strips Chapter, Ch, Part, Section prefixes and numbers cleanly", () => {
+    expect(cleanChapterTitle("Chapter 1: The Conspiracy")).toBe("The Conspiracy");
+    expect(cleanChapterTitle("Ch. 2 - Promise")).toBe("Promise");
+    expect(cleanChapterTitle("Part 1: Genesis")).toBe("Genesis");
+    expect(cleanChapterTitle("1. Two Systems")).toBe("Two Systems");
+    expect(cleanChapterTitle("Genesis")).toBe("Genesis");
+  });
+});
 
 describe("cleanIsbn", () => {
   it("strips hyphens and spaces", () => {
