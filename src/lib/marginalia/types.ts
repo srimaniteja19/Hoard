@@ -62,6 +62,43 @@ export type PointCategory =
   | "HISTORICAL"
   | "EVIDENCE";
 
+export type VisualArtifactType =
+  | "FLOWCHART"
+  | "TIMELINE"
+  | "MINDMAP"
+  | "COMPARISON"
+  | "METRIC_GRID"
+  | "QUADRANT";
+
+export interface MetricCardItem {
+  label: string;
+  value: string;
+  subtext: string;
+  trend?: "UP" | "DOWN" | "CRITICAL" | "NEUTRAL";
+}
+
+export interface ComparisonRow {
+  dimension: string;
+  left: string;
+  right: string;
+}
+
+export interface ComparisonMatrix {
+  leftHeader: string;
+  rightHeader: string;
+  rows: ComparisonRow[];
+}
+
+export interface VisualArtifact {
+  type: VisualArtifactType;
+  title: string;
+  caption?: string;
+  mermaidCode?: string;
+  metrics?: MetricCardItem[];
+  comparison?: ComparisonMatrix;
+  svgMarkup?: string;
+}
+
 export interface ChapterSummaryPoint {
   category: PointCategory;
   point: string;
@@ -73,6 +110,7 @@ export interface ChapterSummaryItem {
   chapterTitle: string;
   thesis: string;
   points: ChapterSummaryPoint[];
+  visualArtifact?: VisualArtifact;
   keyQuote?: string;
   takeaway: string;
 }
@@ -84,8 +122,10 @@ export interface BookSummaryData {
   executiveSummary: string;
   readingTimeMinutes?: number;
   coreThemes: string[];
+  macroInfographic?: VisualArtifact;
   chapters: ChapterSummaryItem[];
   overallTakeaway: string;
   generatedAt: string;
 }
+
 

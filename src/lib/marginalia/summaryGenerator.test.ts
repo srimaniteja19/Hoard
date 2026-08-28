@@ -95,4 +95,58 @@ describe("exportSummaryToMarkdown", () => {
     expect(md).toContain('> "Streets are for people."');
     expect(md).toContain("`Reallocate lane space to active transit.`");
   });
+
+  it("exports Mermaid diagrams and comparison matrices in markdown", () => {
+    const dataWithVisuals: BookSummaryData = {
+      bookTitle: "Genius Makers",
+      author: "Cade Metz",
+      oneLiner: "The story of modern AI.",
+      executiveSummary: "How deep learning won.",
+      readingTimeMinutes: 10,
+      coreThemes: ["AI", "Tech"],
+      overallTakeaway: "Breakthroughs take persistence.",
+      generatedAt: "2026-08-28T12:00:00Z",
+      macroInfographic: {
+        type: "TIMELINE",
+        title: "Deep Learning Milestones",
+        mermaidCode: "timeline\n  title History\n  1986 : Backpropagation\n  2012 : AlexNet",
+        caption: "Chronology of the deep learning revival.",
+      },
+      chapters: [
+        {
+          chapterNumber: 1,
+          chapterTitle: "Genesis",
+          thesis: "Hinton and the pioneers.",
+          points: [
+            {
+              category: "CORE_IDEA",
+              point: "Connectionism vs Symbolic AI.",
+            },
+          ],
+          visualArtifact: {
+            type: "COMPARISON",
+            title: "Symbolic vs Connectionist AI",
+            comparison: {
+              leftHeader: "Symbolic AI",
+              rightHeader: "Connectionism",
+              rows: [
+                {
+                  dimension: "Learning Method",
+                  left: "Hand-coded rules",
+                  right: "Learns from data",
+                },
+              ],
+            },
+          },
+          takeaway: "Neural nets win.",
+        },
+      ],
+    };
+
+    const md = exportSummaryToMarkdown(dataWithVisuals);
+    expect(md).toContain("```mermaid");
+    expect(md).toContain("1986 : Backpropagation");
+    expect(md).toContain("| Dimension | Symbolic AI | Connectionism |");
+    expect(md).toContain("| **Learning Method** | Hand-coded rules | Learns from data |");
+  });
 });

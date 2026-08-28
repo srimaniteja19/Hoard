@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { BookRow } from "@/db/schema";
 import { BookSummaryData, PointCategory, ChapterSummaryPoint } from "@/lib/marginalia/types";
 import { exportSummaryToMarkdown } from "@/lib/marginalia/summaryGenerator";
+import { VisualArtifactViewer } from "./VisualArtifactViewer";
 import { playSound } from "@/lib/sound";
 
 interface BookSummaryModalProps {
@@ -401,6 +402,13 @@ export const BookSummaryModal: React.FC<BookSummaryModalProps> = ({
                 >
                   {summary.executiveSummary}
                 </p>
+
+                {/* Macro Overarching Infographic / System Diagram */}
+                {summary.macroInfographic && (
+                  <div style={{ marginTop: "16px" }}>
+                    <VisualArtifactViewer artifact={summary.macroInfographic} />
+                  </div>
+                )}
               </div>
 
               {/* ── INTERACTIVE CATEGORY FILTER BAR ── */}
@@ -610,6 +618,11 @@ export const BookSummaryModal: React.FC<BookSummaryModalProps> = ({
                           </strong>
                           {ch.thesis}
                         </div>
+
+                        {/* Chapter Visual Artifact / Diagram / Infographic if present */}
+                        {ch.visualArtifact && (
+                          <VisualArtifactViewer artifact={ch.visualArtifact} compact />
+                        )}
 
                         {/* Key Quote Box if present */}
                         {ch.keyQuote && (
