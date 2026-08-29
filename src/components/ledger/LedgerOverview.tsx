@@ -99,6 +99,9 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
             {formatCurrency(investmentMetrics?.monthlyTotal || 0, 2, investmentCurrency)}
           </div>
           <div className="ledger-kpi-sub">
+            {investmentMetrics?.monthlyTotalUsd && investmentCurrency !== "USD"
+              ? `~${formatCurrency(investmentMetrics.monthlyTotalUsd, 0, "USD")}/mo • `
+              : ""}
             {investments.length} SIPs/DCAs • {investmentMetrics?.weightedReturnRatePct || 8}% Avg CAGR
           </div>
         </div>
@@ -308,6 +311,11 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
               <span>Recurring Wealth Investments (SIPs)</span>
               <span style={{ color: "#0284C7", fontWeight: 800 }}>
                 {formatCurrency(-cashFlow.monthlyRecurringInvestments, 2, investmentCurrency)}
+                {cashFlow.monthlyRecurringInvestmentsUsd && (
+                  <span style={{ fontFamily: "var(--mono)", fontSize: "10.5px", color: "#555555", marginLeft: "5px" }}>
+                    ({formatCurrency(-cashFlow.monthlyRecurringInvestmentsUsd, 2, "USD")})
+                  </span>
+                )}
               </span>
             </div>
           )}

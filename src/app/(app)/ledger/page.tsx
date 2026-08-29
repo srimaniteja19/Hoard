@@ -108,9 +108,10 @@ function LedgerContent() {
     investments: FinancialInvestmentRow[],
     latestAudit: FinancialAuditRow | null
   ): FinancialOverviewPayload => {
+    const inrRate = overview?.fxSnapshot?.inrPerUsd;
     const subscriptionMetrics = calculateSubscriptionMetrics(subs);
-    const investmentMetrics = calculateInvestmentMetrics(investments);
-    const { cashFlow, netWorth } = calculateCashFlow(incomes, subs, debts, assets, investments);
+    const investmentMetrics = calculateInvestmentMetrics(investments, inrRate);
+    const { cashFlow, netWorth } = calculateCashFlow(incomes, subs, debts, assets, investments, inrRate);
     const avalanchePayoff = calculateDebtPayoff(debts, "AVALANCHE", 100);
     const snowballPayoff = calculateDebtPayoff(debts, "SNOWBALL", 100);
 
@@ -120,6 +121,7 @@ function LedgerContent() {
       assets,
       incomes,
       investments,
+      fxSnapshot: overview?.fxSnapshot,
       metrics: {
         subscriptionMetrics,
         investmentMetrics,

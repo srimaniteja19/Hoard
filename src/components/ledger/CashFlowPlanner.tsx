@@ -158,10 +158,24 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
 
         {cashFlow.monthlyRecurringInvestments > 0 && (
           <div className="cashflow-row">
-            <span>↳ Recurring Wealth Investments (Gold / Stocks / SIPs)</span>
-            <span style={{ color: "#0284C7", fontWeight: 800 }}>
-              {formatCurrency(-cashFlow.monthlyRecurringInvestments, 2, investmentCurrency)}
-            </span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+              <span>↳ Recurring Wealth Investments (Gold / Stocks / SIPs)</span>
+              {cashFlow.fxRateInrPerUsd && (
+                <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "9.5px", color: "#0369A1", fontWeight: 700 }}>
+                  💱 Real-Time FX (1 USD = ₹{cashFlow.fxRateInrPerUsd.toFixed(2)} INR • {cashFlow.fxRateDate || "Today"})
+                </span>
+              )}
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <span style={{ color: "#0284C7", fontWeight: 800 }}>
+                {formatCurrency(-cashFlow.monthlyRecurringInvestments, 2, cashFlow.investmentCurrency || investmentCurrency)}
+              </span>
+              {cashFlow.monthlyRecurringInvestmentsUsd && (
+                <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", color: "#555555", marginLeft: "6px" }}>
+                  ({formatCurrency(-cashFlow.monthlyRecurringInvestmentsUsd, 2, "USD")})
+                </span>
+              )}
+            </div>
           </div>
         )}
 

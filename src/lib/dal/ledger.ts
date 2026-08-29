@@ -289,13 +289,13 @@ export async function createFinancialAudit(data: NewFinancialAuditRow): Promise<
   return created;
 }
 
-// ─── UNIFIED OVERVIEW AGGREGATOR ─────────────────────────────────────────────
+import { getLiveFxSnapshot } from "@/lib/ledger/fx";
 
 export async function getFinancialOverview(
   userId: string,
   extraMonthlyPayment: number = 0
 ): Promise<FinancialOverviewPayload> {
-  const [subscriptions, debts, assets, incomes, investmentsResult, latestAudit] = await Promise.all([
+  const [subscriptions, debts, assets, incomes, investmentsResult, latestAudit, fxSnapshot] = await Promise.all([
     getUserSubscriptions(userId),
     getUserDebts(userId),
     getUserAssets(userId),
@@ -306,17 +306,19 @@ export async function getFinancialOverview(
       return [] as FinancialInvestmentRow[];
     }),
     getLatestFinancialAudit(userId),
+    getLiveFxSnapshot(),
   ]);
   const investments = investmentsResult;
 
   const subscriptionMetrics = calculateSubscriptionMetrics(subscriptions);
-  const investmentMetrics = calculateInvestmentMetrics(investments);
+  const investmentMetrics = calculateInvestmentMetrics(investments, fxSnapshot.inrPerUsd);
   const { cashFlow, netWorth } = calculateCashFlow(
     incomes,
     subscriptions,
     debts,
     assets,
-    investments
+    investments,
+    fxSnapshot.inrPerUsd
   );
 
   const avalanchePayoff = calculateDebtPayoff(debts, "AVALANCHE", extraMonthlyPayment);
@@ -328,6 +330,12 @@ export async function getFinancialOverview(
     assets,
     incomes,
     investments,
+    fxSnapshot: {
+      date: fxSnapshot.date,
+      formattedDate: fxSnapshot.formattedDate,
+      inrPerUsd: fxSnapshot.inrPerUsd,
+      usdPerInr: fxSnapshot.usdPerInr,
+    },
     metrics: {
       subscriptionMetrics,
       investmentMetrics,

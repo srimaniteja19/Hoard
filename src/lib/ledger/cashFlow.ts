@@ -11,6 +11,7 @@ import {
 import { calculateSubscriptionMetrics } from "./subscriptionMetrics";
 import { calculateInvestmentMetrics } from "./investmentMetrics";
 import { calculateIncomeTax } from "./taxCalculator";
+import { convertToUsd, getFxSnapshotSync } from "./fx";
 
 export function normalizeIncomeToMonthly(amount: number, cadence: IncomeCadence): number {
   if (!amount || isNaN(amount) || amount <= 0) return 0;
@@ -35,11 +36,15 @@ export function calculateCashFlow(
   subscriptions: FinancialSubscriptionRow[],
   debts: FinancialDebtRow[],
   assets: FinancialAssetRow[],
-  investments: FinancialInvestmentRow[] = []
+  investments: FinancialInvestmentRow[] = [],
+  customFxInrRate?: number
 ): {
   cashFlow: CashFlowSummary;
   netWorth: NetWorthSummary;
 } {
+  const fx = getFxSnapshotSync();
+  const effectiveInrRate = customFxInrRate && customFxInrRate > 0 ? customFxInrRate : fx.inrPerUsd;
+
   // 1. Incomes & Automated Tax Jurisdiction Withholding
   let monthlyGrossIncome = 0;
   let monthlyTaxWithholding = 0;
@@ -57,36 +62,44 @@ export function calculateCashFlow(
       customTaxRate: inc.customTaxRate,
     });
 
-    monthlyGrossIncome += taxRes.grossMonthly;
-    monthlyTaxWithholding += taxRes.totalTaxMonthly;
-    monthlyNetTakeHome += taxRes.netMonthlyIncome;
+    const incCurrency = (inc as any).currency || "USD";
+    const grossUsd = convertToUsd(taxRes.grossMonthly, incCurrency, effectiveInrRate);
+    const taxUsd = convertToUsd(taxRes.totalTaxMonthly, incCurrency, effectiveInrRate);
+    const netUsd = convertToUsd(taxRes.netMonthlyIncome, incCurrency, effectiveInrRate);
+
+    monthlyGrossIncome += grossUsd;
+    monthlyTaxWithholding += taxUsd;
+    monthlyNetTakeHome += netUsd;
   }
 
   // 2. Fixed Outflows & Wealth Building Inflow/Outflows
   const subscriptionMetrics = calculateSubscriptionMetrics(subscriptions);
   const monthlySubscriptions = subscriptionMetrics.monthlyTotal;
 
-  const investmentMetrics = calculateInvestmentMetrics(investments);
-  const monthlyRecurringInvestments = investmentMetrics.monthlyTotal;
+  const investmentMetrics = calculateInvestmentMetrics(investments, effectiveInrRate);
+  const monthlyRecurringInvestmentsNative = investmentMetrics.monthlyTotal;
+  const monthlyRecurringInvestmentsUsd =
+    investmentMetrics.monthlyTotalUsd ||
+    convertToUsd(monthlyRecurringInvestmentsNative, investmentMetrics.currency || "INR", effectiveInrRate);
 
   const monthlyDebtMinimums = debts
     .filter((d) => !d.isPaidOff && d.balance > 0)
-    .reduce((sum, d) => sum + d.minPayment, 0);
+    .reduce((sum, d) => sum + convertToUsd(d.minPayment, (d as any).currency, effectiveInrRate), 0);
 
   const totalFixedOutflow = monthlySubscriptions + monthlyDebtMinimums;
   const effectiveInflow = monthlyNetTakeHome > 0 ? monthlyNetTakeHome : monthlyGrossIncome;
-  const monthlyNetSurplus = effectiveInflow - totalFixedOutflow - monthlyRecurringInvestments;
+  const monthlyNetSurplus = effectiveInflow - totalFixedOutflow - monthlyRecurringInvestmentsUsd;
 
-  // Wealth Velocity = (Monthly Investments + Net Cash Surplus) / Effective Inflow
+  // Wealth Velocity = (Monthly Investments (USD) + Net Cash Surplus (USD)) / Effective Inflow
   const wealthVelocityPct =
     effectiveInflow > 0
-      ? Math.round(((monthlyRecurringInvestments + Math.max(0, monthlyNetSurplus)) / effectiveInflow) * 1000) / 10
+      ? Math.round(((monthlyRecurringInvestmentsUsd + Math.max(0, monthlyNetSurplus)) / effectiveInflow) * 1000) / 10
       : 0;
 
   const savingsRatePct =
     effectiveInflow > 0 ? Math.round((monthlyNetSurplus / effectiveInflow) * 1000) / 10 : 0;
 
-  // 3. Assets breakdown
+  // 3. Assets breakdown (all converted to USD base)
   let totalLiquidCash = 0;
   let totalInvestments = 0;
   let totalRetirement = 0;
@@ -95,7 +108,8 @@ export function calculateCashFlow(
   let totalOtherAssets = 0;
 
   for (const asset of assets) {
-    const val = asset.value || 0;
+    const rawVal = asset.value || 0;
+    const val = convertToUsd(rawVal, (asset as any).currency, effectiveInrRate);
     switch (asset.category) {
       case "CASH_CHECKING":
       case "HYSA":
@@ -127,10 +141,10 @@ export function calculateCashFlow(
     totalCrypto +
     totalOtherAssets;
 
-  // 4. Liabilities
+  // 4. Liabilities (all converted to USD base)
   const totalLiabilities = debts
     .filter((d) => !d.isPaidOff && d.balance > 0)
-    .reduce((sum, d) => sum + d.balance, 0);
+    .reduce((sum, d) => sum + convertToUsd(d.balance, (d as any).currency, effectiveInrRate), 0);
 
   const netWorth = totalAssets - totalLiabilities;
   const debtToAssetRatioPct =
@@ -151,7 +165,11 @@ export function calculateCashFlow(
       monthlyNetTakeHome: Math.round(monthlyNetTakeHome * 100) / 100,
       monthlySubscriptions: Math.round(monthlySubscriptions * 100) / 100,
       monthlyDebtMinimums: Math.round(monthlyDebtMinimums * 100) / 100,
-      monthlyRecurringInvestments: Math.round(monthlyRecurringInvestments * 100) / 100,
+      monthlyRecurringInvestments: monthlyRecurringInvestmentsNative,
+      monthlyRecurringInvestmentsUsd: Math.round(monthlyRecurringInvestmentsUsd * 100) / 100,
+      investmentCurrency: investmentMetrics.currency || "INR",
+      fxRateInrPerUsd: effectiveInrRate,
+      fxRateDate: fx.date,
       totalFixedOutflow: Math.round(totalFixedOutflow * 100) / 100,
       monthlyNetSurplus: Math.round(monthlyNetSurplus * 100) / 100,
       savingsRatePct,

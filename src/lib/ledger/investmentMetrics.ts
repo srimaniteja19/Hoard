@@ -92,15 +92,31 @@ export function calculateCompoundWealth(
   };
 }
 
+import { convertToUsd, getFxSnapshotSync } from "./fx";
+
 export function calculateInvestmentMetrics(
-  investments: FinancialInvestmentRow[]
+  investments: FinancialInvestmentRow[],
+  customFxInrRate?: number
 ): InvestmentMetrics {
+  const fx = getFxSnapshotSync();
+  const effectiveInrRate = customFxInrRate && customFxInrRate > 0 ? customFxInrRate : fx.inrPerUsd;
+
   let monthlyTotal = 0;
   let yearlyTotal = 0;
+  let monthlyTotalUsd = 0;
+  let yearlyTotalUsd = 0;
   let activeCount = 0;
   let pausedCount = 0;
   let totalWeightedReturnSum = 0;
   let initialPrincipalSum = 0;
+
+  // Dominant currency
+  const currencyCounts: Record<string, number> = {};
+  investments.forEach((i) => {
+    const c = i.currency || "INR";
+    currencyCounts[c] = (currencyCounts[c] || 0) + 1;
+  });
+  const dominantCurrency = Object.entries(currencyCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "INR";
 
   const categoryBreakdown = INVESTMENT_ASSET_TYPES.reduce((acc, type) => {
     acc[type] = {
@@ -132,6 +148,12 @@ export function calculateInvestmentMetrics(
 
     monthlyTotal += monthlyAmount;
     yearlyTotal += yearlyAmount;
+
+    const invCurrency = inv.currency || "INR";
+    const monthlyUsd = convertToUsd(monthlyAmount, invCurrency, effectiveInrRate);
+    const yearlyUsd = convertToUsd(yearlyAmount, invCurrency, effectiveInrRate);
+    monthlyTotalUsd += monthlyUsd;
+    yearlyTotalUsd += yearlyUsd;
 
     if (inv.currentValuation && inv.currentValuation > 0) {
       initialPrincipalSum += inv.currentValuation;
@@ -173,10 +195,15 @@ export function calculateInvestmentMetrics(
   return {
     monthlyTotal: Math.round(monthlyTotal * 100) / 100,
     yearlyTotal: Math.round(yearlyTotal * 100) / 100,
+    monthlyTotalUsd: Math.round(monthlyTotalUsd * 100) / 100,
+    yearlyTotalUsd: Math.round(yearlyTotalUsd * 100) / 100,
+    currency: dominantCurrency,
     activeCount,
     pausedCount,
     weightedReturnRatePct,
     categoryBreakdown,
     compoundProjections,
+    fxRateInrPerUsd: effectiveInrRate,
+    fxRateDate: fx.date,
   };
 }

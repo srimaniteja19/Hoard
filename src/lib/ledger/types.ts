@@ -355,11 +355,16 @@ export interface CategoryInvestmentStat {
 export interface InvestmentMetrics {
   monthlyTotal: number;
   yearlyTotal: number;
+  monthlyTotalUsd?: number;
+  yearlyTotalUsd?: number;
+  currency?: string;
   activeCount: number;
   pausedCount: number;
   weightedReturnRatePct: number;
   categoryBreakdown: Record<InvestmentAssetType, CategoryInvestmentStat>;
   compoundProjections: CompoundProjectionPoint[];
+  fxRateInrPerUsd?: number;
+  fxRateDate?: string;
 }
 
 export interface CashFlowSummary {
@@ -369,6 +374,10 @@ export interface CashFlowSummary {
   monthlySubscriptions: number;
   monthlyDebtMinimums: number;
   monthlyRecurringInvestments: number;
+  monthlyRecurringInvestmentsUsd?: number;
+  investmentCurrency?: string;
+  fxRateInrPerUsd?: number;
+  fxRateDate?: string;
   totalFixedOutflow: number;
   monthlyNetSurplus: number;
   savingsRatePct: number;
@@ -501,6 +510,12 @@ export interface FinancialOverviewPayload {
   assets: FinancialAssetRow[];
   incomes: FinancialIncomeRow[];
   investments: FinancialInvestmentRow[];
+  fxSnapshot?: {
+    date: string;
+    formattedDate: string;
+    inrPerUsd: number;
+    usdPerInr: number;
+  };
   metrics: {
     subscriptionMetrics: SubscriptionMetrics;
     investmentMetrics: InvestmentMetrics;

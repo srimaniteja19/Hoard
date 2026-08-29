@@ -159,12 +159,17 @@ export const CashFlowVelocityWaterfall: React.FC<CashFlowVelocityWaterfallProps>
               <span style={{ fontWeight: 800 }}>↳ Recurring Wealth Investments (SIPs/DCA)</span>
               <span style={{ fontWeight: 800, color: "#0284C7" }}>
                 {formatCurrency(-monthlyRecurringInvestments, 2, investmentCurrency)}
+                {cashFlow.monthlyRecurringInvestmentsUsd && (
+                  <span style={{ opacity: 0.8, marginLeft: "4px" }}>
+                    ({formatCurrency(-cashFlow.monthlyRecurringInvestmentsUsd, 2, "USD")})
+                  </span>
+                )}
               </span>
             </div>
             <div style={{ width: "100%", height: "12px", background: "rgba(0, 0, 0, 0.05)", borderRadius: "2px", overflow: "hidden", border: "1px solid #000000" }}>
               <div
                 style={{
-                  width: `${Math.min(100, (monthlyRecurringInvestments / maxBar) * 100)}%`,
+                  width: `${Math.min(100, ((cashFlow.monthlyRecurringInvestmentsUsd || monthlyRecurringInvestments) / maxBar) * 100)}%`,
                   height: "100%",
                   background: "#38BDF8",
                 }}
