@@ -137,8 +137,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
       return;
     }
     try {
-      setAlchemistLoading(true);
-      playSound.click();
+      const bookChapters = chapters.map((c) => c.title).filter(Boolean);
       const res = await fetch("/api/books/generate-cover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -146,6 +145,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
           title,
           author: author.trim() || undefined,
           userPrompt: alchemistPrompt.trim() || undefined,
+          chapters: bookChapters.length > 0 ? bookChapters : undefined,
         }),
       });
 
@@ -156,7 +156,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({
         if (generated.accentColor) setSelectedAccent(generated.accentColor);
         if (generated.fgColor) setSelectedFg(generated.fgColor);
         if (generated.epigraph) setAlchemistEpigraph(generated.epigraph);
-        const svgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(generated.svgMarkup)}`;
+        const svgDataUri = generated.dataUri || `data:image/svg+xml;utf8,${encodeURIComponent(generated.svgMarkup)}`;
         setCoverUrl(svgDataUri);
         setCustomCoverUrl(svgDataUri);
         setCoverSource("ALCHEMIST");

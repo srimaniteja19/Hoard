@@ -138,6 +138,75 @@ const DREAM_THEMES = [
   },
 ];
 
+export function sanitizeSvgMarkup(svg: string): string {
+  if (!svg) return "";
+  let clean = svg.trim();
+
+  // Strip markdown code fences if model returned them
+  if (clean.includes("```")) {
+    clean = clean.replace(/```(?:xml|svg)?/gi, "").replace(/```/g, "").trim();
+  }
+
+  // Find where <svg begins
+  const svgStart = clean.indexOf("<svg");
+  if (svgStart !== -1) {
+    clean = clean.slice(svgStart);
+  }
+
+  // Ensure xmlns is present for standalone SVG image decoders
+  if (!clean.includes("xmlns=")) {
+    clean = clean.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+
+  // Ensure viewBox
+  if (!clean.includes("viewBox=")) {
+    clean = clean.replace(/<svg\b/i, '<svg viewBox="0 0 200 300"');
+  }
+
+  // Ensure closing tag
+  if (!clean.includes("</svg>")) {
+    clean += "\n</svg>";
+  }
+
+  return clean;
+}
+
+export function extractSvgFromDataUri(uri: string): string | null {
+  if (!uri || !uri.startsWith("data:image/svg+xml")) return null;
+  try {
+    if (uri.startsWith("data:image/svg+xml;base64,")) {
+      const base64 = uri.replace("data:image/svg+xml;base64,", "");
+      let raw: string;
+      if (typeof window !== "undefined" && typeof window.atob === "function") {
+        raw = decodeURIComponent(escape(window.atob(base64)));
+      } else if (typeof Buffer !== "undefined") {
+        raw = Buffer.from(base64, "base64").toString("utf-8");
+      } else {
+        return null;
+      }
+      return sanitizeSvgMarkup(raw);
+    } else if (uri.startsWith("data:image/svg+xml;utf8,")) {
+      const raw = decodeURIComponent(uri.replace("data:image/svg+xml;utf8,", ""));
+      return sanitizeSvgMarkup(raw);
+    } else if (uri.startsWith("data:image/svg+xml,")) {
+      const raw = decodeURIComponent(uri.replace("data:image/svg+xml,", ""));
+      return sanitizeSvgMarkup(raw);
+    }
+  } catch (e) {
+    console.error("Error extracting SVG from data URI:", e);
+    return null;
+  }
+  return null;
+}
+
+export function toSvgDataUri(svg: string): string {
+  const clean = sanitizeSvgMarkup(svg);
+  if (typeof Buffer !== "undefined") {
+    return `data:image/svg+xml;base64,${Buffer.from(clean, "utf-8").toString("base64")}`;
+  }
+  return `data:image/svg+xml;utf8,${encodeURIComponent(clean)}`;
+}
+
 export function seedDreamStyle(title: string, author: string): DreamStyle {
   const seedStr = `${title.toLowerCase().trim()}|${author.toLowerCase().trim()}`;
   const hash = Math.abs(hashString(seedStr));

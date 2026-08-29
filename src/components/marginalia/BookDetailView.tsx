@@ -243,8 +243,9 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
   const handleGenerateAiCover = async () => {
     try {
       setGeneratingCover(true);
-      playSound.click();
-      showToast("✨ Alchemizing AI Dream Cover...");
+      const bookChapters = Array.isArray(book.chapters)
+        ? (book.chapters as Array<{ title?: string }>).map((c) => c.title || "").filter(Boolean)
+        : undefined;
 
       const res = await fetch("/api/books/generate-cover", {
         method: "POST",
@@ -252,6 +253,9 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
         body: JSON.stringify({
           title: book.title,
           author: book.author,
+          description: book.summary?.oneLiner || book.summary?.executiveSummary || undefined,
+          coreThemes: book.summary?.coreThemes || undefined,
+          chapters: bookChapters && bookChapters.length > 0 ? bookChapters : undefined,
         }),
       });
 
@@ -261,7 +265,7 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
 
       const data = await res.json();
       const generated = data.cover;
-      const svgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(generated.svgMarkup)}`;
+      const svgDataUri = generated.dataUri || `data:image/svg+xml;utf8,${encodeURIComponent(generated.svgMarkup)}`;
 
       const originalIsHttp = book.coverUrl && !book.coverUrl.startsWith("data:image/svg+xml");
       const patchRes = await fetch(`/api/books/${book.id}`, {
