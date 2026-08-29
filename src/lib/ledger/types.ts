@@ -390,27 +390,104 @@ export interface NetWorthSummary {
   debtToAssetRatioPct: number;
 }
 
+export interface AuditHealthPillar {
+  name: string;
+  score: number; // 0 - 100
+  grade: "A+" | "A" | "B" | "C" | "D" | "F";
+  verdict: string;
+  status: "EXCELLENT" | "STABLE" | "WARNING" | "CRITICAL";
+}
+
+export interface AuditTrajectoryPoint {
+  year: number; // 1, 3, 5, 10
+  statusQuoNetWorth: number;
+  optimizedNetWorth: number;
+  deltaGain: number;
+}
+
+export interface AuditSubscriptionCull {
+  name: string;
+  category?: string;
+  currentCost?: number;
+  cadence?: string;
+  annualSavings: number;
+  actionType?: "CANCEL" | "DOWNGRADE" | "RENEGOTIATE" | "SWITCH_ANNUAL";
+  reason: string;
+  negotiationScript?: string;
+  severity: "HIGH" | "MEDIUM" | "LOW";
+}
+
+export interface AuditTacticalAction {
+  phase: "IMMEDIATE_7_DAYS" | "NEXT_30_DAYS" | "LONG_TERM_90_DAYS";
+  title: string;
+  impact: string;
+  action: string;
+  priority: "URGENT" | "RECOMMENDED" | "OPPORTUNITY";
+}
+
+export interface AuditAssetAllocation {
+  current: {
+    liquidCashPct: number;
+    equitiesAndMutualFundsPct: number;
+    preciousMetalsPct: number;
+    cryptoPct: number;
+    realEstatePct: number;
+    retirementPct: number;
+    otherPct: number;
+  };
+  recommended: {
+    liquidCashPct: number;
+    equitiesAndMutualFundsPct: number;
+    preciousMetalsPct: number;
+    cryptoPct: number;
+    realEstatePct: number;
+    retirementPct: number;
+    otherPct: number;
+  };
+  rebalanceAdvice: string;
+}
+
+export interface AuditInvestmentStrategy {
+  currentMonthlySIP: number;
+  suggestedMonthlySIP: number;
+  suggestedAllocations: Array<{
+    assetType: string;
+    percentage: number;
+    rationale: string;
+  }>;
+  assetDiversificationTip: string;
+  tenYearCompoundingImpact: number;
+}
+
 export interface FinancialAuditAnalysis {
   healthScore: number; // 0 - 100
   summaryVerdict: string;
-  subscriptionCullList: Array<{
-    name: string;
-    annualSavings: number;
-    reason: string;
-    severity: "HIGH" | "MEDIUM" | "LOW";
-  }>;
+  currency?: string; // Dominant currency (INR, USD, etc.)
+  pillars?: {
+    runway: AuditHealthPillar;
+    debt: AuditHealthPillar;
+    burn: AuditHealthPillar;
+    wealth: AuditHealthPillar;
+  };
+  projections?: AuditTrajectoryPoint[];
+  subscriptionCullList: AuditSubscriptionCull[];
   debtAccelerationStrategy: {
     recommendedStrategy: "AVALANCHE" | "SNOWBALL";
     strategyRationale: string;
     targetPriorityDebt: string;
     extraPaymentRecommendation: number;
     projectedInterestSavings: number;
+    payoffMonthsSaved?: number;
+    estimatedDebtFreeDate?: string;
   };
+  investmentStrategy?: AuditInvestmentStrategy;
+  assetAllocation?: AuditAssetAllocation;
   cashFlowOptimization: Array<{
     title: string;
     impact: string;
     action: string;
   }>;
+  tacticalPlan?: AuditTacticalAction[];
   runwayAnalysis: {
     currentRunwayMonths: number;
     safetyEvaluation: "CRITICAL" | "LEAN" | "HEALTHY" | "FORTRESS";

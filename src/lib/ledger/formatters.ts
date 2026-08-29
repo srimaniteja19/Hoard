@@ -2,7 +2,7 @@
  * Financial Formatting Utilities for The Hoard Ledger
  * Follows rigorous accounting & UX guidelines:
  * - Negative currency places the minus sign BEFORE the currency symbol (-$150,150.00, NEVER $-150,150.00)
- * - Locale comma separators for thousands
+ * - Locale comma separators for thousands (en-US for USD, en-IN for INR)
  * - Consistent decimal precision
  * - Multi-currency aware: USD ($), INR (₹), EUR (€), GBP (£), JPY (¥), etc.
  */
@@ -25,6 +25,11 @@ export function getCurrencySymbol(currency?: string | null): string {
   return CURRENCY_SYMBOLS[currency.toUpperCase()] ?? `${currency.toUpperCase()} `;
 }
 
+function getLocale(currency?: string | null): string {
+  if (currency?.toUpperCase() === "INR") return "en-IN";
+  return "en-US";
+}
+
 export function formatCurrency(
   val: number | null | undefined,
   fractionDigits = 2,
@@ -35,9 +40,10 @@ export function formatCurrency(
   }
 
   const sym = getCurrencySymbol(currency);
+  const locale = getLocale(currency);
   const isNeg = val < 0;
   const absVal = Math.abs(val);
-  const formatted = absVal.toLocaleString("en-IN", {
+  const formatted = absVal.toLocaleString(locale, {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
   });
@@ -55,9 +61,10 @@ export function formatSignedCurrency(
   }
 
   const sym = getCurrencySymbol(currency);
+  const locale = getLocale(currency);
 
   if (val > 0) {
-    const formatted = val.toLocaleString("en-IN", {
+    const formatted = val.toLocaleString(locale, {
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
     });
@@ -66,7 +73,7 @@ export function formatSignedCurrency(
 
   if (val < 0) {
     const absVal = Math.abs(val);
-    const formatted = absVal.toLocaleString("en-IN", {
+    const formatted = absVal.toLocaleString(locale, {
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
     });
@@ -82,23 +89,26 @@ export function formatCompactCurrency(val: number | null | undefined, currency?:
   }
 
   const sym = getCurrencySymbol(currency);
+  const isINR = currency?.toUpperCase() === "INR";
+  const locale = getLocale(currency);
   const isNeg = val < 0;
   const absVal = Math.abs(val);
 
   let formatted = "";
   if (absVal >= 1_000_000_000) {
     formatted = `${(absVal / 1_000_000_000).toFixed(1)}B`;
-  } else if (absVal >= 10_000_000) {
+  } else if (absVal >= 10_000_000 && isINR) {
     // Indian Cr notation for INR
-    formatted = currency === "INR" ? `${(absVal / 10_000_000).toFixed(2)} Cr` : `${(absVal / 1_000_000).toFixed(1)}M`;
-  } else if (absVal >= 100_000 && currency === "INR") {
+    formatted = `${(absVal / 10_000_000).toFixed(2)} Cr`;
+  } else if (absVal >= 100_000 && isINR) {
+    // Indian Lakh notation for INR
     formatted = `${(absVal / 100_000).toFixed(2)} L`;
   } else if (absVal >= 1_000_000) {
     formatted = `${(absVal / 1_000_000).toFixed(1)}M`;
   } else if (absVal >= 1_000) {
     formatted = `${(absVal / 1_000).toFixed(1)}K`;
   } else {
-    formatted = absVal.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+    formatted = absVal.toLocaleString(locale, { maximumFractionDigits: 0 });
   }
 
   return isNeg ? `-${sym}${formatted}` : `${sym}${formatted}`;

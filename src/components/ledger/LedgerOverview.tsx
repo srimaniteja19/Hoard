@@ -327,7 +327,8 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
       {/* ── AI AUDIT PROMPT BANNER ── */}
       <div
         style={{
-          background: "var(--card, #FFFFFF)",
+          background: overview.latestAudit ? "#0A0A0A" : "var(--card, #FFFFFF)",
+          color: overview.latestAudit ? "#FFFFFF" : "var(--ink, #000000)",
           border: "2.5px solid var(--ink, #000000)",
           boxShadow: "5px 5px 0 var(--ink, #000000)",
           padding: "22px 24px",
@@ -341,20 +342,56 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
       >
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-            <Sparkles size={18} aria-hidden="true" />
+            <Sparkles size={18} color="#FFE600" aria-hidden="true" />
             <span style={{ fontFamily: "var(--display)", fontSize: "20px", fontWeight: 900 }}>
-              AI FINANCIAL SCRIBE & AUDITOR
+              AI FINANCIAL SCRIBE &amp; INSTITUTIONAL AUDITOR
             </span>
-            <span className="ledger-tagline-badge">GEMINI 3.5</span>
+            <span
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "10px",
+                fontWeight: 900,
+                background: "#FFE600",
+                color: "#0A0A0A",
+                padding: "2px 6px",
+                borderRadius: "2px",
+              }}
+            >
+              GEMINI 3.5 QUANT
+            </span>
           </div>
-          <div style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "#444444" }}>
-            Let Gemini analyze your subscriptions, debt APRs, and cash flow to generate a prioritized cull list and debt elimination plan.
+          <div
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "12px",
+              color: overview.latestAudit ? "#D1D5DB" : "#444444",
+            }}
+          >
+            {overview.latestAudit ? (
+              <span>
+                Latest Health Score: <b style={{ color: "#FFE600" }}>{(overview.latestAudit.analysis as any)?.healthScore || 80}/100</b> •{" "}
+                {(overview.latestAudit.analysis as any)?.subscriptionCullList?.length || 0} subscription leaks flagged •{" "}
+                10-yr wealth trajectory modeled
+              </span>
+            ) : (
+              "Let Gemini analyze your subscriptions, recurring SIPs, debt APRs, and cash flow to generate a prioritized cull list and 10-year compounding trajectory."
+            )}
           </div>
         </div>
 
-        <button type="button" className="btn-ledger btn-ledger-ai" onClick={onOpenAudit}>
+        <button
+          type="button"
+          className="btn-ledger btn-ledger-ai"
+          onClick={onOpenAudit}
+          style={{
+            background: "#FFE600",
+            color: "#0A0A0A",
+            border: "2px solid #000000",
+            boxShadow: "3px 3px 0 #FFFFFF",
+          }}
+        >
           <Sparkles size={13} aria-hidden="true" />
-          RUN LEDGER AUDIT
+          {overview.latestAudit ? "VIEW FULL AI AUDIT" : "RUN LEDGER AUDIT"}
         </button>
       </div>
     </div>

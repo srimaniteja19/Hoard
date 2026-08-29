@@ -44,5 +44,23 @@ describe("Ledger Currency Formatters", () => {
       expect(formatCompactCurrency(2500000)).toBe("$2.5M");
       expect(formatCompactCurrency(450)).toBe("$450");
     });
+
+    it("formats Indian Rupee compact representations (Lakhs and Crores)", () => {
+      expect(formatCompactCurrency(250000, "INR")).toBe("₹2.50 L");
+      expect(formatCompactCurrency(15000000, "INR")).toBe("₹1.50 Cr");
+      expect(formatCompactCurrency(5000, "INR")).toBe("₹5.0K");
+    });
+  });
+
+  describe("multi-currency formatting", () => {
+    it("formats INR currency correctly with Indian number grouping", () => {
+      expect(formatCurrency(150000, 0, "INR")).toBe("₹1,50,000");
+      expect(formatCurrency(-5000, 2, "INR")).toBe("-₹5,000.00");
+    });
+
+    it("formats EUR, GBP and other international currencies", () => {
+      expect(formatCurrency(1200, 2, "EUR")).toBe("€1,200.00");
+      expect(formatCurrency(450, 0, "GBP")).toBe("£450");
+    });
   });
 });
