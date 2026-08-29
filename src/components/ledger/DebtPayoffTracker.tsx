@@ -40,7 +40,7 @@ const PaymentPanel: React.FC<{
   onUpdated: (updated: FinancialDebtRow) => void;
   onClose: () => void;
   currency?: string;
-}> = ({ debt, onUpdated, onClose, currency = "INR" }) => {
+}> = ({ debt, onUpdated, onClose, currency = "USD" }) => {
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
@@ -323,7 +323,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
   onEditDebt,
   onUpdateDebt,
   onDeleteDebt,
-  currency = "INR",
+  currency = "USD",
 }) => {
   const [strategy, setStrategy] = useState<DebtPayoffStrategy>("AVALANCHE");
   const [extraPayment, setExtraPayment] = useState<number>(150);

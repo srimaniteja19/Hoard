@@ -41,7 +41,7 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
   onEditAsset,
   onUpdateAsset,
   onDeleteAsset,
-  currency = "INR",
+  currency = "USD",
 }) => {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to remove this asset?")) return;

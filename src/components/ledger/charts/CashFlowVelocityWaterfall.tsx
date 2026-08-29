@@ -8,12 +8,14 @@ interface CashFlowVelocityWaterfallProps {
   cashFlow: CashFlowSummary;
   incomes: FinancialIncomeRow[];
   currency?: string;
+  investmentCurrency?: string;
 }
 
 export const CashFlowVelocityWaterfall: React.FC<CashFlowVelocityWaterfallProps> = ({
   cashFlow,
   incomes,
-  currency = "INR",
+  currency = "USD",
+  investmentCurrency = "INR",
 }) => {
   const {
     monthlyGrossIncome,
@@ -156,7 +158,7 @@ export const CashFlowVelocityWaterfall: React.FC<CashFlowVelocityWaterfallProps>
             <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono, monospace)", fontSize: "11px", marginBottom: "4px" }}>
               <span style={{ fontWeight: 800 }}>↳ Recurring Wealth Investments (SIPs/DCA)</span>
               <span style={{ fontWeight: 800, color: "#0284C7" }}>
-                {formatCurrency(-monthlyRecurringInvestments, 2, currency)}
+                {formatCurrency(-monthlyRecurringInvestments, 2, investmentCurrency)}
               </span>
             </div>
             <div style={{ width: "100%", height: "12px", background: "rgba(0, 0, 0, 0.05)", borderRadius: "2px", overflow: "hidden", border: "1px solid #000000" }}>

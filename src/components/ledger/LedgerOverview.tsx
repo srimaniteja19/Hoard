@@ -26,6 +26,7 @@ interface LedgerOverviewProps {
   onAddAsset: () => void;
   onOpenAudit: () => void;
   currency?: string;
+  investmentCurrency?: string;
 }
 
 export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
@@ -35,7 +36,8 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
   onAddDebt,
   onAddAsset,
   onOpenAudit,
-  currency = "INR",
+  currency = "USD",
+  investmentCurrency = "INR",
 }) => {
   const { metrics, subscriptions, debts, investments = [] } = overview;
   const { subscriptionMetrics, investmentMetrics, cashFlow, netWorth, avalanchePayoff } = metrics;
@@ -94,7 +96,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
         >
           <div className="ledger-kpi-label">MONTHLY RECURRING INVESTMENTS</div>
           <div className="ledger-kpi-value" style={{ color: "#166534" }}>
-            {formatCurrency(investmentMetrics?.monthlyTotal || 0, 2, currency)}
+            {formatCurrency(investmentMetrics?.monthlyTotal || 0, 2, investmentCurrency)}
           </div>
           <div className="ledger-kpi-sub">
             {investments.length} SIPs/DCAs • {investmentMetrics?.weightedReturnRatePct || 8}% Avg CAGR
@@ -305,7 +307,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
             <div className="cashflow-row">
               <span>Recurring Wealth Investments (SIPs)</span>
               <span style={{ color: "#0284C7", fontWeight: 800 }}>
-                {formatCurrency(-cashFlow.monthlyRecurringInvestments, 2, currency)}
+                {formatCurrency(-cashFlow.monthlyRecurringInvestments, 2, investmentCurrency)}
               </span>
             </div>
           )}

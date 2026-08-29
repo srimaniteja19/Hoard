@@ -19,6 +19,7 @@ interface CashFlowPlannerProps {
   onUpdateIncome: (inc: FinancialIncomeRow) => void;
   onDeleteIncome: (id: string) => void;
   currency?: string;
+  investmentCurrency?: string;
 }
 
 export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
@@ -28,7 +29,8 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
   onEditIncome,
   onUpdateIncome,
   onDeleteIncome,
-  currency = "INR",
+  currency = "USD",
+  investmentCurrency = "INR",
 }) => {
   const handleToggleActive = async (inc: FinancialIncomeRow) => {
     playSound.click();
@@ -74,6 +76,7 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
           cashFlow={cashFlow}
           incomes={incomes}
           currency={currency}
+          investmentCurrency={investmentCurrency}
         />
       )}
 
@@ -157,7 +160,7 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
           <div className="cashflow-row">
             <span>↳ Recurring Wealth Investments (Gold / Stocks / SIPs)</span>
             <span style={{ color: "#0284C7", fontWeight: 800 }}>
-              {formatCurrency(-cashFlow.monthlyRecurringInvestments, 2, currency)}
+              {formatCurrency(-cashFlow.monthlyRecurringInvestments, 2, investmentCurrency)}
             </span>
           </div>
         )}

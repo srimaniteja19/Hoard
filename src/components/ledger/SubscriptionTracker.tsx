@@ -30,7 +30,7 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
   onEditSubscription,
   onUpdateSubscription,
   onDeleteSubscription,
-  currency = "INR",
+  currency = "USD",
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");

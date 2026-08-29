@@ -31,6 +31,7 @@ interface RecurringInvestmentsTrackerProps {
   onEditInvestment: (inv: FinancialInvestmentRow) => void;
   onUpdateInvestment: (inv: FinancialInvestmentRow) => void;
   onDeleteInvestment: (id: string) => void;
+  currency?: string;
 }
 
 export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerProps> = ({
@@ -39,6 +40,7 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
   onEditInvestment,
   onUpdateInvestment,
   onDeleteInvestment,
+  currency = "INR",
 }) => {
   const [selectedAssetType, setSelectedAssetType] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -50,11 +52,11 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
 
   // Determine the dominant currency for the banner total display
   const dominantCurrency = useMemo(() => {
-    if (investments.length === 0) return "INR";
+    if (investments.length === 0) return currency;
     const counts: Record<string, number> = {};
     investments.forEach((inv) => { counts[inv.currency] = (counts[inv.currency] || 0) + 1; });
-    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "INR";
-  }, [investments]);
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || currency;
+  }, [investments, currency]);
 
   const filteredInvestments = useMemo(() => {
     return investments.filter((inv) => {

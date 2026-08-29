@@ -48,20 +48,18 @@ function LedgerContent() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<LedgerTab>("OVERVIEW");
 
-  // Determine dominant/primary ledger currency
-  const primaryCurrency = useMemo(() => {
-    if (!overview) return "INR";
-    const { subscriptions = [], debts = [], assets = [], incomes = [], investments = [] } = overview;
-    const counts: Record<string, number> = {};
-    investments.forEach((i) => { if (i.currency) counts[i.currency] = (counts[i.currency] || 0) + 3; });
-    subscriptions.forEach((s) => { if ((s as any).currency) counts[(s as any).currency] = (counts[(s as any).currency] || 0) + 1; });
-    incomes.forEach((inc) => { if ((inc as any).currency) counts[(inc as any).currency] = (counts[(inc as any).currency] || 0) + 2; });
-    assets.forEach((a) => { if ((a as any).currency) counts[(a as any).currency] = (counts[(a as any).currency] || 0) + 1; });
+  // Base ledger currency (USD for debts, subscriptions, assets, cash flow)
+  const primaryCurrency = "USD";
 
-    const entries = Object.entries(counts);
-    if (entries.length === 0) return "INR";
-    entries.sort((a, b) => b[1] - a[1]);
-    return entries[0][0] || "INR";
+  // Investment-specific currency (INR for recurring SIPs / DCA)
+  const investmentCurrency = useMemo(() => {
+    if (!overview?.investments || overview.investments.length === 0) return "INR";
+    const counts: Record<string, number> = {};
+    overview.investments.forEach((i) => {
+      const c = i.currency || "INR";
+      counts[c] = (counts[c] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "INR";
   }, [overview]);
 
   // Modals & Editing State
@@ -421,6 +419,7 @@ function LedgerContent() {
             <LedgerOverview
               overview={overview}
               currency={primaryCurrency}
+              investmentCurrency={investmentCurrency}
               onNavigateTab={(tab) => {
                 playSound.click();
                 setActiveTab(tab);
@@ -461,6 +460,7 @@ function LedgerContent() {
           {activeTab === "INVESTMENTS" && (
             <RecurringInvestmentsTracker
               investments={overview.investments || []}
+              currency={investmentCurrency}
               onAddInvestment={() => {
                 setEditingInvestment(null);
                 setIsAddInvestmentOpen(true);
@@ -496,6 +496,7 @@ function LedgerContent() {
               incomes={overview.incomes}
               cashFlow={overview.metrics.cashFlow}
               currency={primaryCurrency}
+              investmentCurrency={investmentCurrency}
               onAddIncome={() => {
                 setEditingIncome(null);
                 setIsAddIncomeOpen(true);
