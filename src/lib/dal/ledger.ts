@@ -214,11 +214,21 @@ export async function deleteIncome(userId: string, id: string): Promise<boolean>
 // ─── RECURRING INVESTMENTS ───────────────────────────────────────────────────
 
 export async function getUserInvestments(userId: string): Promise<FinancialInvestmentRow[]> {
-  return db
-    .select()
-    .from(financialInvestments)
-    .where(eq(financialInvestments.userId, userId))
-    .orderBy(desc(financialInvestments.amount));
+  try {
+    return await db
+      .select()
+      .from(financialInvestments)
+      .where(eq(financialInvestments.userId, userId))
+      .orderBy(desc(financialInvestments.amount));
+  } catch (err: unknown) {
+    // Graceful degradation: migration may not have run in production yet.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('relation') && msg.includes('does not exist')) {
+      console.warn('[ledger] financial_investments table missing — run migrations. Returning [].');
+      return [];
+    }
+    throw err;
+  }
 }
 
 export async function getInvestmentById(
@@ -284,14 +294,19 @@ export async function getFinancialOverview(
   userId: string,
   extraMonthlyPayment: number = 0
 ): Promise<FinancialOverviewPayload> {
-  const [subscriptions, debts, assets, incomes, investments, latestAudit] = await Promise.all([
+  const [subscriptions, debts, assets, incomes, investmentsResult, latestAudit] = await Promise.all([
     getUserSubscriptions(userId),
     getUserDebts(userId),
     getUserAssets(userId),
     getUserIncomes(userId),
-    getUserInvestments(userId),
+    // Wrap separately so a missing table never kills the full overview fetch.
+    getUserInvestments(userId).catch((err: unknown) => {
+      console.error('[ledger] getUserInvestments failed:', err);
+      return [] as FinancialInvestmentRow[];
+    }),
     getLatestFinancialAudit(userId),
   ]);
+  const investments = investmentsResult;
 
   const subscriptionMetrics = calculateSubscriptionMetrics(subscriptions);
   const investmentMetrics = calculateInvestmentMetrics(investments);
