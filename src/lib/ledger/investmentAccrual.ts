@@ -102,13 +102,20 @@ export async function syncInvestmentWithNetWorthAsset(
   const userAssets = await getUserAssets(userId);
 
   // 1. If investment already has targetAssetId, update that asset
+  const invCurrency = investment.currency || "INR";
   if (investment.targetAssetId) {
     const existing = userAssets.find((a) => a.id === investment.targetAssetId);
     if (existing) {
+      const existingNotes = existing.notes || "";
+      const updatedNotes = existingNotes.includes("[currency:")
+        ? existingNotes
+        : `${existingNotes} [currency:${invCurrency}]`.trim();
+
       await updateAsset(userId, existing.id, {
         value: currentVal,
         institution: investment.platform || existing.institution,
         expectedYield: investment.expectedReturnRate ?? existing.expectedYield,
+        notes: updatedNotes,
       });
       return existing.id;
     }
@@ -124,10 +131,16 @@ export async function syncInvestmentWithNetWorthAsset(
   );
 
   if (matched) {
+    const existingNotes = matched.notes || "";
+    const updatedNotes = existingNotes.includes("[currency:")
+      ? existingNotes
+      : `${existingNotes} [currency:${invCurrency}]`.trim();
+
     await updateAsset(userId, matched.id, {
       value: currentVal,
       institution: investment.platform || matched.institution,
       expectedYield: investment.expectedReturnRate ?? matched.expectedYield,
+      notes: updatedNotes,
     });
     if (investment.targetAssetId !== matched.id) {
       await updateInvestment(userId, investment.id, { targetAssetId: matched.id });
@@ -143,7 +156,7 @@ export async function syncInvestmentWithNetWorthAsset(
     value: currentVal,
     institution: investment.platform,
     expectedYield: investment.expectedReturnRate,
-    notes: `Auto-linked from Recurring SIP: ${investment.name}`,
+    notes: `Auto-linked from Recurring SIP: ${investment.name} [currency:${invCurrency}]`,
   });
 
   await updateInvestment(userId, investment.id, { targetAssetId: created.id });

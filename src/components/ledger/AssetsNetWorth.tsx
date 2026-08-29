@@ -6,7 +6,13 @@ import {
   NetWorthSummary,
   AssetCategory,
 } from "@/lib/ledger/types";
-import { formatCurrency, getCurrencySymbol } from "@/lib/ledger/formatters";
+import {
+  formatCurrency,
+  getCurrencySymbol,
+  getAssetCurrency,
+  cleanNotesText,
+} from "@/lib/ledger/formatters";
+import { convertToUsd } from "@/lib/ledger/fx";
 import { playSound } from "@/lib/sound";
 
 import { NetWorthCompositionChart } from "./charts/NetWorthCompositionChart";
@@ -255,7 +261,10 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
           {assets.map((asset, index) => {
             const cat = (asset.category as AssetCategory) || "OTHER";
             const theme = ASSET_THEMES[cat] || ASSET_THEMES.OTHER;
-            const assetCurrency = (asset as any).currency || currency;
+            const assetCurrency = getAssetCurrency(asset, currency);
+            const isForeign = assetCurrency !== "USD";
+            const usdEquivalent = isForeign ? convertToUsd(asset.value, assetCurrency) : null;
+            const notesText = cleanNotesText(asset.notes);
 
             return (
               <div
@@ -304,10 +313,15 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                 <div className="sub-card-body">
                   <div className="sub-card-title-row">
                     <h3 className="sub-card-title">{asset.name}</h3>
-                    <div className="sub-card-price-box">
+                    <div className="sub-card-price-box" style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
                       <span className="sub-card-price">
                         {formatCurrency(asset.value, 2, assetCurrency)}
                       </span>
+                      {usdEquivalent !== null && (
+                        <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "10.5px", color: "#666666", fontWeight: 700 }}>
+                          (~{formatCurrency(usdEquivalent, 2, "USD")})
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -317,9 +331,9 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                     </div>
                   )}
 
-                  {asset.notes && (
+                  {notesText && (
                     <div className="sub-card-notes">
-                      “{asset.notes}”
+                      “{notesText}”
                     </div>
                   )}
                 </div>

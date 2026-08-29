@@ -12,6 +12,7 @@ import { calculateSubscriptionMetrics } from "./subscriptionMetrics";
 import { calculateInvestmentMetrics } from "./investmentMetrics";
 import { calculateIncomeTax } from "./taxCalculator";
 import { convertToUsd, getFxSnapshotSync } from "./fx";
+import { getAssetCurrency } from "./formatters";
 
 export function normalizeIncomeToMonthly(amount: number, cadence: IncomeCadence): number {
   if (!amount || isNaN(amount) || amount <= 0) return 0;
@@ -109,7 +110,8 @@ export function calculateCashFlow(
 
   for (const asset of assets) {
     const rawVal = asset.value || 0;
-    const val = convertToUsd(rawVal, (asset as any).currency, effectiveInrRate);
+    const assetCurrency = getAssetCurrency(asset, "USD");
+    const val = convertToUsd(rawVal, assetCurrency, effectiveInrRate);
     switch (asset.category) {
       case "CASH_CHECKING":
       case "HYSA":

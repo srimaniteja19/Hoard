@@ -51,6 +51,35 @@ export function formatCurrency(
   return isNeg ? `-${sym}${formatted}` : `${sym}${formatted}`;
 }
 
+export function getAssetCurrency(
+  asset?: { notes?: string | null; institution?: string | null; currency?: string | null; name?: string | null } | null,
+  fallback = "USD"
+): string {
+  if (!asset) return fallback;
+  if ((asset as any).currency) return (asset as any).currency.toUpperCase();
+  if (asset.notes) {
+    const match = asset.notes.match(/\[currency:([A-Za-z]{3})\]/);
+    if (match && match[1]) return match[1].toUpperCase();
+    if (asset.notes.includes("Auto-linked from Recurring SIP")) return "INR";
+  }
+  const indianBrokers = ["Groww", "Jar", "Cred", "Zerodha", "Upstox", "AngelOne", "Paytm Money", "Indmoney", "Wint Wealth"];
+  if (asset.institution && indianBrokers.some((b) => asset.institution?.toLowerCase().includes(b.toLowerCase()))) {
+    return "INR";
+  }
+  if (asset.name && indianBrokers.some((b) => asset.name?.toLowerCase().includes(b.toLowerCase()))) {
+    return "INR";
+  }
+  return fallback;
+}
+
+export function cleanNotesText(notes?: string | null): string {
+  if (!notes) return "";
+  return notes
+    .replace(/\[currency:[A-Za-z]{3}\]/g, "")
+    .replace(/\[accrual:{.*?}\]/g, "")
+    .trim();
+}
+
 export function formatSignedCurrency(
   val: number | null | undefined,
   fractionDigits = 2,
