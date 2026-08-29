@@ -3,10 +3,22 @@
    Aesthetic: Swiss-Archival Minimalism • Refined Typography • Tactile Precision
 ═════════════════════════════════════════════════════════════════════════════ */
 
+.ledger-scroll-view {
+  flex: 1;
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  background: var(--paper, #F2EFE8);
+}
+
 .ledger-container {
-  max-width: 1320px;
-  margin: 0 auto;
-  padding: 32px 24px 96px 24px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 24px clamp(16px, 3vw, 40px) 96px clamp(16px, 3vw, 40px);
   font-family: var(--body, "Space Grotesk", system-ui, sans-serif);
   color: var(--ink, #0A0A0A);
 }
@@ -182,9 +194,21 @@
 /* ── 3. KPI METRIC CARDS ── */
 .ledger-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .ledger-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .ledger-kpi-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .ledger-kpi-card {
@@ -634,25 +658,28 @@
 .ledger-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(10, 10, 10, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(10, 10, 10, 0.55);
+  backdrop-filter: blur(3px);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .ledger-modal-box {
-  background: var(--paper, #F2EFE8);
-  border: 2px solid var(--ink, #0A0A0A);
-  box-shadow: 6px 6px 0 var(--ink, #0A0A0A);
+  background: var(--card, #FFFFFF);
+  border: 1.5px solid var(--ink, #0A0A0A);
+  box-shadow: 4px 4px 0 var(--ink, #0A0A0A);
   width: 100%;
-  max-width: 540px;
+  max-width: 520px;
   max-height: 90vh;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 24px;
   border-radius: 4px;
+  box-sizing: border-box;
 }
 
 .ledger-modal-header {
@@ -666,7 +693,7 @@
 
 .ledger-modal-header h2 {
   font-family: var(--display, "Bricolage Grotesque", sans-serif);
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 900;
   letter-spacing: -0.02em;
   margin: 0;
@@ -677,34 +704,44 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .ledger-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .ledger-field label {
   font-family: var(--mono, "Space Mono", monospace);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #444444;
+  color: #555555;
 }
 
 .ledger-field input,
 .ledger-field select,
 .ledger-field textarea {
   font-family: var(--mono, "Space Mono", monospace);
-  font-size: 12.5px;
+  font-size: 12px;
   padding: 8px 10px;
   background: #FFFFFF;
   border: 1.5px solid var(--ink, #0A0A0A);
   color: var(--ink, #0A0A0A);
   outline: none;
   border-radius: 2px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  text-overflow: ellipsis;
 }
 
 .ledger-field input:focus,
@@ -719,7 +756,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 16px;
   padding-top: 14px;
   border-top: 1.5px solid var(--ink, #0A0A0A);
 }

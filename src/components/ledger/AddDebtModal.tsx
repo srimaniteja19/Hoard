@@ -128,7 +128,7 @@ export const AddDebtModal: React.FC<AddDebtModalProps> = ({ isOpen, onClose, onC
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px" }}>
             <div className="ledger-field">
               <label>Debt Type</label>
               <select value={debtType} onChange={(e) => setDebtType(e.target.value as DebtType)}>
@@ -150,7 +150,7 @@ export const AddDebtModal: React.FC<AddDebtModalProps> = ({ isOpen, onClose, onC
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px" }}>
             <div className="ledger-field">
               <label>Current Remaining Balance ($) *</label>
               <input
@@ -176,14 +176,13 @@ export const AddDebtModal: React.FC<AddDebtModalProps> = ({ isOpen, onClose, onC
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px" }}>
             <div className="ledger-field">
-              <label>APR Interest Rate (%) *</label>
+              <label>Interest Rate (% APR) *</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
-                max="100"
                 required
                 placeholder="21.99"
                 value={interestRate}
@@ -197,7 +196,7 @@ export const AddDebtModal: React.FC<AddDebtModalProps> = ({ isOpen, onClose, onC
                 step="0.01"
                 min="0"
                 required
-                placeholder="120.00"
+                placeholder="110.00"
                 value={minPayment}
                 onChange={(e) => setMinPayment(e.target.value)}
               />

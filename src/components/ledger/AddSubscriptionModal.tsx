@@ -191,7 +191,7 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px" }}>
             <div className="ledger-field">
               <label>Amount ($ USD) *</label>
               <input
@@ -216,7 +216,7 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px" }}>
             <div className="ledger-field">
               <label>Category</label>
               <select value={category} onChange={(e) => setCategory(e.target.value as SubscriptionCategory)}>

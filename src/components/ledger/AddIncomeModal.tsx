@@ -46,7 +46,6 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
     }
   }, [isOpen]);
 
-  // Live tax preview calculation
   const taxPreview = useMemo(() => {
     const numAmount = parseFloat(amount) || 0;
     if (numAmount <= 0) return null;
@@ -111,8 +110,8 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
     <div className="ledger-modal-overlay" onClick={onClose}>
       <div className="ledger-modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="ledger-modal-header">
-          <h2>+ ADD INFLOW / INCOME STREAM</h2>
-          <button type="button" className="btn-ledger" onClick={onClose} style={{ padding: "4px 8px" }}>
+          <h2>+ ADD INFLOW STREAM</h2>
+          <button type="button" className="btn-ledger" onClick={onClose} style={{ padding: "3px 8px", fontSize: "10px" }}>
             ✕
           </button>
         </div>
@@ -123,11 +122,12 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
               background: "#FEE2E2",
               color: "#DC2626",
               padding: "8px 12px",
-              fontFamily: "var(--mono)",
+              fontFamily: "var(--mono, monospace)",
               fontSize: "11px",
               fontWeight: 700,
               marginBottom: "14px",
               border: "1px solid #DC2626",
+              borderRadius: "2px",
             }}
           >
             {error}
@@ -140,13 +140,13 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
             <input
               type="text"
               required
-              placeholder="e.g. Primary Salary, Consulting, Dividends, Side Project"
+              placeholder="e.g. Primary Salary, Consulting, Dividends"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px" }}>
             <div className="ledger-field">
               <label>Amount ($ USD) *</label>
               <input
@@ -186,18 +186,20 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
           {/* ── TAX WITHHOLDING & JURISDICTION PROFILE ── */}
           <div
             style={{
-              background: "rgba(0, 0, 0, 0.03)",
-              border: "1px solid var(--ink, #0A0A0A)",
+              background: "rgba(0, 0, 0, 0.025)",
+              border: "1px solid rgba(0, 0, 0, 0.15)",
               borderRadius: "3px",
-              padding: "14px",
+              padding: "12px",
               display: "flex",
               flexDirection: "column",
-              gap: "12px",
+              gap: "10px",
+              boxSizing: "border-box",
+              width: "100%",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <label style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 900, textTransform: "uppercase" }}>
-                🏛️ TAX & WITHHOLDING TREATMENT
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+              <label style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 800, textTransform: "uppercase", color: "#555555" }}>
+                TAX WITHHOLDING TREATMENT
               </label>
 
               <div className="debt-strategy-toggle" style={{ margin: 0 }}>
@@ -205,6 +207,7 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
                   type="button"
                   className={`debt-strategy-btn ${!isPreTax ? "active" : ""}`}
                   onClick={() => setIsPreTax(false)}
+                  style={{ fontSize: "10px", padding: "4px 8px" }}
                 >
                   POST-TAX (NET)
                 </button>
@@ -212,6 +215,7 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
                   type="button"
                   className={`debt-strategy-btn ${isPreTax ? "active" : ""}`}
                   onClick={() => setIsPreTax(true)}
+                  style={{ fontSize: "10px", padding: "4px 8px" }}
                 >
                   PRE-TAX (GROSS)
                 </button>
@@ -219,10 +223,10 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
             </div>
 
             {isPreTax && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "4px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", width: "100%" }}>
                   <div className="ledger-field">
-                    <label>Country Jurisdiction</label>
+                    <label>Country</label>
                     <select value={country} onChange={(e) => setCountry(e.target.value)}>
                       {SUPPORTED_COUNTRIES.map((c) => (
                         <option key={c.code} value={c.code}>
@@ -266,7 +270,7 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
                     step="0.1"
                     min="0"
                     max="100"
-                    placeholder="e.g. 28.5 (Leave blank for automated brackets)"
+                    placeholder="Leave blank for automated brackets"
                     value={customTaxRate}
                     onChange={(e) => setCustomTaxRate(e.target.value)}
                   />
@@ -276,21 +280,22 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
                 {taxPreview && (
                   <div
                     style={{
-                      background: "#FFFFFF",
+                      background: "#F0FDF4",
                       border: "1px solid #16A34A",
                       borderRadius: "2px",
-                      padding: "10px 12px",
-                      fontFamily: "var(--mono)",
+                      padding: "8px 10px",
+                      fontFamily: "var(--mono, monospace)",
                       fontSize: "11px",
-                      lineHeight: 1.4,
+                      lineHeight: 1.35,
+                      boxSizing: "border-box",
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, color: "#166534", marginBottom: "4px" }}>
-                      <span>Estimated Effective Tax Rate: {taxPreview.effectiveTaxRatePct}%</span>
-                      <span>Taxes: -${taxPreview.totalTaxMonthly.toFixed(2)}/mo</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, color: "#166534", marginBottom: "4px" }}>
+                      <span>Effective Rate: <b>{taxPreview.effectiveTaxRatePct}%</b></span>
+                      <span>Taxes: <b>-${taxPreview.totalTaxMonthly.toFixed(2)}/mo</b></span>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", color: "#000000", fontWeight: 900, borderTop: "1px dashed rgba(0,0,0,0.15)", paddingTop: "4px" }}>
-                      <span>Net Take-Home Pay:</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#000000", fontWeight: 900, borderTop: "1px dashed rgba(22, 163, 74, 0.4)", paddingTop: "4px" }}>
+                      <span>Estimated Net Take-Home:</span>
                       <span>+${taxPreview.netMonthlyIncome.toFixed(2)} / MO</span>
                     </div>
                   </div>

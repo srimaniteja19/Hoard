@@ -405,9 +405,11 @@ function LedgerContent() {
 
 export default function LedgerPage() {
   return (
-    <AppPage>
+    <AppPage variant="flush">
       <Suspense fallback={<AppLoading label="OPENING FINANCIAL LEDGER..." />}>
-        <LedgerContent />
+        <div className="ledger-scroll-view">
+          <LedgerContent />
+        </div>
       </Suspense>
     </AppPage>
   );
