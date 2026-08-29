@@ -53,10 +53,12 @@ export function calculateDaysUntilRenewal(billingDay?: number | null, nextRenewa
       target.setHours(0, 0, 0, 0);
       const diffMs = target.getTime() - now.getTime();
       const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-      return {
-        daysUntil: Math.max(0, days),
-        formattedDate: target.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      };
+      if (days >= 0) {
+        return {
+          daysUntil: days,
+          formattedDate: target.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        };
+      }
     }
   }
 

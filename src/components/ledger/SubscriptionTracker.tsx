@@ -10,6 +10,7 @@ import {
 import {
   normalizeCadenceToMonthly,
   normalizeCadenceToYearly,
+  calculateDaysUntilRenewal,
 } from "@/lib/ledger/subscriptionMetrics";
 import { formatCurrency, getCurrencySymbol } from "@/lib/ledger/formatters";
 import { playSound } from "@/lib/sound";
@@ -297,20 +298,13 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
 
             const displayUnit = viewCadence === "MONTHLY" ? "/ mo" : "/ yr";
 
-            // Trial end or renewal date string
-            const targetDateStr = sub.trialEndsDate || sub.nextRenewalDate;
-            let daysUntil: number | null = null;
-            let formattedDate = "";
+            // Calculate exact days until renewal from billingDay or nextRenewalDate
+            const { daysUntil, formattedDate } = calculateDaysUntilRenewal(
+              sub.billingDay,
+              sub.status === "TRIAL" && sub.trialEndsDate ? sub.trialEndsDate : sub.nextRenewalDate
+            );
 
-            if (targetDateStr) {
-              const target = new Date(targetDateStr);
-              const now = new Date();
-              const diffMs = target.getTime() - now.getTime();
-              daysUntil = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-              formattedDate = target.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-            }
-
-            const isUrgent = daysUntil !== null && daysUntil <= 3 && daysUntil >= 0;
+            const isUrgent = daysUntil <= 3 && daysUntil >= 0;
 
             return (
               <div
@@ -374,9 +368,19 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
                     <div className={`sub-card-renewal ${isUrgent ? "urgent" : ""}`}>
                       <span>📅</span>
                       <span>
-                        {sub.status === "TRIAL" ? "Trial ends in " : "Renews in "}
-                        <b>{daysUntil} {daysUntil === 1 ? "day" : "days"}</b>
-                        <span style={{ opacity: 0.7, marginLeft: "4px" }}>({formattedDate})</span>
+                        {sub.status === "TRIAL"
+                          ? "Trial ends in "
+                          : daysUntil === 0
+                          ? "Renews "
+                          : "Renews in "}
+                        <b>
+                          {daysUntil === 0
+                            ? "today"
+                            : `${daysUntil} ${daysUntil === 1 ? "day" : "days"}`}
+                        </b>
+                        {formattedDate && (
+                          <span style={{ opacity: 0.7, marginLeft: "4px" }}>({formattedDate})</span>
+                        )}
                       </span>
                     </div>
                   )}
