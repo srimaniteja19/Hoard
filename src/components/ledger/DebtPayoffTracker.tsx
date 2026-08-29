@@ -10,6 +10,7 @@ import { formatCurrency, formatSignedCurrency } from "@/lib/ledger/formatters";
 import { calculateDebtPayoff } from "@/lib/ledger/debtPayoff";
 import { playSound } from "@/lib/sound";
 import { DebtAmortizationChart } from "./charts/DebtAmortizationChart";
+import { CreditCard, DollarSign, CheckCircle, Plus, Minus } from "lucide-react";
 
 const DEBT_THEMES: Record<DebtType, { icon: string; label: string }> = {
   CREDIT_CARD: { icon: "💳", label: "CREDIT CARD" },
@@ -32,6 +33,316 @@ interface DebtPayoffTrackerProps {
   onDeleteDebt: (id: string) => void;
 }
 
+/** Small inline payment panel shown when a card's payment row is expanded */
+const PaymentPanel: React.FC<{
+  debt: FinancialDebtRow;
+  onUpdated: (updated: FinancialDebtRow) => void;
+  onClose: () => void;
+}> = ({ debt, onUpdated, onClose }) => {
+  const [amount, setAmount] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [flash, setFlash] = useState<string | null>(null);
+
+  const applyPayment = async (paymentAmount: number, label: string) => {
+    if (paymentAmount <= 0 || saving) return;
+    setSaving(true);
+    try {
+      const newBalance = Math.max(0, debt.balance - paymentAmount);
+      const res = await fetch(`/api/financial/debts/${debt.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          balance: newBalance,
+          isPaidOff: newBalance <= 0,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const updated = await res.json();
+      playSound.fileIt();
+      setFlash(
+        `${label} of ${formatCurrency(paymentAmount, 2)} applied! New balance: ${formatCurrency(newBalance, 2)}`
+      );
+      setTimeout(() => {
+        onUpdated(updated);
+        onClose();
+      }, 1800);
+    } catch {
+      setFlash("Payment failed — please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (flash) {
+    return (
+      <div
+        style={{
+          background: flash.includes("failed") ? "#FEE2E2" : "#DCFCE7",
+          border: `1.5px solid ${flash.includes("failed") ? "#DC2626" : "#16A34A"}`,
+          color: flash.includes("failed") ? "#991B1B" : "#15803D",
+          padding: "10px 14px",
+          borderRadius: "3px",
+          fontFamily: "var(--mono, monospace)",
+          fontSize: "11px",
+          fontWeight: 800,
+          textAlign: "center",
+        }}
+      >
+        {flash.includes("failed") ? "⚠ " : "✓ "}
+        {flash}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        background: "#F0FDF4",
+        border: "2px solid #16A34A",
+        boxShadow: "2px 2px 0 #16A34A",
+        borderRadius: "3px",
+        padding: "14px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "10px",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "10px",
+            fontWeight: 900,
+            textTransform: "uppercase",
+            color: "#166534",
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+          }}
+        >
+          <DollarSign size={11} aria-hidden="true" />
+          RECORD A PAYMENT
+        </div>
+        <button
+          type="button"
+          className="btn-card-action"
+          onClick={onClose}
+          style={{ fontSize: "11px", padding: "2px 7px" }}
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Quick-pay rows */}
+      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+        {/* Pay Minimum button */}
+        <button
+          type="button"
+          onClick={() => applyPayment(debt.minPayment, "Minimum payment")}
+          disabled={saving || debt.isPaidOff}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "10.5px",
+            fontWeight: 900,
+            padding: "5px 12px",
+            background: "#0A0A0A",
+            color: "#FFE600",
+            border: "2px solid #0A0A0A",
+            boxShadow: "2px 2px 0 #0A0A0A",
+            borderRadius: "2px",
+            cursor: saving ? "not-allowed" : "pointer",
+            opacity: saving ? 0.6 : 1,
+          }}
+        >
+          <CheckCircle size={11} aria-hidden="true" />
+          PAY MINIMUM ({formatCurrency(debt.minPayment, 0)})
+        </button>
+
+        {/* Pay extra = minimum + common extras */}
+        {debt.targetPayment && debt.targetPayment > debt.minPayment && (
+          <button
+            type="button"
+            onClick={() => applyPayment(debt.targetPayment!, "Target payment")}
+            disabled={saving || debt.isPaidOff}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "10.5px",
+              fontWeight: 900,
+              padding: "5px 12px",
+              background: "#166534",
+              color: "#FFFFFF",
+              border: "2px solid #166534",
+              boxShadow: "2px 2px 0 #166534",
+              borderRadius: "2px",
+              cursor: saving ? "not-allowed" : "pointer",
+              opacity: saving ? 0.6 : 1,
+            }}
+          >
+            <TrendingUpIcon size={11} />
+            PAY TARGET ({formatCurrency(debt.targetPayment, 0)})
+          </button>
+        )}
+
+        {/* Pay full balance */}
+        <button
+          type="button"
+          onClick={() => applyPayment(debt.balance, "Full payoff")}
+          disabled={saving || debt.isPaidOff}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "10.5px",
+            fontWeight: 900,
+            padding: "5px 12px",
+            background: "#7C3AED",
+            color: "#FFFFFF",
+            border: "2px solid #7C3AED",
+            boxShadow: "2px 2px 0 #7C3AED",
+            borderRadius: "2px",
+            cursor: saving ? "not-allowed" : "pointer",
+            opacity: saving ? 0.6 : 1,
+          }}
+        >
+          🏆 PAY IN FULL ({formatCurrency(debt.balance, 0)})
+        </button>
+      </div>
+
+      {/* Separator */}
+      <div
+        style={{
+          fontFamily: "var(--mono, monospace)",
+          fontSize: "9.5px",
+          fontWeight: 800,
+          color: "#888888",
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+        }}
+      >
+        — OR ENTER CUSTOM AMOUNT —
+      </div>
+
+      {/* Custom amount input + confirm */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <span
+          style={{
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "14px",
+            fontWeight: 900,
+            color: "#166534",
+          }}
+        >
+          $
+        </span>
+        <input
+          type="number"
+          min="0.01"
+          step="0.01"
+          placeholder={`e.g. ${(debt.minPayment * 1.5).toFixed(0)}`}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          style={{
+            flex: 1,
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "15px",
+            fontWeight: 900,
+            color: "#166534",
+            background: "#FFFFFF",
+            padding: "6px 10px",
+            border: "2px solid #16A34A",
+            boxShadow: "2px 2px 0 #16A34A",
+            borderRadius: "2px",
+            outline: "none",
+          }}
+        />
+        <button
+          type="button"
+          disabled={saving || !amount || parseFloat(amount) <= 0}
+          onClick={() => {
+            const amt = parseFloat(amount);
+            if (!isNaN(amt) && amt > 0) {
+              applyPayment(amt, "Extra payment");
+            }
+          }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "10.5px",
+            fontWeight: 900,
+            padding: "6px 14px",
+            background: "#16A34A",
+            color: "#FFFFFF",
+            border: "2px solid #16A34A",
+            boxShadow: "2px 2px 0 #16A34A",
+            borderRadius: "2px",
+            cursor: !amount || parseFloat(amount) <= 0 ? "not-allowed" : "pointer",
+            opacity: !amount || parseFloat(amount) <= 0 ? 0.5 : 1,
+          }}
+        >
+          <Minus size={11} aria-hidden="true" />
+          APPLY
+        </button>
+      </div>
+
+      {/* Remaining balance preview */}
+      {amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0 && (
+        <div
+          style={{
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "10.5px",
+            fontWeight: 800,
+            color: "#166534",
+            background: "#DCFCE7",
+            border: "1px solid #16A34A",
+            borderRadius: "2px",
+            padding: "5px 10px",
+          }}
+        >
+          New balance after payment:{" "}
+          <b>{formatCurrency(Math.max(0, debt.balance - parseFloat(amount)), 2)}</b>
+          {parseFloat(amount) >= debt.balance && (
+            <span style={{ marginLeft: "8px", color: "#7C3AED" }}>🏆 FULLY PAID OFF!</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Lightweight icon shim since lucide's TrendingUp is already imported elsewhere
+const TrendingUpIcon = ({ size }: { size: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+    <polyline points="16 7 22 7 22 13" />
+  </svg>
+);
+
 export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
   debts,
   onAddDebt,
@@ -42,6 +353,8 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
   const [strategy, setStrategy] = useState<DebtPayoffStrategy>("AVALANCHE");
   const [extraPayment, setExtraPayment] = useState<number>(150);
   const [lumpSum, setLumpSum] = useState<number>(0);
+  // Track which card has its payment panel open
+  const [activePaymentCardId, setActivePaymentCardId] = useState<string | null>(null);
 
   // Dynamic slider upper bounds that scale automatically if the user types any large number
   const extraPaymentSliderMax = Math.max(5000, Math.ceil(((extraPayment || 0) * 1.5) / 500) * 500);
@@ -558,6 +871,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
           const original = d.originalPrincipal || d.balance;
           const paidPct = original > 0 ? Math.min(100, Math.round(((original - d.balance) / original) * 100)) : 0;
           const isHighApr = d.interestRate >= 18;
+          const isPaymentOpen = activePaymentCardId === d.id;
 
           return (
             <div
@@ -615,10 +929,50 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                     Institution: <b>{d.lender}</b> (Due: Day {d.dueDay || 1})
                   </div>
                 )}
+
+                {/* ── INLINE PAYMENT PANEL ── */}
+                {isPaymentOpen && !d.isPaidOff && (
+                  <PaymentPanel
+                    debt={d}
+                    onUpdated={(updated) => {
+                      onUpdateDebt(updated);
+                    }}
+                    onClose={() => setActivePaymentCardId(null)}
+                  />
+                )}
               </div>
 
               {/* Actions Footer */}
               <div className="sub-card-footer">
+                {/* Make Payment CTA — primary action */}
+                {!d.isPaidOff && (
+                  <button
+                    type="button"
+                    className="btn-card-action"
+                    onClick={() => {
+                      playSound.click();
+                      setActivePaymentCardId(isPaymentOpen ? null : d.id);
+                    }}
+                    style={{
+                      background: isPaymentOpen ? "#0A0A0A" : "#DCFCE7",
+                      color: isPaymentOpen ? "#FFE600" : "#166534",
+                      borderColor: isPaymentOpen ? "#0A0A0A" : "#16A34A",
+                      fontWeight: 900,
+                    }}
+                  >
+                    {isPaymentOpen ? "✕ CLOSE" : (
+                      <>
+                        <Plus
+                          size={10}
+                          style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }}
+                          aria-hidden="true"
+                        />
+                        MAKE PAYMENT
+                      </>
+                    )}
+                  </button>
+                )}
+
                 <button
                   type="button"
                   className="btn-card-action"
