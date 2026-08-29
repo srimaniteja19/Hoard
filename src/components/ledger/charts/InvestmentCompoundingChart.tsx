@@ -9,6 +9,7 @@ interface InvestmentCompoundingChartProps {
   monthlyInvestment: number;
   initialReturnRate: number;
   initialPrincipal?: number;
+  currency?: string;
 }
 
 const MILESTONES = [1, 3, 5, 10, 15, 20, 25, 30];
@@ -17,6 +18,7 @@ export const InvestmentCompoundingChart: React.FC<InvestmentCompoundingChartProp
   monthlyInvestment,
   initialReturnRate,
   initialPrincipal = 0,
+  currency = "INR",
 }) => {
   const [returnRate, setReturnRate] = useState<number>(
     initialReturnRate > 0 ? initialReturnRate : 10.0
@@ -145,7 +147,7 @@ export const InvestmentCompoundingChart: React.FC<InvestmentCompoundingChartProp
             {activePoint.years}-YEAR PROJECTED WEALTH
           </div>
           <div style={{ fontFamily: "var(--display)", fontSize: "26px", fontWeight: 900, color: "#166534" }}>
-            {formatCurrency(activePoint.projectedWealth, 0)}
+            {formatCurrency(activePoint.projectedWealth, 0, currency)}
           </div>
         </div>
 
@@ -162,7 +164,7 @@ export const InvestmentCompoundingChart: React.FC<InvestmentCompoundingChartProp
             TOTAL CAPITAL INVESTED
           </div>
           <div style={{ fontFamily: "var(--display)", fontSize: "24px", fontWeight: 900, color: "var(--ink, #0A0A0A)" }}>
-            {formatCurrency(activePoint.totalInvested, 0)}
+            {formatCurrency(activePoint.totalInvested, 0, currency)}
           </div>
         </div>
 
@@ -179,7 +181,7 @@ export const InvestmentCompoundingChart: React.FC<InvestmentCompoundingChartProp
             COMPOUND GAINS / MULTIPLIER
           </div>
           <div style={{ fontFamily: "var(--display)", fontSize: "24px", fontWeight: 900, color: "#A16207" }}>
-            +{formatCurrency(activePoint.interestEarned, 0)}{" "}
+            +{formatCurrency(activePoint.interestEarned, 0, currency)}{" "}
             <span style={{ fontSize: "12px", fontFamily: "var(--mono)", fontWeight: 800, color: "#854D0E" }}>
               ({(activePoint.projectedWealth / Math.max(1, activePoint.totalInvested)).toFixed(1)}x)
             </span>
@@ -237,7 +239,7 @@ export const InvestmentCompoundingChart: React.FC<InvestmentCompoundingChartProp
                       zIndex: 2,
                     }}
                   >
-                    {formatCompactCurrency(item.projectedWealth)}
+                    {formatCompactCurrency(item.projectedWealth, currency)}
                   </div>
                 )}
 
@@ -267,7 +269,7 @@ export const InvestmentCompoundingChart: React.FC<InvestmentCompoundingChartProp
                       background: isSelected ? "#0A0A0A" : "#334155",
                       borderTop: "1px solid rgba(255, 255, 255, 0.4)",
                     }}
-                    title={`Capital: ${formatCurrency(item.totalInvested, 0)}`}
+                    title={`Capital: ${formatCurrency(item.totalInvested, 0, currency)}`}
                   />
                 </div>
               </div>
@@ -331,7 +333,7 @@ export const InvestmentCompoundingChart: React.FC<InvestmentCompoundingChartProp
 
         <div>
           Investing <b>{formatCurrency(monthlyInvestment, 0)}/mo</b> at {returnRate}% CAGR turns into{" "}
-          <b style={{ color: "#166534" }}>{formatCurrency(projectionData[3]?.projectedWealth || 0, 0)}</b> in 10 years.
+          <b style={{ color: "#166534" }}>{formatCurrency(projectionData[3]?.projectedWealth || 0, 0, currency)}</b> in 10 years.
         </div>
       </div>
     </div>

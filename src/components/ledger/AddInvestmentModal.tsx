@@ -10,7 +10,19 @@ import {
   INVESTMENT_THEMES,
 } from "@/lib/ledger/types";
 import { playSound } from "@/lib/sound";
+import { getCurrencySymbol } from "@/lib/ledger/formatters";
 import { Sparkles, Coins, TrendingUp } from "lucide-react";
+
+const CURRENCY_OPTIONS = [
+  { code: "INR", label: "₹ Indian Rupee (INR)" },
+  { code: "USD", label: "$ US Dollar (USD)" },
+  { code: "EUR", label: "€ Euro (EUR)" },
+  { code: "GBP", label: "£ British Pound (GBP)" },
+  { code: "JPY", label: "¥ Japanese Yen (JPY)" },
+  { code: "CAD", label: "CA$ Canadian Dollar (CAD)" },
+  { code: "AUD", label: "A$ Australian Dollar (AUD)" },
+  { code: "SGD", label: "S$ Singapore Dollar (SGD)" },
+];
 
 interface AddInvestmentModalProps {
   isOpen: boolean;
@@ -21,50 +33,76 @@ interface AddInvestmentModalProps {
 }
 
 const PRESETS = [
+  // ── Indian Market Presets ────────────────────────────
   {
-    name: "Sovereign Gold / Digital Gold SIP",
+    name: "Digital Gold SIP (CRED / PhonePe)",
     assetType: "GOLD_PRECIOUS_METALS" as InvestmentAssetType,
-    amount: 200,
+    amount: 1000,
+    currency: "INR",
     cadence: "MONTHLY" as InvestmentCadence,
-    expectedReturnRate: 8.0,
-    platform: "Gold Vault",
+    expectedReturnRate: 12.0,
+    platform: "CRED",
   },
+  {
+    name: "Nifty 50 Index Fund SIP",
+    assetType: "STOCKS_ETF" as InvestmentAssetType,
+    amount: 5000,
+    currency: "INR",
+    cadence: "MONTHLY" as InvestmentCadence,
+    expectedReturnRate: 13.0,
+    platform: "Groww / Zerodha",
+  },
+  {
+    name: "PPFAS / Mirae ELSS Mutual Fund SIP",
+    assetType: "MUTUAL_FUND" as InvestmentAssetType,
+    amount: 3000,
+    currency: "INR",
+    cadence: "MONTHLY" as InvestmentCadence,
+    expectedReturnRate: 14.0,
+    platform: "Coin / MFCentral",
+  },
+  {
+    name: "EPF / PPF Retirement SIP",
+    assetType: "RETIREMENT" as InvestmentAssetType,
+    amount: 2000,
+    currency: "INR",
+    cadence: "MONTHLY" as InvestmentCadence,
+    expectedReturnRate: 8.1,
+    platform: "EPFO / India Post",
+  },
+  // ── US Market Presets ────────────────────────────────
   {
     name: "Vanguard S&P 500 Index (VOO)",
     assetType: "STOCKS_ETF" as InvestmentAssetType,
     amount: 500,
+    currency: "USD",
     cadence: "MONTHLY" as InvestmentCadence,
     expectedReturnRate: 10.0,
     platform: "Vanguard",
   },
   {
-    name: "Total Stock Market Mutual Fund",
-    assetType: "MUTUAL_FUND" as InvestmentAssetType,
-    amount: 300,
-    cadence: "MONTHLY" as InvestmentCadence,
-    expectedReturnRate: 11.0,
-    platform: "Fidelity",
-  },
-  {
-    name: "Bitcoin / Ethereum Weekly DCA",
-    assetType: "CRYPTO" as InvestmentAssetType,
-    amount: 100,
-    cadence: "WEEKLY" as InvestmentCadence,
-    expectedReturnRate: 15.0,
-    platform: "Cold Storage / Exchange",
-  },
-  {
     name: "Roth IRA Index Allocation",
     assetType: "RETIREMENT" as InvestmentAssetType,
     amount: 400,
+    currency: "USD",
     cadence: "MONTHLY" as InvestmentCadence,
     expectedReturnRate: 8.5,
     platform: "Schwab",
   },
   {
+    name: "Bitcoin / Ethereum Weekly DCA",
+    assetType: "CRYPTO" as InvestmentAssetType,
+    amount: 100,
+    currency: "USD",
+    cadence: "WEEKLY" as InvestmentCadence,
+    expectedReturnRate: 15.0,
+    platform: "Coinbase",
+  },
+  {
     name: "Real Estate REIT Dividend Fund",
     assetType: "REAL_ESTATE_REIT" as InvestmentAssetType,
     amount: 250,
+    currency: "USD",
     cadence: "MONTHLY" as InvestmentCadence,
     expectedReturnRate: 7.5,
     platform: "Robinhood",
@@ -81,7 +119,7 @@ export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({
   const [name, setName] = useState("");
   const [assetType, setAssetType] = useState<InvestmentAssetType>("STOCKS_ETF");
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("INR");
   const [cadence, setCadence] = useState<InvestmentCadence>("MONTHLY");
   const [investmentDay, setInvestmentDay] = useState(1);
   const [platform, setPlatform] = useState("");
@@ -97,7 +135,7 @@ export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({
       setName(investmentToEdit.name);
       setAssetType((investmentToEdit.assetType as InvestmentAssetType) || "STOCKS_ETF");
       setAmount(investmentToEdit.amount.toString());
-      setCurrency(investmentToEdit.currency || "USD");
+      setCurrency(investmentToEdit.currency || "INR");
       setCadence((investmentToEdit.cadence as InvestmentCadence) || "MONTHLY");
       setInvestmentDay(investmentToEdit.investmentDay || 1);
       setPlatform(investmentToEdit.platform || "");
@@ -117,7 +155,7 @@ export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({
       setName("");
       setAssetType("STOCKS_ETF");
       setAmount("");
-      setCurrency("USD");
+      setCurrency("INR");
       setCadence("MONTHLY");
       setInvestmentDay(1);
       setPlatform("");
@@ -197,10 +235,13 @@ export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({
     setName(p.name);
     setAssetType(p.assetType);
     setAmount(p.amount.toString());
+    setCurrency(p.currency || "INR");
     setCadence(p.cadence);
     setExpectedReturnRate(p.expectedReturnRate.toString());
     setPlatform(p.platform);
   };
+
+  const currSym = getCurrencySymbol(currency);
 
   return (
     <div className="ledger-modal-overlay" onClick={onClose}>
@@ -253,7 +294,7 @@ export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({
                     style={{ fontSize: "9.5px", padding: "4px 8px" }}
                     onClick={() => handleApplyPreset(p)}
                   >
-                    <span>{theme.icon}</span> {theme.shortLabel} (${p.amount})
+                    <span>{theme.icon}</span> {theme.shortLabel} ({getCurrencySymbol(p.currency)}{p.amount.toLocaleString()})
                   </button>
                 );
               })}
@@ -327,24 +368,40 @@ export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({
             </div>
           </div>
 
-          {/* Amount & Execution Day */}
+          {/* Currency & Amount */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="ledger-field">
-              <label htmlFor="inv-amount">RECURRING AMOUNT ($) *</label>
+              <label htmlFor="inv-currency">CURRENCY</label>
+              <select
+                id="inv-currency"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+              >
+                {CURRENCY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="ledger-field">
+              <label htmlFor="inv-amount">RECURRING AMOUNT ({currSym}) *</label>
               <input
                 id="inv-amount"
                 type="number"
                 step="any"
                 min="0.01"
                 required
-                placeholder="e.g. 500.00"
+                placeholder={currency === "INR" ? "e.g. 5000" : "e.g. 500.00"}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
             </div>
+          </div>
 
+          {/* Investment Day */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="ledger-field">
-              <label htmlFor="inv-day">INVESTMENT DAY (DAY OF MO)</label>
+              <label htmlFor="inv-day">INVESTMENT DAY (DAY OF MONTH)</label>
               <input
                 id="inv-day"
                 type="number"
@@ -354,6 +411,7 @@ export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({
                 onChange={(e) => setInvestmentDay(parseInt(e.target.value, 10) || 1)}
               />
             </div>
+            <div /> {/* spacer */}
           </div>
 
           {/* Platform & Expected Return Rate CAGR */}
@@ -387,13 +445,13 @@ export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({
           {/* Accumulated Valuation (Optional) & Status */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="ledger-field">
-              <label htmlFor="inv-valuation">CURRENT ACCUMULATED VALUE ($)</label>
+              <label htmlFor="inv-valuation">CURRENT ACCUMULATED VALUE ({currSym})</label>
               <input
                 id="inv-valuation"
                 type="number"
                 step="any"
                 min="0"
-                placeholder="e.g. 12500 (Current portfolio holding)"
+                placeholder={currency === "INR" ? "e.g. 50000 (Current holding)" : "e.g. 12500 (Current holding)"}
                 value={currentValuation}
                 onChange={(e) => setCurrentValuation(e.target.value)}
               />

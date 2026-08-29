@@ -12,7 +12,7 @@ import {
   normalizeInvestmentCadenceToYearly,
   calculateInvestmentMetrics,
 } from "@/lib/ledger/investmentMetrics";
-import { formatCurrency, formatSignedCurrency } from "@/lib/ledger/formatters";
+import { formatCurrency, formatSignedCurrency, getCurrencySymbol } from "@/lib/ledger/formatters";
 import { playSound } from "@/lib/sound";
 import {
   TrendingUp,
@@ -46,6 +46,14 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
 
   const metrics = useMemo(() => {
     return calculateInvestmentMetrics(investments);
+  }, [investments]);
+
+  // Determine the dominant currency for the banner total display
+  const dominantCurrency = useMemo(() => {
+    if (investments.length === 0) return "INR";
+    const counts: Record<string, number> = {};
+    investments.forEach((inv) => { counts[inv.currency] = (counts[inv.currency] || 0) + 1; });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "INR";
   }, [investments]);
 
   const filteredInvestments = useMemo(() => {
@@ -137,8 +145,8 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
               }}
             >
               {viewCadence === "MONTHLY"
-                ? formatCurrency(metrics.monthlyTotal, 2)
-                : formatCurrency(metrics.yearlyTotal, 0)}
+                ? formatCurrency(metrics.monthlyTotal, 2, dominantCurrency)
+                : formatCurrency(metrics.yearlyTotal, 0, dominantCurrency)}
               <span
                 style={{
                   fontSize: "13.5px",
@@ -210,6 +218,7 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
         <InvestmentCompoundingChart
           monthlyInvestment={metrics.monthlyTotal}
           initialReturnRate={metrics.weightedReturnRatePct}
+          currency={dominantCurrency}
         />
       )}
 
@@ -300,8 +309,8 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
               lineHeight: 1.5,
             }}
           >
-            Automate monthly investments into Physical Gold, S&P 500 ETFs, or Mutual Funds (SIPs) to
-            build systematic wealth through dollar-cost averaging.
+            Automate monthly investments into Physical Gold (SGB/Digital Gold), Nifty 50 SIPs,
+            S&amp;P 500 ETFs, or Mutual Funds to build systematic wealth through cost averaging.
           </p>
           <button
             type="button"
@@ -369,7 +378,7 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
                   <div className="sub-card-title-row">
                     <h3 className="sub-card-title">{inv.name}</h3>
                     <div className="sub-card-price-box">
-                      <span className="sub-card-price">{formatCurrency(inv.amount, 2)}</span>
+                      <span className="sub-card-price">{formatCurrency(inv.amount, 2, inv.currency)}</span>
                       <span className="sub-card-price-unit">/ {inv.cadence.toLowerCase()}</span>
                     </div>
                   </div>
@@ -408,7 +417,7 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
                       }}
                     >
                       <span>Accumulated Valuation:</span>
-                      <span>{formatCurrency(inv.currentValuation, 2)}</span>
+                      <span>{formatCurrency(inv.currentValuation, 2, inv.currency)}</span>
                     </div>
                   )}
 
