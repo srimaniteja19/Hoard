@@ -267,7 +267,7 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
         </div>
       ) : (
         <div className="sub-grid">
-          {filteredSubs.map((sub) => {
+          {filteredSubs.map((sub, index) => {
             const cat = (sub.category as SubscriptionCategory) || "OTHER";
             const theme = CATEGORY_THEMES[cat] || CATEGORY_THEMES.OTHER;
 
@@ -284,27 +284,29 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
             const isUrgent = daysUntil <= 3 && sub.status !== "PAUSED";
             const isPaused = sub.status === "PAUSED";
 
+            const cardStyle = {
+              "--cat-accent": theme.accent,
+              "--cat-bg": isPaused ? "#F9FAFB" : theme.cardBg,
+              "--cat-shadow": isPaused ? "rgba(0,0,0,0.15)" : theme.shadowColor,
+              "--cat-price": isPaused ? "#6B7280" : theme.priceColor,
+              "--cat-tag-bg": isPaused ? "#6B7280" : theme.tagBg,
+              "--cat-tag-color": theme.tagColor,
+              "--cat-header-bg": isPaused ? "#F3F4F6" : theme.headerBg,
+              "--cat-header-text": isPaused ? "#6B7280" : theme.headerText,
+              "--sub-index": index,
+              opacity: isPaused ? 0.7 : 1,
+            } as React.CSSProperties;
+
             return (
               <div
                 key={sub.id}
                 className="sub-card-editorial"
-                style={{ opacity: isPaused ? 0.65 : 1 }}
+                style={cardStyle}
               >
                 {/* ── Top Header Bar ── */}
-                <div
-                  className="sub-card-header"
-                  style={{
-                    background: isPaused ? "#F3F4F6" : "rgba(0, 0, 0, 0.03)",
-                  }}
-                >
-                  <span
-                    className="sub-card-category"
-                    style={{
-                      background: "var(--ink, #0A0A0A)",
-                      color: "#FFFFFF",
-                    }}
-                  >
-                    <span>{theme.icon}</span>
+                <div className="sub-card-header">
+                  <span className="sub-card-category">
+                    <span className="sub-card-category-icon">{theme.icon}</span>
                     <span>{theme.label}</span>
                   </span>
 
@@ -338,7 +340,7 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
                 <div className="sub-card-body">
                   <div className="sub-card-title-row">
                     <h3 className="sub-card-title">{sub.name}</h3>
-                    <div>
+                    <div className="sub-card-price-box">
                       <span className="sub-card-price">${displayPrice.toFixed(2)}</span>
                       <span className="sub-card-price-unit">{displayUnit}</span>
                     </div>
