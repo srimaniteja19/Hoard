@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FinancialDebtRow,
   DebtType,
@@ -12,9 +12,17 @@ interface AddDebtModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: (debt: FinancialDebtRow) => void;
+  onUpdated?: (debt: FinancialDebtRow) => void;
+  debtToEdit?: FinancialDebtRow | null;
 }
 
-export const AddDebtModal: React.FC<AddDebtModalProps> = ({ isOpen, onClose, onCreated }) => {
+export const AddDebtModal: React.FC<AddDebtModalProps> = ({
+  isOpen,
+  onClose,
+  onCreated,
+  onUpdated,
+  debtToEdit,
+}) => {
   const [name, setName] = useState("");
   const [debtType, setDebtType] = useState<DebtType>("CREDIT_CARD");
   const [balance, setBalance] = useState("");
@@ -27,20 +35,34 @@ export const AddDebtModal: React.FC<AddDebtModalProps> = ({ isOpen, onClose, onC
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  const isEditing = !!debtToEdit;
+
+  useEffect(() => {
     if (isOpen) {
-      setName("");
-      setDebtType("CREDIT_CARD");
-      setBalance("");
-      setOriginalPrincipal("");
-      setInterestRate("");
-      setMinPayment("");
-      setTargetPayment("");
-      setDueDay("1");
-      setLender("");
+      if (debtToEdit) {
+        setName(debtToEdit.name || "");
+        setDebtType((debtToEdit.debtType as DebtType) || "CREDIT_CARD");
+        setBalance(debtToEdit.balance ? debtToEdit.balance.toString() : "");
+        setOriginalPrincipal(debtToEdit.originalPrincipal ? debtToEdit.originalPrincipal.toString() : "");
+        setInterestRate(debtToEdit.interestRate ? debtToEdit.interestRate.toString() : "");
+        setMinPayment(debtToEdit.minPayment ? debtToEdit.minPayment.toString() : "");
+        setTargetPayment(debtToEdit.targetPayment ? debtToEdit.targetPayment.toString() : "");
+        setDueDay(debtToEdit.dueDay ? debtToEdit.dueDay.toString() : "1");
+        setLender(debtToEdit.lender || "");
+      } else {
+        setName("");
+        setDebtType("CREDIT_CARD");
+        setBalance("");
+        setOriginalPrincipal("");
+        setInterestRate("");
+        setMinPayment("");
+        setTargetPayment("");
+        setDueDay("1");
+        setLender("");
+      }
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, debtToEdit]);
 
   if (!isOpen) return null;
 
@@ -57,8 +79,13 @@ export const AddDebtModal: React.FC<AddDebtModalProps> = ({ isOpen, onClose, onC
       playSound.click();
 
       const bal = parseFloat(balance);
-      const res = await fetch("/api/financial/debts", {
-        method: "POST",
+      const url = isEditing
+        ? `/api/financial/debts/${debtToEdit.id}`
+        : "/api/financial/debts";
+      const method = isEditing ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
@@ -75,15 +102,20 @@ export const AddDebtModal: React.FC<AddDebtModalProps> = ({ isOpen, onClose, onC
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to add debt");
+        throw new Error(data.error || "Failed to save debt");
       }
 
-      const created: FinancialDebtRow = await res.json();
+      const saved: FinancialDebtRow = await res.json();
       playSound.fileIt();
-      onCreated(created);
+
+      if (isEditing && onUpdated) {
+        onUpdated(saved);
+      } else {
+        onCreated(saved);
+      }
       onClose();
     } catch (err: any) {
-      setError(err.message || "Failed to add debt");
+      setError(err.message || "Failed to save debt");
     } finally {
       setLoading(false);
     }
@@ -93,7 +125,7 @@ export const AddDebtModal: React.FC<AddDebtModalProps> = ({ isOpen, onClose, onC
     <div className="ledger-modal-overlay" onClick={onClose}>
       <div className="ledger-modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="ledger-modal-header">
-          <h2>+ REGISTER DEBT / LIABILITY</h2>
+          <h2>{isEditing ? "✎ EDIT DEBT / LIABILITY" : "+ REGISTER DEBT / LIABILITY"}</h2>
           <button type="button" className="btn-ledger" onClick={onClose} style={{ padding: "4px 8px" }}>
             ✕
           </button>
@@ -203,7 +235,7 @@ export const AddDebtModal: React.FC<AddDebtModalProps> = ({ isOpen, onClose, onC
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px" }}>
             <div className="ledger-field">
               <label>Target / Current Actual Payment ($)</label>
               <input
@@ -232,7 +264,7 @@ export const AddDebtModal: React.FC<AddDebtModalProps> = ({ isOpen, onClose, onC
               CANCEL
             </button>
             <button type="submit" disabled={loading} className="btn-ledger btn-ledger-primary">
-              {loading ? "SAVING..." : "REGISTER DEBT ACCOUNT"}
+              {loading ? "SAVING..." : isEditing ? "UPDATE DEBT ACCOUNT" : "REGISTER DEBT ACCOUNT"}
             </button>
           </div>
         </form>

@@ -19,6 +19,7 @@ import { SubscriptionBreakdownChart } from "./charts/SubscriptionBreakdownChart"
 interface SubscriptionTrackerProps {
   subscriptions: FinancialSubscriptionRow[];
   onAddSubscription: () => void;
+  onEditSubscription: (sub: FinancialSubscriptionRow) => void;
   onUpdateSubscription: (sub: FinancialSubscriptionRow) => void;
   onDeleteSubscription: (id: string) => void;
 }
@@ -26,6 +27,7 @@ interface SubscriptionTrackerProps {
 export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
   subscriptions,
   onAddSubscription,
+  onEditSubscription,
   onUpdateSubscription,
   onDeleteSubscription,
 }) => {
@@ -379,6 +381,16 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
                       PORTAL ↗
                     </a>
                   )}
+                  <button
+                    type="button"
+                    className="btn-card-action"
+                    onClick={() => {
+                      playSound.click();
+                      onEditSubscription(sub);
+                    }}
+                  >
+                    ✎ EDIT
+                  </button>
                   <button
                     type="button"
                     className="btn-card-action"

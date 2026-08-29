@@ -14,6 +14,7 @@ interface CashFlowPlannerProps {
   incomes: FinancialIncomeRow[];
   cashFlow: CashFlowSummary;
   onAddIncome: () => void;
+  onEditIncome: (inc: FinancialIncomeRow) => void;
   onUpdateIncome: (inc: FinancialIncomeRow) => void;
   onDeleteIncome: (id: string) => void;
 }
@@ -22,6 +23,7 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
   incomes,
   cashFlow,
   onAddIncome,
+  onEditIncome,
   onUpdateIncome,
   onDeleteIncome,
 }) => {
@@ -324,6 +326,16 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
 
                 {/* Actions Footer */}
                 <div className="sub-card-footer">
+                  <button
+                    type="button"
+                    className="btn-card-action"
+                    onClick={() => {
+                      playSound.click();
+                      onEditIncome(inc);
+                    }}
+                  >
+                    ✎ EDIT
+                  </button>
                   <button
                     type="button"
                     className="btn-card-action"

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   FinancialIncomeRow,
   IncomeCadence,
@@ -18,9 +18,17 @@ interface AddIncomeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: (income: FinancialIncomeRow) => void;
+  onUpdated?: (income: FinancialIncomeRow) => void;
+  incomeToEdit?: FinancialIncomeRow | null;
 }
 
-export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onCreated }) => {
+export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({
+  isOpen,
+  onClose,
+  onCreated,
+  onUpdated,
+  incomeToEdit,
+}) => {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [cadence, setCadence] = useState<IncomeCadence>("MONTHLY");
@@ -32,19 +40,32 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  const isEditing = !!incomeToEdit;
+
+  useEffect(() => {
     if (isOpen) {
-      setName("");
-      setAmount("");
-      setCadence("MONTHLY");
-      setCategory("SALARY");
-      setIsPreTax(false);
-      setCountry("US");
-      setRegion("CA");
-      setCustomTaxRate("");
+      if (incomeToEdit) {
+        setName(incomeToEdit.name || "");
+        setAmount(incomeToEdit.amount ? incomeToEdit.amount.toString() : "");
+        setCadence((incomeToEdit.cadence as IncomeCadence) || "MONTHLY");
+        setCategory(incomeToEdit.category || "SALARY");
+        setIsPreTax(!!incomeToEdit.isPreTax);
+        setCountry(incomeToEdit.country || "US");
+        setRegion(incomeToEdit.region || "CA");
+        setCustomTaxRate(incomeToEdit.customTaxRate ? incomeToEdit.customTaxRate.toString() : "");
+      } else {
+        setName("");
+        setAmount("");
+        setCadence("MONTHLY");
+        setCategory("SALARY");
+        setIsPreTax(false);
+        setCountry("US");
+        setRegion("CA");
+        setCustomTaxRate("");
+      }
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, incomeToEdit]);
 
   const taxPreview = useMemo(() => {
     const numAmount = parseFloat(amount) || 0;
@@ -74,8 +95,13 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
       setError(null);
       playSound.click();
 
-      const res = await fetch("/api/financial/incomes", {
-        method: "POST",
+      const url = isEditing
+        ? `/api/financial/incomes/${incomeToEdit.id}`
+        : "/api/financial/incomes";
+      const method = isEditing ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
@@ -92,15 +118,20 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to add income stream");
+        throw new Error(data.error || "Failed to save income stream");
       }
 
-      const created: FinancialIncomeRow = await res.json();
+      const saved: FinancialIncomeRow = await res.json();
       playSound.fileIt();
-      onCreated(created);
+
+      if (isEditing && onUpdated) {
+        onUpdated(saved);
+      } else {
+        onCreated(saved);
+      }
       onClose();
     } catch (err: any) {
-      setError(err.message || "Failed to add income stream");
+      setError(err.message || "Failed to save income stream");
     } finally {
       setLoading(false);
     }
@@ -110,7 +141,7 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
     <div className="ledger-modal-overlay" onClick={onClose}>
       <div className="ledger-modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="ledger-modal-header">
-          <h2>+ ADD INFLOW STREAM</h2>
+          <h2>{isEditing ? "✎ EDIT INFLOW STREAM" : "+ ADD INFLOW STREAM"}</h2>
           <button type="button" className="btn-ledger" onClick={onClose} style={{ padding: "3px 8px", fontSize: "10px" }}>
             ✕
           </button>
@@ -309,7 +340,7 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose,
               CANCEL
             </button>
             <button type="submit" disabled={loading} className="btn-ledger btn-ledger-primary">
-              {loading ? "SAVING..." : "REGISTER INFLOW"}
+              {loading ? "SAVING..." : isEditing ? "UPDATE INFLOW" : "REGISTER INFLOW"}
             </button>
           </div>
         </form>

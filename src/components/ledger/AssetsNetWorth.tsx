@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import {
   FinancialAssetRow,
   NetWorthSummary,
@@ -10,20 +10,24 @@ import { playSound } from "@/lib/sound";
 
 import { NetWorthCompositionChart } from "./charts/NetWorthCompositionChart";
 
-const ASSET_THEMES: Record<AssetCategory, { icon: string; label: string }> = {
-  CASH_CHECKING: { icon: "💳", label: "CASH / CHECKING" },
-  HYSA: { icon: "📈", label: "HIGH YIELD SAVINGS" },
-  INVESTMENT: { icon: "📊", label: "BROKERAGE / STOCKS" },
-  RETIREMENT: { icon: "🏛️", label: "401(K) / RETIREMENT" },
-  REAL_ESTATE: { icon: "🏡", label: "REAL ESTATE" },
-  CRYPTO: { icon: "🪙", label: "CRYPTO ASSETS" },
-  OTHER: { icon: "📦", label: "OTHER HOLDING" },
+const ASSET_THEMES: Record<
+  AssetCategory,
+  { icon: string; label: string; headerBg: string }
+> = {
+  CASH_CHECKING: { icon: "💳", label: "CASH / CHECKING", headerBg: "#00F0FF" },
+  HYSA: { icon: "📈", label: "HIGH YIELD SAVINGS", headerBg: "#00FF9D" },
+  INVESTMENT: { icon: "📊", label: "BROKERAGE / STOCKS", headerBg: "#FFE600" },
+  RETIREMENT: { icon: "🏛️", label: "401(K) / RETIREMENT", headerBg: "#C084FC" },
+  REAL_ESTATE: { icon: "🏡", label: "REAL ESTATE", headerBg: "#34D399" },
+  CRYPTO: { icon: "🪙", label: "CRYPTO ASSETS", headerBg: "#FF2E93" },
+  OTHER: { icon: "📦", label: "OTHER HOLDING", headerBg: "#E4E4E7" },
 };
 
 interface AssetsNetWorthProps {
   assets: FinancialAssetRow[];
   netWorth: NetWorthSummary;
   onAddAsset: () => void;
+  onEditAsset: (asset: FinancialAssetRow) => void;
   onUpdateAsset: (asset: FinancialAssetRow) => void;
   onDeleteAsset: (id: string) => void;
 }
@@ -32,6 +36,7 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
   assets,
   netWorth,
   onAddAsset,
+  onEditAsset,
   onUpdateAsset,
   onDeleteAsset,
 }) => {
@@ -57,15 +62,15 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
       <div
         style={{
           background: "var(--card, #FFFFFF)",
-          border: "1.5px solid var(--ink, #0A0A0A)",
-          boxShadow: "3.5px 3.5px 0 var(--ink, #0A0A0A)",
+          border: "2.5px solid var(--ink, #0A0A0A)",
+          boxShadow: "5px 5px 0 var(--ink, #0A0A0A)",
           padding: "24px 26px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           flexWrap: "wrap",
           gap: "16px",
-          borderRadius: "3px",
+          borderRadius: "4px",
         }}
       >
         <div>
@@ -73,7 +78,7 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
             style={{
               fontFamily: "var(--mono, monospace)",
               fontSize: "10.5px",
-              fontWeight: 800,
+              fontWeight: 900,
               letterSpacing: "0.08em",
               color: "#666666",
               textTransform: "uppercase",
@@ -107,21 +112,21 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
         <div
           style={{
             background: "var(--card, #FFFFFF)",
-            border: "1.5px solid var(--ink, #0A0A0A)",
-            boxShadow: "3px 3px 0 var(--ink, #0A0A0A)",
+            border: "2px solid var(--ink, #0A0A0A)",
+            boxShadow: "3.5px 3.5px 0 var(--ink, #0A0A0A)",
             padding: "18px 20px",
             borderRadius: "3px",
           }}
         >
-          <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 800, marginBottom: "10px", textTransform: "uppercase" }}>
+          <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 900, marginBottom: "10px", textTransform: "uppercase" }}>
             ASSET ALLOCATION BREAKDOWN
           </div>
 
           <div
             style={{
               display: "flex",
-              height: "18px",
-              border: "1.5px solid var(--ink, #0A0A0A)",
+              height: "20px",
+              border: "2px solid var(--ink, #0A0A0A)",
               overflow: "hidden",
               borderRadius: "2px",
               marginBottom: "12px",
@@ -132,7 +137,7 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                 style={{
                   width: `${(netWorth.totalLiquidCash / netWorth.totalAssets) * 100}%`,
                   background: "#00F0FF",
-                  borderRight: "1px solid #000000",
+                  borderRight: "1.5px solid #000000",
                 }}
                 title={`Liquid Cash: $${netWorth.totalLiquidCash.toLocaleString()}`}
               />
@@ -142,7 +147,7 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                 style={{
                   width: `${(netWorth.totalInvestments / netWorth.totalAssets) * 100}%`,
                   background: "#FFE600",
-                  borderRight: "1px solid #000000",
+                  borderRight: "1.5px solid #000000",
                 }}
                 title={`Investments: $${netWorth.totalInvestments.toLocaleString()}`}
               />
@@ -152,7 +157,7 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                 style={{
                   width: `${(netWorth.totalRetirement / netWorth.totalAssets) * 100}%`,
                   background: "#C084FC",
-                  borderRight: "1px solid #000000",
+                  borderRight: "1.5px solid #000000",
                 }}
                 title={`Retirement: $${netWorth.totalRetirement.toLocaleString()}`}
               />
@@ -162,7 +167,7 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                 style={{
                   width: `${(netWorth.totalRealEstate / netWorth.totalAssets) * 100}%`,
                   background: "#34D399",
-                  borderRight: "1px solid #000000",
+                  borderRight: "1.5px solid #000000",
                 }}
                 title={`Real Estate: $${netWorth.totalRealEstate.toLocaleString()}`}
               />
@@ -178,7 +183,7 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
             )}
           </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 700 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 800 }}>
             <span>🔵 Liquid Cash: ${netWorth.totalLiquidCash.toLocaleString()} ({pct(netWorth.totalLiquidCash, netWorth.totalAssets)}%)</span>
             <span>🟡 Investments: ${netWorth.totalInvestments.toLocaleString()} ({pct(netWorth.totalInvestments, netWorth.totalAssets)}%)</span>
             <span>🟣 Retirement: ${netWorth.totalRetirement.toLocaleString()} ({pct(netWorth.totalRetirement, netWorth.totalAssets)}%)</span>
@@ -193,13 +198,13 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
         <div
           style={{
             background: "var(--card, #FFFFFF)",
-            border: "1.5px dashed var(--ink, #0A0A0A)",
+            border: "2px dashed var(--ink, #0A0A0A)",
             padding: "40px 20px",
             textAlign: "center",
-            borderRadius: "3px",
+            borderRadius: "4px",
           }}
         >
-          <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "18px", fontWeight: 900, marginBottom: "6px" }}>
+          <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900, marginBottom: "6px" }}>
             NO ASSETS RECORDED
           </div>
           <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "12px", color: "#666666", marginBottom: "16px" }}>
@@ -211,35 +216,49 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
         </div>
       ) : (
         <div className="sub-grid">
-          {assets.map((asset) => {
+          {assets.map((asset, index) => {
             const cat = (asset.category as AssetCategory) || "OTHER";
             const theme = ASSET_THEMES[cat] || ASSET_THEMES.OTHER;
 
             return (
-              <div key={asset.id} className="sub-card-editorial">
+              <div
+                key={asset.id}
+                className="sub-card-editorial"
+                style={
+                  {
+                    "--cat-header-bg": theme.headerBg,
+                    "--sub-index": index,
+                  } as React.CSSProperties
+                }
+              >
                 {/* Header */}
                 <div className="sub-card-header">
-                  <span
-                    className="sub-card-category"
-                    style={{
-                      background: "var(--ink, #0A0A0A)",
-                      color: "#FFFFFF",
-                    }}
-                  >
-                    <span>{theme.icon}</span>
+                  <span className="sub-card-category">
+                    <span className="sub-card-category-icon">{theme.icon}</span>
                     <span>{theme.label}</span>
                   </span>
 
-                  {asset.expectedYield && (
+                  {asset.expectedYield ? (
                     <span
                       className="sub-card-status"
                       style={{
                         background: "#DCFCE7",
                         color: "#166534",
-                        borderColor: "#16A34A",
+                        borderColor: "#000000",
                       }}
                     >
                       {asset.expectedYield}% APY
+                    </span>
+                  ) : (
+                    <span
+                      className="sub-card-status"
+                      style={{
+                        background: "#FFFFFF",
+                        color: "#000000",
+                        borderColor: "#000000",
+                      }}
+                    >
+                      HOLDING
                     </span>
                   )}
                 </div>
@@ -248,13 +267,15 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                 <div className="sub-card-body">
                   <div className="sub-card-title-row">
                     <h3 className="sub-card-title">{asset.name}</h3>
-                    <span className="sub-card-price">
-                      ${asset.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </span>
+                    <div className="sub-card-price-box">
+                      <span className="sub-card-price">
+                        ${asset.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </div>
 
                   {asset.institution && (
-                    <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10.5px", color: "#555555" }}>
+                    <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", color: "#444444" }}>
                       Institution: <b>{asset.institution}</b>
                     </div>
                   )}
@@ -268,6 +289,16 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
 
                 {/* Actions Footer */}
                 <div className="sub-card-footer">
+                  <button
+                    type="button"
+                    className="btn-card-action"
+                    onClick={() => {
+                      playSound.click();
+                      onEditAsset(asset);
+                    }}
+                  >
+                    ✎ EDIT
+                  </button>
                   <button
                     type="button"
                     className="btn-card-action btn-card-delete"

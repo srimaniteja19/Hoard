@@ -26,6 +26,7 @@ const LUMP_SUM_PRESETS = [0, 1000, 2500, 5000, 10000, 25000, 50000];
 interface DebtPayoffTrackerProps {
   debts: FinancialDebtRow[];
   onAddDebt: () => void;
+  onEditDebt: (debt: FinancialDebtRow) => void;
   onUpdateDebt: (debt: FinancialDebtRow) => void;
   onDeleteDebt: (id: string) => void;
 }
@@ -33,6 +34,7 @@ interface DebtPayoffTrackerProps {
 export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
   debts,
   onAddDebt,
+  onEditDebt,
   onUpdateDebt,
   onDeleteDebt,
 }) => {
@@ -616,6 +618,16 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
 
               {/* Actions Footer */}
               <div className="sub-card-footer">
+                <button
+                  type="button"
+                  className="btn-card-action"
+                  onClick={() => {
+                    playSound.click();
+                    onEditDebt(d);
+                  }}
+                >
+                  ✎ EDIT
+                </button>
                 <button
                   type="button"
                   className="btn-card-action"

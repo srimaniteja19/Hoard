@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FinancialAssetRow,
   AssetCategory,
@@ -12,9 +12,17 @@ interface AddAssetModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: (asset: FinancialAssetRow) => void;
+  onUpdated?: (asset: FinancialAssetRow) => void;
+  assetToEdit?: FinancialAssetRow | null;
 }
 
-export const AddAssetModal: React.FC<AddAssetModalProps> = ({ isOpen, onClose, onCreated }) => {
+export const AddAssetModal: React.FC<AddAssetModalProps> = ({
+  isOpen,
+  onClose,
+  onCreated,
+  onUpdated,
+  assetToEdit,
+}) => {
   const [name, setName] = useState("");
   const [category, setCategory] = useState<AssetCategory>("CASH_CHECKING");
   const [value, setValue] = useState("");
@@ -24,17 +32,28 @@ export const AddAssetModal: React.FC<AddAssetModalProps> = ({ isOpen, onClose, o
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  const isEditing = !!assetToEdit;
+
+  useEffect(() => {
     if (isOpen) {
-      setName("");
-      setCategory("CASH_CHECKING");
-      setValue("");
-      setInstitution("");
-      setExpectedYield("");
-      setNotes("");
+      if (assetToEdit) {
+        setName(assetToEdit.name || "");
+        setCategory((assetToEdit.category as AssetCategory) || "CASH_CHECKING");
+        setValue(assetToEdit.value ? assetToEdit.value.toString() : "");
+        setInstitution(assetToEdit.institution || "");
+        setExpectedYield(assetToEdit.expectedYield ? assetToEdit.expectedYield.toString() : "");
+        setNotes(assetToEdit.notes || "");
+      } else {
+        setName("");
+        setCategory("CASH_CHECKING");
+        setValue("");
+        setInstitution("");
+        setExpectedYield("");
+        setNotes("");
+      }
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, assetToEdit]);
 
   if (!isOpen) return null;
 
@@ -50,8 +69,13 @@ export const AddAssetModal: React.FC<AddAssetModalProps> = ({ isOpen, onClose, o
       setError(null);
       playSound.click();
 
-      const res = await fetch("/api/financial/assets", {
-        method: "POST",
+      const url = isEditing
+        ? `/api/financial/assets/${assetToEdit.id}`
+        : "/api/financial/assets";
+      const method = isEditing ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
@@ -65,15 +89,20 @@ export const AddAssetModal: React.FC<AddAssetModalProps> = ({ isOpen, onClose, o
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to add asset");
+        throw new Error(data.error || "Failed to save asset");
       }
 
-      const created: FinancialAssetRow = await res.json();
+      const savedAsset: FinancialAssetRow = await res.json();
       playSound.fileIt();
-      onCreated(created);
+
+      if (isEditing && onUpdated) {
+        onUpdated(savedAsset);
+      } else {
+        onCreated(savedAsset);
+      }
       onClose();
     } catch (err: any) {
-      setError(err.message || "Failed to add asset");
+      setError(err.message || "Failed to save asset");
     } finally {
       setLoading(false);
     }
@@ -83,7 +112,7 @@ export const AddAssetModal: React.FC<AddAssetModalProps> = ({ isOpen, onClose, o
     <div className="ledger-modal-overlay" onClick={onClose}>
       <div className="ledger-modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="ledger-modal-header">
-          <h2>+ ADD ASSET / HOLDING</h2>
+          <h2>{isEditing ? "✎ EDIT ASSET / HOLDING" : "+ ADD ASSET / HOLDING"}</h2>
           <button type="button" className="btn-ledger" onClick={onClose} style={{ padding: "4px 8px" }}>
             ✕
           </button>
@@ -181,7 +210,7 @@ export const AddAssetModal: React.FC<AddAssetModalProps> = ({ isOpen, onClose, o
               CANCEL
             </button>
             <button type="submit" disabled={loading} className="btn-ledger btn-ledger-primary">
-              {loading ? "SAVING..." : "REGISTER ASSET"}
+              {loading ? "SAVING..." : isEditing ? "UPDATE ASSET" : "REGISTER ASSET"}
             </button>
           </div>
         </form>

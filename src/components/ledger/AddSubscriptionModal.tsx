@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FinancialSubscriptionRow,
   SubscriptionCadence,
@@ -30,12 +30,16 @@ interface AddSubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: (sub: FinancialSubscriptionRow) => void;
+  onUpdated?: (sub: FinancialSubscriptionRow) => void;
+  subscriptionToEdit?: FinancialSubscriptionRow | null;
 }
 
 export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
   isOpen,
   onClose,
   onCreated,
+  onUpdated,
+  subscriptionToEdit,
 }) => {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -50,26 +54,40 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset form inputs whenever modal opens
-  React.useEffect(() => {
+  const isEditing = !!subscriptionToEdit;
+
+  useEffect(() => {
     if (isOpen) {
-      setName("");
-      setAmount("");
-      setCadence("MONTHLY");
-      setCategory("SAAS");
-      setBillingDay("1");
-      setNextRenewalDate("");
-      setStatus("ACTIVE");
-      setTrialEndsDate("");
-      setUrl("");
-      setNotes("");
+      if (subscriptionToEdit) {
+        setName(subscriptionToEdit.name || "");
+        setAmount(subscriptionToEdit.amount ? subscriptionToEdit.amount.toString() : "");
+        setCadence((subscriptionToEdit.cadence as SubscriptionCadence) || "MONTHLY");
+        setCategory((subscriptionToEdit.category as SubscriptionCategory) || "SAAS");
+        setBillingDay(subscriptionToEdit.billingDay ? subscriptionToEdit.billingDay.toString() : "1");
+        setNextRenewalDate(subscriptionToEdit.nextRenewalDate || "");
+        setStatus((subscriptionToEdit.status as SubscriptionStatus) || "ACTIVE");
+        setTrialEndsDate(subscriptionToEdit.trialEndsDate || "");
+        setUrl(subscriptionToEdit.url || "");
+        setNotes(subscriptionToEdit.notes || "");
+      } else {
+        setName("");
+        setAmount("");
+        setCadence("MONTHLY");
+        setCategory("SAAS");
+        setBillingDay("1");
+        setNextRenewalDate("");
+        setStatus("ACTIVE");
+        setTrialEndsDate("");
+        setUrl("");
+        setNotes("");
+      }
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, subscriptionToEdit]);
 
   if (!isOpen) return null;
 
-  const handleApplyPreset = (p: typeof PRESETS[0]) => {
+  const handleApplyPreset = (p: (typeof PRESETS)[0]) => {
     playSound.click();
     setName(p.name);
     setAmount(String(p.amount));
@@ -89,8 +107,13 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
       setError(null);
       playSound.click();
 
-      const res = await fetch("/api/financial/subscriptions", {
-        method: "POST",
+      const endpoint = isEditing
+        ? `/api/financial/subscriptions/${subscriptionToEdit.id}`
+        : "/api/financial/subscriptions";
+      const method = isEditing ? "PATCH" : "POST";
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
@@ -108,15 +131,20 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to create subscription");
+        throw new Error(data.error || "Failed to save subscription");
       }
 
-      const created: FinancialSubscriptionRow = await res.json();
+      const saved: FinancialSubscriptionRow = await res.json();
       playSound.fileIt();
-      onCreated(created);
+
+      if (isEditing && onUpdated) {
+        onUpdated(saved);
+      } else {
+        onCreated(saved);
+      }
       onClose();
     } catch (err: any) {
-      setError(err.message || "Failed to add subscription");
+      setError(err.message || "Failed to save subscription");
     } finally {
       setLoading(false);
     }
@@ -126,41 +154,43 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
     <div className="ledger-modal-overlay" onClick={onClose}>
       <div className="ledger-modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="ledger-modal-header">
-          <h2>+ ADD RECURRING COMMITMENT</h2>
+          <h2>{isEditing ? "✎ EDIT RECURRING COMMITMENT" : "+ ADD RECURRING COMMITMENT"}</h2>
           <button type="button" className="btn-ledger" onClick={onClose} style={{ padding: "4px 8px" }}>
             ✕
           </button>
         </div>
 
-        {/* Quick Presets */}
-        <div style={{ marginBottom: "16px" }}>
-          <div
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: "10px",
-              fontWeight: 800,
-              color: "var(--ink-muted, #777)",
-              marginBottom: "6px",
-              textTransform: "uppercase",
-            }}
-          >
-            QUICK POPULAR PRESETS:
+        {/* Quick Presets (Only in Add mode) */}
+        {!isEditing && (
+          <div style={{ marginBottom: "16px" }}>
+            <div
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "10px",
+                fontWeight: 800,
+                color: "var(--ink-muted, #777)",
+                marginBottom: "6px",
+                textTransform: "uppercase",
+              }}
+            >
+              QUICK POPULAR PRESETS:
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              {PRESETS.map((p) => (
+                <button
+                  key={p.name}
+                  type="button"
+                  className="sub-filter-btn"
+                  onClick={() => handleApplyPreset(p)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+                >
+                  <span>{p.icon}</span>
+                  <span>{p.name} (${p.amount})</span>
+                </button>
+              ))}
+            </div>
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-            {PRESETS.map((p) => (
-              <button
-                key={p.name}
-                type="button"
-                className="sub-filter-btn"
-                onClick={() => handleApplyPreset(p)}
-                style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
-              >
-                <span>{p.icon}</span>
-                <span>{p.name} (${p.amount})</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
         {error && (
           <div
@@ -185,7 +215,7 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
             <input
               type="text"
               required
-              placeholder="e.g. GitHub Copilot, Fastmail"
+              placeholder="e.g. OpenAI Plus, Superhuman, Vercel Pro"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -193,13 +223,13 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
 
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px" }}>
             <div className="ledger-field">
-              <label>Amount ($ USD) *</label>
+              <label>Amount ($) *</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 required
-                placeholder="10.00"
+                placeholder="20.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
@@ -220,70 +250,72 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
             <div className="ledger-field">
               <label>Category</label>
               <select value={category} onChange={(e) => setCategory(e.target.value as SubscriptionCategory)}>
-                {SUBSCRIPTION_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
+                {SUBSCRIPTION_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
                   </option>
                 ))}
               </select>
             </div>
             <div className="ledger-field">
-              <label>Status</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value as SubscriptionStatus)}>
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="TRIAL">FREE TRIAL</option>
-                <option value="PAUSED">PAUSED</option>
-              </select>
-            </div>
-          </div>
-
-          {status === "TRIAL" && (
-            <div className="ledger-field">
-              <label>Trial Ends Date</label>
-              <input
-                type="date"
-                value={trialEndsDate}
-                onChange={(e) => setTrialEndsDate(e.target.value)}
-              />
-            </div>
-          )}
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="ledger-field">
-              <label>Billing Day of Month (1-31)</label>
+              <label>Billing Day of Month</label>
               <input
                 type="number"
                 min="1"
                 max="31"
+                placeholder="1"
                 value={billingDay}
                 onChange={(e) => setBillingDay(e.target.value)}
               />
             </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px" }}>
             <div className="ledger-field">
-              <label>Specific Next Renewal Date</label>
-              <input
-                type="date"
-                value={nextRenewalDate}
-                onChange={(e) => setNextRenewalDate(e.target.value)}
-              />
+              <label>Current Status</label>
+              <select value={status} onChange={(e) => setStatus(e.target.value as SubscriptionStatus)}>
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="TRIAL">TRIAL</option>
+                <option value="PAUSED">PAUSED</option>
+                <option value="CANCELLED">CANCELLED</option>
+              </select>
             </div>
+            {status === "TRIAL" ? (
+              <div className="ledger-field">
+                <label>Trial Expiration Date</label>
+                <input
+                  type="date"
+                  value={trialEndsDate}
+                  onChange={(e) => setTrialEndsDate(e.target.value)}
+                />
+              </div>
+            ) : (
+              <div className="ledger-field">
+                <label>Next Renewal Date (Optional)</label>
+                <input
+                  type="date"
+                  value={nextRenewalDate}
+                  onChange={(e) => setNextRenewalDate(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           <div className="ledger-field">
-            <label>Manage URL (Optional)</label>
+            <label>Manage Portal URL (Optional)</label>
             <input
               type="url"
-              placeholder="https://..."
+              placeholder="https://app.cursor.com/settings"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
             />
           </div>
 
           <div className="ledger-field">
-            <label>Notes / Justification</label>
+            <label>Notes / Cancellation Trigger</label>
             <textarea
               rows={2}
-              placeholder="e.g. Essential for coding; review in 6 months"
+              placeholder="e.g. Cancel before 14-day trial ends if Claude 3.7 proves superior."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
@@ -294,7 +326,7 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
               CANCEL
             </button>
             <button type="submit" disabled={loading} className="btn-ledger btn-ledger-primary">
-              {loading ? "SAVING..." : "BIND RECURRING COMMITMENT"}
+              {loading ? "SAVING..." : isEditing ? "UPDATE SUBSCRIPTION" : "CREATE SUBSCRIPTION"}
             </button>
           </div>
         </form>

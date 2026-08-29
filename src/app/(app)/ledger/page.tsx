@@ -33,11 +33,19 @@ function LedgerContent() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<LedgerTab>("OVERVIEW");
 
-  // Modals
+  // Modals & Editing State
   const [isAddSubOpen, setIsAddSubOpen] = useState(false);
+  const [editingSub, setEditingSub] = useState<FinancialSubscriptionRow | null>(null);
+
   const [isAddDebtOpen, setIsAddDebtOpen] = useState(false);
+  const [editingDebt, setEditingDebt] = useState<FinancialDebtRow | null>(null);
+
   const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<FinancialAssetRow | null>(null);
+
   const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false);
+  const [editingIncome, setEditingIncome] = useState<FinancialIncomeRow | null>(null);
+
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
   const fetchOverview = async () => {
@@ -188,6 +196,7 @@ function LedgerContent() {
     );
   };
 
+  // Audit
   const handleAuditGenerated = (audit: FinancialAuditRow) => {
     if (!overview) return;
     setOverview({ ...overview, latestAudit: audit });
@@ -195,122 +204,119 @@ function LedgerContent() {
 
   return (
     <div className="ledger-container">
-      {/* ── MASTHEAD ── */}
-      <div className="ledger-masthead">
-        <div className="ledger-title-group">
-          <div className="ledger-title-row">
-            <h1>THE LEDGER</h1>
-            <span className="ledger-tagline-badge">TREASURY & BURN</span>
+      {/* ── HEADER TOOLBAR ── */}
+      <div className="ledger-header">
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+            <span style={{ fontSize: "20px" }}>🏛️</span>
+            <h1 className="ledger-title">THE HOARD FINANCIAL LEDGER</h1>
+            <span className="ledger-title-badge">PERSONAL FISCAL DESK</span>
           </div>
           <p className="ledger-subtitle">
-            SUBSCRIPTION TRACKING • DEBT AMORTIZATION • CASH VELOCITY • NET WORTH
+            Autonomous ledger for recurring commitments, aggressive debt payoff, and liquid net worth tracking.
           </p>
         </div>
 
         <div className="ledger-actions">
           <button
             type="button"
-            className="btn-ledger btn-ledger-ai"
+            className="btn-ledger"
             onClick={() => {
               playSound.click();
               setIsAuditModalOpen(true);
             }}
           >
-            ✨ AI AUDIT
-          </button>
-          <button
-            type="button"
-            className="btn-ledger"
-            onClick={() => {
-              playSound.click();
-              setIsAddSubOpen(true);
-            }}
-          >
-            + SUBSCRIPTION
-          </button>
-          <button
-            type="button"
-            className="btn-ledger"
-            onClick={() => {
-              playSound.click();
-              setIsAddDebtOpen(true);
-            }}
-          >
-            + DEBT
+            ✨ AI AUDITOR
           </button>
           <button
             type="button"
             className="btn-ledger btn-ledger-primary"
             onClick={() => {
               playSound.click();
-              setIsAddAssetOpen(true);
+              if (activeTab === "SUBSCRIPTIONS") {
+                setEditingSub(null);
+                setIsAddSubOpen(true);
+              } else if (activeTab === "DEBTS") {
+                setEditingDebt(null);
+                setIsAddDebtOpen(true);
+              } else if (activeTab === "NETWORTH") {
+                setEditingAsset(null);
+                setIsAddAssetOpen(true);
+              } else {
+                setEditingIncome(null);
+                setIsAddIncomeOpen(true);
+              }
             }}
           >
-            + ASSET
+            + ADD ENTRY
           </button>
         </div>
       </div>
 
-      {/* ── SEGMENTED NAVIGATION TABS ── */}
-      <div className="ledger-nav-bar">
-        <div className="ledger-nav-tabs">
-          <button
-            type="button"
-            className={`ledger-nav-tab ${activeTab === "OVERVIEW" ? "active" : ""}`}
-            onClick={() => {
-              playSound.click();
-              setActiveTab("OVERVIEW");
-            }}
-          >
-            OVERVIEW
-          </button>
-          <button
-            type="button"
-            className={`ledger-nav-tab ${activeTab === "SUBSCRIPTIONS" ? "active" : ""}`}
-            onClick={() => {
-              playSound.click();
-              setActiveTab("SUBSCRIPTIONS");
-            }}
-          >
-            SUBSCRIPTIONS ({overview?.subscriptions.length || 0})
-          </button>
-          <button
-            type="button"
-            className={`ledger-nav-tab ${activeTab === "DEBTS" ? "active" : ""}`}
-            onClick={() => {
-              playSound.click();
-              setActiveTab("DEBTS");
-            }}
-          >
-            DEBT PAYOFF ({overview?.debts.length || 0})
-          </button>
-          <button
-            type="button"
-            className={`ledger-nav-tab ${activeTab === "CASHFLOW" ? "active" : ""}`}
-            onClick={() => {
-              playSound.click();
-              setActiveTab("CASHFLOW");
-            }}
-          >
-            CASH FLOW & RUNWAY
-          </button>
-          <button
-            type="button"
-            className={`ledger-nav-tab ${activeTab === "NETWORTH" ? "active" : ""}`}
-            onClick={() => {
-              playSound.click();
-              setActiveTab("NETWORTH");
-            }}
-          >
-            NET WORTH ({overview?.assets.length || 0})
-          </button>
-        </div>
+      {/* ── NAVIGATION TABS ── */}
+      <div className="ledger-tabs">
+        <button
+          type="button"
+          className={`ledger-tab-btn ${activeTab === "OVERVIEW" ? "active" : ""}`}
+          onClick={() => {
+            playSound.click();
+            setActiveTab("OVERVIEW");
+          }}
+        >
+          📊 OVERVIEW
+        </button>
+        <button
+          type="button"
+          className={`ledger-tab-btn ${activeTab === "SUBSCRIPTIONS" ? "active" : ""}`}
+          onClick={() => {
+            playSound.click();
+            setActiveTab("SUBSCRIPTIONS");
+          }}
+        >
+          ⚡ SUBSCRIPTIONS ({overview?.subscriptions.length || 0})
+        </button>
+        <button
+          type="button"
+          className={`ledger-tab-btn ${activeTab === "DEBTS" ? "active" : ""}`}
+          onClick={() => {
+            playSound.click();
+            setActiveTab("DEBTS");
+          }}
+        >
+          💳 DEBT PAYOFF ({overview?.debts.length || 0})
+        </button>
+        <button
+          type="button"
+          className={`ledger-tab-btn ${activeTab === "CASHFLOW" ? "active" : ""}`}
+          onClick={() => {
+            playSound.click();
+            setActiveTab("CASHFLOW");
+          }}
+        >
+          🌊 CASH FLOW ({overview?.incomes.length || 0})
+        </button>
+        <button
+          type="button"
+          className={`ledger-tab-btn ${activeTab === "NETWORTH" ? "active" : ""}`}
+          onClick={() => {
+            playSound.click();
+            setActiveTab("NETWORTH");
+          }}
+        >
+          🏛️ NET WORTH ({overview?.assets.length || 0})
+        </button>
       </div>
 
-      {/* ── MAIN CONTENT TAB PANELS ── */}
-      {loading || !overview ? (
-        <div style={{ padding: "60px 0", textAlign: "center", fontFamily: "var(--mono)", color: "var(--ink-muted, #777)" }}>
-          OPENING ARCHIVAL LEDGERS...
+      {/* ── TAB CONTENT ── */}
+      {loading ? (
+        <div style={{ padding: "60px 0", textAlign: "center" }}>
+          <div style={{ fontFamily: "var(--mono)", fontSize: "14px", fontWeight: 800 }}>
+            ANALYZING FINANCIAL GRAPH & COMPILED LEDGER...
+          </div>
+        </div>
+      ) : !overview ? (
+        <div style={{ padding: "40px", textAlign: "center" }}>
+          Failed to load ledger records. Please refresh.
         </div>
       ) : (
         <>
@@ -321,9 +327,18 @@ function LedgerContent() {
                 playSound.click();
                 setActiveTab(tab);
               }}
-              onAddSubscription={() => setIsAddSubOpen(true)}
-              onAddDebt={() => setIsAddDebtOpen(true)}
-              onAddAsset={() => setIsAddAssetOpen(true)}
+              onAddSubscription={() => {
+                setEditingSub(null);
+                setIsAddSubOpen(true);
+              }}
+              onAddDebt={() => {
+                setEditingDebt(null);
+                setIsAddDebtOpen(true);
+              }}
+              onAddAsset={() => {
+                setEditingAsset(null);
+                setIsAddAssetOpen(true);
+              }}
               onOpenAudit={() => setIsAuditModalOpen(true)}
             />
           )}
@@ -331,7 +346,14 @@ function LedgerContent() {
           {activeTab === "SUBSCRIPTIONS" && (
             <SubscriptionTracker
               subscriptions={overview.subscriptions}
-              onAddSubscription={() => setIsAddSubOpen(true)}
+              onAddSubscription={() => {
+                setEditingSub(null);
+                setIsAddSubOpen(true);
+              }}
+              onEditSubscription={(sub) => {
+                setEditingSub(sub);
+                setIsAddSubOpen(true);
+              }}
               onUpdateSubscription={handleSubscriptionUpdated}
               onDeleteSubscription={handleSubscriptionDeleted}
             />
@@ -340,7 +362,14 @@ function LedgerContent() {
           {activeTab === "DEBTS" && (
             <DebtPayoffTracker
               debts={overview.debts}
-              onAddDebt={() => setIsAddDebtOpen(true)}
+              onAddDebt={() => {
+                setEditingDebt(null);
+                setIsAddDebtOpen(true);
+              }}
+              onEditDebt={(debt) => {
+                setEditingDebt(debt);
+                setIsAddDebtOpen(true);
+              }}
               onUpdateDebt={handleDebtUpdated}
               onDeleteDebt={handleDebtDeleted}
             />
@@ -350,7 +379,14 @@ function LedgerContent() {
             <CashFlowPlanner
               incomes={overview.incomes}
               cashFlow={overview.metrics.cashFlow}
-              onAddIncome={() => setIsAddIncomeOpen(true)}
+              onAddIncome={() => {
+                setEditingIncome(null);
+                setIsAddIncomeOpen(true);
+              }}
+              onEditIncome={(income) => {
+                setEditingIncome(income);
+                setIsAddIncomeOpen(true);
+              }}
               onUpdateIncome={handleIncomeUpdated}
               onDeleteIncome={handleIncomeDeleted}
             />
@@ -360,7 +396,14 @@ function LedgerContent() {
             <AssetsNetWorth
               assets={overview.assets}
               netWorth={overview.metrics.netWorth}
-              onAddAsset={() => setIsAddAssetOpen(true)}
+              onAddAsset={() => {
+                setEditingAsset(null);
+                setIsAddAssetOpen(true);
+              }}
+              onEditAsset={(asset) => {
+                setEditingAsset(asset);
+                setIsAddAssetOpen(true);
+              }}
               onUpdateAsset={handleAssetUpdated}
               onDeleteAsset={handleAssetDeleted}
             />
@@ -371,26 +414,46 @@ function LedgerContent() {
       {/* ── MODALS ── */}
       <AddSubscriptionModal
         isOpen={isAddSubOpen}
-        onClose={() => setIsAddSubOpen(false)}
+        onClose={() => {
+          setIsAddSubOpen(false);
+          setEditingSub(null);
+        }}
         onCreated={handleSubscriptionCreated}
+        onUpdated={handleSubscriptionUpdated}
+        subscriptionToEdit={editingSub}
       />
 
       <AddDebtModal
         isOpen={isAddDebtOpen}
-        onClose={() => setIsAddDebtOpen(false)}
+        onClose={() => {
+          setIsAddDebtOpen(false);
+          setEditingDebt(null);
+        }}
         onCreated={handleDebtCreated}
+        onUpdated={handleDebtUpdated}
+        debtToEdit={editingDebt}
       />
 
       <AddAssetModal
         isOpen={isAddAssetOpen}
-        onClose={() => setIsAddAssetOpen(false)}
+        onClose={() => {
+          setIsAddAssetOpen(false);
+          setEditingAsset(null);
+        }}
         onCreated={handleAssetCreated}
+        onUpdated={handleAssetUpdated}
+        assetToEdit={editingAsset}
       />
 
       <AddIncomeModal
         isOpen={isAddIncomeOpen}
-        onClose={() => setIsAddIncomeOpen(false)}
+        onClose={() => {
+          setIsAddIncomeOpen(false);
+          setEditingIncome(null);
+        }}
         onCreated={handleIncomeCreated}
+        onUpdated={handleIncomeUpdated}
+        incomeToEdit={editingIncome}
       />
 
       <LedgerAuditModal
