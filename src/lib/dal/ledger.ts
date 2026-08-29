@@ -246,7 +246,8 @@ export async function getInvestmentById(
 export async function createInvestment(
   data: NewFinancialInvestmentRow
 ): Promise<FinancialInvestmentRow> {
-  const [created] = await db.insert(financialInvestments).values(data).returning();
+  const row = { ...data, id: data.id ?? crypto.randomUUID() };
+  const [created] = await db.insert(financialInvestments).values(row).returning();
   return created;
 }
 

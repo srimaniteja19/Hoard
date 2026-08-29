@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    console.error("Error creating recurring investment:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Error creating recurring investment:", msg, error);
     return NextResponse.json({ error: "Failed to create recurring investment" }, { status: 500 });
   }
 }
