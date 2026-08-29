@@ -1,0 +1,304 @@
+"use client";
+
+import React, { useState } from "react";
+import {
+  FinancialSubscriptionRow,
+  SubscriptionCadence,
+  SubscriptionCategory,
+  SubscriptionStatus,
+  SUBSCRIPTION_CADENCES,
+  SUBSCRIPTION_CATEGORIES,
+} from "@/lib/ledger/types";
+import { playSound } from "@/lib/sound";
+
+const PRESETS = [
+  { name: "Cursor Pro", amount: 20, cadence: "MONTHLY" as const, category: "SAAS" as const, icon: "⚡" },
+  { name: "Claude Pro", amount: 20, cadence: "MONTHLY" as const, category: "SAAS" as const, icon: "⚡" },
+  { name: "ChatGPT Plus", amount: 20, cadence: "MONTHLY" as const, category: "SAAS" as const, icon: "⚡" },
+  { name: "GitHub Copilot", amount: 10, cadence: "MONTHLY" as const, category: "SAAS" as const, icon: "⚡" },
+  { name: "Spotify Premium", amount: 11.99, cadence: "MONTHLY" as const, category: "MEDIA" as const, icon: "🎬" },
+  { name: "Netflix Standard", amount: 15.49, cadence: "MONTHLY" as const, category: "MEDIA" as const, icon: "🎬" },
+  { name: "YouTube Premium", amount: 13.99, cadence: "MONTHLY" as const, category: "MEDIA" as const, icon: "🎬" },
+  { name: "iCloud 2TB", amount: 9.99, cadence: "MONTHLY" as const, category: "INFRA" as const, icon: "☁️" },
+  { name: "AWS Cloud", amount: 45, cadence: "MONTHLY" as const, category: "INFRA" as const, icon: "☁️" },
+  { name: "Equinox / Gym", amount: 180, cadence: "MONTHLY" as const, category: "HEALTH" as const, icon: "🌿" },
+  { name: "Whoop / Fitness", amount: 30, cadence: "MONTHLY" as const, category: "HEALTH" as const, icon: "🌿" },
+  { name: "Substack / Gazette", amount: 10, cadence: "MONTHLY" as const, category: "MEMBERSHIP" as const, icon: "🏛️" },
+];
+
+interface AddSubscriptionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreated: (sub: FinancialSubscriptionRow) => void;
+}
+
+export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
+  isOpen,
+  onClose,
+  onCreated,
+}) => {
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [cadence, setCadence] = useState<SubscriptionCadence>("MONTHLY");
+  const [category, setCategory] = useState<SubscriptionCategory>("SAAS");
+  const [billingDay, setBillingDay] = useState("1");
+  const [nextRenewalDate, setNextRenewalDate] = useState("");
+  const [status, setStatus] = useState<SubscriptionStatus>("ACTIVE");
+  const [trialEndsDate, setTrialEndsDate] = useState("");
+  const [url, setUrl] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Reset form inputs whenever modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setName("");
+      setAmount("");
+      setCadence("MONTHLY");
+      setCategory("SAAS");
+      setBillingDay("1");
+      setNextRenewalDate("");
+      setStatus("ACTIVE");
+      setTrialEndsDate("");
+      setUrl("");
+      setNotes("");
+      setError(null);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleApplyPreset = (p: typeof PRESETS[0]) => {
+    playSound.click();
+    setName(p.name);
+    setAmount(String(p.amount));
+    setCadence(p.cadence);
+    setCategory(p.category);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !amount) {
+      setError("Please provide a name and amount");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      playSound.click();
+
+      const res = await fetch("/api/financial/subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          amount: parseFloat(amount),
+          cadence,
+          category,
+          billingDay: parseInt(billingDay, 10) || 1,
+          nextRenewalDate: nextRenewalDate || null,
+          status,
+          trialEndsDate: status === "TRIAL" ? trialEndsDate || null : null,
+          url: url.trim() || null,
+          notes: notes.trim() || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create subscription");
+      }
+
+      const created: FinancialSubscriptionRow = await res.json();
+      playSound.fileIt();
+      onCreated(created);
+      onClose();
+    } catch (err: any) {
+      setError(err.message || "Failed to add subscription");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="ledger-modal-overlay" onClick={onClose}>
+      <div className="ledger-modal-box" onClick={(e) => e.stopPropagation()}>
+        <div className="ledger-modal-header">
+          <h2>+ ADD RECURRING COMMITMENT</h2>
+          <button type="button" className="btn-ledger" onClick={onClose} style={{ padding: "4px 8px" }}>
+            ✕
+          </button>
+        </div>
+
+        {/* Quick Presets */}
+        <div style={{ marginBottom: "16px" }}>
+          <div
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "10px",
+              fontWeight: 800,
+              color: "var(--ink-muted, #777)",
+              marginBottom: "6px",
+              textTransform: "uppercase",
+            }}
+          >
+            QUICK POPULAR PRESETS:
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+            {PRESETS.map((p) => (
+              <button
+                key={p.name}
+                type="button"
+                className="sub-filter-btn"
+                onClick={() => handleApplyPreset(p)}
+                style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+              >
+                <span>{p.icon}</span>
+                <span>{p.name} (${p.amount})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {error && (
+          <div
+            style={{
+              background: "#FEE2E2",
+              color: "#DC2626",
+              padding: "8px 12px",
+              fontFamily: "var(--mono)",
+              fontSize: "11px",
+              fontWeight: 700,
+              marginBottom: "14px",
+              border: "1px solid #DC2626",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="ledger-form">
+          <div className="ledger-field">
+            <label>Service / Subscription Name *</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. GitHub Copilot, Fastmail"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="ledger-field">
+              <label>Amount ($ USD) *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                placeholder="10.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+            <div className="ledger-field">
+              <label>Billing Cadence</label>
+              <select value={cadence} onChange={(e) => setCadence(e.target.value as SubscriptionCadence)}>
+                {SUBSCRIPTION_CADENCES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="ledger-field">
+              <label>Category</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value as SubscriptionCategory)}>
+                {SUBSCRIPTION_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="ledger-field">
+              <label>Status</label>
+              <select value={status} onChange={(e) => setStatus(e.target.value as SubscriptionStatus)}>
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="TRIAL">FREE TRIAL</option>
+                <option value="PAUSED">PAUSED</option>
+              </select>
+            </div>
+          </div>
+
+          {status === "TRIAL" && (
+            <div className="ledger-field">
+              <label>Trial Ends Date</label>
+              <input
+                type="date"
+                value={trialEndsDate}
+                onChange={(e) => setTrialEndsDate(e.target.value)}
+              />
+            </div>
+          )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="ledger-field">
+              <label>Billing Day of Month (1-31)</label>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                value={billingDay}
+                onChange={(e) => setBillingDay(e.target.value)}
+              />
+            </div>
+            <div className="ledger-field">
+              <label>Specific Next Renewal Date</label>
+              <input
+                type="date"
+                value={nextRenewalDate}
+                onChange={(e) => setNextRenewalDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="ledger-field">
+            <label>Manage URL (Optional)</label>
+            <input
+              type="url"
+              placeholder="https://..."
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+            />
+          </div>
+
+          <div className="ledger-field">
+            <label>Notes / Justification</label>
+            <textarea
+              rows={2}
+              placeholder="e.g. Essential for coding; review in 6 months"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+
+          <div className="ledger-modal-footer">
+            <button type="button" className="btn-ledger" onClick={onClose}>
+              CANCEL
+            </button>
+            <button type="submit" disabled={loading} className="btn-ledger btn-ledger-primary">
+              {loading ? "SAVING..." : "BIND RECURRING COMMITMENT"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};

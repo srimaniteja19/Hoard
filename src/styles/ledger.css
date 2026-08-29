@@ -1,0 +1,765 @@
+/* ═════════════════════════════════════════════════════════════════════════════
+   THE LEDGER — NEO-EDITORIAL FINANCIAL SYSTEM
+   Aesthetic: Swiss-Archival Minimalism • Refined Typography • Tactile Precision
+═════════════════════════════════════════════════════════════════════════════ */
+
+.ledger-container {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 32px 24px 96px 24px;
+  font-family: var(--body, "Space Grotesk", system-ui, sans-serif);
+  color: var(--ink, #0A0A0A);
+}
+
+/* ── 1. MASTHEAD ── */
+.ledger-masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--ink, #0A0A0A);
+}
+
+.ledger-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ledger-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ledger-title-row h1 {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: clamp(28px, 4.5vw, 42px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin: 0;
+  color: var(--ink, #0A0A0A);
+  text-transform: uppercase;
+}
+
+.ledger-tagline-badge {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  background: var(--ink, #0A0A0A);
+  color: #FFE600;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+
+.ledger-subtitle {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #666666;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.ledger-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── BUTTONS ── */
+.btn-ledger {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 8px 14px;
+  background: var(--card, #FFFFFF);
+  color: var(--ink, #0A0A0A);
+  border: 1.5px solid var(--ink, #0A0A0A);
+  box-shadow: 2px 2px 0 var(--ink, #0A0A0A);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+  text-transform: uppercase;
+  border-radius: 2px;
+}
+
+.btn-ledger:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 3.5px 3.5px 0 var(--ink, #0A0A0A);
+  background: #FFFFFF;
+}
+
+.btn-ledger:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ink, #0A0A0A);
+}
+
+.btn-ledger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-ledger-primary {
+  background: var(--ink, #0A0A0A);
+  color: #FFFFFF;
+}
+
+.btn-ledger-primary:hover:not(:disabled) {
+  background: #222222;
+  color: #FFFFFF;
+}
+
+.btn-ledger-ai {
+  background: #0A0A0A;
+  color: #FFE600;
+  border-color: #0A0A0A;
+  box-shadow: 2px 2px 0 #FFE600;
+}
+
+.btn-ledger-ai:hover:not(:disabled) {
+  background: #1A1A1A;
+  color: #00F0FF;
+  box-shadow: 3.5px 3.5px 0 #00F0FF;
+}
+
+/* ── 2. SEGMENTED NAVIGATION TABS ── */
+.ledger-nav-bar {
+  margin-bottom: 28px;
+}
+
+.ledger-nav-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 4px;
+  border: 1.5px solid var(--ink, #0A0A0A);
+  border-radius: 4px;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.ledger-nav-tab {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--ink, #0A0A0A);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ledger-nav-tab:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.ledger-nav-tab.active {
+  background: var(--ink, #0A0A0A);
+  color: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* ── 3. KPI METRIC CARDS ── */
+.ledger-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.ledger-kpi-card {
+  background: var(--card, #FFFFFF);
+  border: 1.5px solid var(--ink, #0A0A0A);
+  box-shadow: 3px 3px 0 var(--ink, #0A0A0A);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  border-radius: 3px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ledger-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 4.5px 4.5px 0 var(--ink, #0A0A0A);
+}
+
+.ledger-kpi-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--kpi-accent, var(--ink, #0A0A0A));
+}
+
+.ledger-kpi-label {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #666666;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.ledger-kpi-value {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--ink, #0A0A0A);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.ledger-kpi-sub {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #666666;
+}
+
+/* ── 4. SUBSCRIPTION CARDS ── */
+.sub-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.sub-filter-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sub-filter-btn {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 5px 12px;
+  background: var(--card, #FFFFFF);
+  border: 1.5px solid var(--ink, #0A0A0A);
+  color: var(--ink, #0A0A0A);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.12s ease;
+}
+
+.sub-filter-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.sub-filter-btn.active {
+  background: var(--ink, #0A0A0A);
+  color: #FFFFFF;
+}
+
+.sub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 18px;
+}
+
+.sub-card-editorial {
+  background: var(--card, #FFFFFF);
+  border: 1.5px solid var(--ink, #0A0A0A);
+  box-shadow: 3.5px 3.5px 0 var(--ink, #0A0A0A);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sub-card-editorial:hover {
+  transform: translateY(-2px);
+  box-shadow: 5px 5px 0 var(--ink, #0A0A0A);
+}
+
+.sub-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1.5px solid var(--ink, #0A0A0A);
+}
+
+.sub-card-category {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sub-card-status {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid currentColor;
+}
+
+.sub-card-body {
+  padding: 16px 16px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sub-card-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sub-card-title {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--ink, #0A0A0A);
+}
+
+.sub-card-price {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--ink, #0A0A0A);
+  white-space: nowrap;
+}
+
+.sub-card-price-unit {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10px;
+  font-weight: 800;
+  color: #777777;
+  text-transform: uppercase;
+  margin-left: 2px;
+}
+
+.sub-card-renewal {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sub-card-renewal.urgent {
+  background: #FFF1F2;
+  border-color: #E11D48;
+  color: #BE123C;
+  font-weight: 800;
+}
+
+.sub-card-notes {
+  font-family: var(--quote, "Newsreader", Georgia, serif);
+  font-style: italic;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: #555555;
+  padding-left: 10px;
+  border-left: 2px solid rgba(0, 0, 0, 0.2);
+}
+
+.sub-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 10px 14px 12px 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.btn-card-action {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 4px 8px;
+  background: #FFFFFF;
+  color: var(--ink, #0A0A0A);
+  border: 1px solid var(--ink, #0A0A0A);
+  box-shadow: 1.5px 1.5px 0 var(--ink, #0A0A0A);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.1s ease;
+}
+
+.btn-card-action:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 2.5px 2.5px 0 var(--ink, #0A0A0A);
+}
+
+.btn-card-delete {
+  color: #DC2626;
+  border-color: #DC2626;
+  box-shadow: 1.5px 1.5px 0 #DC2626;
+}
+
+.btn-card-delete:hover {
+  background: #DC2626;
+  color: #FFFFFF;
+}
+
+/* ── 5. DEBT PAYOFF DASHBOARD ── */
+.debt-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.debt-simulator-box {
+  background: var(--card, #FFFFFF);
+  border: 1.5px solid var(--ink, #0A0A0A);
+  box-shadow: 3.5px 3.5px 0 var(--ink, #0A0A0A);
+  padding: 22px 24px;
+  border-radius: 3px;
+}
+
+.debt-strategy-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1.5px dashed rgba(0, 0, 0, 0.2);
+}
+
+.debt-strategy-toggle {
+  display: flex;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 3px;
+  border: 1.5px solid var(--ink, #0A0A0A);
+  border-radius: 3px;
+  gap: 2px;
+}
+
+.debt-strategy-btn {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ink, #0A0A0A);
+  border-radius: 2px;
+  transition: all 0.12s ease;
+}
+
+.debt-strategy-btn:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.debt-strategy-btn.active {
+  background: var(--ink, #0A0A0A);
+  color: #FFFFFF;
+}
+
+.debt-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.debt-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.debt-slider-header label {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.debt-slider-val {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 16px;
+  font-weight: 900;
+  color: #16A34A;
+  background: #DCFCE7;
+  padding: 2px 8px;
+  border: 1px solid #16A34A;
+  border-radius: 2px;
+}
+
+.debt-range-input {
+  width: 100%;
+  accent-color: var(--ink, #0A0A0A);
+  cursor: pointer;
+}
+
+.debt-impact-banner {
+  background: #F0FDF4;
+  border: 1.5px solid #16A34A;
+  box-shadow: 2px 2px 0 #16A34A;
+  padding: 16px 20px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.debt-impact-text {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 17px;
+  font-weight: 800;
+  color: #15803D;
+}
+
+.debt-impact-meta {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11px;
+  font-weight: 700;
+  color: #166534;
+}
+
+.debt-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--ink, #0A0A0A);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.debt-progress-fill {
+  height: 100%;
+  background: #16A34A;
+  transition: width 0.3s ease;
+}
+
+/* ── 6. CASH FLOW & RUNWAY ── */
+.cashflow-dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 860px) {
+  .cashflow-dashboard {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cashflow-box {
+  background: var(--card, #FFFFFF);
+  border: 1.5px solid var(--ink, #0A0A0A);
+  box-shadow: 3px 3px 0 var(--ink, #0A0A0A);
+  padding: 22px 24px;
+  border-radius: 3px;
+}
+
+.cashflow-box h3 {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 19px;
+  font-weight: 900;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cashflow-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.12);
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cashflow-row:last-child {
+  border-bottom: none;
+}
+
+/* ── 7. MODALS ── */
+.ledger-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.ledger-modal-box {
+  background: var(--paper, #F2EFE8);
+  border: 2px solid var(--ink, #0A0A0A);
+  box-shadow: 6px 6px 0 var(--ink, #0A0A0A);
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  border-radius: 4px;
+}
+
+.ledger-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid var(--ink, #0A0A0A);
+}
+
+.ledger-modal-header h2 {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.ledger-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ledger-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ledger-field label {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #444444;
+}
+
+.ledger-field input,
+.ledger-field select,
+.ledger-field textarea {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 12.5px;
+  padding: 8px 10px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--ink, #0A0A0A);
+  color: var(--ink, #0A0A0A);
+  outline: none;
+  border-radius: 2px;
+}
+
+.ledger-field input:focus,
+.ledger-field select:focus,
+.ledger-field textarea:focus {
+  border-color: var(--ink, #0A0A0A);
+  box-shadow: 2px 2px 0 var(--ink, #0A0A0A);
+}
+
+.ledger-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1.5px solid var(--ink, #0A0A0A);
+}
+
+/* ── 8. AI AUDIT MODAL ── */
+.audit-health-meter {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--ink, #0A0A0A);
+  box-shadow: 2.5px 2.5px 0 var(--ink, #0A0A0A);
+  padding: 16px;
+  border-radius: 3px;
+  margin-bottom: 18px;
+}
+
+.audit-score-circle {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 28px;
+  font-weight: 900;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #0A0A0A;
+  color: #FFE600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 2px solid #0A0A0A;
+}
+
+.audit-cull-item {
+  background: #FFF1F2;
+  border: 1.5px solid #E11D48;
+  padding: 10px 14px;
+  border-radius: 3px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

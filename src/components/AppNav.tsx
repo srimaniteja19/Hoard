@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/todos", label: "Todos", match: (path: string) => path.startsWith("/todos") },
   { href: "/atlas", label: "Atlas", match: (path: string) => path.startsWith("/atlas") },
   { href: "/til", label: "TIL", match: (path: string) => path.startsWith("/til") },
+  { href: "/ledger", label: "Ledger", match: (path: string) => path.startsWith("/ledger") },
   { href: "/stats", label: "Stats", match: (path: string) => path.startsWith("/stats") },
 ] as const;
 

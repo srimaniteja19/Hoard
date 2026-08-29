@@ -951,5 +951,183 @@ export const marginaliaPendingMarks = pgTable(
 export type MarginaliaPendingMarkRow = typeof marginaliaPendingMarks.$inferSelect;
 export type NewMarginaliaPendingMarkRow = typeof marginaliaPendingMarks.$inferInsert;
 
+export const subscriptionCadenceValues = ["WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"] as const;
+export type SubscriptionCadence = (typeof subscriptionCadenceValues)[number];
+
+export const subscriptionCategoryValues = [
+  "SAAS",
+  "MEDIA",
+  "INFRA",
+  "HEALTH",
+  "UTILITIES",
+  "MEMBERSHIP",
+  "OTHER",
+] as const;
+export type SubscriptionCategory = (typeof subscriptionCategoryValues)[number];
+
+export const subscriptionStatusValues = ["ACTIVE", "PAUSED", "TRIAL", "CANCELLED"] as const;
+export type SubscriptionStatus = (typeof subscriptionStatusValues)[number];
+
+export const debtTypeValues = [
+  "CREDIT_CARD",
+  "STUDENT_LOAN",
+  "AUTO_LOAN",
+  "MORTGAGE",
+  "PERSONAL",
+  "MEDICAL",
+  "OTHER",
+] as const;
+export type DebtType = (typeof debtTypeValues)[number];
+
+export const assetCategoryValues = [
+  "CASH_CHECKING",
+  "HYSA",
+  "INVESTMENT",
+  "RETIREMENT",
+  "REAL_ESTATE",
+  "CRYPTO",
+  "OTHER",
+] as const;
+export type AssetCategory = (typeof assetCategoryValues)[number];
+
+export const incomeCadenceValues = ["MONTHLY", "BIWEEKLY", "SEMI_MONTHLY", "WEEKLY", "ANNUAL"] as const;
+export type IncomeCadence = (typeof incomeCadenceValues)[number];
+
+export const financialSubscriptions = pgTable(
+  "financial_subscriptions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    amount: real("amount").notNull(),
+    currency: varchar("currency", { length: 8 }).notNull().default("USD"),
+    cadence: varchar("cadence", { length: 16 }).notNull().default("MONTHLY"),
+    category: varchar("category", { length: 32 }).notNull().default("SAAS"),
+    billingDay: integer("billing_day").default(1),
+    nextRenewalDate: varchar("next_renewal_date", { length: 64 }),
+    status: varchar("status", { length: 16 }).notNull().default("ACTIVE"),
+    trialEndsDate: varchar("trial_ends_date", { length: 64 }),
+    url: text("url"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("financial_sub_user_status_idx").on(table.userId, table.status, table.updatedAt.desc()),
+  ]
+);
+
+export type FinancialSubscriptionRow = typeof financialSubscriptions.$inferSelect;
+export type NewFinancialSubscriptionRow = typeof financialSubscriptions.$inferInsert;
+
+export const financialDebts = pgTable(
+  "financial_debts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    debtType: varchar("debt_type", { length: 32 }).notNull().default("CREDIT_CARD"),
+    balance: real("balance").notNull(),
+    originalPrincipal: real("original_principal"),
+    interestRate: real("interest_rate").notNull(), // APR percentage e.g. 19.99
+    minPayment: real("min_payment").notNull(), // Minimum monthly payment
+    targetPayment: real("target_payment"),
+    dueDay: integer("due_day").default(1),
+    lender: text("lender"),
+    isPaidOff: boolean("is_paid_off").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("financial_debt_user_idx").on(table.userId, table.isPaidOff, table.interestRate.desc()),
+  ]
+);
+
+export type FinancialDebtRow = typeof financialDebts.$inferSelect;
+export type NewFinancialDebtRow = typeof financialDebts.$inferInsert;
+
+export const financialAssets = pgTable(
+  "financial_assets",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    category: varchar("category", { length: 32 }).notNull().default("CASH_CHECKING"),
+    value: real("value").notNull(),
+    institution: text("institution"),
+    expectedYield: real("expected_yield"), // APY percentage e.g. 4.5
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("financial_asset_user_idx").on(table.userId, table.category, table.value.desc()),
+  ]
+);
+
+export type FinancialAssetRow = typeof financialAssets.$inferSelect;
+export type NewFinancialAssetRow = typeof financialAssets.$inferInsert;
+
+export const financialIncomes = pgTable(
+  "financial_incomes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    amount: real("amount").notNull(),
+    cadence: varchar("cadence", { length: 16 }).notNull().default("MONTHLY"),
+    category: varchar("category", { length: 32 }).notNull().default("SALARY"),
+    isActive: boolean("is_active").notNull().default(true),
+    isPreTax: boolean("is_pre_tax").notNull().default(false),
+    country: varchar("country", { length: 8 }).default("US"),
+    region: varchar("region", { length: 16 }),
+    customTaxRate: real("custom_tax_rate"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("financial_income_user_idx").on(table.userId, table.isActive, table.updatedAt.desc()),
+  ]
+);
+
+export type FinancialIncomeRow = typeof financialIncomes.$inferSelect;
+export type NewFinancialIncomeRow = typeof financialIncomes.$inferInsert;
+
+export const financialAudits = pgTable(
+  "financial_audits",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    analysis: jsonb("analysis").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("financial_audit_user_idx").on(table.userId, table.createdAt.desc()),
+  ]
+);
+
+export type FinancialAuditRow = typeof financialAudits.$inferSelect;
+export type NewFinancialAuditRow = typeof financialAudits.$inferInsert;
+
 
 

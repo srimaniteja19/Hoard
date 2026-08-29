@@ -92,6 +92,20 @@
       "when": 1787700000000,
       "tag": "0020_add_book_summary",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787800000000,
+      "tag": "0021_add_financial_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787900000000,
+      "tag": "0022_add_income_tax_fields",
+      "breakpoints": true
     }
   ]
 }
