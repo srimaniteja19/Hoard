@@ -39,6 +39,7 @@ import { calculateInvestmentMetrics } from "@/lib/ledger/investmentMetrics";
 import { calculateCashFlow } from "@/lib/ledger/cashFlow";
 import { calculateDebtPayoff } from "@/lib/ledger/debtPayoff";
 import { playSound } from "@/lib/sound";
+import { useMemo } from "react";
 
 type LedgerTab = "OVERVIEW" | "SUBSCRIPTIONS" | "INVESTMENTS" | "DEBTS" | "CASHFLOW" | "NETWORTH";
 
@@ -46,6 +47,22 @@ function LedgerContent() {
   const [overview, setOverview] = useState<FinancialOverviewPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<LedgerTab>("OVERVIEW");
+
+  // Determine dominant/primary ledger currency
+  const primaryCurrency = useMemo(() => {
+    if (!overview) return "INR";
+    const { subscriptions = [], debts = [], assets = [], incomes = [], investments = [] } = overview;
+    const counts: Record<string, number> = {};
+    investments.forEach((i) => { if (i.currency) counts[i.currency] = (counts[i.currency] || 0) + 3; });
+    subscriptions.forEach((s) => { if ((s as any).currency) counts[(s as any).currency] = (counts[(s as any).currency] || 0) + 1; });
+    incomes.forEach((inc) => { if ((inc as any).currency) counts[(inc as any).currency] = (counts[(inc as any).currency] || 0) + 2; });
+    assets.forEach((a) => { if ((a as any).currency) counts[(a as any).currency] = (counts[(a as any).currency] || 0) + 1; });
+
+    const entries = Object.entries(counts);
+    if (entries.length === 0) return "INR";
+    entries.sort((a, b) => b[1] - a[1]);
+    return entries[0][0] || "INR";
+  }, [overview]);
 
   // Modals & Editing State
   const [isAddSubOpen, setIsAddSubOpen] = useState(false);
@@ -403,6 +420,7 @@ function LedgerContent() {
           {activeTab === "OVERVIEW" && (
             <LedgerOverview
               overview={overview}
+              currency={primaryCurrency}
               onNavigateTab={(tab) => {
                 playSound.click();
                 setActiveTab(tab);
@@ -426,6 +444,7 @@ function LedgerContent() {
           {activeTab === "SUBSCRIPTIONS" && (
             <SubscriptionTracker
               subscriptions={overview.subscriptions}
+              currency={primaryCurrency}
               onAddSubscription={() => {
                 setEditingSub(null);
                 setIsAddSubOpen(true);
@@ -458,6 +477,7 @@ function LedgerContent() {
           {activeTab === "DEBTS" && (
             <DebtPayoffTracker
               debts={overview.debts}
+              currency={primaryCurrency}
               onAddDebt={() => {
                 setEditingDebt(null);
                 setIsAddDebtOpen(true);
@@ -475,6 +495,7 @@ function LedgerContent() {
             <CashFlowPlanner
               incomes={overview.incomes}
               cashFlow={overview.metrics.cashFlow}
+              currency={primaryCurrency}
               onAddIncome={() => {
                 setEditingIncome(null);
                 setIsAddIncomeOpen(true);
@@ -492,6 +513,7 @@ function LedgerContent() {
             <AssetsNetWorth
               assets={overview.assets}
               netWorth={overview.metrics.netWorth}
+              currency={primaryCurrency}
               onAddAsset={() => {
                 setEditingAsset(null);
                 setIsAddAssetOpen(true);

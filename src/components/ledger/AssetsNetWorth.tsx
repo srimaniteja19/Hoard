@@ -6,7 +6,7 @@ import {
   NetWorthSummary,
   AssetCategory,
 } from "@/lib/ledger/types";
-import { formatCurrency } from "@/lib/ledger/formatters";
+import { formatCurrency, getCurrencySymbol } from "@/lib/ledger/formatters";
 import { playSound } from "@/lib/sound";
 
 import { NetWorthCompositionChart } from "./charts/NetWorthCompositionChart";
@@ -31,6 +31,7 @@ interface AssetsNetWorthProps {
   onEditAsset: (asset: FinancialAssetRow) => void;
   onUpdateAsset: (asset: FinancialAssetRow) => void;
   onDeleteAsset: (id: string) => void;
+  currency?: string;
 }
 
 export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
@@ -40,6 +41,7 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
   onEditAsset,
   onUpdateAsset,
   onDeleteAsset,
+  currency = "INR",
 }) => {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to remove this asset?")) return;
@@ -52,26 +54,30 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
     }
   };
 
+  const sym = getCurrencySymbol(currency);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       {/* ── VISUAL ASSET COMPOSITION & DIVERSIFICATION CHART ── */}
       <NetWorthCompositionChart
         netWorth={netWorth}
         assets={assets}
+        currency={currency}
       />
-      {/* ── NET WORTH BANNER ── */}
+
+      {/* ── TOTAL NET WORTH SUMMARY HERO BANNER ── */}
       <div
         style={{
           background: "var(--card, #FFFFFF)",
-          border: "2.5px solid var(--ink, #0A0A0A)",
-          boxShadow: "5px 5px 0 var(--ink, #0A0A0A)",
+          border: "2px solid var(--ink, #0A0A0A)",
+          boxShadow: "4px 4px 0 var(--ink, #0A0A0A)",
           padding: "24px 26px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           flexWrap: "wrap",
-          gap: "16px",
-          borderRadius: "4px",
+          gap: "18px",
+          borderRadius: "3px",
         }}
       >
         <div>
@@ -96,10 +102,10 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
               color: netWorth.netWorth >= 0 ? "var(--ink, #0A0A0A)" : "#DC2626",
             }}
           >
-            {formatCurrency(netWorth.netWorth, 2)}
+            {formatCurrency(netWorth.netWorth, 2, currency)}
           </div>
           <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 700, color: "#666666", marginTop: "4px" }}>
-            Total Assets: <b>{formatCurrency(netWorth.totalAssets, 0)}</b> | Total Debt Liabilities: <b>{formatCurrency(netWorth.totalLiabilities, 0)}</b>
+            Total Assets: <b>{formatCurrency(netWorth.totalAssets, 0, currency)}</b> | Total Debt Liabilities: <b>{formatCurrency(netWorth.totalLiabilities, 0, currency)}</b>
           </div>
         </div>
 
@@ -128,8 +134,8 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
               display: "flex",
               height: "20px",
               border: "2px solid var(--ink, #0A0A0A)",
-              overflow: "hidden",
               borderRadius: "2px",
+              overflow: "hidden",
               marginBottom: "12px",
             }}
           >
@@ -138,9 +144,8 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                 style={{
                   width: `${(netWorth.totalLiquidCash / netWorth.totalAssets) * 100}%`,
                   background: "#00F0FF",
-                  borderRight: "1.5px solid #000000",
                 }}
-                title={`Liquid Cash: $${netWorth.totalLiquidCash.toLocaleString()}`}
+                title={`Liquid Cash: ${formatCurrency(netWorth.totalLiquidCash, 0, currency)}`}
               />
             )}
             {netWorth.totalInvestments > 0 && (
@@ -148,9 +153,8 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                 style={{
                   width: `${(netWorth.totalInvestments / netWorth.totalAssets) * 100}%`,
                   background: "#FFE600",
-                  borderRight: "1.5px solid #000000",
                 }}
-                title={`Investments: $${netWorth.totalInvestments.toLocaleString()}`}
+                title={`Investments: ${formatCurrency(netWorth.totalInvestments, 0, currency)}`}
               />
             )}
             {netWorth.totalRetirement > 0 && (
@@ -158,9 +162,8 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                 style={{
                   width: `${(netWorth.totalRetirement / netWorth.totalAssets) * 100}%`,
                   background: "#C084FC",
-                  borderRight: "1.5px solid #000000",
                 }}
-                title={`Retirement: $${netWorth.totalRetirement.toLocaleString()}`}
+                title={`Retirement: ${formatCurrency(netWorth.totalRetirement, 0, currency)}`}
               />
             )}
             {netWorth.totalRealEstate > 0 && (
@@ -168,9 +171,8 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                 style={{
                   width: `${(netWorth.totalRealEstate / netWorth.totalAssets) * 100}%`,
                   background: "#34D399",
-                  borderRight: "1.5px solid #000000",
                 }}
-                title={`Real Estate: $${netWorth.totalRealEstate.toLocaleString()}`}
+                title={`Real Estate: ${formatCurrency(netWorth.totalRealEstate, 0, currency)}`}
               />
             )}
             {netWorth.totalCrypto > 0 && (
@@ -179,40 +181,73 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                   width: `${(netWorth.totalCrypto / netWorth.totalAssets) * 100}%`,
                   background: "#FF2E93",
                 }}
-                title={`Crypto: $${netWorth.totalCrypto.toLocaleString()}`}
+                title={`Crypto: ${formatCurrency(netWorth.totalCrypto, 0, currency)}`}
               />
             )}
           </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 800 }}>
-            <span>🔵 Liquid Cash: ${netWorth.totalLiquidCash.toLocaleString()} ({pct(netWorth.totalLiquidCash, netWorth.totalAssets)}%)</span>
-            <span>🟡 Investments: ${netWorth.totalInvestments.toLocaleString()} ({pct(netWorth.totalInvestments, netWorth.totalAssets)}%)</span>
-            <span>🟣 Retirement: ${netWorth.totalRetirement.toLocaleString()} ({pct(netWorth.totalRetirement, netWorth.totalAssets)}%)</span>
-            <span>🟢 Real Estate: ${netWorth.totalRealEstate.toLocaleString()} ({pct(netWorth.totalRealEstate, netWorth.totalAssets)}%)</span>
-            <span>🔴 Crypto: ${netWorth.totalCrypto.toLocaleString()} ({pct(netWorth.totalCrypto, netWorth.totalAssets)}%)</span>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "14px",
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "11px",
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <span style={{ width: "10px", height: "10px", background: "#00F0FF", border: "1px solid #000" }} />
+              Liquid Cash: {pct(netWorth.totalLiquidCash, netWorth.totalAssets)}%
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <span style={{ width: "10px", height: "10px", background: "#FFE600", border: "1px solid #000" }} />
+              Investments: {pct(netWorth.totalInvestments, netWorth.totalAssets)}%
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <span style={{ width: "10px", height: "10px", background: "#C084FC", border: "1px solid #000" }} />
+              Retirement: {pct(netWorth.totalRetirement, netWorth.totalAssets)}%
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <span style={{ width: "10px", height: "10px", background: "#34D399", border: "1px solid #000" }} />
+              Real Estate: {pct(netWorth.totalRealEstate, netWorth.totalAssets)}%
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <span style={{ width: "10px", height: "10px", background: "#FF2E93", border: "1px solid #000" }} />
+              Crypto: {pct(netWorth.totalCrypto, netWorth.totalAssets)}%
+            </span>
           </div>
         </div>
       )}
 
-      {/* ── ASSETS REGISTER ── */}
+      {/* ── ASSETS LIST ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "10px" }}>
+        <h3 style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900, margin: 0 }}>
+          PORTFOLIO HOLDINGS &amp; ASSETS ({assets.length})
+        </h3>
+        <button type="button" className="btn-ledger btn-ledger-primary" onClick={onAddAsset}>
+          + ADD ASSET
+        </button>
+      </div>
+
       {assets.length === 0 ? (
         <div
           style={{
             background: "var(--card, #FFFFFF)",
             border: "2px dashed var(--ink, #0A0A0A)",
-            padding: "40px 20px",
+            boxShadow: "3px 3px 0 var(--ink, #0A0A0A)",
+            padding: "40px 24px",
             textAlign: "center",
-            borderRadius: "4px",
+            borderRadius: "3px",
           }}
         >
-          <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900, marginBottom: "6px" }}>
-            NO ASSETS RECORDED
+          <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "18px", fontWeight: 900, marginBottom: "6px" }}>
+            ZERO ASSETS RECORDED
           </div>
           <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "12px", color: "#666666", marginBottom: "16px" }}>
-            Record savings accounts, brokerage holdings, 401(k), or home equity to calculate net worth.
+            Track checking accounts, HYSA balances, brokerage investments, real estate equity, and crypto portfolios.
           </div>
           <button type="button" className="btn-ledger btn-ledger-primary" onClick={onAddAsset}>
-            + ADD FIRST ASSET
+            + ADD YOUR FIRST ASSET
           </button>
         </div>
       ) : (
@@ -220,6 +255,7 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
           {assets.map((asset, index) => {
             const cat = (asset.category as AssetCategory) || "OTHER";
             const theme = ASSET_THEMES[cat] || ASSET_THEMES.OTHER;
+            const assetCurrency = (asset as any).currency || currency;
 
             return (
               <div
@@ -270,7 +306,7 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                     <h3 className="sub-card-title">{asset.name}</h3>
                     <div className="sub-card-price-box">
                       <span className="sub-card-price">
-                        {formatCurrency(asset.value, 2)}
+                        {formatCurrency(asset.value, 2, assetCurrency)}
                       </span>
                     </div>
                   </div>

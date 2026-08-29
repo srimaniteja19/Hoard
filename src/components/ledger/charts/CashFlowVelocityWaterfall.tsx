@@ -2,15 +2,18 @@
 
 import React from "react";
 import { CashFlowSummary, FinancialIncomeRow } from "@/lib/ledger/types";
+import { formatCurrency, formatSignedCurrency, getCurrencySymbol } from "@/lib/ledger/formatters";
 
 interface CashFlowVelocityWaterfallProps {
   cashFlow: CashFlowSummary;
   incomes: FinancialIncomeRow[];
+  currency?: string;
 }
 
 export const CashFlowVelocityWaterfall: React.FC<CashFlowVelocityWaterfallProps> = ({
   cashFlow,
   incomes,
+  currency = "INR",
 }) => {
   const {
     monthlyGrossIncome,
@@ -18,6 +21,7 @@ export const CashFlowVelocityWaterfall: React.FC<CashFlowVelocityWaterfallProps>
     monthlyNetTakeHome,
     monthlySubscriptions,
     monthlyDebtMinimums,
+    monthlyRecurringInvestments,
     totalFixedOutflow,
     monthlyNetSurplus,
     savingsRatePct,
@@ -43,10 +47,10 @@ export const CashFlowVelocityWaterfall: React.FC<CashFlowVelocityWaterfallProps>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <div>
           <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 800, textTransform: "uppercase", color: "#666666", marginBottom: "2px" }}>
-            CASH FLOW WATERFALL & VELOCITY
+            CASH FLOW WATERFALL &amp; VELOCITY
           </div>
           <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900 }}>
-            Monthly Inflow vs. Tax & Fixed Outflow Drainage
+            Monthly Inflow vs. Tax &amp; Fixed Outflow Drainage
           </div>
         </div>
 
@@ -72,7 +76,9 @@ export const CashFlowVelocityWaterfall: React.FC<CashFlowVelocityWaterfallProps>
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono, monospace)", fontSize: "11px", marginBottom: "4px" }}>
             <span style={{ fontWeight: 800 }}>💵 Gross Monthly Inflow (Income)</span>
-            <span style={{ fontWeight: 900, color: "#16A34A" }}>+${monthlyGrossIncome.toFixed(2)}</span>
+            <span style={{ fontWeight: 900, color: "#16A34A" }}>
+              {formatSignedCurrency(monthlyGrossIncome, 2, currency)}
+            </span>
           </div>
           <div style={{ width: "100%", height: "16px", background: "rgba(0, 0, 0, 0.05)", borderRadius: "2px", overflow: "hidden", border: "1px solid #000000" }}>
             <div
@@ -89,8 +95,10 @@ export const CashFlowVelocityWaterfall: React.FC<CashFlowVelocityWaterfallProps>
         {monthlyTaxWithholding > 0 && (
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono, monospace)", fontSize: "11px", marginBottom: "4px" }}>
-              <span style={{ fontWeight: 800 }}>🏛️ Estimated Taxes & Withholdings (Fed/State/FICA)</span>
-              <span style={{ fontWeight: 800, color: "#DC2626" }}>-${monthlyTaxWithholding.toFixed(2)}</span>
+              <span style={{ fontWeight: 800 }}>🏛️ Estimated Taxes &amp; Withholdings (Fed/State/FICA)</span>
+              <span style={{ fontWeight: 800, color: "#DC2626" }}>
+                {formatCurrency(-monthlyTaxWithholding, 2, currency)}
+              </span>
             </div>
             <div style={{ width: "100%", height: "12px", background: "rgba(0, 0, 0, 0.05)", borderRadius: "2px", overflow: "hidden", border: "1px solid #000000" }}>
               <div
@@ -107,8 +115,10 @@ export const CashFlowVelocityWaterfall: React.FC<CashFlowVelocityWaterfallProps>
         {/* Subscriptions Outflow Bar */}
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono, monospace)", fontSize: "11px", marginBottom: "4px" }}>
-            <span style={{ fontWeight: 800 }}>↳ Subscriptions & Recurring Commitments</span>
-            <span style={{ fontWeight: 800, color: "#DC2626" }}>-${monthlySubscriptions.toFixed(2)}</span>
+            <span style={{ fontWeight: 800 }}>↳ Subscriptions &amp; Recurring Commitments</span>
+            <span style={{ fontWeight: 800, color: "#DC2626" }}>
+              {formatCurrency(-monthlySubscriptions, 2, currency)}
+            </span>
           </div>
           <div style={{ width: "100%", height: "12px", background: "rgba(0, 0, 0, 0.05)", borderRadius: "2px", overflow: "hidden", border: "1px solid #000000" }}>
             <div
@@ -125,7 +135,9 @@ export const CashFlowVelocityWaterfall: React.FC<CashFlowVelocityWaterfallProps>
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono, monospace)", fontSize: "11px", marginBottom: "4px" }}>
             <span style={{ fontWeight: 800 }}>↳ Debt Minimum Obligations</span>
-            <span style={{ fontWeight: 800, color: "#DC2626" }}>-${monthlyDebtMinimums.toFixed(2)}</span>
+            <span style={{ fontWeight: 800, color: "#DC2626" }}>
+              {formatCurrency(-monthlyDebtMinimums, 2, currency)}
+            </span>
           </div>
           <div style={{ width: "100%", height: "12px", background: "rgba(0, 0, 0, 0.05)", borderRadius: "2px", overflow: "hidden", border: "1px solid #000000" }}>
             <div
@@ -138,12 +150,33 @@ export const CashFlowVelocityWaterfall: React.FC<CashFlowVelocityWaterfallProps>
           </div>
         </div>
 
+        {/* Recurring Wealth Investments (SIPs) Outflow Bar */}
+        {monthlyRecurringInvestments > 0 && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono, monospace)", fontSize: "11px", marginBottom: "4px" }}>
+              <span style={{ fontWeight: 800 }}>↳ Recurring Wealth Investments (SIPs/DCA)</span>
+              <span style={{ fontWeight: 800, color: "#0284C7" }}>
+                {formatCurrency(-monthlyRecurringInvestments, 2, currency)}
+              </span>
+            </div>
+            <div style={{ width: "100%", height: "12px", background: "rgba(0, 0, 0, 0.05)", borderRadius: "2px", overflow: "hidden", border: "1px solid #000000" }}>
+              <div
+                style={{
+                  width: `${Math.min(100, (monthlyRecurringInvestments / maxBar) * 100)}%`,
+                  height: "100%",
+                  background: "#38BDF8",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Net Monthly Free Surplus Bar */}
         <div style={{ borderTop: "1.5px solid var(--ink, #0A0A0A)", paddingTop: "8px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono, monospace)", fontSize: "11.5px", marginBottom: "4px" }}>
             <span style={{ fontWeight: 900 }}>🌊 Free Monthly Cash Surplus</span>
             <span style={{ fontWeight: 900, color: isPositive ? "#16A34A" : "#DC2626" }}>
-              {isPositive ? "+" : ""}${monthlyNetSurplus.toFixed(2)}
+              {formatSignedCurrency(monthlyNetSurplus, 2, currency)}
             </span>
           </div>
           <div style={{ width: "100%", height: "16px", background: "rgba(0, 0, 0, 0.05)", borderRadius: "2px", overflow: "hidden", border: "1px solid #000000" }}>
@@ -195,7 +228,7 @@ export const CashFlowVelocityWaterfall: React.FC<CashFlowVelocityWaterfallProps>
             ANNUALIZED SAVINGS CAPACITY
           </div>
           <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "22px", fontWeight: 900, color: isPositive ? "#16A34A" : "#DC2626" }}>
-            ${(monthlyNetSurplus * 12).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span style={{ fontSize: "12px", fontFamily: "var(--mono, monospace)", color: "#777777" }}>/ YR</span>
+            {formatCurrency(monthlyNetSurplus * 12, 0, currency)} <span style={{ fontSize: "12px", fontFamily: "var(--mono, monospace)", color: "#777777" }}>/ YR</span>
           </div>
         </div>
       </div>

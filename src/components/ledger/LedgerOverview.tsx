@@ -25,6 +25,7 @@ interface LedgerOverviewProps {
   onAddDebt: () => void;
   onAddAsset: () => void;
   onOpenAudit: () => void;
+  currency?: string;
 }
 
 export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
@@ -34,6 +35,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
   onAddDebt,
   onAddAsset,
   onOpenAudit,
+  currency = "INR",
 }) => {
   const { metrics, subscriptions, debts, investments = [] } = overview;
   const { subscriptionMetrics, investmentMetrics, cashFlow, netWorth, avalanchePayoff } = metrics;
@@ -58,10 +60,10 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
             className="ledger-kpi-value"
             style={{ color: netWorth.netWorth >= 0 ? "var(--ink, #0A0A0A)" : "#DC2626" }}
           >
-            {formatCurrency(netWorth.netWorth, 2)}
+            {formatCurrency(netWorth.netWorth, 2, currency)}
           </div>
           <div className="ledger-kpi-sub">
-            {formatCurrency(netWorth.totalAssets, 0)} Assets − {formatCurrency(netWorth.totalLiabilities, 0)} Debt
+            {formatCurrency(netWorth.totalAssets, 0, currency)} Assets − {formatCurrency(netWorth.totalLiabilities, 0, currency)} Debt
           </div>
         </div>
 
@@ -75,9 +77,9 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
           }}
         >
           <div className="ledger-kpi-label">MONTHLY RECURRING BURN</div>
-          <div className="ledger-kpi-value">{formatCurrency(subscriptionMetrics.monthlyTotal, 2)}</div>
+          <div className="ledger-kpi-value">{formatCurrency(subscriptionMetrics.monthlyTotal, 2, currency)}</div>
           <div className="ledger-kpi-sub">
-            {subscriptionMetrics.activeCount} active subscriptions ({formatCurrency(subscriptionMetrics.yearlyTotal, 0)}/yr)
+            {subscriptionMetrics.activeCount} active subscriptions ({formatCurrency(subscriptionMetrics.yearlyTotal, 0, currency)}/yr)
           </div>
         </div>
 
@@ -92,7 +94,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
         >
           <div className="ledger-kpi-label">MONTHLY RECURRING INVESTMENTS</div>
           <div className="ledger-kpi-value" style={{ color: "#166534" }}>
-            {formatCurrency(investmentMetrics?.monthlyTotal || 0, 2)}
+            {formatCurrency(investmentMetrics?.monthlyTotal || 0, 2, currency)}
           </div>
           <div className="ledger-kpi-sub">
             {investments.length} SIPs/DCAs • {investmentMetrics?.weightedReturnRatePct || 8}% Avg CAGR
@@ -109,7 +111,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
           }}
         >
           <div className="ledger-kpi-label">TOTAL DEBT LIABILITIES</div>
-          <div className="ledger-kpi-value">{formatCurrency(netWorth.totalLiabilities, 0)}</div>
+          <div className="ledger-kpi-value">{formatCurrency(netWorth.totalLiabilities, 0, currency)}</div>
           <div className="ledger-kpi-sub">
             {debts.filter((d) => !d.isPaidOff).length > 0
               ? `Debt-Free: ${avalanchePayoff.debtFreeDate} (${avalanchePayoff.monthsToPayoff} mos)`
@@ -129,7 +131,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
           <div className="ledger-kpi-label">LIQUID EMERGENCY RUNWAY</div>
           <div className="ledger-kpi-value">{cashFlow.runwayMonths.toFixed(1)} MOS</div>
           <div className="ledger-kpi-sub">
-            {formatCurrency(cashFlow.liquidCashTotal, 0)} cash ÷ {formatCurrency(cashFlow.totalFixedOutflow, 0)}/mo burn
+            {formatCurrency(cashFlow.liquidCashTotal, 0, currency)} cash ÷ {formatCurrency(cashFlow.totalFixedOutflow, 0, currency)}/mo burn
           </div>
         </div>
       </div>
@@ -138,9 +140,9 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
       {urgentRenewals.length > 0 && (
         <div
           style={{
-            background: "#FFFBEB",
-            border: "2.5px solid var(--ink, #000000)",
-            boxShadow: "4px 4px 0 var(--ink, #000000)",
+            background: "#FFF1F2",
+            border: "2px solid #E11D48",
+            boxShadow: "3px 3px 0 #E11D48",
             padding: "16px 20px",
             display: "flex",
             alignItems: "center",
@@ -150,18 +152,15 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
             borderRadius: "3px",
           }}
         >
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 900, color: "#92400E", marginBottom: "3px", textTransform: "uppercase" }}>
-              <BellRing size={13} aria-hidden="true" />
-              UPCOMING BILLING & RENEWAL ALERTS ({urgentRenewals.length})
-            </div>
-            <div style={{ fontFamily: "var(--sans, system-ui)", fontSize: "13.5px", fontWeight: 700, color: "#000000" }}>
-              {urgentRenewals
-                .map(
-                  (r) =>
-                    `• ${r.name} (${formatCurrency(r.amount, 2)}) renews in ${r.daysUntil} ${r.daysUntil === 1 ? "day" : "days"}`
-                )
-                .join("   ")}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <BellRing size={20} color="#E11D48" aria-hidden="true" />
+            <div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 900, color: "#9F1239" }}>
+                UPCOMING RENEWALS WITHIN 7 DAYS ({urgentRenewals.length})
+              </div>
+              <div style={{ fontFamily: "var(--sans)", fontSize: "13px", fontWeight: 700, color: "#881337" }}>
+                {urgentRenewals.map((r) => `${r.name} (${formatCurrency(r.amount, 2, currency)} in ${r.daysUntil}d)`).join(" • ")}
+              </div>
             </div>
           </div>
 
@@ -184,12 +183,14 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
           <SubscriptionBreakdownChart
             subscriptions={overview.subscriptions}
             onSelectCategory={() => onNavigateTab("SUBSCRIPTIONS")}
+            currency={currency}
           />
         )}
         {overview.incomes.length > 0 && (
           <CashFlowVelocityWaterfall
             cashFlow={overview.metrics.cashFlow}
             incomes={overview.incomes}
+            currency={currency}
           />
         )}
       </div>
@@ -245,7 +246,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
                   borderRadius: "2px",
                 }}
               >
-                Applying extra cash saves <b>{formatCurrency(avalanchePayoff.interestSavedVsMinimums, 0)}</b> in predatory interest and cuts <b>{avalanchePayoff.monthsSavedVsMinimums} months</b> of payments.
+                Applying extra cash saves <b>{formatCurrency(avalanchePayoff.interestSavedVsMinimums, 0, currency)}</b> in predatory interest and cuts <b>{avalanchePayoff.monthsSavedVsMinimums} months</b> of payments.
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -254,7 +255,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
                     <span>
                       <b>{d.name}</b> ({d.interestRate}% APR)
                     </span>
-                    <span style={{ fontWeight: 900 }}>{formatCurrency(d.balance, 0)}</span>
+                    <span style={{ fontWeight: 900 }}>{formatCurrency(d.balance, 0, currency)}</span>
                   </div>
                 ))}
               </div>
@@ -285,26 +286,26 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
           <div className="cashflow-row">
             <span>Gross Monthly Inflow</span>
             <span style={{ fontWeight: 900, color: "#16A34A" }}>
-              {formatSignedCurrency(cashFlow.monthlyGrossIncome, 2)}
+              {formatSignedCurrency(cashFlow.monthlyGrossIncome, 2, currency)}
             </span>
           </div>
           <div className="cashflow-row">
             <span>Fixed Monthly Subscriptions</span>
             <span style={{ color: "#DC2626", fontWeight: 800 }}>
-              {formatCurrency(-cashFlow.monthlySubscriptions, 2)}
+              {formatCurrency(-cashFlow.monthlySubscriptions, 2, currency)}
             </span>
           </div>
           <div className="cashflow-row">
             <span>Debt Minimum Payments</span>
             <span style={{ color: "#DC2626", fontWeight: 800 }}>
-              {formatCurrency(-cashFlow.monthlyDebtMinimums, 2)}
+              {formatCurrency(-cashFlow.monthlyDebtMinimums, 2, currency)}
             </span>
           </div>
           {cashFlow.monthlyRecurringInvestments > 0 && (
             <div className="cashflow-row">
               <span>Recurring Wealth Investments (SIPs)</span>
               <span style={{ color: "#0284C7", fontWeight: 800 }}>
-                {formatCurrency(-cashFlow.monthlyRecurringInvestments, 2)}
+                {formatCurrency(-cashFlow.monthlyRecurringInvestments, 2, currency)}
               </span>
             </div>
           )}
@@ -318,7 +319,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
                 color: cashFlow.monthlyNetSurplus >= 0 ? "#16A34A" : "#DC2626",
               }}
             >
-              {formatSignedCurrency(cashFlow.monthlyNetSurplus, 2)}
+              {formatSignedCurrency(cashFlow.monthlyNetSurplus, 2, currency)}
             </span>
           </div>
         </div>

@@ -2,15 +2,18 @@
 
 import React, { useState } from "react";
 import { NetWorthSummary, FinancialAssetRow } from "@/lib/ledger/types";
+import { formatCurrency } from "@/lib/ledger/formatters";
 
 interface NetWorthCompositionChartProps {
   netWorth: NetWorthSummary;
   assets: FinancialAssetRow[];
+  currency?: string;
 }
 
 export const NetWorthCompositionChart: React.FC<NetWorthCompositionChartProps> = ({
   netWorth,
   assets,
+  currency = "INR",
 }) => {
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
 
@@ -57,7 +60,7 @@ export const NetWorthCompositionChart: React.FC<NetWorthCompositionChartProps> =
             PORTFOLIO DIVERSIFICATION
           </div>
           <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900 }}>
-            Asset Allocation & Solvency
+            Asset Allocation &amp; Solvency
           </div>
         </div>
 
@@ -121,7 +124,7 @@ export const NetWorthCompositionChart: React.FC<NetWorthCompositionChartProps> =
                 }}
                 onMouseEnter={() => setHoveredSegment(cat.label)}
                 onMouseLeave={() => setHoveredSegment(null)}
-                title={`${cat.label}: $${cat.value.toLocaleString()} (${pct.toFixed(1)}%)`}
+                title={`${cat.label}: ${formatCurrency(cat.value, 0, currency)} (${pct.toFixed(1)}%)`}
               />
             );
           })}
@@ -153,7 +156,7 @@ export const NetWorthCompositionChart: React.FC<NetWorthCompositionChartProps> =
                   <span style={{ fontWeight: 800 }}>{cat.label.split(" ")[0]}</span>
                 </div>
                 <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px" }}>
-                  <b>${cat.value.toLocaleString()}</b> <span style={{ color: "#777777", fontSize: "10px" }}>({pct.toFixed(0)}%)</span>
+                  <b>{formatCurrency(cat.value, 0, currency)}</b> <span style={{ color: "#777777", fontSize: "10px" }}>({pct.toFixed(0)}%)</span>
                 </div>
               </div>
             );

@@ -6,11 +6,11 @@ import {
   DebtPayoffStrategy,
   DebtType,
 } from "@/lib/ledger/types";
-import { formatCurrency, formatSignedCurrency } from "@/lib/ledger/formatters";
+import { formatCurrency, formatSignedCurrency, getCurrencySymbol } from "@/lib/ledger/formatters";
 import { calculateDebtPayoff } from "@/lib/ledger/debtPayoff";
 import { playSound } from "@/lib/sound";
 import { DebtAmortizationChart } from "./charts/DebtAmortizationChart";
-import { CreditCard, DollarSign, CheckCircle, Plus, Minus } from "lucide-react";
+import { CreditCard, DollarSign, CheckCircle, Plus, Minus, TrendingUp as TrendingUpIcon } from "lucide-react";
 
 const DEBT_THEMES: Record<DebtType, { icon: string; label: string }> = {
   CREDIT_CARD: { icon: "💳", label: "CREDIT CARD" },
@@ -31,6 +31,7 @@ interface DebtPayoffTrackerProps {
   onEditDebt: (debt: FinancialDebtRow) => void;
   onUpdateDebt: (debt: FinancialDebtRow) => void;
   onDeleteDebt: (id: string) => void;
+  currency?: string;
 }
 
 /** Small inline payment panel shown when a card's payment row is expanded */
@@ -38,7 +39,8 @@ const PaymentPanel: React.FC<{
   debt: FinancialDebtRow;
   onUpdated: (updated: FinancialDebtRow) => void;
   onClose: () => void;
-}> = ({ debt, onUpdated, onClose }) => {
+  currency?: string;
+}> = ({ debt, onUpdated, onClose, currency = "INR" }) => {
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
@@ -60,7 +62,7 @@ const PaymentPanel: React.FC<{
       const updated = await res.json();
       playSound.fileIt();
       setFlash(
-        `${label} of ${formatCurrency(paymentAmount, 2)} applied! New balance: ${formatCurrency(newBalance, 2)}`
+        `${label} of ${formatCurrency(paymentAmount, 2, currency)} applied! New balance: ${formatCurrency(newBalance, 2, currency)}`
       );
       setTimeout(() => {
         onUpdated(updated);
@@ -72,6 +74,8 @@ const PaymentPanel: React.FC<{
       setSaving(false);
     }
   };
+
+  const sym = getCurrencySymbol(currency);
 
   if (flash) {
     return (
@@ -165,7 +169,7 @@ const PaymentPanel: React.FC<{
           }}
         >
           <CheckCircle size={11} aria-hidden="true" />
-          PAY MINIMUM ({formatCurrency(debt.minPayment, 0)})
+          PAY MINIMUM ({formatCurrency(debt.minPayment, 0, currency)})
         </button>
 
         {/* Pay extra = minimum + common extras */}
@@ -192,7 +196,7 @@ const PaymentPanel: React.FC<{
             }}
           >
             <TrendingUpIcon size={11} />
-            PAY TARGET ({formatCurrency(debt.targetPayment, 0)})
+            PAY TARGET ({formatCurrency(debt.targetPayment, 0, currency)})
           </button>
         )}
 
@@ -218,7 +222,7 @@ const PaymentPanel: React.FC<{
             opacity: saving ? 0.6 : 1,
           }}
         >
-          🏆 PAY IN FULL ({formatCurrency(debt.balance, 0)})
+          🏆 PAY IN FULL ({formatCurrency(debt.balance, 0, currency)})
         </button>
       </div>
 
@@ -246,7 +250,7 @@ const PaymentPanel: React.FC<{
             color: "#166534",
           }}
         >
-          $
+          {sym}
         </span>
         <input
           type="number"
@@ -258,32 +262,27 @@ const PaymentPanel: React.FC<{
           style={{
             flex: 1,
             fontFamily: "var(--mono, monospace)",
-            fontSize: "15px",
+            fontSize: "14px",
             fontWeight: 900,
-            color: "#166534",
-            background: "#FFFFFF",
-            padding: "6px 10px",
-            border: "2px solid #16A34A",
-            boxShadow: "2px 2px 0 #16A34A",
+            padding: "5px 8px",
+            border: "1.5px solid #16A34A",
             borderRadius: "2px",
             outline: "none",
+            background: "#FFFFFF",
           }}
         />
         <button
           type="button"
-          disabled={saving || !amount || parseFloat(amount) <= 0}
           onClick={() => {
-            const amt = parseFloat(amount);
-            if (!isNaN(amt) && amt > 0) {
-              applyPayment(amt, "Extra payment");
+            const parsed = parseFloat(amount);
+            if (!isNaN(parsed) && parsed > 0) {
+              applyPayment(parsed, `Extra payment of ${formatCurrency(parsed, 2, currency)}`);
             }
           }}
+          disabled={saving || !amount || parseFloat(amount) <= 0}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "5px",
             fontFamily: "var(--mono, monospace)",
-            fontSize: "10.5px",
+            fontSize: "11px",
             fontWeight: 900,
             padding: "6px 14px",
             background: "#16A34A",
@@ -291,57 +290,32 @@ const PaymentPanel: React.FC<{
             border: "2px solid #16A34A",
             boxShadow: "2px 2px 0 #16A34A",
             borderRadius: "2px",
-            cursor: !amount || parseFloat(amount) <= 0 ? "not-allowed" : "pointer",
-            opacity: !amount || parseFloat(amount) <= 0 ? 0.5 : 1,
+            cursor: saving || !amount || parseFloat(amount) <= 0 ? "not-allowed" : "pointer",
+            opacity: saving || !amount || parseFloat(amount) <= 0 ? 0.5 : 1,
           }}
         >
-          <Minus size={11} aria-hidden="true" />
-          APPLY
+          {saving ? "APPLYING..." : "APPLY"}
         </button>
       </div>
 
-      {/* Remaining balance preview */}
-      {amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0 && (
+      {/* Balance preview when custom amount entered */}
+      {amount && parseFloat(amount) > 0 && (
         <div
           style={{
             fontFamily: "var(--mono, monospace)",
             fontSize: "10.5px",
-            fontWeight: 800,
             color: "#166534",
-            background: "#DCFCE7",
-            border: "1px solid #16A34A",
-            borderRadius: "2px",
-            padding: "5px 10px",
+            fontWeight: 700,
           }}
         >
           New balance after payment:{" "}
-          <b>{formatCurrency(Math.max(0, debt.balance - parseFloat(amount)), 2)}</b>
-          {parseFloat(amount) >= debt.balance && (
-            <span style={{ marginLeft: "8px", color: "#7C3AED" }}>🏆 FULLY PAID OFF!</span>
-          )}
+          <b>{formatCurrency(Math.max(0, debt.balance - parseFloat(amount)), 2, currency)}</b>
+          {parseFloat(amount) >= debt.balance && " — 🏆 FULLY PAID OFF!"}
         </div>
       )}
     </div>
   );
 };
-
-// Lightweight icon shim since lucide's TrendingUp is already imported elsewhere
-const TrendingUpIcon = ({ size }: { size: number }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2.5}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-    <polyline points="16 7 22 7 22 13" />
-  </svg>
-);
 
 export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
   debts,
@@ -349,14 +323,13 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
   onEditDebt,
   onUpdateDebt,
   onDeleteDebt,
+  currency = "INR",
 }) => {
   const [strategy, setStrategy] = useState<DebtPayoffStrategy>("AVALANCHE");
   const [extraPayment, setExtraPayment] = useState<number>(150);
   const [lumpSum, setLumpSum] = useState<number>(0);
-  // Track which card has its payment panel open
   const [activePaymentCardId, setActivePaymentCardId] = useState<string | null>(null);
 
-  // Dynamic slider upper bounds that scale automatically if the user types any large number
   const extraPaymentSliderMax = Math.max(5000, Math.ceil(((extraPayment || 0) * 1.5) / 500) * 500);
   const lumpSumSliderMax = Math.max(25000, Math.ceil(((lumpSum || 0) * 1.5) / 1000) * 1000);
 
@@ -408,6 +381,8 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
     }
   };
 
+  const sym = getCurrencySymbol(currency);
+
   if (debts.length === 0) {
     return (
       <div
@@ -449,38 +424,18 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
           gap: "20px",
         }}
       >
-        {/* Header & Strategy Switcher */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "16px",
-            paddingBottom: "16px",
-            borderBottom: "2px solid var(--ink, #0A0A0A)",
-          }}
-        >
+        {/* Simulator Top Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <div
-              style={{
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "10.5px",
-                fontWeight: 900,
-                color: "#666666",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                marginBottom: "4px",
-              }}
-            >
-              🧮 DEBT FREEDOM ACCELERATOR & WHAT-IF SIMULATOR
+            <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", color: "#666666", letterSpacing: "0.08em", marginBottom: "2px" }}>
+              QUANTITATIVE ENGINE
             </div>
-            <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "22px", fontWeight: 900 }}>
-              Simulate Any Surplus & Lump-Sum Payoff Amount
-            </div>
+            <h2 style={{ fontFamily: "var(--display, sans-serif)", fontSize: "26px", fontWeight: 900, margin: 0 }}>
+              DEBT KNOCKOUT &amp; AMORTIZATION SIMULATOR
+            </h2>
           </div>
 
-          {/* Strategy Toggle */}
+          {/* Strategy Selector Tabs */}
           <div className="debt-strategy-toggle">
             <button
               type="button"
@@ -489,9 +444,8 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                 playSound.click();
                 setStrategy("AVALANCHE");
               }}
-              title="Avalanche: Pay highest APR first to minimize total interest paid."
             >
-              ⚡ AVALANCHE (MAX INTEREST SAVED)
+              🏔️ AVALANCHE (HIGHEST APR)
             </button>
             <button
               type="button"
@@ -500,22 +454,38 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                 playSound.click();
                 setStrategy("SNOWBALL");
               }}
-              title="Snowball: Pay lowest balance first for rapid psychological momentum."
             >
-              ❄️ SNOWBALL (FASTEST WINS)
+              ⛄ SNOWBALL (LOWEST BALANCE)
             </button>
           </div>
         </div>
 
-        {/* ── SIMULATOR CONTROLS (DIRECT EDITABLE INPUTS & DYNAMIC SLIDERS) ── */}
+        {/* Strategy Explainer Banner */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-            gap: "20px",
+            background: strategy === "AVALANCHE" ? "#F0FDF4" : "#FEF3C7",
+            border: `1.5px solid ${strategy === "AVALANCHE" ? "#16A34A" : "#D97706"}`,
+            padding: "10px 14px",
+            borderRadius: "2px",
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "11px",
+            color: strategy === "AVALANCHE" ? "#166534" : "#92400E",
           }}
         >
-          {/* 1. Monthly Extra Payment: Direct Input & Scalable Slider */}
+          {strategy === "AVALANCHE" ? (
+            <span>
+              💡 <b>Debt Avalanche (Mathematically Optimal):</b> Directs all surplus funds toward the highest APR debt first ({debts.filter(d => !d.isPaidOff).sort((a, b) => b.interestRate - a.interestRate)[0]?.name || "account"}), minimizing total interest paid.
+            </span>
+          ) : (
+            <span>
+              💡 <b>Debt Snowball (Psychological Momentum):</b> Knocks out the smallest balance account first ({debts.filter(d => !d.isPaidOff).sort((a, b) => a.balance - b.balance)[0]?.name || "account"}) to rapidly free up monthly cash flow minimums.
+            </span>
+          )}
+        </div>
+
+        {/* ── INTERACTIVE WHAT-IF SLIDERS ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+          {/* 1. Monthly Extra Surplus Payment: Direct Input & Scalable Slider */}
           <div
             style={{
               background: "#F8FAFC",
@@ -530,12 +500,12 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
               <label style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 900, textTransform: "uppercase" }}>
-                💵 MONTHLY EXTRA SURPLUS
+                ⚡ MONTHLY EXTRA SURPLUS PAYMENT
               </label>
 
               {/* Direct Editable Number Input Box */}
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "14px", fontWeight: 900 }}>+ $</span>
+                <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "14px", fontWeight: 900, color: "#166534" }}>+ {sym}</span>
                 <input
                   type="number"
                   min="0"
@@ -599,7 +569,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                     borderRadius: "2px",
                   }}
                 >
-                  {amount === 0 ? "MINIMUMS ($0)" : `+$${amount.toLocaleString()}`}
+                  {amount === 0 ? `MINIMUMS (${sym}0)` : `+${sym}${amount.toLocaleString()}`}
                 </button>
               ))}
             </div>
@@ -625,7 +595,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
 
               {/* Direct Editable Number Input Box */}
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "14px", fontWeight: 900 }}>$</span>
+                <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "14px", fontWeight: 900 }}>{sym}</span>
                 <input
                   type="number"
                   min="0"
@@ -689,7 +659,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                     borderRadius: "2px",
                   }}
                 >
-                  {amount === 0 ? "NO WINDFALL ($0)" : `+$${amount.toLocaleString()}`}
+                  {amount === 0 ? `NO WINDFALL (${sym}0)` : `+${sym}${amount.toLocaleString()}`}
                 </button>
               ))}
             </div>
@@ -743,10 +713,10 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
               💰 TOTAL INTEREST SAVED
             </div>
             <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "28px", fontWeight: 900, color: "#16A34A", lineHeight: 1.1 }}>
-              {formatSignedCurrency(simulation.interestSavedVsMinimums, 2)}
+              {formatSignedCurrency(simulation.interestSavedVsMinimums, 2, currency)}
             </div>
             <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 700, color: "#854D0E", marginTop: "6px" }}>
-              Paid Interest: <b>{formatCurrency(simulation.totalInterestPaid, 2)}</b> (vs {formatCurrency(simulation.baselineTotalInterestPaid, 2)} baseline)
+              Paid Interest: <b>{formatCurrency(simulation.totalInterestPaid, 2, currency)}</b> (vs {formatCurrency(simulation.baselineTotalInterestPaid, 2, currency)} baseline)
             </div>
           </div>
 
@@ -764,10 +734,10 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
               🛡️ TOTAL LIFETIME REPAYMENT
             </div>
             <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "28px", fontWeight: 900, color: "#0A0A0A", lineHeight: 1.1 }}>
-              {formatCurrency(simulation.totalPrincipalPaid + simulation.totalInterestPaid, 2)}
+              {formatCurrency(simulation.totalPrincipalPaid + simulation.totalInterestPaid, 2, currency)}
             </div>
             <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 700, color: "#64748B", marginTop: "6px" }}>
-              Principal: {formatCurrency(simulation.totalPrincipalPaid, 0)} + Interest: {formatCurrency(simulation.totalInterestPaid, 0)}
+              Principal: {formatCurrency(simulation.totalPrincipalPaid, 0, currency)} + Interest: {formatCurrency(simulation.totalInterestPaid, 0, currency)}
             </div>
           </div>
         </div>
@@ -780,6 +750,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
           activeStrategy={strategy}
           extraPayment={extraPayment}
           oneTimeLumpSum={lumpSum}
+          currency={currency}
         />
       )}
 
@@ -809,9 +780,9 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
               gap: "8px",
             }}
           >
-            <span>🎯 {strategy} PAYOFF SEQUENCE & ELIMINATION ORDER</span>
+            <span>🎯 {strategy} PAYOFF SEQUENCE &amp; ELIMINATION ORDER</span>
             <span style={{ color: "#666666", fontWeight: 700 }}>
-              Total Remaining: {formatCurrency(totalDebtBalance, 0)} (Base Min: {formatCurrency(totalMinMonthly, 0)}/mo)
+              Total Remaining: {formatCurrency(totalDebtBalance, 0, currency)} (Base Min: {formatCurrency(totalMinMonthly, 0, currency)}/mo)
             </span>
           </div>
 
@@ -846,7 +817,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                   🏆 Paid Off: {m.payoffDate}
                 </div>
                 <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10.5px", color: "#555555" }}>
-                  Interest Accrued: <b>{formatCurrency(m.totalInterestPaid, 2)}</b>
+                  Interest Accrued: <b>{formatCurrency(m.totalInterestPaid, 2, currency)}</b>
                 </div>
               </div>
             ))}
@@ -872,6 +843,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
           const paidPct = original > 0 ? Math.min(100, Math.round(((original - d.balance) / original) * 100)) : 0;
           const isHighApr = d.interestRate >= 18;
           const isPaymentOpen = activePaymentCardId === d.id;
+          const debtCurrency = (d as any).currency || currency;
 
           return (
             <div
@@ -909,7 +881,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                 <div className="sub-card-title-row">
                   <h3 className="sub-card-title">{d.name}</h3>
                   <div className="sub-card-price-box">
-                    <span className="sub-card-price">{formatCurrency(d.balance, 2)}</span>
+                    <span className="sub-card-price">{formatCurrency(d.balance, 2, debtCurrency)}</span>
                   </div>
                 </div>
 
@@ -920,7 +892,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 800, marginTop: "4px", color: "#555555" }}>
                     <span>{paidPct}% Paid</span>
-                    <span>Min: {formatCurrency(d.minPayment, 0)}/mo</span>
+                    <span>Min: {formatCurrency(d.minPayment, 0, debtCurrency)}/mo</span>
                   </div>
                 </div>
 
@@ -938,6 +910,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                       onUpdateDebt(updated);
                     }}
                     onClose={() => setActivePaymentCardId(null)}
+                    currency={debtCurrency}
                   />
                 )}
               </div>
@@ -956,23 +929,21 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                     style={{
                       background: isPaymentOpen ? "#0A0A0A" : "#DCFCE7",
                       color: isPaymentOpen ? "#FFE600" : "#166534",
-                      borderColor: isPaymentOpen ? "#0A0A0A" : "#16A34A",
+                      borderColor: "#166534",
                       fontWeight: 900,
                     }}
                   >
-                    {isPaymentOpen ? "✕ CLOSE" : (
-                      <>
-                        <Plus
-                          size={10}
-                          style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }}
-                          aria-hidden="true"
-                        />
-                        MAKE PAYMENT
-                      </>
-                    )}
+                    💳 {isPaymentOpen ? "CLOSE PANEL" : "MAKE PAYMENT"}
                   </button>
                 )}
 
+                <button
+                  type="button"
+                  className="btn-card-action"
+                  onClick={() => handleMarkPaid(d)}
+                >
+                  {d.isPaidOff ? "REOPEN" : "✓ PAID OFF"}
+                </button>
                 <button
                   type="button"
                   className="btn-card-action"
@@ -982,13 +953,6 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                   }}
                 >
                   ✎ EDIT
-                </button>
-                <button
-                  type="button"
-                  className="btn-card-action"
-                  onClick={() => handleMarkPaid(d)}
-                >
-                  {d.isPaidOff ? "MARK ACTIVE" : "✓ PAID OFF"}
                 </button>
                 <button
                   type="button"

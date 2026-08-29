@@ -3,12 +3,14 @@
 import React, { useState, useMemo } from "react";
 import { FinancialDebtRow, DebtPayoffStrategy } from "@/lib/ledger/types";
 import { calculateDebtPayoff } from "@/lib/ledger/debtPayoff";
+import { formatCurrency, getCurrencySymbol } from "@/lib/ledger/formatters";
 
 interface DebtAmortizationChartProps {
   debts: FinancialDebtRow[];
   activeStrategy: DebtPayoffStrategy;
   extraPayment: number;
   oneTimeLumpSum?: number;
+  currency?: string;
 }
 
 export const DebtAmortizationChart: React.FC<DebtAmortizationChartProps> = ({
@@ -16,6 +18,7 @@ export const DebtAmortizationChart: React.FC<DebtAmortizationChartProps> = ({
   activeStrategy,
   extraPayment,
   oneTimeLumpSum = 0,
+  currency = "INR",
 }) => {
   const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
 
@@ -68,58 +71,50 @@ export const DebtAmortizationChart: React.FC<DebtAmortizationChartProps> = ({
     return map;
   }, [minSchedule, initialTotalBalance]);
 
-  if (initialTotalBalance === 0) return null;
+  if (debts.length === 0 || initialTotalBalance === 0) return null;
 
-  // SVG Chart Geometry
-  const width = 640;
+  // Chart dimensions & scaling
+  const width = 680;
   const height = 240;
-  const padding = { top: 20, right: 30, bottom: 35, left: 55 };
+  const padding = { top: 20, right: 30, bottom: 35, left: 65 };
   const chartW = width - padding.left - padding.right;
   const chartH = height - padding.top - padding.bottom;
 
   const maxBalance = initialTotalBalance * 1.05;
 
   const getX = (month: number) => padding.left + (month / maxMonths) * chartW;
-  const getY = (balance: number) => padding.top + chartH - (balance / maxBalance) * chartH;
+  const getY = (balance: number) => padding.top + chartH - (Math.max(0, balance) / maxBalance) * chartH;
 
-  const activePoints: [number, number][] = [];
-  const minPoints: [number, number][] = [];
+  // Build SVG Path strings
+  const buildPath = (timeline: Map<number, any>, isMin = false) => {
+    const points: string[] = [];
+    const months = Array.from(timeline.keys()).sort((a, b) => a - b);
 
-  for (let m = 0; m <= maxMonths; m++) {
-    const actBal = activeTimeline.has(m)
-      ? activeTimeline.get(m)!.balance
-      : m > activeSim.monthsToPayoff
-      ? 0
-      : initialTotalBalance;
-    const minBal = minTimeline.has(m)
-      ? minTimeline.get(m)!
-      : m > minSim.monthsToPayoff
-      ? 0
-      : initialTotalBalance;
+    for (let i = 0; i < months.length; i++) {
+      const m = months[i];
+      const bal = isMin ? timeline.get(m) : timeline.get(m)?.balance ?? 0;
+      const x = getX(m);
+      const y = getY(bal);
+      points.push(`${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`);
+    }
+    return points.join(" ");
+  };
 
-    activePoints.push([getX(m), getY(actBal)]);
-    minPoints.push([getX(m), getY(minBal)]);
-  }
+  const activePathD = buildPath(activeTimeline);
+  const minPathD = buildPath(minTimeline, true);
 
-  const activePathD = activePoints.reduce(
-    (acc, [x, y], idx) => `${acc} ${idx === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`,
-    ""
-  );
+  // Area under active curve
+  const activeAreaD = `${activePathD} L ${getX(activeSim.monthsToPayoff)} ${getY(0)} L ${getX(0)} ${getY(0)} Z`;
 
-  const minPathD = minPoints.reduce(
-    (acc, [x, y], idx) => `${acc} ${idx === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`,
-    ""
-  );
-
-  const activeAreaD = `${activePathD} L ${getX(maxMonths).toFixed(1)} ${getY(0).toFixed(1)} L ${getX(0).toFixed(1)} ${getY(0).toFixed(1)} Z`;
-
-  const currentMonthIdx = hoveredMonth !== null ? hoveredMonth : Math.min(6, activeSim.monthsToPayoff);
+  const currentMonthIdx = hoveredMonth !== null ? hoveredMonth : Math.min(activeSim.monthsToPayoff, 3);
   const currentActiveData = activeTimeline.get(currentMonthIdx) || {
-    balance: currentMonthIdx > activeSim.monthsToPayoff ? 0 : initialTotalBalance,
+    balance: 0,
     interest: 0,
     payments: 0,
     targetDebt: "",
   };
+
+  const sym = getCurrencySymbol(currency);
 
   return (
     <div
@@ -127,65 +122,51 @@ export const DebtAmortizationChart: React.FC<DebtAmortizationChartProps> = ({
         background: "var(--card, #FFFFFF)",
         border: "1.5px solid var(--ink, #0A0A0A)",
         boxShadow: "3px 3px 0 var(--ink, #0A0A0A)",
-        padding: "20px 22px",
+        padding: "20px 24px",
         borderRadius: "3px",
         display: "flex",
         flexDirection: "column",
         gap: "14px",
       }}
     >
-      {/* ── Chart Header ── */}
+      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
-            <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 800, textTransform: "uppercase", color: "#666666" }}>
-              AMORTIZATION & ACCELERATION CURVE
-            </span>
-            <span
-              style={{
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "9.5px",
-                fontWeight: 900,
-                padding: "2px 6px",
-                background: "#DCFCE7",
-                color: "#166534",
-                border: "1px solid #166534",
-                borderRadius: "2px",
-              }}
-            >
-              ⚡ {activeStrategy} (+${extraPayment}/mo)
-            </span>
+          <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 800, textTransform: "uppercase", color: "#666666", marginBottom: "2px" }}>
+            AMORTIZATION TRAJECTORY &amp; KNOCKOUT SIMULATION
           </div>
           <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900 }}>
-            Debt Elimination Trajectory
+            {activeStrategy} Acceleration vs. Baseline Minimums
           </div>
         </div>
 
         {/* Legend */}
-        <div style={{ display: "flex", gap: "14px", fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 700 }}>
+        <div style={{ display: "flex", gap: "16px", fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 700 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <div style={{ width: "12px", height: "3px", background: "#16A34A" }} />
-            <span>Accelerated ({activeSim.monthsToPayoff} mos)</span>
+            <span style={{ width: "12px", height: "3px", background: "#DC2626", display: "inline-block" }} />
+            <span style={{ color: "#DC2626" }}>Minimums Only</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <div style={{ width: "12px", height: "3px", background: "#DC2626", borderTop: "1px dashed #DC2626" }} />
-            <span>Minimums Only ({minSim.monthsToPayoff} mos)</span>
+            <span style={{ width: "12px", height: "3px", background: "#16A34A", display: "inline-block" }} />
+            <span style={{ color: "#16A34A" }}>
+              Accelerated (+{formatCurrency(extraPayment, 0, currency)}/mo)
+            </span>
           </div>
         </div>
       </div>
 
-      {/* ── SVG Visualization Canvas ── */}
-      <div style={{ width: "100%", overflowX: "auto", position: "relative" }}>
+      {/* SVG Chart */}
+      <div style={{ width: "100%", overflowX: "auto" }}>
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          style={{ width: "100%", height: "auto", minWidth: "500px", display: "block" }}
+          style={{ width: "100%", height: "auto", minWidth: "520px", display: "block" }}
           onMouseMove={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
-            const mouseX = ((e.clientX - rect.left) / rect.width) * width;
-            const relX = mouseX - padding.left;
-            if (relX >= 0 && relX <= chartW) {
-              const m = Math.round((relX / chartW) * maxMonths);
-              setHoveredMonth(Math.min(maxMonths, Math.max(0, m)));
+            const svgX = ((e.clientX - rect.left) / rect.width) * width;
+            if (svgX >= padding.left && svgX <= width - padding.right) {
+              const relX = svgX - padding.left;
+              const targetMonth = Math.round((relX / chartW) * maxMonths);
+              setHoveredMonth(Math.min(maxMonths, Math.max(0, targetMonth)));
             }
           }}
           onMouseLeave={() => setHoveredMonth(null)}
@@ -193,7 +174,7 @@ export const DebtAmortizationChart: React.FC<DebtAmortizationChartProps> = ({
           <defs>
             <linearGradient id="activeDebtGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#16A34A" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#16A34A" stopOpacity="0.0" />
+              <stop offset="100%" stopColor="#16A34A" stopOpacity="0.02" />
             </linearGradient>
           </defs>
 
@@ -219,7 +200,7 @@ export const DebtAmortizationChart: React.FC<DebtAmortizationChartProps> = ({
                   fontSize="9.5"
                   fill="#777777"
                 >
-                  ${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toFixed(0)}
+                  {sym}{val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toFixed(0)}
                 </text>
               </g>
             );
@@ -322,9 +303,9 @@ export const DebtAmortizationChart: React.FC<DebtAmortizationChartProps> = ({
           )}
         </div>
         <div style={{ display: "flex", gap: "16px" }}>
-          <span>Remaining Balance: <b>${currentActiveData.balance.toLocaleString(undefined, { maximumFractionDigits: 0 })}</b></span>
+          <span>Remaining Balance: <b>{formatCurrency(currentActiveData.balance, 0, currency)}</b></span>
           <span style={{ color: "#16A34A" }}>
-            Total Interest Saved vs Min: <b>${activeSim.interestSavedVsMinimums.toLocaleString()}</b>
+            Total Interest Saved vs Min: <b>{formatCurrency(activeSim.interestSavedVsMinimums, 0, currency)}</b>
           </span>
         </div>
       </div>

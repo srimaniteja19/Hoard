@@ -6,7 +6,7 @@ import {
   CashFlowSummary,
   IncomeCadence,
 } from "@/lib/ledger/types";
-import { formatCurrency, formatSignedCurrency } from "@/lib/ledger/formatters";
+import { formatCurrency, formatSignedCurrency, getCurrencySymbol } from "@/lib/ledger/formatters";
 import { calculateIncomeTax } from "@/lib/ledger/taxCalculator";
 import { playSound } from "@/lib/sound";
 import { CashFlowVelocityWaterfall } from "./charts/CashFlowVelocityWaterfall";
@@ -18,6 +18,7 @@ interface CashFlowPlannerProps {
   onEditIncome: (inc: FinancialIncomeRow) => void;
   onUpdateIncome: (inc: FinancialIncomeRow) => void;
   onDeleteIncome: (id: string) => void;
+  currency?: string;
 }
 
 export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
@@ -27,6 +28,7 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
   onEditIncome,
   onUpdateIncome,
   onDeleteIncome,
+  currency = "INR",
 }) => {
   const handleToggleActive = async (inc: FinancialIncomeRow) => {
     playSound.click();
@@ -50,33 +52,49 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
     if (!confirm("Are you sure you want to remove this income source?")) return;
     playSound.bury();
     try {
-      const res = await fetch(`/api/financial/incomes/${id}`, { method: "DELETE" });
-      if (res.ok) onDeleteIncome(id);
+      const res = await fetch(`/api/financial/incomes/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        onDeleteIncome(id);
+      }
     } catch {
       // ignore
     }
   };
 
   const isSurplusPositive = cashFlow.monthlyNetSurplus >= 0;
+  const sym = getCurrencySymbol(currency);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-      {/* ── VISUAL CASH FLOW WATERFALL ── */}
-      <CashFlowVelocityWaterfall
-        cashFlow={cashFlow}
-        incomes={incomes}
-      />
+      {/* ── CHARTS: WATERFALL VISUALIZATION ── */}
+      {incomes.length > 0 && (
+        <CashFlowVelocityWaterfall
+          cashFlow={cashFlow}
+          incomes={incomes}
+          currency={currency}
+        />
+      )}
 
-      {/* ── CASH FLOW DASHBOARD GRID ── */}
-      <div className="cashflow-dashboard">
-        {/* Left: Inflow vs Outflow Balance Sheet */}
-        <div className="cashflow-box">
-          <h3>
-            <span>🌊 MONTHLY CASH VELOCITY</span>
+      {/* ── CASH FLOW WATERFALL SUMMARY CARD ── */}
+      <div
+        style={{
+          background: "var(--card, #FFFFFF)",
+          border: "2px solid var(--ink, #0A0A0A)",
+          boxShadow: "4px 4px 0 var(--ink, #0A0A0A)",
+          padding: "24px 26px",
+          borderRadius: "3px",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+          <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+            <span>🌊</span>
+            MONTHLY CASH VELOCITY
             <span
               style={{
-                fontSize: "10.5px",
                 fontFamily: "var(--mono, monospace)",
+                fontSize: "10.5px",
                 fontWeight: 800,
                 padding: "2px 8px",
                 background: isSurplusPositive ? "#DCFCE7" : "#FEE2E2",
@@ -89,133 +107,99 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
             </span>
           </h3>
 
-          <div className="cashflow-row">
-            <span style={{ fontWeight: 800 }}>Gross Monthly Inflow</span>
-            <span style={{ fontFamily: "var(--display, sans-serif)", fontSize: "17px", fontWeight: 900, color: "#16A34A" }}>
-              {formatSignedCurrency(cashFlow.monthlyGrossIncome, 2)}
-            </span>
-          </div>
-
-          {cashFlow.monthlyTaxWithholding > 0 && (
-            <div className="cashflow-row">
-              <span>↳ Estimated Taxes & Withholdings (Fed/State/FICA)</span>
-              <span style={{ color: "#DC2626", fontWeight: 800 }}>{formatCurrency(-cashFlow.monthlyTaxWithholding, 2)}</span>
-            </div>
-          )}
-
-          <div className="cashflow-row">
-            <span style={{ fontWeight: 800 }}>Net Take-Home Cash Flow</span>
-            <span style={{ fontFamily: "var(--display, sans-serif)", fontSize: "17px", fontWeight: 900, color: "#16A34A" }}>
-              {formatSignedCurrency(cashFlow.monthlyNetTakeHome, 2)}
-            </span>
-          </div>
-
-          <div className="cashflow-row">
-            <span>↳ Subscriptions & Recurring Burn</span>
-            <span style={{ color: "#DC2626", fontWeight: 700 }}>{formatCurrency(-cashFlow.monthlySubscriptions, 2)}</span>
-          </div>
-
-          <div className="cashflow-row">
-            <span>↳ Debt Minimum Payments</span>
-            <span style={{ color: "#DC2626", fontWeight: 700 }}>{formatCurrency(-cashFlow.monthlyDebtMinimums, 2)}</span>
-          </div>
-
-          {cashFlow.monthlyRecurringInvestments > 0 && (
-            <div className="cashflow-row">
-              <span>↳ Recurring Wealth Investments (Gold / Stocks / SIPs)</span>
-              <span style={{ color: "#0284C7", fontWeight: 800 }}>
-                {formatCurrency(-cashFlow.monthlyRecurringInvestments, 2)}
-              </span>
-            </div>
-          )}
-
-          <div className="cashflow-row" style={{ borderTop: "1.5px solid var(--ink, #0A0A0A)", marginTop: "8px", paddingTop: "10px" }}>
-            <span style={{ fontWeight: 900, fontSize: "12.5px" }}>FREE CASH SURPLUS</span>
-            <span
-              style={{
-                fontFamily: "var(--display, sans-serif)",
-                fontSize: "22px",
-                fontWeight: 900,
-                color: isSurplusPositive ? "#16A34A" : "#DC2626",
-              }}
-            >
-              {formatSignedCurrency(cashFlow.monthlyNetSurplus, 2)}
-            </span>
-          </div>
-
-          <div style={{ marginTop: "14px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 800, marginBottom: "5px" }}>
-              <span>WEALTH ACCUMULATION VELOCITY</span>
-              <span>{cashFlow.wealthVelocityPct || cashFlow.savingsRatePct}% (INVESTMENT + SURPLUS)</span>
-            </div>
-            <div className="debt-progress-bar">
-              <div
-                className="debt-progress-fill"
-                style={{
-                  width: `${Math.min(100, Math.max(0, cashFlow.wealthVelocityPct || cashFlow.savingsRatePct))}%`,
-                  background: (cashFlow.wealthVelocityPct || cashFlow.savingsRatePct) > 20 ? "#16A34A" : "#F59E0B",
-                }}
-              />
-            </div>
-          </div>
+          <button
+            type="button"
+            className="btn-ledger btn-ledger-primary"
+            onClick={onAddIncome}
+          >
+            + ADD INCOME STREAM
+          </button>
         </div>
 
-        {/* Right: Emergency Liquid Runway */}
-        <div className="cashflow-box">
-          <h3>
-            <span>🛡️ LIQUID RUNWAY & BUFFER</span>
-            <span
-              style={{
-                fontSize: "10.5px",
-                fontFamily: "var(--mono, monospace)",
-                fontWeight: 800,
-                padding: "2px 8px",
-                background: "#DCFCE7",
-                color: "#166534",
-                border: "1px solid #166534",
-                borderRadius: "2px",
-              }}
-            >
-              {cashFlow.runwayMonths >= 6 ? "FORTRESS" : cashFlow.runwayMonths >= 3 ? "HEALTHY" : "LEAN"}
+        <div className="cashflow-row">
+          <span style={{ fontWeight: 800 }}>Gross Monthly Inflow</span>
+          <span style={{ fontFamily: "var(--display, sans-serif)", fontSize: "17px", fontWeight: 900, color: "#16A34A" }}>
+            {formatSignedCurrency(cashFlow.monthlyGrossIncome, 2, currency)}
+          </span>
+        </div>
+
+        {cashFlow.monthlyTaxWithholding > 0 && (
+          <div className="cashflow-row">
+            <span>↳ Estimated Taxes &amp; Withholdings (Fed/State/FICA)</span>
+            <span style={{ color: "#DC2626", fontWeight: 800 }}>
+              {formatCurrency(-cashFlow.monthlyTaxWithholding, 2, currency)}
             </span>
-          </h3>
-
-          <div style={{ textAlign: "center", padding: "14px 0" }}>
-            <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "46px", fontWeight: 900, color: "var(--ink, #0A0A0A)", lineHeight: 1 }}>
-              {cashFlow.runwayMonths.toFixed(1)}
-              <span style={{ fontSize: "16px", fontFamily: "var(--mono, monospace)", fontWeight: 800, color: "#666666", marginLeft: "6px" }}>
-                MONTHS
-              </span>
-            </div>
-            <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 700, color: "#555555", marginTop: "6px" }}>
-              Liquid Cash: <b>${cashFlow.liquidCashTotal.toLocaleString()}</b> ÷ Monthly Outflows (<b>${cashFlow.totalFixedOutflow.toFixed(2)}</b>)
-            </div>
           </div>
+        )}
 
-          <div
+        <div className="cashflow-row">
+          <span style={{ fontWeight: 800 }}>Net Take-Home Cash Flow</span>
+          <span style={{ fontFamily: "var(--display, sans-serif)", fontSize: "17px", fontWeight: 900, color: "#16A34A" }}>
+            {formatSignedCurrency(cashFlow.monthlyNetTakeHome, 2, currency)}
+          </span>
+        </div>
+
+        <div className="cashflow-row">
+          <span>↳ Subscriptions &amp; Recurring Burn</span>
+          <span style={{ color: "#DC2626", fontWeight: 700 }}>
+            {formatCurrency(-cashFlow.monthlySubscriptions, 2, currency)}
+          </span>
+        </div>
+
+        <div className="cashflow-row">
+          <span>↳ Debt Minimum Payments</span>
+          <span style={{ color: "#DC2626", fontWeight: 700 }}>
+            {formatCurrency(-cashFlow.monthlyDebtMinimums, 2, currency)}
+          </span>
+        </div>
+
+        {cashFlow.monthlyRecurringInvestments > 0 && (
+          <div className="cashflow-row">
+            <span>↳ Recurring Wealth Investments (Gold / Stocks / SIPs)</span>
+            <span style={{ color: "#0284C7", fontWeight: 800 }}>
+              {formatCurrency(-cashFlow.monthlyRecurringInvestments, 2, currency)}
+            </span>
+          </div>
+        )}
+
+        <div className="cashflow-row" style={{ borderTop: "1.5px solid var(--ink, #0A0A0A)", marginTop: "8px", paddingTop: "10px" }}>
+          <span style={{ fontWeight: 900, fontSize: "12.5px" }}>FREE CASH SURPLUS</span>
+          <span
             style={{
-              background: "rgba(0, 0, 0, 0.03)",
-              border: "1px solid rgba(0, 0, 0, 0.12)",
-              borderRadius: "2px",
-              padding: "10px 12px",
-              fontFamily: "var(--mono, monospace)",
-              fontSize: "11px",
-              lineHeight: 1.4,
+              fontFamily: "var(--display, sans-serif)",
+              fontSize: "22px",
+              fontWeight: 900,
+              color: isSurplusPositive ? "#16A34A" : "#DC2626",
             }}
           >
-            💡 <b>Emergency Buffer Target:</b> Maintain 3 to 6 months of fixed burn ($
-            {(cashFlow.totalFixedOutflow * 3).toFixed(0)} – ${(cashFlow.totalFixedOutflow * 6).toFixed(0)}) in liquid high-yield accounts.
+            {formatSignedCurrency(cashFlow.monthlyNetSurplus, 2, currency)}
+          </span>
+        </div>
+
+        <div style={{ marginTop: "14px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 800, marginBottom: "5px" }}>
+            <span>WEALTH ACCUMULATION VELOCITY</span>
+            <span>{cashFlow.wealthVelocityPct || cashFlow.savingsRatePct}% (INVESTMENT + SURPLUS)</span>
+          </div>
+          <div className="debt-progress-bar">
+            <div
+              className="debt-progress-fill"
+              style={{
+                width: `${Math.min(100, Math.max(0, cashFlow.wealthVelocityPct || cashFlow.savingsRatePct))}%`,
+                background: (cashFlow.wealthVelocityPct || cashFlow.savingsRatePct) > 20 ? "#16A34A" : "#F59E0B",
+              }}
+            />
           </div>
         </div>
       </div>
 
-      {/* ── INFLOW STREAMS REGISTER ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      {/* ── INCOME SOURCES GRID ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "10px" }}>
         <h3 style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900, margin: 0 }}>
-          RECURRING INFLOW STREAMS ({incomes.length})
+          INCOME STREAMS ({incomes.length})
         </h3>
         <button type="button" className="btn-ledger btn-ledger-primary" onClick={onAddIncome}>
-          + ADD INFLOW STREAM
+          + ADD INCOME STREAM
         </button>
       </div>
 
@@ -223,8 +207,9 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
         <div
           style={{
             background: "var(--card, #FFFFFF)",
-            border: "1.5px dashed var(--ink, #0A0A0A)",
-            padding: "40px 20px",
+            border: "2px dashed var(--ink, #0A0A0A)",
+            boxShadow: "3px 3px 0 var(--ink, #0A0A0A)",
+            padding: "40px 24px",
             textAlign: "center",
             borderRadius: "3px",
           }}
@@ -242,6 +227,7 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
       ) : (
         <div className="sub-grid">
           {incomes.map((inc) => {
+            const incCurrency = (inc as any).currency || currency;
             const taxDetails = calculateIncomeTax({
               amount: inc.amount,
               cadence: inc.cadence as IncomeCadence,
@@ -301,7 +287,7 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
                     <h3 className="sub-card-title">{inc.name}</h3>
                     <div>
                       <span className="sub-card-price" style={{ color: "#16A34A" }}>
-                        +${inc.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        +{formatCurrency(inc.amount, 2, incCurrency)}
                       </span>
                       <span className="sub-card-price-unit">/ {inc.cadence.toLowerCase()}</span>
                     </div>
@@ -328,7 +314,7 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, color: "#16A34A" }}>
                         <span>Take-Home Net:</span>
-                        <span>+${taxDetails.netMonthlyIncome.toFixed(2)}/mo</span>
+                        <span>+{formatCurrency(taxDetails.netMonthlyIncome, 2, incCurrency)}/mo</span>
                       </div>
                     </div>
                   )}

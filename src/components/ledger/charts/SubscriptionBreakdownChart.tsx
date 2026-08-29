@@ -3,15 +3,18 @@
 import React, { useState, useMemo } from "react";
 import { FinancialSubscriptionRow, SubscriptionCategory, CATEGORY_THEMES } from "@/lib/ledger/types";
 import { normalizeCadenceToMonthly } from "@/lib/ledger/subscriptionMetrics";
+import { formatCurrency, getCurrencySymbol } from "@/lib/ledger/formatters";
 
 interface SubscriptionBreakdownChartProps {
   subscriptions: FinancialSubscriptionRow[];
   onSelectCategory?: (cat: string) => void;
+  currency?: string;
 }
 
 export const SubscriptionBreakdownChart: React.FC<SubscriptionBreakdownChartProps> = ({
   subscriptions,
   onSelectCategory,
+  currency = "INR",
 }) => {
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
@@ -58,48 +61,41 @@ export const SubscriptionBreakdownChart: React.FC<SubscriptionBreakdownChartProp
   const radius = 80;
   const innerRadius = 55;
 
-  let cumulativeAngle = 0;
+  let currentAngle = -Math.PI / 2; // start at top
+
   const slices = categoryStats.map((item) => {
-    const angle = (item.pct / 100) * 360;
-    const startAngle = cumulativeAngle;
-    const endAngle = cumulativeAngle + angle;
-    cumulativeAngle += angle;
+    const sliceAngle = (item.pct / 100) * (2 * Math.PI);
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + sliceAngle;
+    currentAngle = endAngle;
 
-    // Convert polar coordinates to Cartesian
-    const startRad = ((startAngle - 90) * Math.PI) / 180;
-    const endRad = ((endAngle - 90) * Math.PI) / 180;
+    const x1 = center + radius * Math.cos(startAngle);
+    const y1 = center + radius * Math.sin(startAngle);
+    const x2 = center + radius * Math.cos(endAngle);
+    const y2 = center + radius * Math.sin(endAngle);
 
-    const x1 = center + radius * Math.cos(startRad);
-    const y1 = center + radius * Math.sin(startRad);
-    const x2 = center + radius * Math.cos(endRad);
-    const y2 = center + radius * Math.sin(endRad);
+    const x3 = center + innerRadius * Math.cos(endAngle);
+    const y3 = center + innerRadius * Math.sin(endAngle);
+    const x4 = center + innerRadius * Math.cos(startAngle);
+    const y4 = center + innerRadius * Math.sin(startAngle);
 
-    const x3 = center + innerRadius * Math.cos(endRad);
-    const y3 = center + innerRadius * Math.sin(endRad);
-    const x4 = center + innerRadius * Math.cos(startRad);
-    const y4 = center + innerRadius * Math.sin(startRad);
-
-    const largeArcFlag = angle > 180 ? 1 : 0;
+    const largeArc = sliceAngle > Math.PI ? 1 : 0;
 
     const pathData = [
       `M ${x1.toFixed(2)} ${y1.toFixed(2)}`,
-      `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`,
+      `A ${radius} ${radius} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`,
       `L ${x3.toFixed(2)} ${y3.toFixed(2)}`,
-      `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x4.toFixed(2)} ${y4.toFixed(2)}`,
+      `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x4.toFixed(2)} ${y4.toFixed(2)}`,
       "Z",
     ].join(" ");
 
     return {
       ...item,
       pathData,
-      startAngle,
-      endAngle,
     };
   });
 
-  const activeItem = hoveredCategory
-    ? categoryStats.find((c) => c.category === hoveredCategory)
-    : categoryStats[0];
+  const activeItem = hoveredCategory ? categoryStats.find((c) => c.category === hoveredCategory) : null;
 
   return (
     <div
@@ -107,7 +103,7 @@ export const SubscriptionBreakdownChart: React.FC<SubscriptionBreakdownChartProp
         background: "var(--card, #FFFFFF)",
         border: "1.5px solid var(--ink, #0A0A0A)",
         boxShadow: "3px 3px 0 var(--ink, #0A0A0A)",
-        padding: "20px 22px",
+        padding: "20px 24px",
         borderRadius: "3px",
         display: "flex",
         flexDirection: "column",
@@ -173,7 +169,7 @@ export const SubscriptionBreakdownChart: React.FC<SubscriptionBreakdownChartProp
               {activeItem ? activeItem.theme.label : "MONTHLY BURN"}
             </div>
             <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900 }}>
-              ${activeItem ? activeItem.totalMonthly.toFixed(0) : totalMonthlyBurn.toFixed(0)}
+              {formatCurrency(activeItem ? activeItem.totalMonthly : totalMonthlyBurn, 0, currency)}
             </div>
             <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "9.5px", fontWeight: 800, color: "#16A34A" }}>
               {activeItem ? `${activeItem.pct.toFixed(0)}%` : "/ MO"}
@@ -209,7 +205,9 @@ export const SubscriptionBreakdownChart: React.FC<SubscriptionBreakdownChartProp
                     <span style={{ color: "#777777", fontSize: "9.5px" }}>({item.count})</span>
                   </div>
                   <div style={{ display: "flex", gap: "8px", alignItems: "baseline" }}>
-                    <span style={{ fontWeight: 900 }}>${item.totalMonthly.toFixed(2)}/mo</span>
+                    <span style={{ fontWeight: 900 }}>
+                      {formatCurrency(item.totalMonthly, 2, currency)}/mo
+                    </span>
                     <span style={{ color: "#777777", fontSize: "10px" }}>{item.pct.toFixed(1)}%</span>
                   </div>
                 </div>

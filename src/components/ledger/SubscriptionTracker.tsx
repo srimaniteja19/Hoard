@@ -10,10 +10,9 @@ import {
 import {
   normalizeCadenceToMonthly,
   normalizeCadenceToYearly,
-  calculateDaysUntilRenewal,
 } from "@/lib/ledger/subscriptionMetrics";
+import { formatCurrency, getCurrencySymbol } from "@/lib/ledger/formatters";
 import { playSound } from "@/lib/sound";
-
 import { SubscriptionBreakdownChart } from "./charts/SubscriptionBreakdownChart";
 
 interface SubscriptionTrackerProps {
@@ -22,6 +21,7 @@ interface SubscriptionTrackerProps {
   onEditSubscription: (sub: FinancialSubscriptionRow) => void;
   onUpdateSubscription: (sub: FinancialSubscriptionRow) => void;
   onDeleteSubscription: (id: string) => void;
+  currency?: string;
 }
 
 export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
@@ -30,21 +30,32 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
   onEditSubscription,
   onUpdateSubscription,
   onDeleteSubscription,
+  currency = "INR",
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [viewCadence, setViewCadence] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
 
-  const filteredSubs = useMemo(() => {
+  // Filter subscriptions
+  const filteredSubscriptions = useMemo(() => {
     return subscriptions.filter((sub) => {
-      if (selectedCategory !== "ALL" && sub.category !== selectedCategory) return false;
-      if (statusFilter === "ACTIVE" && sub.status !== "ACTIVE" && sub.status !== "TRIAL") return false;
-      if (statusFilter === "TRIAL" && sub.status !== "TRIAL") return false;
-      if (statusFilter === "PAUSED" && sub.status !== "PAUSED") return false;
+      if (selectedCategory !== "ALL" && sub.category !== selectedCategory) {
+        return false;
+      }
+      if (statusFilter === "ACTIVE" && sub.status !== "ACTIVE" && sub.status !== "TRIAL") {
+        return false;
+      }
+      if (statusFilter === "PAUSED" && sub.status !== "PAUSED") {
+        return false;
+      }
+      if (statusFilter === "TRIAL" && sub.status !== "TRIAL") {
+        return false;
+      }
       return true;
     });
   }, [subscriptions, selectedCategory, statusFilter]);
 
+  // Aggregate monthly & yearly burn from active/trial subs
   const activeMonthlyBurn = useMemo(() => {
     return subscriptions
       .filter((s) => s.status === "ACTIVE" || s.status === "TRIAL")
@@ -91,6 +102,8 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
     }
   };
 
+  const sym = getCurrencySymbol(currency);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       {/* ── TOP BURN HERO BANNER ── */}
@@ -124,7 +137,7 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
           </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: "12px" }}>
             <span style={{ fontFamily: "var(--display, sans-serif)", fontSize: "36px", fontWeight: 900, color: "var(--ink, #0A0A0A)" }}>
-              ${activeMonthlyBurn.toFixed(2)}
+              {formatCurrency(activeMonthlyBurn, 2, currency)}
               <span style={{ fontSize: "13.5px", fontFamily: "var(--mono, monospace)", fontWeight: 800, color: "#666666", marginLeft: "4px" }}>
                 / MO
               </span>
@@ -141,7 +154,7 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
                 borderRadius: "2px",
               }}
             >
-              ${activeYearlyBurn.toFixed(2)} / YEAR
+              {formatCurrency(activeYearlyBurn, 0, currency)} / YEAR
             </span>
           </div>
         </div>
@@ -181,37 +194,56 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
         </div>
       </div>
 
-      {/* ── VISUAL CATEGORY DONUT CHART ── */}
+      {/* ── INTERACTIVE VISUAL DONUT BREAKDOWN ── */}
       {subscriptions.length > 0 && (
         <SubscriptionBreakdownChart
           subscriptions={subscriptions}
-          onSelectCategory={(cat) => setSelectedCategory(cat === selectedCategory ? "ALL" : cat)}
+          onSelectCategory={(cat) => setSelectedCategory(cat)}
+          currency={currency}
         />
       )}
 
-      {/* ── TOOLBAR & FILTERS ── */}
+      {/* ── TOOLBAR & CATEGORY CHIPS ── */}
       <div className="sub-toolbar">
+        <div className="sub-filter-group">
+          <button
+            type="button"
+            className={`sub-filter-btn ${selectedCategory === "ALL" ? "active" : ""}`}
+            onClick={() => setSelectedCategory("ALL")}
+          >
+            ALL CATEGORIES ({subscriptions.length})
+          </button>
+          {SUBSCRIPTION_CATEGORIES.map((cat) => {
+            const count = subscriptions.filter((s) => s.category === cat).length;
+            if (count === 0) return null;
+            const theme = CATEGORY_THEMES[cat];
+            return (
+              <button
+                key={cat}
+                type="button"
+                className={`sub-filter-btn ${selectedCategory === cat ? "active" : ""}`}
+                onClick={() => setSelectedCategory(cat)}
+              >
+                <span>{theme.icon}</span> {theme.label} ({count})
+              </button>
+            );
+          })}
+        </div>
+
         <div className="sub-filter-group">
           <button
             type="button"
             className={`sub-filter-btn ${statusFilter === "ALL" ? "active" : ""}`}
             onClick={() => setStatusFilter("ALL")}
           >
-            ALL ({subscriptions.length})
+            ALL STATUS
           </button>
           <button
             type="button"
             className={`sub-filter-btn ${statusFilter === "ACTIVE" ? "active" : ""}`}
             onClick={() => setStatusFilter("ACTIVE")}
           >
-            ACTIVE ({subscriptions.filter((s) => s.status === "ACTIVE").length})
-          </button>
-          <button
-            type="button"
-            className={`sub-filter-btn ${statusFilter === "TRIAL" ? "active" : ""}`}
-            onClick={() => setStatusFilter("TRIAL")}
-          >
-            TRIALS ({subscriptions.filter((s) => s.status === "TRIAL").length})
+            ACTIVE ({subscriptions.filter((s) => s.status === "ACTIVE" || s.status === "TRIAL").length})
           </button>
           <button
             type="button"
@@ -221,111 +253,98 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
             PAUSED ({subscriptions.filter((s) => s.status === "PAUSED").length})
           </button>
         </div>
-
-        <div className="sub-filter-group">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            style={{
-              fontFamily: "var(--mono, monospace)",
-              fontSize: "11px",
-              fontWeight: 800,
-              padding: "5px 10px",
-              background: "var(--card, #FFFFFF)",
-              border: "1.5px solid var(--ink, #0A0A0A)",
-              borderRadius: "2px",
-            }}
-          >
-            <option value="ALL">ALL CATEGORIES</option>
-            {SUBSCRIPTION_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
 
-      {/* ── EDITORIAL SUBSCRIPTIONS GRID ── */}
-      {filteredSubs.length === 0 ? (
+      {/* ── SUBSCRIPTIONS CARDS GRID ── */}
+      {filteredSubscriptions.length === 0 ? (
         <div
           style={{
             background: "var(--card, #FFFFFF)",
-            border: "1.5px dashed var(--ink, #0A0A0A)",
+            border: "2px dashed var(--ink, #0A0A0A)",
+            boxShadow: "3px 3px 0 var(--ink, #0A0A0A)",
             padding: "48px 24px",
             textAlign: "center",
             borderRadius: "3px",
           }}
         >
-          <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900, marginBottom: "8px" }}>
-            NO RECURRING COMMITMENTS FOUND
+          <div style={{ fontSize: "36px", marginBottom: "10px" }}>📦</div>
+          <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900, marginBottom: "6px" }}>
+            {subscriptions.length === 0 ? "ZERO RECORDED SUBSCRIPTIONS" : "NO MATCHING SUBSCRIPTIONS"}
           </div>
           <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "12px", color: "#666666", marginBottom: "18px" }}>
-            Add your streaming services, software licenses, gym memberships, and cloud bills to monitor burn.
+            {subscriptions.length === 0
+              ? "Track your recurring SaaS, entertainment, gym, and hosting memberships to prevent forgotten leaks."
+              : "Try changing your active category or status filters above."}
           </div>
           <button type="button" className="btn-ledger btn-ledger-primary" onClick={onAddSubscription}>
-            + ADD YOUR FIRST SUBSCRIPTION
+            + ADD SUBSCRIPTION
           </button>
         </div>
       ) : (
         <div className="sub-grid">
-          {filteredSubs.map((sub, index) => {
+          {filteredSubscriptions.map((sub, index) => {
             const cat = (sub.category as SubscriptionCategory) || "OTHER";
             const theme = CATEGORY_THEMES[cat] || CATEGORY_THEMES.OTHER;
+            const subCurrency = (sub as any).currency || currency;
 
-            const monthlyNormalized = normalizeCadenceToMonthly(sub.amount, sub.cadence as any);
-            const yearlyNormalized = normalizeCadenceToYearly(sub.amount, sub.cadence as any);
-            const displayPrice = viewCadence === "MONTHLY" ? monthlyNormalized : yearlyNormalized;
+            const isPaused = sub.status === "PAUSED";
+            const isTrial = sub.status === "TRIAL";
+
+            const displayPrice =
+              viewCadence === "MONTHLY"
+                ? normalizeCadenceToMonthly(sub.amount, sub.cadence as any)
+                : normalizeCadenceToYearly(sub.amount, sub.cadence as any);
+
             const displayUnit = viewCadence === "MONTHLY" ? "/ mo" : "/ yr";
 
-            const { daysUntil, formattedDate } = calculateDaysUntilRenewal(
-              sub.billingDay,
-              sub.status === "TRIAL" && sub.trialEndsDate ? sub.trialEndsDate : sub.nextRenewalDate
-            );
+            // Trial end or renewal date string
+            const targetDateStr = sub.trialEndsDate || sub.nextRenewalDate;
+            let daysUntil: number | null = null;
+            let formattedDate = "";
 
-            const isUrgent = daysUntil <= 3 && sub.status !== "PAUSED";
-            const isPaused = sub.status === "PAUSED";
+            if (targetDateStr) {
+              const target = new Date(targetDateStr);
+              const now = new Date();
+              const diffMs = target.getTime() - now.getTime();
+              daysUntil = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+              formattedDate = target.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+            }
 
-            const cardStyle = {
-              "--cat-accent": theme.accent,
-              "--cat-bg": isPaused ? "#F9FAFB" : theme.cardBg,
-              "--cat-shadow": isPaused ? "rgba(0,0,0,0.15)" : theme.shadowColor,
-              "--cat-price": isPaused ? "#6B7280" : theme.priceColor,
-              "--cat-tag-bg": isPaused ? "#6B7280" : theme.tagBg,
-              "--cat-tag-color": theme.tagColor,
-              "--cat-header-bg": isPaused ? "#F3F4F6" : theme.headerBg,
-              "--cat-header-text": isPaused ? "#6B7280" : theme.headerText,
-              "--sub-index": index,
-              opacity: isPaused ? 0.7 : 1,
-            } as React.CSSProperties;
+            const isUrgent = daysUntil !== null && daysUntil <= 3 && daysUntil >= 0;
 
             return (
               <div
                 key={sub.id}
                 className="sub-card-editorial"
-                style={cardStyle}
+                style={
+                  {
+                    "--cat-header-bg": theme.headerBg,
+                    "--sub-index": index,
+                    opacity: isPaused ? 0.6 : 1,
+                  } as React.CSSProperties
+                }
               >
-                {/* ── Top Header Bar ── */}
+                {/* ── Header ── */}
                 <div className="sub-card-header">
                   <span className="sub-card-category">
                     <span className="sub-card-category-icon">{theme.icon}</span>
                     <span>{theme.label}</span>
                   </span>
 
-                  {sub.status === "TRIAL" && (
+                  {isPaused && (
+                    <span
+                      className="sub-card-status"
+                      style={{ background: "#F3F4F6", color: "#6B7280", borderColor: "#9CA3AF" }}
+                    >
+                      PAUSED
+                    </span>
+                  )}
+                  {isTrial && (
                     <span
                       className="sub-card-status"
                       style={{ background: "#FEF08A", color: "#854D0E", borderColor: "#CA8A04" }}
                     >
-                      ⏳ TRIAL
-                    </span>
-                  )}
-                  {isPaused && (
-                    <span
-                      className="sub-card-status"
-                      style={{ background: "#E5E7EB", color: "#4B5563", borderColor: "#9CA3AF" }}
-                    >
-                      PAUSED
+                      FREE TRIAL
                     </span>
                   )}
                   {sub.status === "ACTIVE" && (
@@ -343,7 +362,9 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
                   <div className="sub-card-title-row">
                     <h3 className="sub-card-title">{sub.name}</h3>
                     <div className="sub-card-price-box">
-                      <span className="sub-card-price">${displayPrice.toFixed(2)}</span>
+                      <span className="sub-card-price">
+                        {formatCurrency(displayPrice, 2, subCurrency)}
+                      </span>
                       <span className="sub-card-price-unit">{displayUnit}</span>
                     </div>
                   </div>
