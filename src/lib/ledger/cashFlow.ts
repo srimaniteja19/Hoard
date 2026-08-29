@@ -3,11 +3,13 @@ import {
   FinancialSubscriptionRow,
   FinancialDebtRow,
   FinancialAssetRow,
+  FinancialInvestmentRow,
   IncomeCadence,
   CashFlowSummary,
   NetWorthSummary,
 } from "./types";
 import { calculateSubscriptionMetrics } from "./subscriptionMetrics";
+import { calculateInvestmentMetrics } from "./investmentMetrics";
 import { calculateIncomeTax } from "./taxCalculator";
 
 export function normalizeIncomeToMonthly(amount: number, cadence: IncomeCadence): number {
@@ -32,7 +34,8 @@ export function calculateCashFlow(
   incomes: FinancialIncomeRow[],
   subscriptions: FinancialSubscriptionRow[],
   debts: FinancialDebtRow[],
-  assets: FinancialAssetRow[]
+  assets: FinancialAssetRow[],
+  investments: FinancialInvestmentRow[] = []
 ): {
   cashFlow: CashFlowSummary;
   netWorth: NetWorthSummary;
@@ -59,9 +62,12 @@ export function calculateCashFlow(
     monthlyNetTakeHome += taxRes.netMonthlyIncome;
   }
 
-  // 2. Fixed Outflows
+  // 2. Fixed Outflows & Wealth Building Inflow/Outflows
   const subscriptionMetrics = calculateSubscriptionMetrics(subscriptions);
   const monthlySubscriptions = subscriptionMetrics.monthlyTotal;
+
+  const investmentMetrics = calculateInvestmentMetrics(investments);
+  const monthlyRecurringInvestments = investmentMetrics.monthlyTotal;
 
   const monthlyDebtMinimums = debts
     .filter((d) => !d.isPaidOff && d.balance > 0)
@@ -69,7 +75,14 @@ export function calculateCashFlow(
 
   const totalFixedOutflow = monthlySubscriptions + monthlyDebtMinimums;
   const effectiveInflow = monthlyNetTakeHome > 0 ? monthlyNetTakeHome : monthlyGrossIncome;
-  const monthlyNetSurplus = effectiveInflow - totalFixedOutflow;
+  const monthlyNetSurplus = effectiveInflow - totalFixedOutflow - monthlyRecurringInvestments;
+
+  // Wealth Velocity = (Monthly Investments + Net Cash Surplus) / Effective Inflow
+  const wealthVelocityPct =
+    effectiveInflow > 0
+      ? Math.round(((monthlyRecurringInvestments + Math.max(0, monthlyNetSurplus)) / effectiveInflow) * 1000) / 10
+      : 0;
+
   const savingsRatePct =
     effectiveInflow > 0 ? Math.round((monthlyNetSurplus / effectiveInflow) * 1000) / 10 : 0;
 
@@ -138,9 +151,11 @@ export function calculateCashFlow(
       monthlyNetTakeHome: Math.round(monthlyNetTakeHome * 100) / 100,
       monthlySubscriptions: Math.round(monthlySubscriptions * 100) / 100,
       monthlyDebtMinimums: Math.round(monthlyDebtMinimums * 100) / 100,
+      monthlyRecurringInvestments: Math.round(monthlyRecurringInvestments * 100) / 100,
       totalFixedOutflow: Math.round(totalFixedOutflow * 100) / 100,
       monthlyNetSurplus: Math.round(monthlyNetSurplus * 100) / 100,
       savingsRatePct,
+      wealthVelocityPct,
       liquidCashTotal: Math.round(totalLiquidCash * 100) / 100,
       runwayMonths,
     },

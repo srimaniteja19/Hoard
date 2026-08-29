@@ -4,12 +4,16 @@ import {
   FinancialAssetRow,
   FinancialIncomeRow,
   FinancialAuditRow,
+  FinancialInvestmentRow,
+  NewFinancialInvestmentRow,
   SubscriptionCadence,
   SubscriptionCategory,
   SubscriptionStatus,
   DebtType,
   AssetCategory,
   IncomeCadence,
+  InvestmentAssetType,
+  InvestmentCadence,
 } from "@/db/schema";
 
 export type {
@@ -18,12 +22,16 @@ export type {
   FinancialAssetRow,
   FinancialIncomeRow,
   FinancialAuditRow,
+  FinancialInvestmentRow,
+  NewFinancialInvestmentRow,
   SubscriptionCadence,
   SubscriptionCategory,
   SubscriptionStatus,
   DebtType,
   AssetCategory,
   IncomeCadence,
+  InvestmentAssetType,
+  InvestmentCadence,
 };
 
 export const SUBSCRIPTION_CADENCES = ["WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"] as const;
@@ -56,6 +64,87 @@ export const ASSET_CATEGORIES = [
   "OTHER",
 ] as const;
 export const INCOME_CADENCES = ["MONTHLY", "BIWEEKLY", "SEMI_MONTHLY", "WEEKLY", "ANNUAL"] as const;
+
+export const INVESTMENT_ASSET_TYPES = [
+  "STOCKS_ETF",
+  "MUTUAL_FUND",
+  "GOLD_PRECIOUS_METALS",
+  "CRYPTO",
+  "RETIREMENT",
+  "REAL_ESTATE_REIT",
+  "BONDS_TREASURY",
+  "OTHER",
+] as const;
+
+export const INVESTMENT_CADENCES = ["DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY", "QUARTERLY", "ANNUAL"] as const;
+export const INVESTMENT_STATUSES = ["ACTIVE", "PAUSED", "COMPLETED"] as const;
+
+export interface InvestmentThemeConfig {
+  icon: string;
+  label: string;
+  shortLabel: string;
+  headerBg: string;
+  accent: string;
+}
+
+export const INVESTMENT_THEMES: Record<InvestmentAssetType, InvestmentThemeConfig> = {
+  GOLD_PRECIOUS_METALS: {
+    icon: "🪙",
+    label: "GOLD & PRECIOUS METALS",
+    shortLabel: "GOLD",
+    headerBg: "#F59E0B",
+    accent: "#D97706",
+  },
+  STOCKS_ETF: {
+    icon: "📈",
+    label: "STOCKS & ETFS (S&P 500)",
+    shortLabel: "STOCKS",
+    headerBg: "#00F0FF",
+    accent: "#0284C7",
+  },
+  MUTUAL_FUND: {
+    icon: "📊",
+    label: "MUTUAL FUNDS / SIPS",
+    shortLabel: "MUTUAL FUNDS",
+    headerBg: "#FFE600",
+    accent: "#CA8A04",
+  },
+  CRYPTO: {
+    icon: "⚡",
+    label: "CRYPTO & BITCOIN DCA",
+    shortLabel: "CRYPTO",
+    headerBg: "#FF2E93",
+    accent: "#BE123C",
+  },
+  RETIREMENT: {
+    icon: "🏛️",
+    label: "RETIREMENT / 401(K) / IRA",
+    shortLabel: "RETIREMENT",
+    headerBg: "#C084FC",
+    accent: "#9333EA",
+  },
+  REAL_ESTATE_REIT: {
+    icon: "🏡",
+    label: "REAL ESTATE & REITS",
+    shortLabel: "REAL ESTATE",
+    headerBg: "#34D399",
+    accent: "#059669",
+  },
+  BONDS_TREASURY: {
+    icon: "📜",
+    label: "BONDS & GOVT TREASURIES",
+    shortLabel: "BONDS",
+    headerBg: "#B6FF3C",
+    accent: "#65A30D",
+  },
+  OTHER: {
+    icon: "📦",
+    label: "OTHER INVESTMENTS",
+    shortLabel: "OTHER",
+    headerBg: "#E4E4E7",
+    accent: "#71717A",
+  },
+};
 
 export interface CategoryThemeConfig {
   headerBg: string;
@@ -249,15 +338,41 @@ export interface SubscriptionMetrics {
   upcomingRenewals: UpcomingRenewal[];
 }
 
+export interface CompoundProjectionPoint {
+  years: number;
+  totalInvested: number;
+  projectedWealth: number;
+  interestEarned: number;
+}
+
+export interface CategoryInvestmentStat {
+  assetType: InvestmentAssetType;
+  monthlyTotal: number;
+  yearlyTotal: number;
+  count: number;
+}
+
+export interface InvestmentMetrics {
+  monthlyTotal: number;
+  yearlyTotal: number;
+  activeCount: number;
+  pausedCount: number;
+  weightedReturnRatePct: number;
+  categoryBreakdown: Record<InvestmentAssetType, CategoryInvestmentStat>;
+  compoundProjections: CompoundProjectionPoint[];
+}
+
 export interface CashFlowSummary {
   monthlyGrossIncome: number;
   monthlyTaxWithholding: number;
   monthlyNetTakeHome: number;
   monthlySubscriptions: number;
   monthlyDebtMinimums: number;
+  monthlyRecurringInvestments: number;
   totalFixedOutflow: number;
   monthlyNetSurplus: number;
   savingsRatePct: number;
+  wealthVelocityPct: number;
   liquidCashTotal: number;
   runwayMonths: number;
 }
@@ -308,8 +423,10 @@ export interface FinancialOverviewPayload {
   debts: FinancialDebtRow[];
   assets: FinancialAssetRow[];
   incomes: FinancialIncomeRow[];
+  investments: FinancialInvestmentRow[];
   metrics: {
     subscriptionMetrics: SubscriptionMetrics;
+    investmentMetrics: InvestmentMetrics;
     cashFlow: CashFlowSummary;
     netWorth: NetWorthSummary;
     avalanchePayoff: PayoffSimulationResult;

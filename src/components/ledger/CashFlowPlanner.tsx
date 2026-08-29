@@ -120,6 +120,15 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
             <span style={{ color: "#DC2626", fontWeight: 700 }}>{formatCurrency(-cashFlow.monthlyDebtMinimums, 2)}</span>
           </div>
 
+          {cashFlow.monthlyRecurringInvestments > 0 && (
+            <div className="cashflow-row">
+              <span>↳ Recurring Wealth Investments (Gold / Stocks / SIPs)</span>
+              <span style={{ color: "#0284C7", fontWeight: 800 }}>
+                {formatCurrency(-cashFlow.monthlyRecurringInvestments, 2)}
+              </span>
+            </div>
+          )}
+
           <div className="cashflow-row" style={{ borderTop: "1.5px solid var(--ink, #0A0A0A)", marginTop: "8px", paddingTop: "10px" }}>
             <span style={{ fontWeight: 900, fontSize: "12.5px" }}>FREE CASH SURPLUS</span>
             <span
@@ -136,15 +145,15 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
 
           <div style={{ marginTop: "14px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 800, marginBottom: "5px" }}>
-              <span>SAVINGS RATE</span>
-              <span>{cashFlow.savingsRatePct}% OF TAKE-HOME</span>
+              <span>WEALTH ACCUMULATION VELOCITY</span>
+              <span>{cashFlow.wealthVelocityPct || cashFlow.savingsRatePct}% (INVESTMENT + SURPLUS)</span>
             </div>
             <div className="debt-progress-bar">
               <div
                 className="debt-progress-fill"
                 style={{
-                  width: `${Math.min(100, Math.max(0, cashFlow.savingsRatePct))}%`,
-                  background: cashFlow.savingsRatePct > 20 ? "#16A34A" : "#F59E0B",
+                  width: `${Math.min(100, Math.max(0, cashFlow.wealthVelocityPct || cashFlow.savingsRatePct))}%`,
+                  background: (cashFlow.wealthVelocityPct || cashFlow.savingsRatePct) > 20 ? "#16A34A" : "#F59E0B",
                 }}
               />
             </div>

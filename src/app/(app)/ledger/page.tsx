@@ -1,17 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { AppPage } from "@/components/chrome/AppPage";
-import { AppLoading } from "@/components/chrome/AppLoading";
 import {
+  Landmark,
   Sparkles,
   Plus,
   LayoutDashboard,
   Repeat,
   CreditCard,
   TrendingUp,
-  Landmark,
+  Coins,
 } from "lucide-react";
+import { AppPage } from "@/components/chrome/AppPage";
+import { AppLoading } from "@/components/chrome/AppLoading";
 import {
   FinancialOverviewPayload,
   FinancialSubscriptionRow,
@@ -19,23 +20,27 @@ import {
   FinancialAssetRow,
   FinancialIncomeRow,
   FinancialAuditRow,
+  FinancialInvestmentRow,
 } from "@/lib/ledger/types";
 import { LedgerOverview } from "@/components/ledger/LedgerOverview";
 import { SubscriptionTracker } from "@/components/ledger/SubscriptionTracker";
+import { RecurringInvestmentsTracker } from "@/components/ledger/RecurringInvestmentsTracker";
 import { DebtPayoffTracker } from "@/components/ledger/DebtPayoffTracker";
 import { CashFlowPlanner } from "@/components/ledger/CashFlowPlanner";
 import { AssetsNetWorth } from "@/components/ledger/AssetsNetWorth";
 import { AddSubscriptionModal } from "@/components/ledger/AddSubscriptionModal";
+import { AddInvestmentModal } from "@/components/ledger/AddInvestmentModal";
 import { AddDebtModal } from "@/components/ledger/AddDebtModal";
 import { AddAssetModal } from "@/components/ledger/AddAssetModal";
 import { AddIncomeModal } from "@/components/ledger/AddIncomeModal";
 import { LedgerAuditModal } from "@/components/ledger/LedgerAuditModal";
 import { calculateSubscriptionMetrics } from "@/lib/ledger/subscriptionMetrics";
+import { calculateInvestmentMetrics } from "@/lib/ledger/investmentMetrics";
 import { calculateCashFlow } from "@/lib/ledger/cashFlow";
 import { calculateDebtPayoff } from "@/lib/ledger/debtPayoff";
 import { playSound } from "@/lib/sound";
 
-type LedgerTab = "OVERVIEW" | "SUBSCRIPTIONS" | "DEBTS" | "CASHFLOW" | "NETWORTH";
+type LedgerTab = "OVERVIEW" | "SUBSCRIPTIONS" | "INVESTMENTS" | "DEBTS" | "CASHFLOW" | "NETWORTH";
 
 function LedgerContent() {
   const [overview, setOverview] = useState<FinancialOverviewPayload | null>(null);
@@ -45,6 +50,9 @@ function LedgerContent() {
   // Modals & Editing State
   const [isAddSubOpen, setIsAddSubOpen] = useState(false);
   const [editingSub, setEditingSub] = useState<FinancialSubscriptionRow | null>(null);
+
+  const [isAddInvestmentOpen, setIsAddInvestmentOpen] = useState(false);
+  const [editingInvestment, setEditingInvestment] = useState<FinancialInvestmentRow | null>(null);
 
   const [isAddDebtOpen, setIsAddDebtOpen] = useState(false);
   const [editingDebt, setEditingDebt] = useState<FinancialDebtRow | null>(null);
@@ -82,10 +90,12 @@ function LedgerContent() {
     debts: FinancialDebtRow[],
     assets: FinancialAssetRow[],
     incomes: FinancialIncomeRow[],
+    investments: FinancialInvestmentRow[],
     latestAudit: FinancialAuditRow | null
   ): FinancialOverviewPayload => {
     const subscriptionMetrics = calculateSubscriptionMetrics(subs);
-    const { cashFlow, netWorth } = calculateCashFlow(incomes, subs, debts, assets);
+    const investmentMetrics = calculateInvestmentMetrics(investments);
+    const { cashFlow, netWorth } = calculateCashFlow(incomes, subs, debts, assets, investments);
     const avalanchePayoff = calculateDebtPayoff(debts, "AVALANCHE", 100);
     const snowballPayoff = calculateDebtPayoff(debts, "SNOWBALL", 100);
 
@@ -94,8 +104,10 @@ function LedgerContent() {
       debts,
       assets,
       incomes,
+      investments,
       metrics: {
         subscriptionMetrics,
+        investmentMetrics,
         cashFlow,
         netWorth,
         avalanchePayoff,
@@ -110,7 +122,7 @@ function LedgerContent() {
     if (!overview) return;
     const newSubs = [sub, ...overview.subscriptions];
     setOverview(
-      recomputeOverview(newSubs, overview.debts, overview.assets, overview.incomes, overview.latestAudit)
+      recomputeOverview(newSubs, overview.debts, overview.assets, overview.incomes, overview.investments || [], overview.latestAudit)
     );
   };
 
@@ -118,7 +130,7 @@ function LedgerContent() {
     if (!overview) return;
     const newSubs = overview.subscriptions.map((s) => (s.id === updated.id ? updated : s));
     setOverview(
-      recomputeOverview(newSubs, overview.debts, overview.assets, overview.incomes, overview.latestAudit)
+      recomputeOverview(newSubs, overview.debts, overview.assets, overview.incomes, overview.investments || [], overview.latestAudit)
     );
   };
 
@@ -126,7 +138,32 @@ function LedgerContent() {
     if (!overview) return;
     const newSubs = overview.subscriptions.filter((s) => s.id !== id);
     setOverview(
-      recomputeOverview(newSubs, overview.debts, overview.assets, overview.incomes, overview.latestAudit)
+      recomputeOverview(newSubs, overview.debts, overview.assets, overview.incomes, overview.investments || [], overview.latestAudit)
+    );
+  };
+
+  // Handlers for Recurring Investments
+  const handleInvestmentCreated = (inv: FinancialInvestmentRow) => {
+    if (!overview) return;
+    const newInvestments = [inv, ...(overview.investments || [])];
+    setOverview(
+      recomputeOverview(overview.subscriptions, overview.debts, overview.assets, overview.incomes, newInvestments, overview.latestAudit)
+    );
+  };
+
+  const handleInvestmentUpdated = (updated: FinancialInvestmentRow) => {
+    if (!overview) return;
+    const newInvestments = (overview.investments || []).map((i) => (i.id === updated.id ? updated : i));
+    setOverview(
+      recomputeOverview(overview.subscriptions, overview.debts, overview.assets, overview.incomes, newInvestments, overview.latestAudit)
+    );
+  };
+
+  const handleInvestmentDeleted = (id: string) => {
+    if (!overview) return;
+    const newInvestments = (overview.investments || []).filter((i) => i.id !== id);
+    setOverview(
+      recomputeOverview(overview.subscriptions, overview.debts, overview.assets, overview.incomes, newInvestments, overview.latestAudit)
     );
   };
 
@@ -135,7 +172,7 @@ function LedgerContent() {
     if (!overview) return;
     const newDebts = [debt, ...overview.debts];
     setOverview(
-      recomputeOverview(overview.subscriptions, newDebts, overview.assets, overview.incomes, overview.latestAudit)
+      recomputeOverview(overview.subscriptions, newDebts, overview.assets, overview.incomes, overview.investments || [], overview.latestAudit)
     );
   };
 
@@ -143,7 +180,7 @@ function LedgerContent() {
     if (!overview) return;
     const newDebts = overview.debts.map((d) => (d.id === updated.id ? updated : d));
     setOverview(
-      recomputeOverview(overview.subscriptions, newDebts, overview.assets, overview.incomes, overview.latestAudit)
+      recomputeOverview(overview.subscriptions, newDebts, overview.assets, overview.incomes, overview.investments || [], overview.latestAudit)
     );
   };
 
@@ -151,7 +188,7 @@ function LedgerContent() {
     if (!overview) return;
     const newDebts = overview.debts.filter((d) => d.id !== id);
     setOverview(
-      recomputeOverview(overview.subscriptions, newDebts, overview.assets, overview.incomes, overview.latestAudit)
+      recomputeOverview(overview.subscriptions, newDebts, overview.assets, overview.incomes, overview.investments || [], overview.latestAudit)
     );
   };
 
@@ -160,7 +197,7 @@ function LedgerContent() {
     if (!overview) return;
     const newAssets = [asset, ...overview.assets];
     setOverview(
-      recomputeOverview(overview.subscriptions, overview.debts, newAssets, overview.incomes, overview.latestAudit)
+      recomputeOverview(overview.subscriptions, overview.debts, newAssets, overview.incomes, overview.investments || [], overview.latestAudit)
     );
   };
 
@@ -168,7 +205,7 @@ function LedgerContent() {
     if (!overview) return;
     const newAssets = overview.assets.map((a) => (a.id === updated.id ? updated : a));
     setOverview(
-      recomputeOverview(overview.subscriptions, overview.debts, newAssets, overview.incomes, overview.latestAudit)
+      recomputeOverview(overview.subscriptions, overview.debts, newAssets, overview.incomes, overview.investments || [], overview.latestAudit)
     );
   };
 
@@ -176,7 +213,7 @@ function LedgerContent() {
     if (!overview) return;
     const newAssets = overview.assets.filter((a) => a.id !== id);
     setOverview(
-      recomputeOverview(overview.subscriptions, overview.debts, newAssets, overview.incomes, overview.latestAudit)
+      recomputeOverview(overview.subscriptions, overview.debts, newAssets, overview.incomes, overview.investments || [], overview.latestAudit)
     );
   };
 
@@ -185,7 +222,7 @@ function LedgerContent() {
     if (!overview) return;
     const newIncomes = [income, ...overview.incomes];
     setOverview(
-      recomputeOverview(overview.subscriptions, overview.debts, overview.assets, newIncomes, overview.latestAudit)
+      recomputeOverview(overview.subscriptions, overview.debts, overview.assets, newIncomes, overview.investments || [], overview.latestAudit)
     );
   };
 
@@ -193,7 +230,7 @@ function LedgerContent() {
     if (!overview) return;
     const newIncomes = overview.incomes.map((i) => (i.id === updated.id ? updated : i));
     setOverview(
-      recomputeOverview(overview.subscriptions, overview.debts, overview.assets, newIncomes, overview.latestAudit)
+      recomputeOverview(overview.subscriptions, overview.debts, overview.assets, newIncomes, overview.investments || [], overview.latestAudit)
     );
   };
 
@@ -201,7 +238,7 @@ function LedgerContent() {
     if (!overview) return;
     const newIncomes = overview.incomes.filter((i) => i.id !== id);
     setOverview(
-      recomputeOverview(overview.subscriptions, overview.debts, overview.assets, newIncomes, overview.latestAudit)
+      recomputeOverview(overview.subscriptions, overview.debts, overview.assets, newIncomes, overview.investments || [], overview.latestAudit)
     );
   };
 
@@ -245,6 +282,9 @@ function LedgerContent() {
               if (activeTab === "SUBSCRIPTIONS") {
                 setEditingSub(null);
                 setIsAddSubOpen(true);
+              } else if (activeTab === "INVESTMENTS") {
+                setEditingInvestment(null);
+                setIsAddInvestmentOpen(true);
               } else if (activeTab === "DEBTS") {
                 setEditingDebt(null);
                 setIsAddDebtOpen(true);
@@ -291,6 +331,19 @@ function LedgerContent() {
           >
             <Repeat size={13} aria-hidden="true" />
             SUBSCRIPTIONS ({overview?.subscriptions.length || 0})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "INVESTMENTS"}
+            className={`ledger-nav-tab ${activeTab === "INVESTMENTS" ? "active" : ""}`}
+            onClick={() => {
+              playSound.click();
+              setActiveTab("INVESTMENTS");
+            }}
+          >
+            <Coins size={13} aria-hidden="true" />
+            INVESTMENTS ({overview?.investments?.length || 0})
           </button>
           <button
             type="button"
@@ -386,6 +439,22 @@ function LedgerContent() {
             />
           )}
 
+          {activeTab === "INVESTMENTS" && (
+            <RecurringInvestmentsTracker
+              investments={overview.investments || []}
+              onAddInvestment={() => {
+                setEditingInvestment(null);
+                setIsAddInvestmentOpen(true);
+              }}
+              onEditInvestment={(inv) => {
+                setEditingInvestment(inv);
+                setIsAddInvestmentOpen(true);
+              }}
+              onUpdateInvestment={handleInvestmentUpdated}
+              onDeleteInvestment={handleInvestmentDeleted}
+            />
+          )}
+
           {activeTab === "DEBTS" && (
             <DebtPayoffTracker
               debts={overview.debts}
@@ -450,6 +519,17 @@ function LedgerContent() {
         subscriptionToEdit={editingSub}
       />
 
+      <AddInvestmentModal
+        isOpen={isAddInvestmentOpen}
+        onClose={() => {
+          setIsAddInvestmentOpen(false);
+          setEditingInvestment(null);
+        }}
+        onCreated={handleInvestmentCreated}
+        onUpdated={handleInvestmentUpdated}
+        investmentToEdit={editingInvestment}
+      />
+
       <AddDebtModal
         isOpen={isAddDebtOpen}
         onClose={() => {
@@ -504,3 +584,4 @@ export default function LedgerPage() {
     </AppPage>
   );
 }
+

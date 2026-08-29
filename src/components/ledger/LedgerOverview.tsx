@@ -12,6 +12,7 @@ import {
   TrendingUp,
   CreditCard,
   BellRing,
+  Coins,
 } from "lucide-react";
 import { SubscriptionBreakdownChart } from "./charts/SubscriptionBreakdownChart";
 import { CashFlowVelocityWaterfall } from "./charts/CashFlowVelocityWaterfall";
@@ -19,7 +20,7 @@ import { DebtAmortizationChart } from "./charts/DebtAmortizationChart";
 
 interface LedgerOverviewProps {
   overview: FinancialOverviewPayload;
-  onNavigateTab: (tab: "SUBSCRIPTIONS" | "DEBTS" | "CASHFLOW" | "NETWORTH") => void;
+  onNavigateTab: (tab: "SUBSCRIPTIONS" | "INVESTMENTS" | "DEBTS" | "CASHFLOW" | "NETWORTH") => void;
   onAddSubscription: () => void;
   onAddDebt: () => void;
   onAddAsset: () => void;
@@ -34,8 +35,8 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
   onAddAsset,
   onOpenAudit,
 }) => {
-  const { metrics, subscriptions, debts } = overview;
-  const { subscriptionMetrics, cashFlow, netWorth, avalanchePayoff } = metrics;
+  const { metrics, subscriptions, debts, investments = [] } = overview;
+  const { subscriptionMetrics, investmentMetrics, cashFlow, netWorth, avalanchePayoff } = metrics;
 
   const urgentRenewals = subscriptionMetrics.upcomingRenewals.filter((r) => r.daysUntil <= 7);
 
@@ -77,6 +78,24 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
           <div className="ledger-kpi-value">{formatCurrency(subscriptionMetrics.monthlyTotal, 2)}</div>
           <div className="ledger-kpi-sub">
             {subscriptionMetrics.activeCount} active subscriptions ({formatCurrency(subscriptionMetrics.yearlyTotal, 0)}/yr)
+          </div>
+        </div>
+
+        {/* Recurring Investments / SIPs */}
+        <div
+          className="ledger-kpi-card"
+          style={{ "--kpi-accent": "#F59E0B", cursor: "pointer" } as React.CSSProperties}
+          onClick={() => {
+            playSound.click();
+            onNavigateTab("INVESTMENTS");
+          }}
+        >
+          <div className="ledger-kpi-label">MONTHLY RECURRING INVESTMENTS</div>
+          <div className="ledger-kpi-value" style={{ color: "#166534" }}>
+            {formatCurrency(investmentMetrics?.monthlyTotal || 0, 2)}
+          </div>
+          <div className="ledger-kpi-sub">
+            {investments.length} SIPs/DCAs • {investmentMetrics?.weightedReturnRatePct || 8}% Avg CAGR
           </div>
         </div>
 
@@ -281,6 +300,14 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
               {formatCurrency(-cashFlow.monthlyDebtMinimums, 2)}
             </span>
           </div>
+          {cashFlow.monthlyRecurringInvestments > 0 && (
+            <div className="cashflow-row">
+              <span>Recurring Wealth Investments (SIPs)</span>
+              <span style={{ color: "#0284C7", fontWeight: 800 }}>
+                {formatCurrency(-cashFlow.monthlyRecurringInvestments, 2)}
+              </span>
+            </div>
+          )}
           <div className="cashflow-row" style={{ borderTop: "2px solid var(--ink, #000000)", paddingTop: "10px" }}>
             <span style={{ fontWeight: 900 }}>Free Monthly Surplus</span>
             <span

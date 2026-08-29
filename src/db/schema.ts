@@ -993,6 +993,21 @@ export type AssetCategory = (typeof assetCategoryValues)[number];
 export const incomeCadenceValues = ["MONTHLY", "BIWEEKLY", "SEMI_MONTHLY", "WEEKLY", "ANNUAL"] as const;
 export type IncomeCadence = (typeof incomeCadenceValues)[number];
 
+export const investmentAssetTypeValues = [
+  "STOCKS_ETF",
+  "MUTUAL_FUND",
+  "GOLD_PRECIOUS_METALS",
+  "CRYPTO",
+  "RETIREMENT",
+  "REAL_ESTATE_REIT",
+  "BONDS_TREASURY",
+  "OTHER",
+] as const;
+export type InvestmentAssetType = (typeof investmentAssetTypeValues)[number];
+
+export const investmentCadenceValues = ["DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY", "QUARTERLY", "ANNUAL"] as const;
+export type InvestmentCadence = (typeof investmentCadenceValues)[number];
+
 export const financialSubscriptions = pgTable(
   "financial_subscriptions",
   {
@@ -1128,6 +1143,39 @@ export const financialAudits = pgTable(
 
 export type FinancialAuditRow = typeof financialAudits.$inferSelect;
 export type NewFinancialAuditRow = typeof financialAudits.$inferInsert;
+
+export const financialInvestments = pgTable(
+  "financial_investments",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    assetType: varchar("asset_type", { length: 32 }).notNull().default("STOCKS_ETF"),
+    amount: real("amount").notNull(),
+    currency: varchar("currency", { length: 8 }).notNull().default("USD"),
+    cadence: varchar("cadence", { length: 16 }).notNull().default("MONTHLY"),
+    investmentDay: integer("investment_day").default(1),
+    platform: text("platform"),
+    expectedReturnRate: real("expected_return_rate"),
+    currentValuation: real("current_valuation"),
+    status: varchar("status", { length: 16 }).notNull().default("ACTIVE"),
+    targetAssetId: text("target_asset_id"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("financial_investment_user_status_idx").on(table.userId, table.status, table.updatedAt.desc()),
+  ]
+);
+
+export type FinancialInvestmentRow = typeof financialInvestments.$inferSelect;
+export type NewFinancialInvestmentRow = typeof financialInvestments.$inferInsert;
+
 
 
 

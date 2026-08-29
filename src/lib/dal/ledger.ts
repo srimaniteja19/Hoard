@@ -5,6 +5,7 @@ import {
   financialAssets,
   financialIncomes,
   financialAudits,
+  financialInvestments,
   FinancialSubscriptionRow,
   NewFinancialSubscriptionRow,
   FinancialDebtRow,
@@ -15,9 +16,12 @@ import {
   NewFinancialIncomeRow,
   FinancialAuditRow,
   NewFinancialAuditRow,
+  FinancialInvestmentRow,
+  NewFinancialInvestmentRow,
 } from "@/db/schema";
 import { eq, and, desc, asc } from "drizzle-orm";
 import { calculateSubscriptionMetrics } from "@/lib/ledger/subscriptionMetrics";
+import { calculateInvestmentMetrics } from "@/lib/ledger/investmentMetrics";
 import { calculateCashFlow } from "@/lib/ledger/cashFlow";
 import { calculateDebtPayoff } from "@/lib/ledger/debtPayoff";
 import { FinancialOverviewPayload } from "@/lib/ledger/types";
@@ -207,6 +211,56 @@ export async function deleteIncome(userId: string, id: string): Promise<boolean>
   return res.length > 0;
 }
 
+// ─── RECURRING INVESTMENTS ───────────────────────────────────────────────────
+
+export async function getUserInvestments(userId: string): Promise<FinancialInvestmentRow[]> {
+  return db
+    .select()
+    .from(financialInvestments)
+    .where(eq(financialInvestments.userId, userId))
+    .orderBy(desc(financialInvestments.amount));
+}
+
+export async function getInvestmentById(
+  userId: string,
+  id: string
+): Promise<FinancialInvestmentRow | null> {
+  const [row] = await db
+    .select()
+    .from(financialInvestments)
+    .where(and(eq(financialInvestments.id, id), eq(financialInvestments.userId, userId)))
+    .limit(1);
+  return row || null;
+}
+
+export async function createInvestment(
+  data: NewFinancialInvestmentRow
+): Promise<FinancialInvestmentRow> {
+  const [created] = await db.insert(financialInvestments).values(data).returning();
+  return created;
+}
+
+export async function updateInvestment(
+  userId: string,
+  id: string,
+  data: Partial<NewFinancialInvestmentRow>
+): Promise<FinancialInvestmentRow | null> {
+  const [updated] = await db
+    .update(financialInvestments)
+    .set({ ...data, updatedAt: new Date() })
+    .where(and(eq(financialInvestments.id, id), eq(financialInvestments.userId, userId)))
+    .returning();
+  return updated || null;
+}
+
+export async function deleteInvestment(userId: string, id: string): Promise<boolean> {
+  const res = await db
+    .delete(financialInvestments)
+    .where(and(eq(financialInvestments.id, id), eq(financialInvestments.userId, userId)))
+    .returning({ id: financialInvestments.id });
+  return res.length > 0;
+}
+
 // ─── AUDITS ──────────────────────────────────────────────────────────────────
 
 export async function getLatestFinancialAudit(userId: string): Promise<FinancialAuditRow | null> {
@@ -230,16 +284,24 @@ export async function getFinancialOverview(
   userId: string,
   extraMonthlyPayment: number = 0
 ): Promise<FinancialOverviewPayload> {
-  const [subscriptions, debts, assets, incomes, latestAudit] = await Promise.all([
+  const [subscriptions, debts, assets, incomes, investments, latestAudit] = await Promise.all([
     getUserSubscriptions(userId),
     getUserDebts(userId),
     getUserAssets(userId),
     getUserIncomes(userId),
+    getUserInvestments(userId),
     getLatestFinancialAudit(userId),
   ]);
 
   const subscriptionMetrics = calculateSubscriptionMetrics(subscriptions);
-  const { cashFlow, netWorth } = calculateCashFlow(incomes, subscriptions, debts, assets);
+  const investmentMetrics = calculateInvestmentMetrics(investments);
+  const { cashFlow, netWorth } = calculateCashFlow(
+    incomes,
+    subscriptions,
+    debts,
+    assets,
+    investments
+  );
 
   const avalanchePayoff = calculateDebtPayoff(debts, "AVALANCHE", extraMonthlyPayment);
   const snowballPayoff = calculateDebtPayoff(debts, "SNOWBALL", extraMonthlyPayment);
@@ -249,8 +311,10 @@ export async function getFinancialOverview(
     debts,
     assets,
     incomes,
+    investments,
     metrics: {
       subscriptionMetrics,
+      investmentMetrics,
       cashFlow,
       netWorth,
       avalanchePayoff,
