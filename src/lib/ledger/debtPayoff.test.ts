@@ -49,7 +49,6 @@ describe("calculateDebtPayoff", () => {
     const result = calculateDebtPayoff(mockDebts, "AVALANCHE", 200);
     expect(result.monthsToPayoff).toBeGreaterThan(0);
     expect(result.payoffMilestones.length).toBe(2);
-    // Highest APR (debt-1, 24%) should be paid off before debt-2 (4.5%)
     const debt1Milestone = result.payoffMilestones.find((m) => m.debtId === "debt-1");
     const debt2Milestone = result.payoffMilestones.find((m) => m.debtId === "debt-2");
     expect(debt1Milestone).toBeDefined();
@@ -58,7 +57,6 @@ describe("calculateDebtPayoff", () => {
   });
 
   it("should calculate Snowball payoff order prioritizing lowest balance", () => {
-    // Modify balances so debt with lower APR has lower balance
     const snowballDebts: FinancialDebtRow[] = [
       {
         ...mockDebts[0],
@@ -77,7 +75,7 @@ describe("calculateDebtPayoff", () => {
     ];
 
     const result = calculateDebtPayoff(snowballDebts, "SNOWBALL", 100);
-    expect(result.payoffMilestones[0].debtId).toBe("d2"); // Smallest balance first
+    expect(result.payoffMilestones[0].debtId).toBe("d2");
   });
 
   it("should demonstrate savings when extra payment is applied", () => {
@@ -88,5 +86,14 @@ describe("calculateDebtPayoff", () => {
     expect(accelerated.totalInterestPaid).toBeLessThan(baseline.totalInterestPaid);
     expect(accelerated.interestSavedVsMinimums).toBeGreaterThan(0);
     expect(accelerated.monthsSavedVsMinimums).toBeGreaterThan(0);
+  });
+
+  it("should simulate one-time lump sum windfall payments", () => {
+    const withoutLump = calculateDebtPayoff(mockDebts, "AVALANCHE", 100, 0);
+    const withLump = calculateDebtPayoff(mockDebts, "AVALANCHE", 100, 2000);
+
+    expect(withLump.monthsToPayoff).toBeLessThan(withoutLump.monthsToPayoff);
+    expect(withLump.totalInterestPaid).toBeLessThan(withoutLump.totalInterestPaid);
+    expect(withLump.interestSavedVsMinimums).toBeGreaterThan(withoutLump.interestSavedVsMinimums);
   });
 });

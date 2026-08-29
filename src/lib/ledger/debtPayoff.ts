@@ -1,4 +1,11 @@
-import { FinancialDebtRow, PayoffSimulationResult, DebtPayoffStrategy, PayoffMonthSnapshot, DebtMonthlyPaymentPlan, DebtPayoffMilestone } from "./types";
+import {
+  FinancialDebtRow,
+  PayoffSimulationResult,
+  DebtPayoffStrategy,
+  PayoffMonthSnapshot,
+  DebtMonthlyPaymentPlan,
+  DebtPayoffMilestone,
+} from "./types";
 
 interface ActiveDebtState {
   id: string;
@@ -20,7 +27,8 @@ function formatPayoffDate(monthsFromNow: number): string {
 export function calculateDebtPayoff(
   debts: FinancialDebtRow[],
   strategy: DebtPayoffStrategy = "AVALANCHE",
-  extraMonthlyPayment: number = 0
+  extraMonthlyPayment: number = 0,
+  oneTimeLumpSum: number = 0
 ): PayoffSimulationResult {
   const activeDebts = debts.filter((d) => !d.isPaidOff && d.balance > 0);
 
@@ -28,10 +36,14 @@ export function calculateDebtPayoff(
     return {
       strategy,
       extraMonthlyPayment,
+      oneTimeLumpSum,
       monthsToPayoff: 0,
       debtFreeDate: "Debt-Free Today!",
       totalInterestPaid: 0,
       totalPrincipalPaid: 0,
+      baselineMonthsToPayoff: 0,
+      baselineTotalInterestPaid: 0,
+      baselineDebtFreeDate: "Debt-Free Today!",
       interestSavedVsMinimums: 0,
       monthsSavedVsMinimums: 0,
       monthlySchedule: [],
@@ -39,20 +51,28 @@ export function calculateDebtPayoff(
     };
   }
 
-  // Calculate baseline simulation with 0 extra payment and no strategy rollover for comparison
-  const baseline = runSimulation(activeDebts, strategy, 0, false);
-  const simulated = runSimulation(activeDebts, strategy, extraMonthlyPayment, true);
+  // Calculate baseline simulation with $0 extra payment, $0 lump sum, and no rollover
+  const baseline = runSimulation(activeDebts, strategy, 0, 0, false);
+  // Calculate accelerated simulated payoff
+  const simulated = runSimulation(activeDebts, strategy, extraMonthlyPayment, oneTimeLumpSum, true);
 
-  const interestSaved = Math.max(0, Math.round((baseline.totalInterestPaid - simulated.totalInterestPaid) * 100) / 100);
+  const interestSaved = Math.max(
+    0,
+    Math.round((baseline.totalInterestPaid - simulated.totalInterestPaid) * 100) / 100
+  );
   const monthsSaved = Math.max(0, baseline.monthsToPayoff - simulated.monthsToPayoff);
 
   return {
     strategy,
     extraMonthlyPayment,
+    oneTimeLumpSum,
     monthsToPayoff: simulated.monthsToPayoff,
     debtFreeDate: formatPayoffDate(simulated.monthsToPayoff),
     totalInterestPaid: simulated.totalInterestPaid,
     totalPrincipalPaid: simulated.totalPrincipalPaid,
+    baselineMonthsToPayoff: baseline.monthsToPayoff,
+    baselineTotalInterestPaid: baseline.totalInterestPaid,
+    baselineDebtFreeDate: formatPayoffDate(baseline.monthsToPayoff),
     interestSavedVsMinimums: interestSaved,
     monthsSavedVsMinimums: monthsSaved,
     monthlySchedule: simulated.monthlySchedule,
@@ -64,6 +84,7 @@ function runSimulation(
   debts: FinancialDebtRow[],
   strategy: DebtPayoffStrategy,
   extraMonthlyPayment: number,
+  oneTimeLumpSum: number,
   rolloverFreedPayments: boolean
 ): {
   monthsToPayoff: number;
@@ -89,6 +110,7 @@ function runSimulation(
   const MAX_MONTHS = 360; // 30-year safety cap
 
   let currentMonth = 0;
+  let remainingLumpSum = oneTimeLumpSum;
 
   while (state.some((d) => !d.isPaid) && currentMonth < MAX_MONTHS) {
     currentMonth++;
@@ -96,23 +118,29 @@ function runSimulation(
     let totalPrincipalThisMonth = 0;
     const paymentPlans: DebtMonthlyPaymentPlan[] = [];
 
-    // Step 1: Charge interest for the month
+    // Step 1: Charge monthly accrued interest
     for (const debt of state) {
       if (debt.isPaid) continue;
-      const monthlyRate = (debt.interestRate / 100) / 12;
+      const monthlyRate = debt.interestRate / 100 / 12;
       const interest = Math.round(debt.balance * monthlyRate * 100) / 100;
       debt.balance += interest;
       debt.totalInterestPaid += interest;
       totalInterestThisMonth += interest;
     }
 
-    // Step 2: Pay minimums across all open debts
+    // Step 2: Pay minimum monthly obligations across all accounts
     let surplusPool = extraMonthlyPayment;
+
+    // Apply one-time windfall lump sum at Month 1
+    if (currentMonth === 1 && remainingLumpSum > 0) {
+      surplusPool += remainingLumpSum;
+      remainingLumpSum = 0;
+    }
 
     for (const debt of state) {
       if (debt.isPaid) {
         if (rolloverFreedPayments) {
-          // Add cleared minimum payment into the snowball/avalanche accelerator pool
+          // Rollover freed minimum payments into the accelerator pool
           surplusPool += debt.minPayment;
         }
         continue;
@@ -141,18 +169,17 @@ function runSimulation(
         debtId: debt.id,
         name: debt.name,
         startBalance,
-        interestCharged: Math.round((startBalance * ((debt.interestRate / 100) / 12)) * 100) / 100,
+        interestCharged: Math.round(startBalance * (debt.interestRate / 100 / 12) * 100) / 100,
         payment,
         principalPaid,
         endBalance: debt.balance,
       });
     }
 
-    // Step 3: Apply surplus pool to target priority debt
+    // Step 3: Apply surplus pool to target priority debt (Avalanche vs Snowball)
     if (surplusPool > 0) {
       const unpaidDebts = state.filter((d) => !d.isPaid);
 
-      // Sort by strategy
       if (strategy === "AVALANCHE") {
         // Highest APR first; if tied, lowest balance
         unpaidDebts.sort((a, b) => b.interestRate - a.interestRate || a.balance - b.balance);
@@ -170,7 +197,6 @@ function runSimulation(
         surplusPool -= extraPay;
         totalPrincipalThisMonth += extraPay;
 
-        // Update payment plan
         const plan = paymentPlans.find((p) => p.debtId === targetDebt.id);
         if (plan) {
           plan.payment += extraPay;

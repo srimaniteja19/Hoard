@@ -206,10 +206,14 @@ export interface DebtPayoffMilestone {
 export interface PayoffSimulationResult {
   strategy: DebtPayoffStrategy;
   extraMonthlyPayment: number;
+  oneTimeLumpSum?: number;
   monthsToPayoff: number;
   debtFreeDate: string;
   totalInterestPaid: number;
   totalPrincipalPaid: number;
+  baselineMonthsToPayoff: number;
+  baselineTotalInterestPaid: number;
+  baselineDebtFreeDate: string;
   interestSavedVsMinimums: number;
   monthsSavedVsMinimums: number;
   monthlySchedule: PayoffMonthSnapshot[];

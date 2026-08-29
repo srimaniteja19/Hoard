@@ -8,21 +8,23 @@ interface DebtAmortizationChartProps {
   debts: FinancialDebtRow[];
   activeStrategy: DebtPayoffStrategy;
   extraPayment: number;
+  oneTimeLumpSum?: number;
 }
 
 export const DebtAmortizationChart: React.FC<DebtAmortizationChartProps> = ({
   debts,
   activeStrategy,
   extraPayment,
+  oneTimeLumpSum = 0,
 }) => {
   const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
 
   const activeSim = useMemo(
-    () => calculateDebtPayoff(debts, activeStrategy, extraPayment),
-    [debts, activeStrategy, extraPayment]
+    () => calculateDebtPayoff(debts, activeStrategy, extraPayment, oneTimeLumpSum),
+    [debts, activeStrategy, extraPayment, oneTimeLumpSum]
   );
   const minSim = useMemo(
-    () => calculateDebtPayoff(debts, activeStrategy, 0),
+    () => calculateDebtPayoff(debts, activeStrategy, 0, 0),
     [debts, activeStrategy]
   );
 

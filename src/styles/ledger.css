@@ -581,9 +581,10 @@
 
 .debt-strategy-toggle {
   display: flex;
-  background: rgba(0, 0, 0, 0.05);
+  background: #F4F4F5;
   padding: 3px;
-  border: 1.5px solid var(--ink, #0A0A0A);
+  border: 2px solid var(--ink, #0A0A0A);
+  box-shadow: 2px 2px 0 var(--ink, #0A0A0A);
   border-radius: 3px;
   gap: 2px;
 }
@@ -591,60 +592,36 @@
 .debt-strategy-btn {
   font-family: var(--mono, "Space Mono", monospace);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 900;
   padding: 6px 12px;
   border: none;
   background: transparent;
   cursor: pointer;
   color: var(--ink, #0A0A0A);
   border-radius: 2px;
-  transition: all 0.12s ease;
+  transition: all 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-transform: uppercase;
 }
 
-.debt-strategy-btn:hover {
-  background: rgba(255, 255, 255, 0.6);
+.debt-strategy-btn:hover:not(.active) {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .debt-strategy-btn.active {
   background: var(--ink, #0A0A0A);
-  color: #FFFFFF;
-}
-
-.debt-slider-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.debt-slider-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-
-.debt-slider-header label {
-  font-family: var(--mono, "Space Mono", monospace);
-  font-size: 11.5px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-}
-
-.debt-slider-val {
-  font-family: var(--mono, "Space Mono", monospace);
-  font-size: 16px;
-  font-weight: 900;
-  color: #16A34A;
-  background: #DCFCE7;
-  padding: 2px 8px;
-  border: 1px solid #16A34A;
-  border-radius: 2px;
+  color: #FFE600;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.2);
 }
 
 .debt-range-input {
   width: 100%;
+  height: 8px;
+  background: #E4E4E7;
+  border: 1.5px solid var(--ink, #0A0A0A);
+  border-radius: 4px;
   accent-color: var(--ink, #0A0A0A);
   cursor: pointer;
+  outline: none;
 }
 
 .debt-impact-banner {
