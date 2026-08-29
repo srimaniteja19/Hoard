@@ -6,6 +6,7 @@ import {
   DebtPayoffStrategy,
   DebtType,
 } from "@/lib/ledger/types";
+import { formatCurrency, formatSignedCurrency } from "@/lib/ledger/formatters";
 import { calculateDebtPayoff } from "@/lib/ledger/debtPayoff";
 import { playSound } from "@/lib/sound";
 import { DebtAmortizationChart } from "./charts/DebtAmortizationChart";
@@ -429,10 +430,10 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
               💰 TOTAL INTEREST SAVED
             </div>
             <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "28px", fontWeight: 900, color: "#16A34A", lineHeight: 1.1 }}>
-              +${simulation.interestSavedVsMinimums.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {formatSignedCurrency(simulation.interestSavedVsMinimums, 2)}
             </div>
             <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 700, color: "#854D0E", marginTop: "6px" }}>
-              Paid Interest: <b>${simulation.totalInterestPaid.toFixed(2)}</b> (vs ${simulation.baselineTotalInterestPaid.toFixed(2)} baseline)
+              Paid Interest: <b>{formatCurrency(simulation.totalInterestPaid, 2)}</b> (vs {formatCurrency(simulation.baselineTotalInterestPaid, 2)} baseline)
             </div>
           </div>
 
@@ -450,10 +451,10 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
               🛡️ TOTAL LIFETIME REPAYMENT
             </div>
             <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "28px", fontWeight: 900, color: "#0A0A0A", lineHeight: 1.1 }}>
-              ${(simulation.totalPrincipalPaid + simulation.totalInterestPaid).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {formatCurrency(simulation.totalPrincipalPaid + simulation.totalInterestPaid, 2)}
             </div>
             <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 700, color: "#64748B", marginTop: "6px" }}>
-              Principal: ${simulation.totalPrincipalPaid.toLocaleString()} + Interest: ${simulation.totalInterestPaid.toLocaleString()}
+              Principal: {formatCurrency(simulation.totalPrincipalPaid, 0)} + Interest: {formatCurrency(simulation.totalInterestPaid, 0)}
             </div>
           </div>
         </div>
@@ -497,7 +498,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
           >
             <span>🎯 {strategy} PAYOFF SEQUENCE & ELIMINATION ORDER</span>
             <span style={{ color: "#666666", fontWeight: 700 }}>
-              Total Remaining: ${totalDebtBalance.toLocaleString()} (Base Min: ${totalMinMonthly}/mo)
+              Total Remaining: {formatCurrency(totalDebtBalance, 0)} (Base Min: {formatCurrency(totalMinMonthly, 0)}/mo)
             </span>
           </div>
 
@@ -532,7 +533,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                   🏆 Paid Off: {m.payoffDate}
                 </div>
                 <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10.5px", color: "#555555" }}>
-                  Interest Accrued: <b>${m.totalInterestPaid.toFixed(2)}</b>
+                  Interest Accrued: <b>{formatCurrency(m.totalInterestPaid, 2)}</b>
                 </div>
               </div>
             ))}
@@ -594,7 +595,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                 <div className="sub-card-title-row">
                   <h3 className="sub-card-title">{d.name}</h3>
                   <div className="sub-card-price-box">
-                    <span className="sub-card-price">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="sub-card-price">{formatCurrency(d.balance, 2)}</span>
                   </div>
                 </div>
 
@@ -605,7 +606,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 800, marginTop: "4px", color: "#555555" }}>
                     <span>{paidPct}% Paid</span>
-                    <span>Min: ${d.minPayment}/mo</span>
+                    <span>Min: {formatCurrency(d.minPayment, 0)}/mo</span>
                   </div>
                 </div>
 

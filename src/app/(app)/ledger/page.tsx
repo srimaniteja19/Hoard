@@ -4,6 +4,15 @@ import React, { useState, useEffect, Suspense } from "react";
 import { AppPage } from "@/components/chrome/AppPage";
 import { AppLoading } from "@/components/chrome/AppLoading";
 import {
+  Sparkles,
+  Plus,
+  LayoutDashboard,
+  Repeat,
+  CreditCard,
+  TrendingUp,
+  Landmark,
+} from "lucide-react";
+import {
   FinancialOverviewPayload,
   FinancialSubscriptionRow,
   FinancialDebtRow,
@@ -204,13 +213,12 @@ function LedgerContent() {
 
   return (
     <div className="ledger-container">
-      {/* ── HEADER TOOLBAR ── */}
-      <div className="ledger-header">
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-            <span style={{ fontSize: "20px" }}>🏛️</span>
-            <h1 className="ledger-title">THE HOARD FINANCIAL LEDGER</h1>
-            <span className="ledger-title-badge">PERSONAL FISCAL DESK</span>
+      {/* ── HEADER MASTHEAD ── */}
+      <header className="ledger-masthead">
+        <div className="ledger-title-group">
+          <div className="ledger-title-row">
+            <h1>THE HOARD FINANCIAL LEDGER</h1>
+            <span className="ledger-tagline-badge">PERSONAL FISCAL DESK</span>
           </div>
           <p className="ledger-subtitle">
             Autonomous ledger for recurring commitments, aggressive debt payoff, and liquid net worth tracking.
@@ -220,13 +228,14 @@ function LedgerContent() {
         <div className="ledger-actions">
           <button
             type="button"
-            className="btn-ledger"
+            className="btn-ledger btn-ledger-ai"
             onClick={() => {
               playSound.click();
               setIsAuditModalOpen(true);
             }}
           >
-            ✨ AI AUDITOR
+            <Sparkles size={13} aria-hidden="true" />
+            AI AUDITOR
           </button>
           <button
             type="button"
@@ -248,64 +257,82 @@ function LedgerContent() {
               }
             }}
           >
-            + ADD ENTRY
+            <Plus size={13} aria-hidden="true" />
+            ADD ENTRY
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* ── NAVIGATION TABS ── */}
-      <div className="ledger-tabs">
-        <button
-          type="button"
-          className={`ledger-tab-btn ${activeTab === "OVERVIEW" ? "active" : ""}`}
-          onClick={() => {
-            playSound.click();
-            setActiveTab("OVERVIEW");
-          }}
-        >
-          📊 OVERVIEW
-        </button>
-        <button
-          type="button"
-          className={`ledger-tab-btn ${activeTab === "SUBSCRIPTIONS" ? "active" : ""}`}
-          onClick={() => {
-            playSound.click();
-            setActiveTab("SUBSCRIPTIONS");
-          }}
-        >
-          ⚡ SUBSCRIPTIONS ({overview?.subscriptions.length || 0})
-        </button>
-        <button
-          type="button"
-          className={`ledger-tab-btn ${activeTab === "DEBTS" ? "active" : ""}`}
-          onClick={() => {
-            playSound.click();
-            setActiveTab("DEBTS");
-          }}
-        >
-          💳 DEBT PAYOFF ({overview?.debts.length || 0})
-        </button>
-        <button
-          type="button"
-          className={`ledger-tab-btn ${activeTab === "CASHFLOW" ? "active" : ""}`}
-          onClick={() => {
-            playSound.click();
-            setActiveTab("CASHFLOW");
-          }}
-        >
-          🌊 CASH FLOW ({overview?.incomes.length || 0})
-        </button>
-        <button
-          type="button"
-          className={`ledger-tab-btn ${activeTab === "NETWORTH" ? "active" : ""}`}
-          onClick={() => {
-            playSound.click();
-            setActiveTab("NETWORTH");
-          }}
-        >
-          🏛️ NET WORTH ({overview?.assets.length || 0})
-        </button>
-      </div>
+      {/* ── SEGMENTED NAVIGATION TABS ── */}
+      <nav className="ledger-nav-bar" aria-label="Ledger Sections">
+        <div className="ledger-nav-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "OVERVIEW"}
+            className={`ledger-nav-tab ${activeTab === "OVERVIEW" ? "active" : ""}`}
+            onClick={() => {
+              playSound.click();
+              setActiveTab("OVERVIEW");
+            }}
+          >
+            <LayoutDashboard size={13} aria-hidden="true" />
+            OVERVIEW
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "SUBSCRIPTIONS"}
+            className={`ledger-nav-tab ${activeTab === "SUBSCRIPTIONS" ? "active" : ""}`}
+            onClick={() => {
+              playSound.click();
+              setActiveTab("SUBSCRIPTIONS");
+            }}
+          >
+            <Repeat size={13} aria-hidden="true" />
+            SUBSCRIPTIONS ({overview?.subscriptions.length || 0})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "DEBTS"}
+            className={`ledger-nav-tab ${activeTab === "DEBTS" ? "active" : ""}`}
+            onClick={() => {
+              playSound.click();
+              setActiveTab("DEBTS");
+            }}
+          >
+            <CreditCard size={13} aria-hidden="true" />
+            DEBT PAYOFF ({overview?.debts.length || 0})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "CASHFLOW"}
+            className={`ledger-nav-tab ${activeTab === "CASHFLOW" ? "active" : ""}`}
+            onClick={() => {
+              playSound.click();
+              setActiveTab("CASHFLOW");
+            }}
+          >
+            <TrendingUp size={13} aria-hidden="true" />
+            CASH FLOW ({overview?.incomes.length || 0})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "NETWORTH"}
+            className={`ledger-nav-tab ${activeTab === "NETWORTH" ? "active" : ""}`}
+            onClick={() => {
+              playSound.click();
+              setActiveTab("NETWORTH");
+            }}
+          >
+            <Landmark size={13} aria-hidden="true" />
+            NET WORTH ({overview?.assets.length || 0})
+          </button>
+        </div>
+      </nav>
 
       {/* ── TAB CONTENT ── */}
       {loading ? (

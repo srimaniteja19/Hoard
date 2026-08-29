@@ -6,6 +6,7 @@ import {
   CashFlowSummary,
   IncomeCadence,
 } from "@/lib/ledger/types";
+import { formatCurrency, formatSignedCurrency } from "@/lib/ledger/formatters";
 import { calculateIncomeTax } from "@/lib/ledger/taxCalculator";
 import { playSound } from "@/lib/sound";
 import { CashFlowVelocityWaterfall } from "./charts/CashFlowVelocityWaterfall";
@@ -91,32 +92,32 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
           <div className="cashflow-row">
             <span style={{ fontWeight: 800 }}>Gross Monthly Inflow</span>
             <span style={{ fontFamily: "var(--display, sans-serif)", fontSize: "17px", fontWeight: 900, color: "#16A34A" }}>
-              +${cashFlow.monthlyGrossIncome.toFixed(2)}
+              {formatSignedCurrency(cashFlow.monthlyGrossIncome, 2)}
             </span>
           </div>
 
           {cashFlow.monthlyTaxWithholding > 0 && (
             <div className="cashflow-row">
               <span>↳ Estimated Taxes & Withholdings (Fed/State/FICA)</span>
-              <span style={{ color: "#DC2626", fontWeight: 800 }}>-${cashFlow.monthlyTaxWithholding.toFixed(2)}</span>
+              <span style={{ color: "#DC2626", fontWeight: 800 }}>{formatCurrency(-cashFlow.monthlyTaxWithholding, 2)}</span>
             </div>
           )}
 
           <div className="cashflow-row">
             <span style={{ fontWeight: 800 }}>Net Take-Home Cash Flow</span>
             <span style={{ fontFamily: "var(--display, sans-serif)", fontSize: "17px", fontWeight: 900, color: "#16A34A" }}>
-              +${cashFlow.monthlyNetTakeHome.toFixed(2)}
+              {formatSignedCurrency(cashFlow.monthlyNetTakeHome, 2)}
             </span>
           </div>
 
           <div className="cashflow-row">
             <span>↳ Subscriptions & Recurring Burn</span>
-            <span style={{ color: "#DC2626", fontWeight: 700 }}>-${cashFlow.monthlySubscriptions.toFixed(2)}</span>
+            <span style={{ color: "#DC2626", fontWeight: 700 }}>{formatCurrency(-cashFlow.monthlySubscriptions, 2)}</span>
           </div>
 
           <div className="cashflow-row">
             <span>↳ Debt Minimum Payments</span>
-            <span style={{ color: "#DC2626", fontWeight: 700 }}>-${cashFlow.monthlyDebtMinimums.toFixed(2)}</span>
+            <span style={{ color: "#DC2626", fontWeight: 700 }}>{formatCurrency(-cashFlow.monthlyDebtMinimums, 2)}</span>
           </div>
 
           <div className="cashflow-row" style={{ borderTop: "1.5px solid var(--ink, #0A0A0A)", marginTop: "8px", paddingTop: "10px" }}>
@@ -129,7 +130,7 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
                 color: isSurplusPositive ? "#16A34A" : "#DC2626",
               }}
             >
-              {isSurplusPositive ? "+" : ""}${cashFlow.monthlyNetSurplus.toFixed(2)}
+              {formatSignedCurrency(cashFlow.monthlyNetSurplus, 2)}
             </span>
           </div>
 

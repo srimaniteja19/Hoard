@@ -6,6 +6,7 @@ import {
   NetWorthSummary,
   AssetCategory,
 } from "@/lib/ledger/types";
+import { formatCurrency } from "@/lib/ledger/formatters";
 import { playSound } from "@/lib/sound";
 
 import { NetWorthCompositionChart } from "./charts/NetWorthCompositionChart";
@@ -95,10 +96,10 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
               color: netWorth.netWorth >= 0 ? "var(--ink, #0A0A0A)" : "#DC2626",
             }}
           >
-            ${netWorth.netWorth.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            {formatCurrency(netWorth.netWorth, 2)}
           </div>
           <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 700, color: "#666666", marginTop: "4px" }}>
-            Total Assets: <b>${netWorth.totalAssets.toLocaleString()}</b> | Total Debt Liabilities: <b>${netWorth.totalLiabilities.toLocaleString()}</b>
+            Total Assets: <b>{formatCurrency(netWorth.totalAssets, 0)}</b> | Total Debt Liabilities: <b>{formatCurrency(netWorth.totalLiabilities, 0)}</b>
           </div>
         </div>
 
@@ -269,7 +270,7 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
                     <h3 className="sub-card-title">{asset.name}</h3>
                     <div className="sub-card-price-box">
                       <span className="sub-card-price">
-                        ${asset.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {formatCurrency(asset.value, 2)}
                       </span>
                     </div>
                   </div>
