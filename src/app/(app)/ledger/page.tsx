@@ -163,16 +163,55 @@ function LedgerContent() {
   const handleInvestmentCreated = (inv: FinancialInvestmentRow) => {
     if (!overview) return;
     const newInvestments = [inv, ...(overview.investments || [])];
+    const assetName = inv.platform ? `${inv.platform} - ${inv.name}` : inv.name;
+    const existingAsset = overview.assets.find(
+      (a) => a.id === inv.targetAssetId || a.name.toLowerCase() === assetName.toLowerCase()
+    );
+    let newAssets = overview.assets;
+    if (existingAsset) {
+      newAssets = overview.assets.map((a) =>
+        a.id === existingAsset.id ? { ...a, value: inv.currentValuation || 0 } : a
+      );
+    } else if (inv.currentValuation && inv.currentValuation > 0) {
+      newAssets = [
+        {
+          id: inv.targetAssetId || `asset-${inv.id}`,
+          userId: inv.userId,
+          name: assetName,
+          category: "INVESTMENT",
+          value: inv.currentValuation,
+          institution: inv.platform || null,
+          expectedYield: inv.expectedReturnRate ?? null,
+          notes: `Auto-linked from Recurring SIP: ${inv.name}`,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        ...overview.assets,
+      ];
+    }
     setOverview(
-      recomputeOverview(overview.subscriptions, overview.debts, overview.assets, overview.incomes, newInvestments, overview.latestAudit)
+      recomputeOverview(overview.subscriptions, overview.debts, newAssets, overview.incomes, newInvestments, overview.latestAudit)
     );
   };
 
   const handleInvestmentUpdated = (updated: FinancialInvestmentRow) => {
     if (!overview) return;
     const newInvestments = (overview.investments || []).map((i) => (i.id === updated.id ? updated : i));
+    const assetName = updated.platform ? `${updated.platform} - ${updated.name}` : updated.name;
+    const newAssets = overview.assets.map((a) => {
+      if (updated.targetAssetId && a.id === updated.targetAssetId) {
+        return { ...a, value: updated.currentValuation || 0 };
+      }
+      if (
+        a.name.toLowerCase() === updated.name.toLowerCase() ||
+        a.name.toLowerCase() === assetName.toLowerCase()
+      ) {
+        return { ...a, value: updated.currentValuation || 0 };
+      }
+      return a;
+    });
     setOverview(
-      recomputeOverview(overview.subscriptions, overview.debts, overview.assets, overview.incomes, newInvestments, overview.latestAudit)
+      recomputeOverview(overview.subscriptions, overview.debts, newAssets, overview.incomes, newInvestments, overview.latestAudit)
     );
   };
 

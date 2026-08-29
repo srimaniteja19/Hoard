@@ -22,8 +22,11 @@ import {
   Calendar,
   Building,
   Target,
+  Zap,
+  CheckCircle2,
 } from "lucide-react";
 import { InvestmentCompoundingChart } from "./charts/InvestmentCompoundingChart";
+import { parseAccrualNotes } from "@/lib/ledger/investmentAccrual";
 
 interface RecurringInvestmentsTrackerProps {
   investments: FinancialInvestmentRow[];
@@ -45,6 +48,30 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
   const [selectedAssetType, setSelectedAssetType] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [viewCadence, setViewCadence] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
+  const [executingId, setExecutingId] = useState<string | null>(null);
+
+  const handleExecuteSIP = async (inv: FinancialInvestmentRow) => {
+    try {
+      setExecutingId(inv.id);
+      playSound.click();
+      const res = await fetch(`/api/financial/investments/${inv.id}/execute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: inv.amount }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to execute SIP");
+      }
+      const data = await res.json();
+      playSound.fileIt();
+      onUpdateInvestment(data.investment);
+    } catch (err) {
+      console.error("Error executing SIP:", err);
+    } finally {
+      setExecutingId(null);
+    }
+  };
 
   const metrics = useMemo(() => {
     return calculateInvestmentMetrics(investments);
@@ -403,32 +430,87 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
                     <span>
                       🏛️ <b>{inv.platform || "Direct / Self-Custody"}</b>
                     </span>
-                    <span>🗓️ Day {inv.investmentDay || 1}</span>
+                    <span>🗓️ Day {inv.investmentDay || 1} of month</span>
                   </div>
 
-                  {/* Accumulated Valuation (if any) */}
-                  {inv.currentValuation && inv.currentValuation > 0 && (
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontFamily: "var(--mono)",
-                        fontSize: "11px",
-                        fontWeight: 800,
-                        color: "#15803D",
-                      }}
-                    >
-                      <span>Accumulated Valuation:</span>
-                      <span>{formatCurrency(inv.currentValuation, 2, inv.currency)}</span>
-                    </div>
-                  )}
+                  {/* Accumulated Valuation & Net Worth Sync Status */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontFamily: "var(--mono)",
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      color: "#15803D",
+                      background: "#F0FDF4",
+                      border: "1px solid #BBF7D0",
+                      padding: "6px 8px",
+                      borderRadius: "2px",
+                    }}
+                  >
+                    <span>Accumulated Valuation:</span>
+                    <span style={{ fontSize: "12px" }}>
+                      {formatCurrency(inv.currentValuation || 0, 2, inv.currency)}
+                    </span>
+                  </div>
+
+                  {/* Accrual / Execution Status Badge */}
+                  {(() => {
+                    const { userNote, lastAccruedMonth } = parseAccrualNotes(inv.notes);
+                    const now = new Date();
+                    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+                    const isAccrued = lastAccruedMonth === currentMonth;
+
+                    return (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          color: isAccrued ? "#166534" : "#0369A1",
+                        }}
+                      >
+                        <span>
+                          {isAccrued ? "✓ Accrued for this month" : `🗓️ Auto-accrues on Day ${inv.investmentDay || 1}`}
+                        </span>
+                        <span style={{ opacity: 0.85 }}>🔗 Net Worth Synced</span>
+                      </div>
+                    );
+                  })()}
 
                   {/* Notes */}
-                  {inv.notes && <div className="sub-card-notes">“{inv.notes}”</div>}
+                  {(() => {
+                    const { userNote } = parseAccrualNotes(inv.notes);
+                    return userNote ? <div className="sub-card-notes">“{userNote}”</div> : null;
+                  })()}
                 </div>
 
                 {/* Actions Footer */}
-                <div className="sub-card-footer">
+                <div className="sub-card-footer" style={{ gap: "4px" }}>
+                  <button
+                    type="button"
+                    disabled={executingId === inv.id || inv.status === "PAUSED"}
+                    className="btn-card-action"
+                    style={{
+                      background: "#0284C7",
+                      color: "#FFFFFF",
+                      borderColor: "#000000",
+                      fontWeight: 900,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "3px",
+                      padding: "5px 8px",
+                    }}
+                    onClick={() => handleExecuteSIP(inv)}
+                    title="Log 1 monthly installment to accumulated valuation and sync Net Worth"
+                  >
+                    <Zap size={11} aria-hidden="true" />
+                    {executingId === inv.id ? "LOGGING..." : `+ RECORD SIP`}
+                  </button>
                   <button
                     type="button"
                     className="btn-card-action"

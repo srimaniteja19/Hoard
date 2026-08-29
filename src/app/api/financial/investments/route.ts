@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUserId, AuthError } from "@/lib/session";
 import { getUserInvestments, createInvestment } from "@/lib/dal/ledger";
+import {
+  syncInvestmentWithNetWorthAsset,
+  processAutomaticMonthlyAccruals,
+} from "@/lib/ledger/investmentAccrual";
 
 export async function GET(req: NextRequest) {
   try {
     const userId = await requireUserId(req);
-    const investments = await getUserInvestments(userId);
+    const rawInvestments = await getUserInvestments(userId);
+    const investments = await processAutomaticMonthlyAccruals(userId, rawInvestments);
     return NextResponse.json({ investments });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -43,6 +48,13 @@ export async function POST(req: NextRequest) {
       targetAssetId: body.targetAssetId || null,
       notes: body.notes ? body.notes.trim() : null,
     });
+
+    // Auto-sync into Net Worth Assets table
+    try {
+      await syncInvestmentWithNetWorthAsset(userId, created);
+    } catch (syncErr) {
+      console.warn("[investments/POST] Auto-sync to asset warning:", syncErr);
+    }
 
     return NextResponse.json(created, { status: 201 });
   } catch (error) {

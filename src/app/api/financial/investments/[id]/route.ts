@@ -62,6 +62,13 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Investment not found" }, { status: 404 });
     }
 
+    try {
+      const { syncInvestmentWithNetWorthAsset } = await import("@/lib/ledger/investmentAccrual");
+      await syncInvestmentWithNetWorthAsset(userId, updated);
+    } catch (e) {
+      console.warn("[investments/PATCH] Auto-sync to asset warning:", e);
+    }
+
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof AuthError) {

@@ -308,7 +308,13 @@ export async function getFinancialOverview(
     getLatestFinancialAudit(userId),
     getLiveFxSnapshot(),
   ]);
-  const investments = investmentsResult;
+  let investments = investmentsResult;
+  try {
+    const { processAutomaticMonthlyAccruals } = await import("@/lib/ledger/investmentAccrual");
+    investments = await processAutomaticMonthlyAccruals(userId, investmentsResult);
+  } catch (e) {
+    console.error("[ledger] Auto accrual error:", e);
+  }
 
   const subscriptionMetrics = calculateSubscriptionMetrics(subscriptions);
   const investmentMetrics = calculateInvestmentMetrics(investments, fxSnapshot.inrPerUsd);
