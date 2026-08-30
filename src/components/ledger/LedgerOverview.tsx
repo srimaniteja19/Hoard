@@ -20,6 +20,7 @@ import {
 import { SubscriptionBreakdownChart } from "./charts/SubscriptionBreakdownChart";
 import { CashFlowVelocityWaterfall } from "./charts/CashFlowVelocityWaterfall";
 import { DebtAmortizationChart } from "./charts/DebtAmortizationChart";
+import { MarketTickerTape } from "./MarketTickerTape";
 
 interface LedgerOverviewProps {
   overview: FinancialOverviewPayload;
@@ -31,6 +32,7 @@ interface LedgerOverviewProps {
   onOpenFireWarRoom: () => void;
   onOpenSurplusSweeper: () => void;
   onOpenReceipt: () => void;
+  onOpenMarketOracle: () => void;
   currency?: string;
   investmentCurrency?: string;
 }
@@ -45,6 +47,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
   onOpenFireWarRoom,
   onOpenSurplusSweeper,
   onOpenReceipt,
+  onOpenMarketOracle,
   currency = "USD",
   investmentCurrency = "INR",
 }) => {
@@ -54,7 +57,10 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
   const urgentRenewals = subscriptionMetrics.upcomingRenewals.filter((r) => r.daysUntil <= 7);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      {/* ── REAL-TIME MARKET TICKER TAPE ── */}
+      <MarketTickerTape onOpenOracle={onOpenMarketOracle} />
+
       {/* ── TOP KPI METRIC CARDS ── */}
       <div className="ledger-kpi-grid">
         {/* Net Worth */}
@@ -469,6 +475,48 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
           </div>
           <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 800, color: "#15803D", display: "flex", alignItems: "center", gap: "4px" }}>
             GENERATE RECEIPT <ArrowRight size={11} />
+          </div>
+        </div>
+
+        {/* Card 4: Live Market Oracle */}
+        <div
+          onClick={() => {
+            playSound.click();
+            onOpenMarketOracle();
+          }}
+          style={{
+            background: "var(--card, #FFFFFF)",
+            border: "2px solid var(--ink, #0A0A0A)",
+            boxShadow: "3.5px 3.5px 0 var(--ink, #0A0A0A)",
+            padding: "16px 18px",
+            borderRadius: "3px",
+            cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            gap: "10px",
+            transition: "transform 0.1s ease",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 900, color: "#7C3AED", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "4px" }}>
+              <Coins size={12} color="#7C3AED" />
+              SPOT ORACLE
+            </span>
+            <span style={{ fontFamily: "var(--mono)", fontSize: "9px", fontWeight: 900, background: "#F3E8FF", color: "#6B21A8", padding: "1px 5px", borderRadius: "2px" }}>
+              CRYPTO · METALS · STOCKS
+            </span>
+          </div>
+          <div>
+            <div style={{ fontFamily: "var(--display)", fontSize: "18px", fontWeight: 900 }}>
+              Live Market Oracle
+            </div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "#555555", marginTop: "2px" }}>
+              24K Gold, Silver, Top 5 Cryptos, &amp; mutual funds in USD &amp; INR.
+            </div>
+          </div>
+          <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 800, color: "#7C3AED", display: "flex", alignItems: "center", gap: "4px" }}>
+            OPEN TERMINAL <ArrowRight size={11} />
           </div>
         </div>
       </div>

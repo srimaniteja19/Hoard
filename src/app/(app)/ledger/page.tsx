@@ -37,6 +37,7 @@ import { LedgerAuditModal } from "@/components/ledger/LedgerAuditModal";
 import { FireFreedomWarRoom } from "@/components/ledger/FireFreedomWarRoom";
 import { SurplusSweeperModal } from "@/components/ledger/SurplusSweeperModal";
 import { ThermalReceiptModal } from "@/components/ledger/ThermalReceiptModal";
+import { LiveMarketOracleModal } from "@/components/ledger/LiveMarketOracleModal";
 import { LedgerErrorBoundary } from "@/components/ledger/LedgerErrorBoundary";
 import { calculateSubscriptionMetrics } from "@/lib/ledger/subscriptionMetrics";
 import { calculateInvestmentMetrics } from "@/lib/ledger/investmentMetrics";
@@ -86,6 +87,7 @@ function LedgerContent() {
   const [isFireWarRoomOpen, setIsFireWarRoomOpen] = useState(false);
   const [isSurplusSweeperOpen, setIsSurplusSweeperOpen] = useState(false);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [isMarketOracleOpen, setIsMarketOracleOpen] = useState(false);
 
   const fetchOverview = async () => {
     try {
@@ -488,6 +490,7 @@ function LedgerContent() {
               onOpenFireWarRoom={() => setIsFireWarRoomOpen(true)}
               onOpenSurplusSweeper={() => setIsSurplusSweeperOpen(true)}
               onOpenReceipt={() => setIsReceiptOpen(true)}
+              onOpenMarketOracle={() => setIsMarketOracleOpen(true)}
             />
           )}
 
@@ -672,6 +675,13 @@ function LedgerContent() {
             overview={overview}
             currency={primaryCurrency}
             investmentCurrency={investmentCurrency}
+          />
+
+          <LiveMarketOracleModal
+            isOpen={isMarketOracleOpen}
+            onClose={() => setIsMarketOracleOpen(false)}
+            investments={overview.investments || []}
+            inrRate={overview.fxSnapshot?.inrPerUsd || 86.85}
           />
         </>
       )}
