@@ -61,7 +61,7 @@ export const LiveMarketOracleModal: React.FC<LiveMarketOracleModalProps> = ({
   const [displayMode, setDisplayMode] = useState<CurrencyDisplayMode>("DUAL");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchingRemote, setSearchingRemote] = useState(false);
-  const [remoteSearchResults, setRemoteSearchResults] = useState<{ funds: LiveFundQuote[]; stocks: LiveStockQuote[] }>({ funds: [], stocks: [] });
+  const [remoteSearchResults, setRemoteSearchResults] = useState<{ funds: LiveFundQuote[]; stocks: LiveStockQuote[]; crypto: LiveCryptoQuote[] }>({ funds: [], stocks: [], crypto: [] });
   const [lastRefreshedTime, setLastRefreshedTime] = useState<string | null>(null);
   const [pinnedIds, setPinnedIds] = useState<string[]>(["GOLD_24K", "SILVER_999", "bitcoin", "ethereum"]);
 
@@ -117,7 +117,7 @@ export const LiveMarketOracleModal: React.FC<LiveMarketOracleModalProps> = ({
   // Debounced search for on-the-fly Indian Mutual Funds or US Stock tickers
   useEffect(() => {
     if (!searchQuery || searchQuery.trim().length < 2) {
-      setRemoteSearchResults({ funds: [], stocks: [] });
+      setRemoteSearchResults({ funds: [], stocks: [], crypto: [] });
       return;
     }
 
@@ -149,14 +149,14 @@ export const LiveMarketOracleModal: React.FC<LiveMarketOracleModalProps> = ({
 
   const currentRate = data?.fxRate || inrRate;
   const metals = data?.metals || [];
-  const crypto = data?.crypto || [];
-  const funds = [...(data?.investedFunds || []), ...(remoteSearchResults.funds || [])];
-  const stocks = [...(data?.stocks || []), ...(remoteSearchResults.stocks || [])];
+  const allCrypto = [...(data?.crypto || []), ...(remoteSearchResults.crypto || [])];
+  const allFunds = [...(data?.investedFunds || []), ...(remoteSearchResults.funds || [])];
+  const allStocks = [...(data?.stocks || []), ...(remoteSearchResults.stocks || [])];
 
-  // De-duplicate funds by schemeCode
-  const uniqueFunds = Array.from(new Map(funds.map((f) => [f.schemeCode, f])).values());
-  // De-duplicate stocks by symbol
-  const uniqueStocks = Array.from(new Map(stocks.map((s) => [s.symbol, s])).values());
+  // De-duplicate items
+  const uniqueCrypto = Array.from(new Map(allCrypto.map((c) => [c.id, c])).values());
+  const uniqueFunds = Array.from(new Map(allFunds.map((f) => [f.schemeCode, f])).values());
+  const uniqueStocks = Array.from(new Map(allStocks.map((s) => [s.symbol, s])).values());
 
   // Filter items by search query
   const query = searchQuery.trim().toLowerCase();
@@ -168,7 +168,7 @@ export const LiveMarketOracleModal: React.FC<LiveMarketOracleModalProps> = ({
       m.id.toLowerCase().includes(query)
   );
 
-  const filteredCrypto = crypto.filter(
+  const filteredCrypto = uniqueCrypto.filter(
     (c) =>
       c.name.toLowerCase().includes(query) ||
       c.symbol.toLowerCase().includes(query) ||

@@ -64,6 +64,12 @@ export interface LiveMarketPricesPayload {
   source: "LIVE_GATEWAY" | "CACHE" | "FALLBACK";
 }
 
+export interface LiveMarketSearchResults {
+  funds: LiveFundQuote[];
+  stocks: LiveStockQuote[];
+  crypto: LiveCryptoQuote[];
+}
+
 /**
  * 1 Troy Ounce in Grams = 31.1034768
  */
