@@ -835,6 +835,72 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
         </button>
       </div>
 
+      {/* ── AGGREGATE DEBT PROGRESS TRACKER ── */}
+      {debts.filter((d) => !d.isPaidOff).length > 0 && (() => {
+        const activeDebts = debts.filter((d) => !d.isPaidOff);
+        const totalOriginal = activeDebts.reduce((s, d) => s + (d.originalPrincipal || d.balance), 0);
+        const totalRemaining = activeDebts.reduce((s, d) => s + d.balance, 0);
+        const totalPaid = totalOriginal - totalRemaining;
+        const paidPct = totalOriginal > 0 ? Math.min(100, Math.round((totalPaid / totalOriginal) * 100)) : 0;
+        const sym = getCurrencySymbol(currency);
+
+        return (
+          <div
+            style={{
+              marginTop: "14px",
+              padding: "14px 18px",
+              background: "#0A0A0A",
+              border: "2px solid #1E1E1E",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "18px",
+              alignItems: "center",
+            }}
+          >
+            {/* Stats row */}
+            <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", flex: 1, minWidth: "0" }}>
+              {[
+                { label: "TOTAL ORIGINAL", value: `${sym}${totalOriginal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, color: "#888888" },
+                { label: "PAID SO FAR", value: `${sym}${totalPaid.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, color: "#4ADE80" },
+                { label: "REMAINING", value: `${sym}${totalRemaining.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, color: "#FFE600" },
+                { label: "ACCOUNTS", value: `${activeDebts.length} Active`, color: "#888888" },
+              ].map((stat) => (
+                <div key={stat.label}>
+                  <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "9px", fontWeight: 900, color: "#555555", letterSpacing: "0.06em" }}>
+                    {stat.label}
+                  </div>
+                  <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "16px", fontWeight: 900, color: stat.color, marginTop: "1px" }}>
+                    {stat.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Progress */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+              <div style={{ width: "160px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                  <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "9px", fontWeight: 900, color: "#555555" }}>OVERALL PAYOFF</span>
+                  <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 900, color: paidPct >= 50 ? "#4ADE80" : "#FFE600" }}>
+                    {paidPct}%
+                  </span>
+                </div>
+                <div style={{ height: "6px", background: "#1E1E1E", borderRadius: "2px", overflow: "hidden" }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${paidPct}%`,
+                      background: paidPct >= 75 ? "#4ADE80" : paidPct >= 40 ? "#FFE600" : "#FF2E93",
+                      transition: "width 0.4s ease",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="sub-grid">
         {debts.map((d, index) => {
           const type = (d.debtType as DebtType) || "OTHER";
