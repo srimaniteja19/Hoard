@@ -45,11 +45,19 @@ const PaymentPanel: React.FC<{
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
 
+  // Monthly interest on the current balance (APR / 12)
+  const monthlyRate = (debt.interestRate || 0) / 100 / 12;
+  const monthlyInterest = Math.round(debt.balance * monthlyRate * 100) / 100;
+
   const applyPayment = async (paymentAmount: number, label: string) => {
     if (paymentAmount <= 0 || saving) return;
     setSaving(true);
     try {
-      const newBalance = Math.max(0, debt.balance - paymentAmount);
+      // Split payment: interest first, then principal reduction
+      const interestPortion = Math.min(monthlyInterest, paymentAmount);
+      const principalReduction = Math.max(0, paymentAmount - interestPortion);
+      const newBalance = Math.max(0, debt.balance - principalReduction);
+
       const res = await fetch(`/api/financial/debts/${debt.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -61,13 +69,17 @@ const PaymentPanel: React.FC<{
       if (!res.ok) throw new Error("Failed");
       const updated = await res.json();
       playSound.fileIt();
+
+      const interestNote = interestPortion > 0
+        ? ` (Interest: ${formatCurrency(interestPortion, 2, currency)} · Principal: ${formatCurrency(principalReduction, 2, currency)})`
+        : "";
       setFlash(
-        `${label} of ${formatCurrency(paymentAmount, 2, currency)} applied! New balance: ${formatCurrency(newBalance, 2, currency)}`
+        `${label} of ${formatCurrency(paymentAmount, 2, currency)} applied!${interestNote} New balance: ${formatCurrency(newBalance, 2, currency)}`
       );
       setTimeout(() => {
         onUpdated(updated);
         onClose();
-      }, 1800);
+      }, 2200);
     } catch {
       setFlash("Payment failed — please try again.");
     } finally {
@@ -143,6 +155,32 @@ const PaymentPanel: React.FC<{
           ✕
         </button>
       </div>
+
+      {/* ── This Month's Interest Breakdown ── */}
+      {monthlyInterest > 0 && (
+        <div
+          style={{
+            background: "#FFF9C4",
+            border: "1px solid #D97706",
+            borderRadius: "3px",
+            padding: "7px 10px",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "10px",
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "10.5px",
+          }}
+        >
+          <span style={{ color: "#92400E", fontWeight: 900 }}>⚠ THIS MONTH'S INTEREST:</span>
+          <span style={{ color: "#DC2626", fontWeight: 900 }}>{formatCurrency(monthlyInterest, 2, currency)}</span>
+          <span style={{ color: "#555555" }}>
+            Of your <b>{formatCurrency(debt.minPayment, 2, currency)}</b> minimum,{" "}
+            <b style={{ color: "#DC2626" }}>{formatCurrency(Math.min(monthlyInterest, debt.minPayment), 2, currency)}</b> goes to interest
+            {" "}and only{" "}
+            <b style={{ color: "#15803D" }}>{formatCurrency(Math.max(0, debt.minPayment - monthlyInterest), 2, currency)}</b> reduces principal.
+          </span>
+        </div>
+      )}
 
       {/* Quick-pay rows */}
       <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
