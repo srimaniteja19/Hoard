@@ -14,18 +14,34 @@ export const AuditTrajectoryChart: React.FC<AuditTrajectoryChartProps> = ({
   projections,
   currency = "USD",
 }) => {
-  const [hoveredIndex, setHoveredIndex] = useState<number>(projections.length - 1);
+  const safeProjections = React.useMemo(() => {
+    if (!Array.isArray(projections) || projections.length === 0) return [];
+    return projections.map((p, idx) => ({
+      year: Number(p?.year) || (idx === 0 ? 1 : idx === 1 ? 3 : idx === 2 ? 5 : 10),
+      statusQuoNetWorth: Number(p?.statusQuoNetWorth) || 0,
+      optimizedNetWorth: Number(p?.optimizedNetWorth) || 0,
+      deltaGain: Number(p?.deltaGain) || Math.max(0, (Number(p?.optimizedNetWorth) || 0) - (Number(p?.statusQuoNetWorth) || 0)),
+    }));
+  }, [projections]);
 
-  if (!projections || projections.length === 0) {
+  const [hoveredIndex, setHoveredIndex] = useState<number>(Math.max(0, safeProjections.length - 1));
+
+  if (safeProjections.length === 0) {
     return null;
   }
 
   const maxVal = Math.max(
-    ...projections.map((p) => Math.max(p.optimizedNetWorth, p.statusQuoNetWorth, 1000)),
+    ...safeProjections.map((p) => Math.max(p.optimizedNetWorth, p.statusQuoNetWorth, 1000)),
     1000
   );
 
-  const activePoint = projections[hoveredIndex] || projections[projections.length - 1];
+  const activePoint = safeProjections[hoveredIndex] || safeProjections[safeProjections.length - 1] || {
+    year: 10,
+    statusQuoNetWorth: 0,
+    optimizedNetWorth: 0,
+    deltaGain: 0,
+  };
+
   const deltaPct =
     activePoint.statusQuoNetWorth > 0
       ? Math.round(
@@ -33,7 +49,9 @@ export const AuditTrajectoryChart: React.FC<AuditTrajectoryChartProps> = ({
             activePoint.statusQuoNetWorth) *
             100
         )
-      : 100;
+      : activePoint.optimizedNetWorth > 0
+      ? 100
+      : 0;
 
   return (
     <div
@@ -278,14 +296,14 @@ export const AuditTrajectoryChart: React.FC<AuditTrajectoryChartProps> = ({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: `repeat(${projections.length}, 1fr)`,
+            gridTemplateColumns: `repeat(${safeProjections.length}, 1fr)`,
             gap: "20px",
             height: "190px",
             alignItems: "flex-end",
             position: "relative",
           }}
         >
-          {projections.map((p, idx) => {
+          {safeProjections.map((p, idx) => {
             const sqHeightPct = Math.max(8, Math.min(95, (p.statusQuoNetWorth / maxVal) * 100));
             const optHeightPct = Math.max(12, Math.min(100, (p.optimizedNetWorth / maxVal) * 100));
             const isHovered = hoveredIndex === idx;
@@ -407,8 +425,8 @@ export const AuditTrajectoryChart: React.FC<AuditTrajectoryChartProps> = ({
       >
         ⚡ <b>Compounding Catalyst:</b> Eliminating high-interest drag and reinvesting freed
         subscription cash into disciplined wealth SIPs unlocks{" "}
-        <b>+{formatCurrency(projections[projections.length - 1]?.deltaGain || 0, 0, currency)}</b> in
-        accelerated net worth by Year {projections[projections.length - 1]?.year || 10}.
+        <b>+{formatCurrency(safeProjections[safeProjections.length - 1]?.deltaGain || 0, 0, currency)}</b> in
+        accelerated net worth by Year {safeProjections[safeProjections.length - 1]?.year || 10}.
       </div>
     </div>
   );

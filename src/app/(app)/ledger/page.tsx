@@ -34,6 +34,7 @@ import { AddDebtModal } from "@/components/ledger/AddDebtModal";
 import { AddAssetModal } from "@/components/ledger/AddAssetModal";
 import { AddIncomeModal } from "@/components/ledger/AddIncomeModal";
 import { LedgerAuditModal } from "@/components/ledger/LedgerAuditModal";
+import { LedgerErrorBoundary } from "@/components/ledger/LedgerErrorBoundary";
 import { calculateSubscriptionMetrics } from "@/lib/ledger/subscriptionMetrics";
 import { calculateInvestmentMetrics } from "@/lib/ledger/investmentMetrics";
 import { calculateCashFlow } from "@/lib/ledger/cashFlow";
@@ -642,7 +643,9 @@ export default function LedgerPage() {
     <AppPage variant="flush">
       <Suspense fallback={<AppLoading label="OPENING FINANCIAL LEDGER..." />}>
         <div className="ledger-scroll-view">
-          <LedgerContent />
+          <LedgerErrorBoundary fallbackTitle="FINANCIAL LEDGER ENCOUNTERED AN ISSUE">
+            <LedgerContent />
+          </LedgerErrorBoundary>
         </div>
       </Suspense>
     </AppPage>
