@@ -13,6 +13,9 @@ import {
   CreditCard,
   BellRing,
   Coins,
+  Flame,
+  Zap,
+  Receipt,
 } from "lucide-react";
 import { SubscriptionBreakdownChart } from "./charts/SubscriptionBreakdownChart";
 import { CashFlowVelocityWaterfall } from "./charts/CashFlowVelocityWaterfall";
@@ -25,6 +28,9 @@ interface LedgerOverviewProps {
   onAddDebt: () => void;
   onAddAsset: () => void;
   onOpenAudit: () => void;
+  onOpenFireWarRoom: () => void;
+  onOpenSurplusSweeper: () => void;
+  onOpenReceipt: () => void;
   currency?: string;
   investmentCurrency?: string;
 }
@@ -36,6 +42,9 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
   onAddDebt,
   onAddAsset,
   onOpenAudit,
+  onOpenFireWarRoom,
+  onOpenSurplusSweeper,
+  onOpenReceipt,
   currency = "USD",
   investmentCurrency = "INR",
 }) => {
@@ -331,6 +340,135 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
             >
               {formatSignedCurrency(cashFlow.monthlyNetSurplus, 2, currency)}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── INSTITUTIONAL WEALTH TOOLS & SIMULATORS ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "12px" }}>
+        {/* Card 1: FIRE Freedom Clock */}
+        <div
+          onClick={() => {
+            playSound.click();
+            onOpenFireWarRoom();
+          }}
+          style={{
+            background: "var(--card, #FFFFFF)",
+            border: "2px solid var(--ink, #0A0A0A)",
+            boxShadow: "3.5px 3.5px 0 var(--ink, #0A0A0A)",
+            padding: "16px 18px",
+            borderRadius: "3px",
+            cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            gap: "10px",
+            transition: "transform 0.1s ease",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 900, color: "#FF6B00", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "4px" }}>
+              <Flame size={12} color="#FF6B00" />
+              FREEDOM CLOCK
+            </span>
+            <span style={{ fontFamily: "var(--mono)", fontSize: "9px", fontWeight: 900, background: "#FFEDD5", color: "#C2410C", padding: "1px 5px", borderRadius: "2px" }}>
+              WAR ROOM
+            </span>
+          </div>
+          <div>
+            <div style={{ fontFamily: "var(--display)", fontSize: "18px", fontWeight: 900 }}>
+              FIRE Retirement Simulator
+            </div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "#555555", marginTop: "2px" }}>
+              Model what-if SIP boosts &amp; calculate exact years of life reclaimed.
+            </div>
+          </div>
+          <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 800, color: "#FF6B00", display: "flex", alignItems: "center", gap: "4px" }}>
+            LAUNCH SIMULATOR <ArrowRight size={11} />
+          </div>
+        </div>
+
+        {/* Card 2: Surplus Sweeper */}
+        <div
+          onClick={() => {
+            playSound.click();
+            onOpenSurplusSweeper();
+          }}
+          style={{
+            background: "var(--card, #FFFFFF)",
+            border: "2px solid var(--ink, #0A0A0A)",
+            boxShadow: "3.5px 3.5px 0 var(--ink, #0A0A0A)",
+            padding: "16px 18px",
+            borderRadius: "3px",
+            cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            gap: "10px",
+            transition: "transform 0.1s ease",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 900, color: "#0284C7", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "4px" }}>
+              <Zap size={12} color="#0284C7" />
+              CAPITAL DEPLOYMENT
+            </span>
+            <span style={{ fontFamily: "var(--mono)", fontSize: "9px", fontWeight: 900, background: "#E0F2FE", color: "#0369A1", padding: "1px 5px", borderRadius: "2px" }}>
+              +{formatCurrency(cashFlow.monthlyNetSurplus, 0, currency)}/MO
+            </span>
+          </div>
+          <div>
+            <div style={{ fontFamily: "var(--display)", fontSize: "18px", fontWeight: 900 }}>
+              Monthly Surplus Sweeper
+            </div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "#555555", marginTop: "2px" }}>
+              Auto-distribute free cash into Equities, Gold, HYSA, &amp; Debt payoff.
+            </div>
+          </div>
+          <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 800, color: "#0284C7", display: "flex", alignItems: "center", gap: "4px" }}>
+            DEPLOY ALLOCATIONS <ArrowRight size={11} />
+          </div>
+        </div>
+
+        {/* Card 3: Thermal Receipt Export */}
+        <div
+          onClick={() => {
+            playSound.click();
+            onOpenReceipt();
+          }}
+          style={{
+            background: "var(--card, #FFFFFF)",
+            border: "2px solid var(--ink, #0A0A0A)",
+            boxShadow: "3.5px 3.5px 0 var(--ink, #0A0A0A)",
+            padding: "16px 18px",
+            borderRadius: "3px",
+            cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            gap: "10px",
+            transition: "transform 0.1s ease",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 900, color: "#15803D", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "4px" }}>
+              <Receipt size={12} color="#15803D" />
+              ARCHIVAL VOUCHER
+            </span>
+            <span style={{ fontFamily: "var(--mono)", fontSize: "9px", fontWeight: 900, background: "#DCFCE7", color: "#166534", padding: "1px 5px", borderRadius: "2px" }}>
+              PNG / PRINT
+            </span>
+          </div>
+          <div>
+            <div style={{ fontFamily: "var(--display)", fontSize: "18px", fontWeight: 900 }}>
+              Dover St Thermal Receipt
+            </div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "#555555", marginTop: "2px" }}>
+              Export high-fashion monospace balance sheet receipt with live FX stamp.
+            </div>
+          </div>
+          <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 800, color: "#15803D", display: "flex", alignItems: "center", gap: "4px" }}>
+            GENERATE RECEIPT <ArrowRight size={11} />
           </div>
         </div>
       </div>

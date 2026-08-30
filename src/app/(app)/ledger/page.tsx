@@ -34,6 +34,9 @@ import { AddDebtModal } from "@/components/ledger/AddDebtModal";
 import { AddAssetModal } from "@/components/ledger/AddAssetModal";
 import { AddIncomeModal } from "@/components/ledger/AddIncomeModal";
 import { LedgerAuditModal } from "@/components/ledger/LedgerAuditModal";
+import { FireFreedomWarRoom } from "@/components/ledger/FireFreedomWarRoom";
+import { SurplusSweeperModal } from "@/components/ledger/SurplusSweeperModal";
+import { ThermalReceiptModal } from "@/components/ledger/ThermalReceiptModal";
 import { LedgerErrorBoundary } from "@/components/ledger/LedgerErrorBoundary";
 import { calculateSubscriptionMetrics } from "@/lib/ledger/subscriptionMetrics";
 import { calculateInvestmentMetrics } from "@/lib/ledger/investmentMetrics";
@@ -80,6 +83,9 @@ function LedgerContent() {
   const [editingIncome, setEditingIncome] = useState<FinancialIncomeRow | null>(null);
 
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [isFireWarRoomOpen, setIsFireWarRoomOpen] = useState(false);
+  const [isSurplusSweeperOpen, setIsSurplusSweeperOpen] = useState(false);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   const fetchOverview = async () => {
     try {
@@ -479,6 +485,9 @@ function LedgerContent() {
                 setIsAddAssetOpen(true);
               }}
               onOpenAudit={() => setIsAuditModalOpen(true)}
+              onOpenFireWarRoom={() => setIsFireWarRoomOpen(true)}
+              onOpenSurplusSweeper={() => setIsSurplusSweeperOpen(true)}
+              onOpenReceipt={() => setIsReceiptOpen(true)}
             />
           )}
 
@@ -634,6 +643,38 @@ function LedgerContent() {
         latestAudit={overview?.latestAudit || null}
         onAuditGenerated={handleAuditGenerated}
       />
+
+      <FireFreedomWarRoom
+        isOpen={isFireWarRoomOpen}
+        onClose={() => setIsFireWarRoomOpen(false)}
+        currentNetWorth={overview?.metrics.netWorth.netWorth || 0}
+        monthlyExpenses={(overview?.metrics.cashFlow.monthlySubscriptions || 0) + (overview?.metrics.cashFlow.monthlyDebtMinimums || 0)}
+        monthlySurplus={overview?.metrics.cashFlow.monthlyNetSurplus || 0}
+        currency={primaryCurrency}
+        inrRate={overview?.fxSnapshot?.inrPerUsd || 86.85}
+      />
+
+      {overview && (
+        <>
+          <SurplusSweeperModal
+            isOpen={isSurplusSweeperOpen}
+            onClose={() => setIsSurplusSweeperOpen(false)}
+            monthlySurplusUsd={overview.metrics.cashFlow.monthlyNetSurplus}
+            debts={overview.debts}
+            investments={overview.investments || []}
+            inrRate={overview.fxSnapshot?.inrPerUsd || 86.85}
+            currency={primaryCurrency}
+          />
+
+          <ThermalReceiptModal
+            isOpen={isReceiptOpen}
+            onClose={() => setIsReceiptOpen(false)}
+            overview={overview}
+            currency={primaryCurrency}
+            investmentCurrency={investmentCurrency}
+          />
+        </>
+      )}
     </div>
   );
 }
