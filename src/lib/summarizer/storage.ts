@@ -6,6 +6,7 @@ export interface SavedDigestItem {
   thesis: string;
   readMinutes: number;
   tags: string[];
+  folderId?: string; // Associated Course/Project folder
   savedAt: string;
   digest: DigestResult;
   sourcePreview: string;
@@ -20,7 +21,7 @@ export function inferDigestTags(digest: DigestResult): string[] {
   const tags = new Set<string>();
   const text = `${digest.title} ${digest.thesis} ${(digest.terms || []).map((t) => t.term).join(" ")}`.toLowerCase();
 
-  if (text.includes("ai") || text.includes("model") || text.includes("learning") || text.includes("llm") || text.includes("neural") || text.includes("transformer")) {
+  if (text.includes("ai") || text.includes("agent") || text.includes("model") || text.includes("learning") || text.includes("llm") || text.includes("neural") || text.includes("transformer")) {
     tags.add("AI");
   }
   if (text.includes("finance") || text.includes("option") || text.includes("stock") || text.includes("market") || text.includes("hedg") || text.includes("risk")) {
@@ -68,7 +69,12 @@ export function getSavedDigests(): SavedDigestItem[] {
 /**
  * Save a new digest or update an existing one
  */
-export function saveDigest(digest: DigestResult, customTags?: string[], sourceText?: string): SavedDigestItem {
+export function saveDigest(
+  digest: DigestResult,
+  customTags?: string[],
+  sourceText?: string,
+  folderId?: string
+): SavedDigestItem {
   const items = getSavedDigests();
   const existingIndex = items.findIndex((i) => i.digest.title === digest.title || i.digest.thesis === digest.thesis);
 
@@ -81,6 +87,7 @@ export function saveDigest(digest: DigestResult, customTags?: string[], sourceTe
     thesis: digest.thesis,
     readMinutes: digest.readMinutes,
     tags,
+    folderId: folderId || (existingIndex >= 0 ? items[existingIndex].folderId : undefined),
     savedAt: new Date().toISOString(),
     digest,
     sourcePreview,
@@ -99,6 +106,25 @@ export function saveDigest(digest: DigestResult, customTags?: string[], sourceTe
   }
 
   return item;
+}
+
+/**
+ * Assign or move a digest to a folder
+ */
+export function assignDigestFolder(id: string, folderId?: string): SavedDigestItem[] {
+  const items = getSavedDigests().map((item) => {
+    if (item.id === id) {
+      return { ...item, folderId: folderId || undefined };
+    }
+    return item;
+  });
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  } catch (err) {
+    console.error("Failed to update digest folder:", err);
+  }
+  return items;
 }
 
 /**

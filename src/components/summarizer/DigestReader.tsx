@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { DigestResult } from "@/lib/summarizer/types";
 import { saveDigest } from "@/lib/summarizer/storage";
+import { getCourseFolders } from "@/lib/summarizer/folders";
 import { FigureRenderer } from "./figures/FigureRenderer";
 import { playSound } from "@/lib/sound";
 import {
@@ -76,10 +77,16 @@ export const DigestReader: React.FC<DigestReaderProps> = ({ digest, onReset, onS
   };
 
   const [saved, setSaved] = useState(false);
+  const [selectedFolderId, setSelectedFolderId] = useState<string>("");
+  const [folders, setFolders] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    setFolders(getCourseFolders());
+  }, []);
 
   const handleSave = () => {
     playSound.click();
-    saveDigest(digest);
+    saveDigest(digest, undefined, undefined, selectedFolderId || undefined);
     setSaved(true);
     playSound.fileIt();
     if (onSaved) onSaved();
@@ -129,7 +136,40 @@ export const DigestReader: React.FC<DigestReaderProps> = ({ digest, onReset, onS
           NEW DIGEST
         </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          {/* Course Folder Picker */}
+          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+            <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", color: "#888888", fontWeight: 800 }}>
+              FOLDER:
+            </span>
+            <select
+              value={selectedFolderId}
+              onChange={(e) => {
+                setSelectedFolderId(e.target.value);
+                playSound.click();
+              }}
+              style={{
+                background: "#1C1C1C",
+                color: "#FFE600",
+                border: "1.5px solid #333333",
+                borderRadius: "3px",
+                padding: "5px 8px",
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "11px",
+                fontWeight: 800,
+                outline: "none",
+                cursor: "pointer",
+              }}
+            >
+              <option value="">🌐 (None / General Shelf)</option>
+              {folders.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.icon} {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Save Button */}
           <button
             type="button"

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { SavedDigestItem, deleteSavedDigest, updateDigestTags } from "@/lib/summarizer/storage";
+import { SavedDigestItem, deleteSavedDigest, updateDigestTags, assignDigestFolder } from "@/lib/summarizer/storage";
+import { getCourseFolders } from "@/lib/summarizer/folders";
 import { DigestResult } from "@/lib/summarizer/types";
 import { playSound } from "@/lib/sound";
 import {
@@ -18,6 +19,7 @@ import {
   ShieldAlert,
   Plus,
   X,
+  Folder,
 } from "lucide-react";
 
 interface SavedDigestsShelfProps {
@@ -38,6 +40,7 @@ export const SavedDigestsShelf: React.FC<SavedDigestsShelfProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [tagEditingId, setTagEditingId] = useState<string | null>(null);
   const [newTagInput, setNewTagInput] = useState<string>("");
+  const allFolders = getCourseFolders();
 
   // Extract all unique tags and counts
   const tagCounts = useMemo(() => {
@@ -217,46 +220,72 @@ export const SavedDigestsShelf: React.FC<SavedDigestsShelfProps> = ({
       {/* ── SAVED DIGESTS GRID ── */}
       {filteredItems.length > 0 ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "16px" }}>
-          {filteredItems.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => {
-                playSound.click();
-                onOpenDigest(item.digest);
-              }}
-              style={{
-                background: "#0C0C0C",
-                border: "2px solid #242424",
-                borderRadius: "4px",
-                boxShadow: "4px 4px 0 #000000",
-                padding: "20px",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                gap: "14px",
-                cursor: "pointer",
-                transition: "border-color 0.15s ease, transform 0.15s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "#FFE600";
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "#242424";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              {/* Top Meta & Tags */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "9.5px", fontWeight: 900, background: "#1C1C1C", color: "#4ADE80", border: "1px solid #166534", padding: "2px 6px", borderRadius: "2px" }}>
-                    ~{item.readMinutes} MIN READ
-                  </span>
+          {filteredItems.map((item) => {
+            const assignedFolder = allFolders.find((f) => f.id === item.folderId);
 
-                  <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", color: "#666666" }}>
-                    {new Date(item.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                  </span>
-                </div>
+            return (
+              <div
+                key={item.id}
+                onClick={() => {
+                  playSound.click();
+                  onOpenDigest(item.digest);
+                }}
+                style={{
+                  background: "#0C0C0C",
+                  border: "2px solid #242424",
+                  borderRadius: "4px",
+                  boxShadow: "4px 4px 0 #000000",
+                  padding: "20px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  gap: "14px",
+                  cursor: "pointer",
+                  transition: "border-color 0.15s ease, transform 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#FFE600";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#242424";
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+              >
+                {/* Top Meta & Tags */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "9.5px", fontWeight: 900, background: "#1C1C1C", color: "#4ADE80", border: "1px solid #166534", padding: "2px 6px", borderRadius: "2px" }}>
+                        ~{item.readMinutes} MIN READ
+                      </span>
+
+                      {assignedFolder && (
+                        <span
+                          style={{
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9.5px",
+                            fontWeight: 900,
+                            background: "#181818",
+                            color: assignedFolder.color,
+                            border: `1px solid ${assignedFolder.color}40`,
+                            padding: "2px 6px",
+                            borderRadius: "2px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                          }}
+                        >
+                          <span>{assignedFolder.icon}</span>
+                          <span>{assignedFolder.name}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", color: "#666666" }}>
+                      {new Date(item.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                    </span>
+                  </div>
 
                 {/* Title */}
                 <h3
@@ -435,7 +464,8 @@ export const SavedDigestsShelf: React.FC<SavedDigestsShelfProps> = ({
                 </div>
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
       ) : (
         /* Empty State */
