@@ -18,11 +18,23 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick }) => {
     (l) => lessonState({ wordCount: computeWordCount(l.blocks || []) }) === "written"
   ).length;
 
-  const watchedCount = allLessons.filter((l) => l.watched).length;
-  const unwrittenCount = Math.max(0, watchedCount - writtenCount);
+  const unwrittenCount = allLessons.filter(
+    (l) => l.watched && lessonState({ wordCount: computeWordCount(l.blocks || []) }) !== "written"
+  ).length;
   const stubCount = allLessons.filter(
     (l) => lessonState({ wordCount: computeWordCount(l.blocks || []) }) === "stub"
   ).length;
+  const pagesCount = allLessons.filter(
+    (l) => lessonState({ wordCount: computeWordCount(l.blocks || []) }) !== "empty"
+  ).length;
+  // Real count of "fact"/"connects" callouts — the blocks a writer tagged as
+  // takeaways worth promoting to a TIL claim, rather than a fabricated number.
+  const tilCandidateCount = allLessons.reduce(
+    (sum, l) =>
+      sum +
+      (l.blocks || []).filter((b) => b.type === "callout" && (b.kind === "fact" || b.kind === "connects")).length,
+    0
+  );
 
   const writtenPct = totalLessons > 0 ? (writtenCount / totalLessons) * 100 : 0;
   const unwrittenPct = totalLessons > 0 ? (unwrittenCount / totalLessons) * 100 : 0;
@@ -157,7 +169,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick }) => {
         <div style={{ display: "flex", gap: "22px", flexWrap: "wrap" }}>
           <div>
             <b style={{ display: "block", fontFamily: "var(--display, sans-serif)", fontWeight: 800, fontSize: "23px", lineHeight: 1 }}>
-              {allLessons.filter((l) => (l.blocks?.length || 0) > 0).length}
+              {pagesCount}
             </b>
             <span style={{ display: "block", fontFamily: "var(--mono, monospace)", fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.12em", opacity: 0.45, marginTop: "5px" }}>
               PAGES
@@ -165,7 +177,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick }) => {
           </div>
           <div>
             <b style={{ display: "block", fontFamily: "var(--display, sans-serif)", fontWeight: 800, fontSize: "23px", lineHeight: 1 }}>
-              {course.id === "agentic" ? 7 : 4}
+              {tilCandidateCount}
             </b>
             <span style={{ display: "block", fontFamily: "var(--mono, monospace)", fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.12em", opacity: 0.45, marginTop: "5px" }}>
               → TIL

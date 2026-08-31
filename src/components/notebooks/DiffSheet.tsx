@@ -143,7 +143,7 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {originalBlocks.map((b) => (
                 <div key={b.id} style={{ opacity: 0.75 }}>
-                  <BlockRenderer block={b} accentColor={accentColor} />
+                  <BlockRenderer block={b} accentColor={accentColor} readOnly />
                 </div>
               ))}
             </div>
@@ -211,7 +211,7 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
                         {b.type.toUpperCase()} BLOCK
                       </span>
                     </div>
-                    <BlockRenderer block={b} accentColor={accentColor} />
+                    <BlockRenderer block={b} accentColor={accentColor} readOnly />
                   </div>
                 );
               })}

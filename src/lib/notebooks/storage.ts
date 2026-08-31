@@ -235,9 +235,34 @@ export function createNewCourse(
   return newCourse;
 }
 
+const COLLISIONS_STORAGE_KEY = "hoard_notebook_collisions_v1";
+
 /**
- * Returns all active collisions
+ * Returns all active collisions, preferring the last AI-found set over the seed
+ * examples once the user has actually run "Find Collisions".
  */
 export function getCollisions(): CourseCollision[] {
-  return SEED_COLLISIONS;
+  if (typeof window === "undefined") return SEED_COLLISIONS;
+  try {
+    const raw = localStorage.getItem(COLLISIONS_STORAGE_KEY);
+    if (!raw) return SEED_COLLISIONS;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : SEED_COLLISIONS;
+  } catch (err) {
+    console.error("Failed to load notebook collisions:", err);
+    return SEED_COLLISIONS;
+  }
+}
+
+/**
+ * Persists the results of an AI collision run so they survive a page reload
+ * instead of reverting to the seed examples every time.
+ */
+export function saveCollisions(collisions: CourseCollision[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(COLLISIONS_STORAGE_KEY, JSON.stringify(collisions));
+  } catch (err) {
+    console.error("Failed to save notebook collisions:", err);
+  }
 }

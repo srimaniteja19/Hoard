@@ -67,7 +67,7 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
           }}
         >
           <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 700, color: "#B8F04A", letterSpacing: "0.15em" }}>
-            ✦ LECTURE TRANSCRIPT · AI NOTEBOOK SYNTHESIS
+            ✦ PASTE CONTENT · AI NOTEBOOK SYNTHESIS
           </span>
           <button
             type="button"
@@ -88,7 +88,7 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
 
         <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px", color: "#0A0A0A" }}>
           <p style={{ margin: 0, fontSize: "14.5px", lineHeight: "1.5" }}>
-            Paste the raw video transcript below. You can either <b>convert it directly into clean, structured notes</b> or <b>find missing topics</b> against your existing notes.
+            Paste a lecture transcript, slide text, or any source material below. You can either <b>convert it directly into clean, structured notes</b> or <b>find missing topics</b> against your existing notes.
           </p>
 
           <textarea

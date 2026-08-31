@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { playSound } from "@/lib/sound";
 import { AlertTriangle, Trash2, RotateCcw, X } from "lucide-react";
 
@@ -23,13 +23,30 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   confirmLabel = "CONFIRM",
   confirmVariant = "danger",
 }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  // Steal focus into the dialog when it opens (and restore it on close). This
+  // is what makes the keydown handler below safe: Enter/Escape only ever act
+  // on keystrokes that actually originate from inside this dialog, instead of
+  // hijacking a stray Enter pressed anywhere else on the page (e.g. while
+  // typing a note) into confirming a destructive delete/clear action.
+  useEffect(() => {
+    if (isOpen) {
+      previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+      dialogRef.current?.focus();
+    } else if (previouslyFocusedRef.current) {
+      previouslyFocusedRef.current.focus();
+      previouslyFocusedRef.current = null;
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
+      if (!dialogRef.current?.contains(e.target as Node)) return;
       if (e.key === "Escape") onClose();
-      if (e.key === "Enter") {
-        onConfirm();
-      }
+      if (e.key === "Enter") onConfirm();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -52,11 +69,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       style={{
         position: "fixed",
         inset: 0,
+        outline: "none",
         background: "rgba(10, 10, 10, 0.65)",
         backdropFilter: "blur(4px)",
         display: "grid",

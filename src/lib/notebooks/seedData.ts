@@ -34,6 +34,7 @@ export interface CourseCollision {
   id: string;
   title: string;
   description: string;
+  relation?: "same-idea" | "same-words" | "contradiction" | "open-in-both";
   sourceA: { course: string; lesson: string };
   sourceB: { course: string; lesson: string };
 }
@@ -56,7 +57,7 @@ export const SEED_COURSES: SeedCourse[] = [
             id: "les-a1-1",
             title: "What makes a system agentic",
             watched: true,
-            meta: "1,240 WORDS · 2 IMAGES",
+            meta: "47 WORDS",
             blocks: [
               {
                 id: "b-a11-1",
@@ -75,7 +76,7 @@ export const SEED_COURSES: SeedCourse[] = [
             id: "les-a1-2",
             title: "The agentic loop",
             watched: true,
-            meta: "860 WORDS · 1 DIAGRAM",
+            meta: "33 WORDS",
             blocks: [
               {
                 id: "b-a12-1",
@@ -94,7 +95,7 @@ export const SEED_COURSES: SeedCourse[] = [
             id: "les-a1-3",
             title: "Where agents fail",
             watched: true,
-            meta: "1,510 WORDS",
+            meta: "39 WORDS",
             blocks: [
               {
                 id: "b-a13-1",
@@ -113,7 +114,7 @@ export const SEED_COURSES: SeedCourse[] = [
             id: "les-a1-4",
             title: "Evaluating agent output",
             watched: true,
-            meta: "720 WORDS",
+            meta: "21 WORDS",
             blocks: [
               {
                 id: "b-a14-1",
@@ -132,7 +133,7 @@ export const SEED_COURSES: SeedCourse[] = [
             id: "les-a2-1",
             title: "Reflection",
             watched: true,
-            meta: "512 WORDS · FROM A 3:53 LECTURE · GENERATED, THEN EDITED",
+            meta: "625 WORDS · FROM A 3:53 LECTURE · GENERATED, THEN EDITED",
             gap: [
               { timestamp: "2:35", topic: "The specific syntax-error walkthrough — he steps through the error log going back in" },
             ],
@@ -366,7 +367,7 @@ final = llm(f"revise using:\\n{critique}\\n{draft}")`,
             id: "les-a2-2",
             title: "Tool use",
             watched: true,
-            meta: "1,090 WORDS · 1 SNIPPET",
+            meta: "29 WORDS",
             blocks: [
               {
                 id: "b-a22-1",
@@ -467,7 +468,7 @@ final = llm(f"revise using:\\n{critique}\\n{draft}")`,
             id: "les-p1-1",
             title: "Variables and types",
             watched: true,
-            meta: "640 WORDS",
+            meta: "23 WORDS",
             blocks: [
               {
                 id: "b-p11-1",
@@ -480,7 +481,7 @@ final = llm(f"revise using:\\n{critique}\\n{draft}")`,
             id: "les-p1-2",
             title: "Control flow",
             watched: true,
-            meta: "520 WORDS",
+            meta: "12 WORDS",
             blocks: [
               {
                 id: "b-p12-1",
@@ -493,7 +494,7 @@ final = llm(f"revise using:\\n{critique}\\n{draft}")`,
             id: "les-p1-3",
             title: "Functions and signatures",
             watched: true,
-            meta: "OPEN · 980 WORDS · 2 SNIPPETS",
+            meta: "OPEN · 178 WORDS · 2 SNIPPETS",
             gap: [
               { timestamp: "09:20", topic: "Keyword-only arguments and why the bare * exists" },
               { timestamp: "17:44", topic: "Mutable default arguments — the classic trap" },
@@ -586,7 +587,7 @@ final = llm(f"revise using:\\n{critique}\\n{draft}")`,
             id: "les-p1-4",
             title: "Lists, dicts and comprehensions",
             watched: true,
-            meta: "1,120 WORDS",
+            meta: "13 WORDS",
             blocks: [
               {
                 id: "b-p14-1",
@@ -605,7 +606,7 @@ final = llm(f"revise using:\\n{critique}\\n{draft}")`,
             id: "les-p2-1",
             title: "Files and I/O",
             watched: true,
-            meta: "430 WORDS",
+            meta: "16 WORDS",
             blocks: [
               {
                 id: "b-p21-1",
@@ -644,7 +645,7 @@ final = llm(f"revise using:\\n{critique}\\n{draft}")`,
             id: "les-p3-1",
             title: "Calling an LLM API",
             watched: true,
-            meta: "870 WORDS · 1 SNIPPET",
+            meta: "12 WORDS",
             blocks: [
               {
                 id: "b-p31-1",

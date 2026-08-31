@@ -11,7 +11,7 @@ const CollisionSchema = z.object({
     .array(
       z.object({
         title: z.string(), // "Tool calling is just a function signature"
-        why: z.string(), // one or two sentences
+        description: z.string(), // one or two sentences
         relation: z.enum(["same-idea", "same-words", "contradiction", "open-in-both"]),
         sourceA: z.object({ course: z.string(), lesson: z.string() }),
         sourceB: z.object({ course: z.string(), lesson: z.string() }),
@@ -73,7 +73,9 @@ ${JSON.stringify(coursesDump, null, 2).slice(0, 16000)}`;
       ...gatewayProviderOptions(NOTEBOOK_MODEL, ["feature:notebook-collisions"]),
     });
 
-    return NextResponse.json(object);
+    return NextResponse.json({
+      collisions: object.collisions.map((c, idx) => ({ id: `collision-${Date.now().toString(36)}-${idx}`, ...c })),
+    });
   } catch (err) {
     console.error("Notebook collisions failed:", err);
     return NextResponse.json(

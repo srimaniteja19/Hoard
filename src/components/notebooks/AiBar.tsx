@@ -12,6 +12,10 @@ interface AiBarProps {
   onCollisions: () => void;
   onGaps: () => void;
   isTidying?: boolean;
+  isQuizzing?: boolean;
+  isExplaining?: boolean;
+  isFindingCollisions?: boolean;
+  isAnalyzingGaps?: boolean;
 }
 
 export const AiBar: React.FC<AiBarProps> = ({
@@ -23,6 +27,10 @@ export const AiBar: React.FC<AiBarProps> = ({
   onCollisions,
   onGaps,
   isTidying = false,
+  isQuizzing = false,
+  isExplaining = false,
+  isFindingCollisions = false,
+  isAnalyzingGaps = false,
 }) => {
   return (
     <div
@@ -88,6 +96,7 @@ export const AiBar: React.FC<AiBarProps> = ({
 
       <button
         type="button"
+        disabled={isQuizzing}
         onClick={() => {
           playSound.click();
           onQuiz();
@@ -98,24 +107,29 @@ export const AiBar: React.FC<AiBarProps> = ({
           fontSize: "9.5px",
           fontWeight: 700,
           letterSpacing: "0.11em",
-          background: "#FFFFFF",
+          background: isQuizzing ? "#FCE94F" : "#FFFFFF",
           color: "#0A0A0A",
           border: "none",
           borderRight: "2px solid #0A0A0A",
           padding: "11px 6px",
-          cursor: "pointer",
+          cursor: isQuizzing ? "wait" : "pointer",
           minWidth: "90px",
           whiteSpace: "nowrap",
           transition: "background 0.12s ease",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
+        onMouseEnter={(e) => {
+          if (!isQuizzing) e.currentTarget.style.background = "#FCE94F";
+        }}
+        onMouseLeave={(e) => {
+          if (!isQuizzing) e.currentTarget.style.background = "#FFFFFF";
+        }}
       >
-        QUIZ ME
+        {isQuizzing ? "QUIZZING…" : "QUIZ ME"}
       </button>
 
       <button
         type="button"
+        disabled={isExplaining}
         onClick={() => {
           playSound.click();
           onExplain();
@@ -126,24 +140,29 @@ export const AiBar: React.FC<AiBarProps> = ({
           fontSize: "9.5px",
           fontWeight: 700,
           letterSpacing: "0.11em",
-          background: "#FFFFFF",
+          background: isExplaining ? "#FCE94F" : "#FFFFFF",
           color: "#0A0A0A",
           border: "none",
           borderRight: "2px solid #0A0A0A",
           padding: "11px 6px",
-          cursor: "pointer",
+          cursor: isExplaining ? "wait" : "pointer",
           minWidth: "114px",
           whiteSpace: "nowrap",
           transition: "background 0.12s ease",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
+        onMouseEnter={(e) => {
+          if (!isExplaining) e.currentTarget.style.background = "#FCE94F";
+        }}
+        onMouseLeave={(e) => {
+          if (!isExplaining) e.currentTarget.style.background = "#FFFFFF";
+        }}
       >
-        EXPLAIN AGAIN
+        {isExplaining ? "EXPLAINING…" : "EXPLAIN AGAIN"}
       </button>
 
       <button
         type="button"
+        disabled={isFindingCollisions}
         onClick={() => {
           playSound.click();
           onCollisions();
@@ -154,24 +173,29 @@ export const AiBar: React.FC<AiBarProps> = ({
           fontSize: "9.5px",
           fontWeight: 700,
           letterSpacing: "0.11em",
-          background: "#FFFFFF",
+          background: isFindingCollisions ? "#FCE94F" : "#FFFFFF",
           color: "#0A0A0A",
           border: "none",
           borderRight: "2px solid #0A0A0A",
           padding: "11px 6px",
-          cursor: "pointer",
+          cursor: isFindingCollisions ? "wait" : "pointer",
           minWidth: "114px",
           whiteSpace: "nowrap",
           transition: "background 0.12s ease",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
+        onMouseEnter={(e) => {
+          if (!isFindingCollisions) e.currentTarget.style.background = "#FCE94F";
+        }}
+        onMouseLeave={(e) => {
+          if (!isFindingCollisions) e.currentTarget.style.background = "#FFFFFF";
+        }}
       >
-        FIND COLLISIONS
+        {isFindingCollisions ? "SCANNING…" : "FIND COLLISIONS"}
       </button>
 
       <button
         type="button"
+        disabled={isAnalyzingGaps}
         onClick={() => {
           playSound.click();
           onGaps();
@@ -182,19 +206,23 @@ export const AiBar: React.FC<AiBarProps> = ({
           fontSize: "9.5px",
           fontWeight: 700,
           letterSpacing: "0.11em",
-          background: "#FFFFFF",
+          background: isAnalyzingGaps ? "#FCE94F" : "#FFFFFF",
           color: "#0A0A0A",
           border: "none",
           padding: "11px 6px",
-          cursor: "pointer",
+          cursor: isAnalyzingGaps ? "wait" : "pointer",
           minWidth: "124px",
           whiteSpace: "nowrap",
           transition: "background 0.12s ease",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
+        onMouseEnter={(e) => {
+          if (!isAnalyzingGaps) e.currentTarget.style.background = "#FCE94F";
+        }}
+        onMouseLeave={(e) => {
+          if (!isAnalyzingGaps) e.currentTarget.style.background = "#FFFFFF";
+        }}
       >
-        WHAT DID I MISS?
+        {isAnalyzingGaps ? "CHECKING…" : "WHAT DID I MISS?"}
       </button>
     </div>
   );

@@ -7,7 +7,7 @@ import { X, Sparkles, BookOpen, Layers } from "lucide-react";
 interface AddCourseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { title: string; provider?: string; accent?: string }) => void;
+  onSubmit: (data: { title: string; provider?: string; accent?: string; accentFg?: string }) => void;
 }
 
 const COLOR_PRESETS = [
@@ -48,6 +48,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
       title: title.trim(),
       provider: provider.trim() || "SELF STUDY",
       accent: selectedAccent.hex,
+      accentFg: selectedAccent.fg,
     });
   };
 

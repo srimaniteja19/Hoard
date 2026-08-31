@@ -10,6 +10,8 @@ import {
   clearLessonNotes,
   createNewCourse,
   getCollisions,
+  saveCollisions,
+  toggleLessonWatched,
 } from "@/lib/notebooks/storage";
 import { SeedCourse, CourseCollision } from "@/lib/notebooks/seedData";
 import { Block, computeWordCount, generateBlockId } from "@/lib/notebooks/blocks";
@@ -67,6 +69,7 @@ export default function NotebooksPage() {
   const [quizQuestions, setQuizQuestions] = useState<any[] | null>(null);
   const [quizNotEnough, setQuizNotEnough] = useState(false);
   const [quizExplanation, setQuizExplanation] = useState<string>("");
+  const [isQuizzing, setIsQuizzing] = useState(false);
 
   const [explainSelection, setExplainSelection] = useState<string | null>(null);
   const [explainText, setExplainText] = useState<string>("");
@@ -74,6 +77,7 @@ export default function NotebooksPage() {
 
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [isAnalyzingGaps, setIsAnalyzingGaps] = useState(false);
+  const [isFindingCollisions, setIsFindingCollisions] = useState(false);
 
   // Load courses & restore active location on mount
   useEffect(() => {
@@ -232,6 +236,14 @@ export default function NotebooksPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleToggleWatched = (modIdx: number, lesIdx: number) => {
+    if (!currentCourse) return;
+    const targetLesson = currentCourse.modules[modIdx]?.lessons[lesIdx];
+    if (!targetLesson) return;
+    const updated = toggleLessonWatched(currentCourse.id, targetLesson.id);
+    setCourses([...updated]);
+  };
+
   const handleDeleteLesson = (modIdx: number, lesIdx: number) => {
     if (!currentCourse) return;
     const targetModule = currentCourse.modules[modIdx];
@@ -314,6 +326,8 @@ export default function NotebooksPage() {
 
   // AI: QUIZ ME
   const handleQuizMe = async () => {
+    if (isQuizzing) return;
+    setIsQuizzing(true);
     try {
       const res = await fetch("/api/notebooks/quiz", {
         method: "POST",
@@ -333,11 +347,14 @@ export default function NotebooksPage() {
       playSound.fileIt();
     } catch {
       alert("Failed to generate quiz.");
+    } finally {
+      setIsQuizzing(false);
     }
   };
 
   // AI: EXPLAIN AGAIN
   const handleExplain = async () => {
+    if (isExplaining) return;
     // Note text lives in <textarea> elements, whose selection isn't exposed via
     // window.getSelection() — read it directly off the focused textarea first.
     const active = document.activeElement;
@@ -414,6 +431,7 @@ export default function NotebooksPage() {
 
   // AI: WHAT DID I MISS? (Gap analysis)
   const handleAnalyzeTranscript = async (transcriptText: string) => {
+    if (isAnalyzingGaps) return;
     setIsAnalyzingGaps(true);
     try {
       const res = await fetch("/api/notebooks/gaps", {
@@ -445,7 +463,9 @@ export default function NotebooksPage() {
 
   // AI: FIND COLLISIONS
   const handleFindCollisions = async () => {
+    if (isFindingCollisions) return;
     playSound.click();
+    setIsFindingCollisions(true);
     try {
       const res = await fetch("/api/notebooks/collisions", {
         method: "POST",
@@ -456,10 +476,13 @@ export default function NotebooksPage() {
         const data = await res.json();
         if (data.collisions && data.collisions.length > 0) {
           setCollisions(data.collisions);
+          saveCollisions(data.collisions);
         }
       }
     } catch {
       // keep fallback
+    } finally {
+      setIsFindingCollisions(false);
     }
     setView("index");
     setTimeout(() => {
@@ -476,12 +499,14 @@ export default function NotebooksPage() {
     title,
     provider,
     accent,
+    accentFg,
   }: {
     title: string;
     provider?: string;
     accent?: string;
+    accentFg?: string;
   }) => {
-    const newCourse = createNewCourse(title, provider || "DEEPLEARNING.AI", accent || "#7B5CF0");
+    const newCourse = createNewCourse(title, provider || "DEEPLEARNING.AI", accent || "#7B5CF0", accentFg || "#FFFFFF");
     const updated = [...courses, newCourse];
     setCourses(updated);
     setCurrentCourseIdx(courses.length);
@@ -493,18 +518,19 @@ export default function NotebooksPage() {
 
   const handleCreatePage = (newTitle: string) => {
     if (!currentCourse) return;
+    const targetModIdx = currentModule ? currentModuleIdx : 0;
     const newLesson = {
       id: "les-" + Date.now().toString(36),
       title: newTitle,
-      watched: true,
+      watched: false,
       meta: "STUB · 1 LINE",
       blocks: [{ id: generateBlockId(), type: "paragraph" as const, text: "" }],
     };
-    currentCourse.modules[0].lessons.push(newLesson);
+    currentCourse.modules[targetModIdx].lessons.push(newLesson);
     saveStoredCourses(courses);
     setCourses([...courses]);
-    setCurrentModuleIdx(0);
-    setCurrentLessonIdx(currentCourse.modules[0].lessons.length - 1);
+    setCurrentModuleIdx(targetModIdx);
+    setCurrentLessonIdx(currentCourse.modules[targetModIdx].lessons.length - 1);
     setShowAddPageModal(false);
   };
 
@@ -737,6 +763,7 @@ export default function NotebooksPage() {
               setCurrentLessonIdx(lesIdx);
             }}
             onDeleteLesson={handleDeleteLesson}
+            onToggleWatched={handleToggleWatched}
             onBackToIndex={() => setView("index")}
             onNewPage={() => {
               playSound.click();
@@ -922,6 +949,10 @@ export default function NotebooksPage() {
                   }
                 }}
                 isTidying={isTidying}
+                isQuizzing={isQuizzing}
+                isExplaining={isExplaining}
+                isFindingCollisions={isFindingCollisions}
+                isAnalyzingGaps={isAnalyzingGaps}
               />
 
               {/* Content: Empty Page vs Block Editor */}
@@ -933,12 +964,7 @@ export default function NotebooksPage() {
                     ]);
                   }}
                   onPasteTranscript={() => setShowTranscriptModal(true)}
-                  onDraftFromSlides={() => {
-                    handleUpdateBlocks([
-                      { id: generateBlockId(), type: "heading", level: 2, text: "Key Concepts from Slides" },
-                      { id: generateBlockId(), type: "paragraph", text: "" },
-                    ]);
-                  }}
+                  onDraftFromSlides={() => setShowTranscriptModal(true)}
                 />
               ) : (
                 <BlockEditor

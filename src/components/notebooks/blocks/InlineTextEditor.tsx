@@ -21,6 +21,7 @@ interface InlineTextEditorProps {
   style?: React.CSSProperties;
   placeholder?: string;
   autoFocus?: boolean;
+  readOnly?: boolean;
 }
 
 // Notion-style markdown auto-transform triggers. Each pattern is matched against
@@ -59,6 +60,7 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   style = {},
   placeholder = "Type note, or # for heading, > for quote, ! for callout…",
   autoFocus = false,
+  readOnly = false,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -84,6 +86,7 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   }, [autoFocus]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (readOnly) return;
     const val = e.target.value;
 
     // ── Notion-style Markdown Auto-Transformations ──
@@ -123,6 +126,8 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (readOnly) return;
+
     // If slash menu handled key
     if (onSlashKeyDown && onSlashKeyDown(e)) {
       return;
@@ -237,6 +242,8 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
         if (registerTextareaRef) registerTextareaRef(el);
       }}
       value={value}
+      readOnly={readOnly}
+      tabIndex={readOnly ? -1 : undefined}
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       placeholder={placeholder}

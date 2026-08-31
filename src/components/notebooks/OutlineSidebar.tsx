@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { SeedCourse } from "@/lib/notebooks/seedData";
 import { lessonState, computeWordCount } from "@/lib/notebooks/blocks";
 import { playSound } from "@/lib/sound";
+import { Eye, EyeOff } from "lucide-react";
 
 interface OutlineSidebarProps {
   courses: SeedCourse[];
@@ -13,6 +14,7 @@ interface OutlineSidebarProps {
   onSelectCourse: (index: number) => void;
   onSelectLesson: (moduleIndex: number, lessonIndex: number) => void;
   onDeleteLesson?: (moduleIndex: number, lessonIndex: number) => void;
+  onToggleWatched?: (moduleIndex: number, lessonIndex: number) => void;
   onBackToIndex: () => void;
   onNewPage: () => void;
 }
@@ -25,6 +27,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   onSelectCourse,
   onSelectLesson,
   onDeleteLesson,
+  onToggleWatched,
   onBackToIndex,
   onNewPage,
 }) => {
@@ -36,8 +39,9 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   const writtenCount = allLessons.filter(
     (l) => lessonState({ wordCount: computeWordCount(l.blocks || []) }) === "written"
   ).length;
-  const watchedCount = allLessons.filter((l) => l.watched).length;
-  const unwrittenCount = Math.max(0, watchedCount - writtenCount);
+  const unwrittenCount = allLessons.filter(
+    (l) => l.watched && lessonState({ wordCount: computeWordCount(l.blocks || []) }) !== "written"
+  ).length;
 
   const writtenPct = totalLessons > 0 ? (writtenCount / totalLessons) * 100 : 0;
   const unwrittenPct = totalLessons > 0 ? (unwrittenCount / totalLessons) * 100 : 0;
@@ -296,6 +300,32 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                         {les.meta}
                       </em>
                     </div>
+                    {onToggleWatched && (
+                      <button
+                        type="button"
+                        title={les.watched ? "Mark as not watched" : "Mark as watched"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playSound.click();
+                          onToggleWatched(modIdx, lesIdx);
+                        }}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          color: isSelected ? "#F3F0E8" : "#0A0A0A",
+                          opacity: les.watched ? 0.55 : 0.3,
+                          cursor: "pointer",
+                          padding: "2px 4px",
+                          marginTop: "2px",
+                          display: "grid",
+                          placeItems: "center",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = les.watched ? "0.55" : "0.3")}
+                      >
+                        {les.watched ? <Eye size={12} /> : <EyeOff size={12} />}
+                      </button>
+                    )}
                     {onDeleteLesson && (
                       <button
                         type="button"

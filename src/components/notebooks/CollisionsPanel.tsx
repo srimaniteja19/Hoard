@@ -50,19 +50,37 @@ export const CollisionsPanel: React.FC<CollisionsPanelProps> = ({ collisions }) 
           }}
         >
           <div>
-            <b
-              style={{
-                display: "block",
-                fontFamily: "var(--display, sans-serif)",
-                fontWeight: 800,
-                fontSize: "18px",
-                letterSpacing: "-0.028em",
-                lineHeight: 1.15,
-                color: "#FFFFFF",
-              }}
-            >
-              {col.title}
-            </b>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <b
+                style={{
+                  display: "block",
+                  fontFamily: "var(--display, sans-serif)",
+                  fontWeight: 800,
+                  fontSize: "18px",
+                  letterSpacing: "-0.028em",
+                  lineHeight: 1.15,
+                  color: "#FFFFFF",
+                }}
+              >
+                {col.title}
+              </b>
+              {col.relation && (
+                <span
+                  style={{
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "8px",
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    padding: "2px 6px",
+                    border: "1.5px solid rgba(240,237,228,0.4)",
+                    color: col.relation === "contradiction" ? "#FF2D8A" : "#F0EDE4",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {col.relation.replace(/-/g, " ").toUpperCase()}
+                </span>
+              )}
+            </div>
             <p style={{ margin: "5px 0 0", fontSize: "14.5px", lineHeight: 1.5, opacity: 0.65 }}>
               {col.description}
             </p>

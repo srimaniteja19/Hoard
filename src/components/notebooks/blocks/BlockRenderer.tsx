@@ -33,6 +33,7 @@ interface BlockRendererProps {
   onSlashCommand?: (query: string, rect: DOMRect | null) => void;
   onSlashKeyDown?: (e: React.KeyboardEvent) => boolean;
   registerTextareaRef?: (el: HTMLTextAreaElement | null) => void;
+  readOnly?: boolean;
   accentColor?: string;
 }
 
@@ -48,6 +49,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   onSlashCommand,
   onSlashKeyDown,
   registerTextareaRef,
+  readOnly = false,
   accentColor = "#7B5CF0",
 }) => {
   const [toggleOpen, setToggleOpen] = useState(false);
@@ -391,6 +393,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           onSlashCommand={onSlashCommand}
           onSlashKeyDown={onSlashKeyDown}
           registerTextareaRef={registerTextareaRef}
+          readOnly={readOnly}
           renderFormatted={renderFormattedText}
           style={{
             margin: "6px 0 14px",
@@ -448,6 +451,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               onSlashCommand={onSlashCommand}
               onSlashKeyDown={onSlashKeyDown}
               registerTextareaRef={registerTextareaRef}
+              readOnly={readOnly}
               renderFormatted={renderFormattedText}
               style={
                 block.level === 2
@@ -1002,6 +1006,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               onSlashCommand={onSlashCommand}
               onSlashKeyDown={onSlashKeyDown}
               registerTextareaRef={registerTextareaRef}
+              readOnly={readOnly}
               renderFormatted={renderFormattedText}
               style={{ fontSize: "16px", lineHeight: "1.6", color: "#0A0A0A" }}
               placeholder="Callout text…"
@@ -1213,6 +1218,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             onSlashCommand={onSlashCommand}
             onSlashKeyDown={onSlashKeyDown}
             registerTextareaRef={registerTextareaRef}
+            readOnly={readOnly}
             renderFormatted={renderFormattedText}
             style={{
               fontFamily: "var(--quote, Georgia, serif)",
