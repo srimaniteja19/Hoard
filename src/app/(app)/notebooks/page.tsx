@@ -24,6 +24,8 @@ import { DiffSheet } from "@/components/notebooks/DiffSheet";
 import { QuizModal } from "@/components/notebooks/QuizModal";
 import { ExplainModal } from "@/components/notebooks/ExplainModal";
 import { TranscriptModal } from "@/components/notebooks/TranscriptModal";
+import { AddCourseModal } from "@/components/notebooks/AddCourseModal";
+import { AddPageModal } from "@/components/notebooks/AddPageModal";
 import { playSound } from "@/lib/sound";
 import { Plus } from "lucide-react";
 
@@ -35,6 +37,10 @@ export default function NotebooksPage() {
   const [currentLessonIdx, setCurrentLessonIdx] = useState(0);
   const [paperTheme, setPaperTheme] = useState<"cream" | "ink">("cream");
   const [collisions, setCollisions] = useState<CourseCollision[]>([]);
+
+  // Dialog / Modal States
+  const [showAddCourseModal, setShowAddCourseModal] = useState(false);
+  const [showAddPageModal, setShowAddPageModal] = useState(false);
 
   // AI Modal States
   const [diffOriginal, setDiffOriginal] = useState<Block[] | null>(null);
@@ -385,14 +391,44 @@ export default function NotebooksPage() {
   };
 
   const handleAddCourse = () => {
-    const title = prompt("Enter course title (e.g. LLM Systems Architecture):");
-    if (!title) return;
-    const newCourse = createNewCourse(title);
-    setCourses([...courses, newCourse]);
+    playSound.click();
+    setShowAddCourseModal(true);
+  };
+
+  const handleCreateCourse = ({
+    title,
+    provider,
+    accent,
+  }: {
+    title: string;
+    provider?: string;
+    accent?: string;
+  }) => {
+    const newCourse = createNewCourse(title, provider || "DEEPLEARNING.AI", accent || "#7B5CF0");
+    const updated = [...courses, newCourse];
+    setCourses(updated);
     setCurrentCourseIdx(courses.length);
     setCurrentModuleIdx(0);
     setCurrentLessonIdx(0);
     setView("course");
+    setShowAddCourseModal(false);
+  };
+
+  const handleCreatePage = (newTitle: string) => {
+    if (!currentCourse) return;
+    const newLesson = {
+      id: "les-" + Date.now().toString(36),
+      title: newTitle,
+      watched: true,
+      meta: "STUB · 1 LINE",
+      blocks: [{ id: generateBlockId(), type: "paragraph" as const, text: "" }],
+    };
+    currentCourse.modules[0].lessons.push(newLesson);
+    saveStoredCourses(courses);
+    setCourses([...courses]);
+    setCurrentModuleIdx(0);
+    setCurrentLessonIdx(currentCourse.modules[0].lessons.length - 1);
+    setShowAddPageModal(false);
   };
 
   const isInk = paperTheme === "ink";
@@ -626,20 +662,8 @@ export default function NotebooksPage() {
             onDeleteLesson={handleDeleteLesson}
             onBackToIndex={() => setView("index")}
             onNewPage={() => {
-              const newTitle = prompt("Lesson title:");
-              if (!newTitle) return;
-              const newLesson = {
-                id: "les-" + Date.now().toString(36),
-                title: newTitle,
-                watched: true,
-                meta: "STUB · 1 LINE",
-                blocks: [{ id: generateBlockId(), type: "paragraph" as const, text: "" }],
-              };
-              currentCourse.modules[0].lessons.push(newLesson);
-              saveStoredCourses(courses);
-              setCourses([...courses]);
-              setCurrentModuleIdx(0);
-              setCurrentLessonIdx(currentCourse.modules[0].lessons.length - 1);
+              playSound.click();
+              setShowAddPageModal(true);
             }}
           />
 
@@ -926,6 +950,21 @@ export default function NotebooksPage() {
           loading={isAnalyzingGaps}
         />
       )}
+
+      {/* 5. Add Course Modal Popup */}
+      <AddCourseModal
+        isOpen={showAddCourseModal}
+        onClose={() => setShowAddCourseModal(false)}
+        onSubmit={handleCreateCourse}
+      />
+
+      {/* 6. Add Page / Lesson Modal Popup */}
+      <AddPageModal
+        isOpen={showAddPageModal}
+        onClose={() => setShowAddPageModal(false)}
+        onSubmit={handleCreatePage}
+        courseTitle={currentCourse?.title}
+      />
     </div>
   );
 }
