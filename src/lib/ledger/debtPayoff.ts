@@ -118,14 +118,19 @@ function runSimulation(
     let totalPrincipalThisMonth = 0;
     const paymentPlans: DebtMonthlyPaymentPlan[] = [];
 
+    // Track initial month balances and interest charged per debt
+    const monthlyInterests: Record<string, { startBalance: number; interest: number }> = {};
+
     // Step 1: Charge monthly accrued interest
     for (const debt of state) {
       if (debt.isPaid) continue;
+      const startBalance = debt.balance;
       const monthlyRate = debt.interestRate / 100 / 12;
-      const interest = Math.round(debt.balance * monthlyRate * 100) / 100;
-      debt.balance += interest;
+      const interest = Math.round(startBalance * monthlyRate * 100) / 100;
+      debt.balance = Math.round((debt.balance + interest) * 100) / 100;
       debt.totalInterestPaid += interest;
       totalInterestThisMonth += interest;
+      monthlyInterests[debt.id] = { startBalance, interest };
     }
 
     // Step 2: Pay minimum monthly obligations across all accounts
@@ -146,10 +151,12 @@ function runSimulation(
         continue;
       }
 
-      const startBalance = debt.balance;
+      const debtMeta = monthlyInterests[debt.id] || { startBalance: debt.balance, interest: 0 };
       const payment = Math.min(debt.balance, debt.minPayment);
       debt.balance = Math.round((debt.balance - payment) * 100) / 100;
-      const principalPaid = payment;
+      
+      const interestCovered = Math.min(debtMeta.interest, payment);
+      const principalPaid = Math.max(0, payment - interestCovered);
       totalPrincipalThisMonth += principalPaid;
 
       if (debt.balance <= 0.01) {
@@ -168,8 +175,8 @@ function runSimulation(
       paymentPlans.push({
         debtId: debt.id,
         name: debt.name,
-        startBalance,
-        interestCharged: Math.round(startBalance * (debt.interestRate / 100 / 12) * 100) / 100,
+        startBalance: debtMeta.startBalance,
+        interestCharged: debtMeta.interest,
         payment,
         principalPaid,
         endBalance: debt.balance,
