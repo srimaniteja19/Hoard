@@ -27,6 +27,9 @@ interface BlockRendererProps {
   onDeleteBlock?: () => void;
   onInsertBelow?: () => void;
   onFocusPrevious?: () => void;
+  onTransformBlock?: (props: Partial<Block>) => void;
+  onSlashCommand?: (query: string, rect: DOMRect | null) => void;
+  onSlashKeyDown?: (e: React.KeyboardEvent) => boolean;
   accentColor?: string;
 }
 
@@ -36,6 +39,9 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   onDeleteBlock,
   onInsertBelow,
   onFocusPrevious,
+  onTransformBlock,
+  onSlashCommand,
+  onSlashKeyDown,
   accentColor = "#7B5CF0",
 }) => {
   const [toggleOpen, setToggleOpen] = useState(false);
@@ -428,6 +434,9 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           onInsertBelow={onInsertBelow}
           onDeleteBlock={onDeleteBlock}
           onFocusPrevious={onFocusPrevious}
+          onTransformBlock={onTransformBlock}
+          onSlashCommand={onSlashCommand}
+          onSlashKeyDown={onSlashKeyDown}
           renderFormatted={renderFormattedText}
           style={{
             margin: "6px 0 14px",
@@ -435,7 +444,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             lineHeight: "1.7",
             color: "inherit",
           }}
-          placeholder="Start writing notes…"
+          placeholder="Type something, or press '/' for blocks…"
         />
       );
     }
@@ -481,6 +490,9 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               onInsertBelow={onInsertBelow}
               onDeleteBlock={onDeleteBlock}
               onFocusPrevious={onFocusPrevious}
+              onTransformBlock={onTransformBlock}
+              onSlashCommand={onSlashCommand}
+              onSlashKeyDown={onSlashKeyDown}
               renderFormatted={renderFormattedText}
               style={
                 block.level === 2
@@ -1029,6 +1041,9 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               onInsertBelow={onInsertBelow}
               onDeleteBlock={onDeleteBlock}
               onFocusPrevious={onFocusPrevious}
+              onTransformBlock={onTransformBlock}
+              onSlashCommand={onSlashCommand}
+              onSlashKeyDown={onSlashKeyDown}
               renderFormatted={renderFormattedText}
               style={{ fontSize: "16px", lineHeight: "1.6", color: "#0A0A0A" }}
               placeholder="Callout text…"
@@ -1234,6 +1249,9 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             onInsertBelow={onInsertBelow}
             onDeleteBlock={onDeleteBlock}
             onFocusPrevious={onFocusPrevious}
+            onTransformBlock={onTransformBlock}
+            onSlashCommand={onSlashCommand}
+            onSlashKeyDown={onSlashKeyDown}
             renderFormatted={renderFormattedText}
             style={{
               fontFamily: "var(--quote, Georgia, serif)",

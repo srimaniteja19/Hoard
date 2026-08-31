@@ -23,17 +23,17 @@ interface BlockEditorProps {
 
 const SLASH_MENU_ITEMS: { type: string; glyph: string; label: string; shortcut: string }[] = [
   { type: "paragraph", glyph: "¶", label: "Text Paragraph", shortcut: "/text" },
-  { type: "h2", glyph: "H2", label: "Heading 2", shortcut: "/h2" },
-  { type: "h3", glyph: "H3", label: "Heading 3", shortcut: "/h3" },
-  { type: "code", glyph: "<>", label: "Code Snippet", shortcut: "/code" },
-  { type: "gotcha", glyph: "!", label: "Gotcha Callout (Pink)", shortcut: "/gotcha" },
-  { type: "question", glyph: "?", label: "Question for Me (Yellow)", shortcut: "/q" },
+  { type: "h2", glyph: "H2", label: "Heading 1 (#)", shortcut: "/h1" },
+  { type: "h3", glyph: "H3", label: "Heading 2 (##)", shortcut: "/h2" },
+  { type: "code", glyph: "<>", label: "Code Snippet (```)", shortcut: "/code" },
+  { type: "todo", glyph: "☑", label: "To-Do Checklist ([])", shortcut: "/todo" },
+  { type: "quote", glyph: '"', label: "Quote Block (>)", shortcut: "/quote" },
+  { type: "gotcha", glyph: "!", label: "Gotcha Callout (!)", shortcut: "/gotcha" },
+  { type: "question", glyph: "?", label: "Question for Me (?)", shortcut: "/q" },
   { type: "fact", glyph: "★", label: "Key Takeaway (Lime)", shortcut: "/fact" },
   { type: "connects", glyph: "↗", label: "Connects To (Cyan)", shortcut: "/connects" },
-  { type: "todo", glyph: "☑", label: "To-Do Checklist", shortcut: "/todo" },
   { type: "image", glyph: "📷", label: "Image / Screenshot", shortcut: "/image" },
   { type: "toggle", glyph: "▸", label: "Collapsible Toggle", shortcut: "/toggle" },
-  { type: "quote", glyph: '"', label: "Quote Block", shortcut: "/quote" },
 ];
 
 export const BlockEditor: React.FC<BlockEditorProps> = ({
@@ -44,12 +44,12 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
-  const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const [slashMenu, setSlashMenu] = useState<{
     isOpen: boolean;
     blockIndex: number;
     query: string;
     activeIndex: number;
+    position: { top: number; left: number } | null;
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,6 +135,45 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     commitBlocks(next);
   };
 
+  // Transform existing block (e.g. from typing '# ', '> ', or from slash menu)
+  const handleTransformBlock = (index: number, props: any) => {
+    playSound.pop();
+    const current = blocks[index] || { id: generateBlockId(), type: "paragraph", text: "" };
+    let transformed: Block;
+
+    const baseId = current.id || generateBlockId();
+
+    switch (props.type) {
+      case "heading":
+        transformed = { id: baseId, type: "heading", level: props.level || 2, text: props.text || "" };
+        break;
+      case "code":
+        transformed = { id: baseId, type: "code", lang: props.lang || "PYTHON", note: "SNIPPET", code: props.code || "# Write code here\n" };
+        break;
+      case "quote":
+        transformed = { id: baseId, type: "quote", text: props.text || "", attribution: "" };
+        break;
+      case "todo":
+        transformed = { id: baseId, type: "todo", items: props.items || [{ text: "", done: false }] };
+        break;
+      case "callout":
+        transformed = { id: baseId, type: "callout", kind: props.kind || "gotcha", text: props.text || "" };
+        break;
+      case "toggle":
+        transformed = { id: baseId, type: "toggle", summary: props.summary || "Toggle Title", body: "" };
+        break;
+      case "paragraph":
+      default:
+        transformed = { id: baseId, type: "paragraph", text: props.text || "" };
+        break;
+    }
+
+    const next = [...blocks];
+    next[index] = transformed;
+    commitBlocks(next);
+    setSlashMenu(null);
+  };
+
   const handleInsertBlock = (type: string, afterIndex?: number) => {
     playSound.click();
 
@@ -188,7 +227,6 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     const insertIdx = typeof afterIndex === "number" ? afterIndex + 1 : next.length;
     next.splice(insertIdx, 0, newBlock);
 
-    setFocusedBlockId(newBlock.id);
     commitBlocks(next);
     setSlashMenu(null);
   };
@@ -222,12 +260,59 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   const filteredSlashItems = SLASH_MENU_ITEMS.filter((item) => {
     if (!slashMenu || !slashMenu.query) return true;
     const q = slashMenu.query.toLowerCase().replace(/^\//, "");
+    if (!q) return true;
     return (
       item.type.toLowerCase().includes(q) ||
       item.label.toLowerCase().includes(q) ||
       item.shortcut.toLowerCase().includes(q)
     );
   });
+
+  // Handle slash keyboard navigation
+  const handleSlashKeyDown = (e: React.KeyboardEvent): boolean => {
+    if (!slashMenu || !slashMenu.isOpen) return false;
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setSlashMenu(null);
+      return true;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSlashMenu((prev) =>
+        prev
+          ? { ...prev, activeIndex: (prev.activeIndex + 1) % filteredSlashItems.length }
+          : null
+      );
+      return true;
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSlashMenu((prev) =>
+        prev
+          ? {
+              ...prev,
+              activeIndex:
+                (prev.activeIndex - 1 + filteredSlashItems.length) % filteredSlashItems.length,
+            }
+          : null
+      );
+      return true;
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const selected = filteredSlashItems[slashMenu.activeIndex] || filteredSlashItems[0];
+      if (selected) {
+        handleTransformBlock(slashMenu.blockIndex, { type: selected.type as any });
+      }
+      return true;
+    }
+
+    return false;
+  };
 
   // Handle clipboard paste (images & links)
   const handlePaste = (e: React.ClipboardEvent) => {
@@ -294,32 +379,6 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     }
   };
 
-  // Drag and drop images directly onto the document
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const files = e.dataTransfer?.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = (uploadEvent) => {
-          const dataUrl = uploadEvent.target?.result as string;
-          if (dataUrl) {
-            const imageBlock: Block = {
-              id: generateBlockId(),
-              type: "image",
-              url: dataUrl,
-              caption: file.name || "DROPPED IMAGE",
-            };
-            commitBlocks([...blocks, imageBlock]);
-            playSound.fileIt();
-          }
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-  };
-
   return (
     <div
       ref={containerRef}
@@ -329,11 +388,10 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         gap: "4px",
         position: "relative",
         minHeight: "450px",
-        paddingBottom: "120px",
+        paddingBottom: "140px",
       }}
       onPaste={handlePaste}
       onDragOver={(e) => e.preventDefault()}
-      onDrop={handleDrop}
     >
       {/* Floating Selection Tooltip */}
       <FloatingFormatBubble containerRef={containerRef} onExplain={onExplain} />
@@ -358,7 +416,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           fontFamily: "var(--mono, monospace)",
           fontSize: "9px",
           fontWeight: 700,
-          opacity: 0.6,
+          opacity: 0.5,
         }}
       >
         <button
@@ -417,18 +475,20 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
               onMouseLeave={() => setHoveredBlockId(null)}
               style={{
                 position: "relative",
-                paddingLeft: "38px", // Clean left gutter for handles without overlapping text
+                paddingLeft: "54px", // Safe, generous gutter so handles NEVER overlap text
                 minHeight: "28px",
               }}
             >
-              {/* Hover Action Gutter */}
+              {/* Hover Action Gutter (Contained safely inside the 54px left gutter) */}
               <div
                 style={{
                   position: "absolute",
                   left: "0px",
                   top: "4px",
+                  width: "48px",
                   display: "flex",
                   alignItems: "center",
+                  justifyContent: "flex-end",
                   gap: "2px",
                   opacity: isHovered ? 1 : 0,
                   transition: "opacity 0.12s ease",
@@ -445,17 +505,18 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                       blockIndex: idx,
                       query: "",
                       activeIndex: 0,
+                      position: null,
                     });
                   }}
                   style={{
-                    width: "16px",
-                    height: "20px",
+                    width: "14px",
+                    height: "18px",
                     border: "none",
                     background: "transparent",
                     cursor: "pointer",
                     color: "inherit",
                     opacity: 0.5,
-                    fontSize: "14px",
+                    fontSize: "13px",
                     padding: 0,
                     lineHeight: 1,
                   }}
@@ -470,8 +531,8 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                   title="Move up"
                   onClick={() => handleMoveBlock(idx, "up")}
                   style={{
-                    width: "14px",
-                    height: "20px",
+                    width: "12px",
+                    height: "18px",
                     border: "none",
                     background: "transparent",
                     cursor: idx > 0 ? "pointer" : "default",
@@ -482,7 +543,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                     placeItems: "center",
                   }}
                 >
-                  <ArrowUp size={11} />
+                  <ArrowUp size={10} />
                 </button>
                 <button
                   type="button"
@@ -490,8 +551,8 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                   title="Move down"
                   onClick={() => handleMoveBlock(idx, "down")}
                   style={{
-                    width: "14px",
-                    height: "20px",
+                    width: "12px",
+                    height: "18px",
                     border: "none",
                     background: "transparent",
                     cursor: idx < blocks.length - 1 ? "pointer" : "default",
@@ -502,15 +563,15 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                     placeItems: "center",
                   }}
                 >
-                  <ArrowDown size={11} />
+                  <ArrowDown size={10} />
                 </button>
                 <button
                   type="button"
                   title="Delete line"
                   onClick={() => handleDeleteBlock(idx)}
                   style={{
-                    width: "14px",
-                    height: "20px",
+                    width: "12px",
+                    height: "18px",
                     border: "none",
                     background: "transparent",
                     cursor: "pointer",
@@ -523,7 +584,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                   onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
                   onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.45")}
                 >
-                  <Trash2 size={11} />
+                  <Trash2 size={10} />
                 </button>
               </div>
 
@@ -533,22 +594,38 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                 onUpdateBlock={(updated) => handleUpdateBlock(idx, updated)}
                 onDeleteBlock={() => handleDeleteBlock(idx)}
                 onInsertBelow={() => handleInsertBlock("paragraph", idx)}
+                onTransformBlock={(props) => handleTransformBlock(idx, props)}
+                onSlashCommand={(query, rect) => {
+                  if (query.startsWith("/")) {
+                    setSlashMenu({
+                      isOpen: true,
+                      blockIndex: idx,
+                      query,
+                      activeIndex: 0,
+                      position: rect ? { top: rect.bottom + 4, left: rect.left } : null,
+                    });
+                  } else {
+                    setSlashMenu(null);
+                  }
+                }}
+                onSlashKeyDown={handleSlashKeyDown}
                 accentColor={accentColor}
               />
 
-              {/* In-Line Slash Palette Popover */}
+              {/* In-Line Notion-Style Slash Palette Popover */}
               {slashMenu?.isOpen && slashMenu.blockIndex === idx && (
                 <div
                   style={{
                     position: "absolute",
-                    left: "38px",
+                    left: "54px",
                     top: "100%",
-                    zIndex: 60,
-                    width: "292px",
+                    zIndex: 9999,
+                    width: "300px",
                     border: "3px solid #0A0A0A",
                     background: "#FFFFFF",
                     boxShadow: "7px 7px 0 #0A0A0A",
                     overflow: "hidden",
+                    animation: "fadeIn 0.1s ease",
                   }}
                 >
                   <div
@@ -565,63 +642,70 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                       justifyContent: "space-between",
                     }}
                   >
-                    <span>INSERT BLOCK</span>
+                    <span>TRANSFORM BLOCK</span>
                     <span>ESC TO CLOSE</span>
                   </div>
-                  {filteredSlashItems.map((item, itemIdx) => {
-                    const isActive = slashMenu.activeIndex === itemIdx;
-                    return (
-                      <button
-                        key={item.type}
-                        type="button"
-                        onClick={() => handleInsertBlock(item.type, idx)}
-                        style={{
-                          display: "flex",
-                          width: "100%",
-                          alignItems: "center",
-                          gap: "11px",
-                          background: isActive ? "#FCE94F" : "transparent",
-                          border: "none",
-                          borderBottom: "2px solid rgba(10,10,10,0.14)",
-                          padding: "8px 12px",
-                          cursor: "pointer",
-                          textAlign: "left",
-                          color: "#0A0A0A",
-                          transition: "background 0.1s ease",
-                        }}
-                        onMouseEnter={() => setSlashMenu((prev) => (prev ? { ...prev, activeIndex: itemIdx } : null))}
-                      >
-                        <span
-                          style={{
-                            width: "22px",
-                            height: "22px",
-                            border: "2px solid #0A0A0A",
-                            display: "grid",
-                            placeItems: "center",
-                            fontFamily: "var(--mono, monospace)",
-                            fontSize: "10.5px",
-                            fontWeight: 700,
-                            flex: "none",
-                            background: "#FFFFFF",
+                  <div style={{ maxHeight: "240px", overflowY: "auto" }}>
+                    {filteredSlashItems.map((item, itemIdx) => {
+                      const isActive = slashMenu.activeIndex === itemIdx;
+                      return (
+                        <button
+                          key={item.type}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleTransformBlock(idx, { type: item.type as any });
                           }}
-                        >
-                          {item.glyph}
-                        </span>
-                        <b style={{ fontSize: "13.5px", fontWeight: 700 }}>{item.label}</b>
-                        <span
                           style={{
-                            fontFamily: "var(--mono, monospace)",
-                            fontSize: "8.5px",
-                            letterSpacing: "0.08em",
-                            opacity: 0.45,
-                            marginLeft: "auto",
+                            display: "flex",
+                            width: "100%",
+                            alignItems: "center",
+                            gap: "10px",
+                            background: isActive ? "#FCE94F" : "transparent",
+                            border: "none",
+                            borderBottom: "1.5px solid rgba(10,10,10,0.1)",
+                            padding: "8px 12px",
+                            cursor: "pointer",
+                            textAlign: "left",
+                            color: "#0A0A0A",
+                            transition: "background 0.08s ease",
                           }}
+                          onMouseEnter={() =>
+                            setSlashMenu((prev) => (prev ? { ...prev, activeIndex: itemIdx } : null))
+                          }
                         >
-                          {item.shortcut}
-                        </span>
-                      </button>
-                    );
-                  })}
+                          <span
+                            style={{
+                              width: "22px",
+                              height: "22px",
+                              border: "2px solid #0A0A0A",
+                              display: "grid",
+                              placeItems: "center",
+                              fontFamily: "var(--mono, monospace)",
+                              fontSize: "10px",
+                              fontWeight: 700,
+                              flex: "none",
+                              background: "#FFFFFF",
+                            }}
+                          >
+                            {item.glyph}
+                          </span>
+                          <b style={{ fontSize: "13px", fontWeight: 700 }}>{item.label}</b>
+                          <span
+                            style={{
+                              fontFamily: "var(--mono, monospace)",
+                              fontSize: "8.5px",
+                              letterSpacing: "0.08em",
+                              opacity: 0.45,
+                              marginLeft: "auto",
+                            }}
+                          >
+                            {item.shortcut}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -634,31 +718,17 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         onClick={() => {
           const lastBlock = blocks[blocks.length - 1];
           if (!lastBlock || (lastBlock.type === "paragraph" && lastBlock.text === "")) {
-            // Already has empty block
             return;
           }
           handleInsertBlock("paragraph", blocks.length - 1);
         }}
         style={{
           flex: 1,
-          minHeight: "180px",
+          minHeight: "220px",
           cursor: "text",
-          paddingLeft: "38px",
-          paddingTop: "12px",
+          paddingLeft: "54px",
         }}
-      >
-        <span
-          style={{
-            fontFamily: "var(--mono, monospace)",
-            fontSize: "10px",
-            letterSpacing: "0.1em",
-            opacity: 0.25,
-            userSelect: "none",
-          }}
-        >
-          Click to continue typing notes…
-        </span>
-      </div>
+      />
     </div>
   );
 };

@@ -885,14 +885,14 @@ export default function NotebooksPage() {
                 <EmptyPage
                   onStartWriting={() => {
                     handleUpdateBlocks([
-                      { id: generateBlockId(), type: "paragraph", text: "Start writing notes from the lecture…" },
+                      { id: generateBlockId(), type: "paragraph", text: "" },
                     ]);
                   }}
                   onPasteTranscript={() => setShowTranscriptModal(true)}
                   onDraftFromSlides={() => {
                     handleUpdateBlocks([
                       { id: generateBlockId(), type: "heading", level: 2, text: "Key Concepts from Slides" },
-                      { id: generateBlockId(), type: "paragraph", text: "[Draft from Slides] Review lecture slides and outline core principles." },
+                      { id: generateBlockId(), type: "paragraph", text: "" },
                     ]);
                   }}
                 />
