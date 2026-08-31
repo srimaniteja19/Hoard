@@ -19,7 +19,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { CodeBlock } from "./CodeBlock";
-import { InlineTextEditor } from "./InlineTextEditor";
+import { InlineTextEditor, InlineEditorHandle } from "./InlineTextEditor";
 
 interface BlockRendererProps {
   block: Block;
@@ -32,7 +32,7 @@ interface BlockRendererProps {
   onTransformBlock?: (props: Partial<Block>) => void;
   onSlashCommand?: (query: string, rect: DOMRect | null) => void;
   onSlashKeyDown?: (e: React.KeyboardEvent) => boolean;
-  registerTextareaRef?: (el: HTMLTextAreaElement | null) => void;
+  registerEditorHandle?: (handle: InlineEditorHandle | null) => void;
   readOnly?: boolean;
   accentColor?: string;
 }
@@ -48,7 +48,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   onTransformBlock,
   onSlashCommand,
   onSlashKeyDown,
-  registerTextareaRef,
+  registerEditorHandle,
   readOnly = false,
   accentColor = "#7B5CF0",
 }) => {
@@ -392,7 +392,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           onTransformBlock={onTransformBlock}
           onSlashCommand={onSlashCommand}
           onSlashKeyDown={onSlashKeyDown}
-          registerTextareaRef={registerTextareaRef}
+          registerEditorHandle={registerEditorHandle}
           readOnly={readOnly}
           renderFormatted={renderFormattedText}
           style={{
@@ -450,7 +450,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               onTransformBlock={onTransformBlock}
               onSlashCommand={onSlashCommand}
               onSlashKeyDown={onSlashKeyDown}
-              registerTextareaRef={registerTextareaRef}
+              registerEditorHandle={registerEditorHandle}
               readOnly={readOnly}
               renderFormatted={renderFormattedText}
               style={
@@ -1005,7 +1005,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               onTransformBlock={onTransformBlock}
               onSlashCommand={onSlashCommand}
               onSlashKeyDown={onSlashKeyDown}
-              registerTextareaRef={registerTextareaRef}
+              registerEditorHandle={registerEditorHandle}
               readOnly={readOnly}
               renderFormatted={renderFormattedText}
               style={{ fontSize: "16px", lineHeight: "1.6", color: "#0A0A0A" }}
@@ -1217,7 +1217,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             onTransformBlock={onTransformBlock}
             onSlashCommand={onSlashCommand}
             onSlashKeyDown={onSlashKeyDown}
-            registerTextareaRef={registerTextareaRef}
+            registerEditorHandle={registerEditorHandle}
             readOnly={readOnly}
             renderFormatted={renderFormattedText}
             style={{

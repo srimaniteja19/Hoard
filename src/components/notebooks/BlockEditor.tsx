@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Block, generateBlockId } from "@/lib/notebooks/blocks";
 import { BlockRenderer } from "./blocks/BlockRenderer";
+import { InlineEditorHandle } from "./blocks/InlineTextEditor";
 import { FloatingFormatBubble } from "./FloatingFormatBubble";
 import { playSound } from "@/lib/sound";
 import {
@@ -55,26 +56,24 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [insertImageAfterIdx, setInsertImageAfterIdx] = useState<number | undefined>(undefined);
 
-  // Maps block id -> its live textarea element, so we can move focus between
-  // blocks (arrow keys, backspace-merge, split-on-enter) the way Notion does.
-  const textareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map());
+  // Maps block id -> its InlineTextEditor's focus handle, so we can move
+  // focus between blocks (arrow keys, backspace-merge, split-on-enter) the
+  // way Notion does — including forcing a not-currently-edited (preview-mode)
+  // block into edit mode before focusing it.
+  const editorHandles = useRef<Map<string, InlineEditorHandle>>(new Map());
   const pendingFocusRef = useRef<{ blockId: string; position: "start" | "end" } | null>(null);
 
-  const registerTextareaRefFor = useCallback((blockId: string, el: HTMLTextAreaElement | null) => {
-    if (el) {
-      textareaRefs.current.set(blockId, el);
+  const registerEditorHandleFor = useCallback((blockId: string, handle: InlineEditorHandle | null) => {
+    if (handle) {
+      editorHandles.current.set(blockId, handle);
     } else {
-      textareaRefs.current.delete(blockId);
+      editorHandles.current.delete(blockId);
     }
   }, []);
 
   const focusBlockById = useCallback((blockId: string | undefined, position: "start" | "end") => {
     if (!blockId) return;
-    const el = textareaRefs.current.get(blockId);
-    if (!el) return;
-    el.focus();
-    const pos = position === "start" ? 0 : el.value.length;
-    el.setSelectionRange(pos, pos);
+    editorHandles.current.get(blockId)?.focus(position);
   }, []);
 
   // After a commit that adds/removes a block, the target block's textarea may
@@ -568,8 +567,15 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         </div>
       </div>
 
-      {/* Note Blocks List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+      {/*
+        Note Blocks List — deliberately NOT a flex column. Flex items never
+        margin-collapse (with siblings or through to a child), so each
+        block's own top/bottom margin would fully add up instead of
+        collapsing, making the whole page look far gappier than the
+        per-block-type margins below were designed for. A plain block
+        container lets normal CSS margin collapsing do its job.
+      */}
+      <div>
         {blocks.map((block, idx) => {
           const isHovered = hoveredBlockId === block.id;
 
@@ -702,7 +708,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                 onSplitBlock={(before, after) => handleSplitBlock(idx, before, after)}
                 onFocusPrevious={() => focusBlockById(blocks[idx - 1]?.id, "end")}
                 onFocusNext={() => focusBlockById(blocks[idx + 1]?.id, "start")}
-                registerTextareaRef={(el) => registerTextareaRefFor(block.id, el)}
+                registerEditorHandle={(handle) => registerEditorHandleFor(block.id, handle)}
                 onTransformBlock={(props) => handleTransformBlock(idx, props)}
                 onSlashCommand={(query, rect) => {
                   if (query.startsWith("/")) {

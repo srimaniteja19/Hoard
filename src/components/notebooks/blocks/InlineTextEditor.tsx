@@ -1,8 +1,12 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { Block } from "@/lib/notebooks/blocks";
 import { playSound } from "@/lib/sound";
+
+export interface InlineEditorHandle {
+  focus: (position: "start" | "end") => void;
+}
 
 interface InlineTextEditorProps {
   value: string;
@@ -16,7 +20,7 @@ interface InlineTextEditorProps {
   onSlashCommand?: (query: string, rect: DOMRect | null) => void;
   onSlashKeyDown?: (e: React.KeyboardEvent) => boolean;
   renderFormatted?: (val: string) => React.ReactNode;
-  registerTextareaRef?: (el: HTMLTextAreaElement | null) => void;
+  registerEditorHandle?: (handle: InlineEditorHandle | null) => void;
   as?: "p" | "h2" | "h3" | "div" | "blockquote";
   style?: React.CSSProperties;
   placeholder?: string;
@@ -56,13 +60,21 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   onTransformBlock,
   onSlashCommand,
   onSlashKeyDown,
-  registerTextareaRef,
+  renderFormatted,
+  registerEditorHandle,
+  as = "p",
   style = {},
   placeholder = "Type note, or # for heading, > for quote, ! for callout…",
   autoFocus = false,
   readOnly = false,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // A block only shows its raw markdown/live textarea while actively being
+  // edited. Otherwise it renders through renderFormatted — otherwise **bold**,
+  // `code`, etc. would just sit there as literal asterisks/backticks forever,
+  // since a plain <textarea> has no way to render rich text inside itself.
+  const [isEditing, setIsEditing] = useState(autoFocus && !readOnly);
+  const pendingFocusPosRef = useRef<"start" | "end" | null>(null);
 
   // Auto-resize textarea to fit text naturally without scrollbars
   const adjustHeight = () => {
@@ -75,7 +87,7 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
 
   useEffect(() => {
     adjustHeight();
-  }, [value]);
+  }, [value, isEditing]);
 
   useEffect(() => {
     if (autoFocus && textareaRef.current) {
@@ -83,7 +95,32 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
       const len = textareaRef.current.value.length;
       textareaRef.current.setSelectionRange(len, len);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoFocus]);
+
+  // Resolve a focus() request against the actual textarea once it mounts
+  // (switching into edit mode is what makes the textarea exist at all).
+  useEffect(() => {
+    if (isEditing && pendingFocusPosRef.current && textareaRef.current) {
+      const el = textareaRef.current;
+      const pos = pendingFocusPosRef.current === "start" ? 0 : el.value.length;
+      el.focus();
+      el.setSelectionRange(pos, pos);
+      pendingFocusPosRef.current = null;
+    }
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (!registerEditorHandle) return;
+    registerEditorHandle({
+      focus: (position) => {
+        pendingFocusPosRef.current = position;
+        setIsEditing(true);
+      },
+    });
+    return () => registerEditorHandle(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registerEditorHandle]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (readOnly) return;
@@ -235,36 +272,68 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
     }
   };
 
+  // NOTE: padding/margin default to 0 here, but ...style (spread last) lets
+  // each block type's own margin (e.g. a paragraph's "6px 0 14px") win — the
+  // same value is used whether this block is currently a <textarea> or the
+  // rendered preview below, so nothing shifts when toggling between them.
+  const baseStyle: React.CSSProperties = {
+    width: "100%",
+    background: "transparent",
+    border: "none",
+    outline: "none",
+    padding: 0,
+    margin: 0,
+    color: "inherit",
+    fontFamily: "inherit",
+    fontSize: "inherit",
+    lineHeight: "inherit",
+    fontWeight: "inherit",
+    letterSpacing: "inherit",
+    ...style,
+  };
+
+  // Read-only (e.g. the "Tidy My Notes" diff preview), or simply not the block
+  // currently being edited: show the rendered/formatted view. **bold**,
+  // `code`, etc. render for real here instead of sitting as literal markdown.
+  if (readOnly || (!isEditing && value)) {
+    return React.createElement(
+      as,
+      {
+        onClick: readOnly
+          ? undefined
+          : () => {
+              pendingFocusPosRef.current = "end";
+              setIsEditing(true);
+            },
+        style: {
+          ...baseStyle,
+          display: "block",
+          whiteSpace: "pre-wrap",
+          overflowWrap: "break-word",
+          cursor: readOnly ? "default" : "text",
+        },
+      },
+      value ? (renderFormatted ? renderFormatted(value) : value) : null
+    );
+  }
+
   return (
     <textarea
       ref={(el) => {
         textareaRef.current = el;
-        if (registerTextareaRef) registerTextareaRef(el);
       }}
       value={value}
-      readOnly={readOnly}
-      tabIndex={readOnly ? -1 : undefined}
       onChange={handleChange}
       onKeyDown={handleKeyDown}
+      onFocus={() => setIsEditing(true)}
+      onBlur={() => setIsEditing(false)}
       placeholder={placeholder}
       rows={1}
       style={{
-        width: "100%",
-        background: "transparent",
-        border: "none",
-        outline: "none",
+        ...baseStyle,
         resize: "none",
         overflow: "hidden",
         display: "block",
-        padding: 0,
-        margin: 0,
-        color: "inherit",
-        fontFamily: "inherit",
-        fontSize: "inherit",
-        lineHeight: "inherit",
-        fontWeight: "inherit",
-        letterSpacing: "inherit",
-        ...style,
       }}
     />
   );
