@@ -19,6 +19,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { CodeBlock } from "./CodeBlock";
+import { InlineTextEditor } from "./InlineTextEditor";
 
 interface BlockRendererProps {
   block: Block;
@@ -418,28 +419,24 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   switch (block.type) {
     case "paragraph": {
       return (
-        <p
-          contentEditable={!!onUpdateBlock}
-          suppressContentEditableWarning
-          onKeyDown={(e) => handleTextKeyDown(e, block.text)}
-          onBlur={(e) => {
-            const nextText = e.currentTarget.innerText;
-            if (nextText !== block.text && onUpdateBlock) {
-              onUpdateBlock({ ...block, text: nextText });
-            }
+        <InlineTextEditor
+          as="p"
+          value={block.text}
+          onChange={(nextText) => {
+            if (onUpdateBlock) onUpdateBlock({ ...block, text: nextText });
           }}
+          onInsertBelow={onInsertBelow}
+          onDeleteBlock={onDeleteBlock}
+          onFocusPrevious={onFocusPrevious}
+          renderFormatted={renderFormattedText}
           style={{
             margin: "6px 0 14px",
             fontSize: "16.5px",
             lineHeight: "1.7",
             color: "inherit",
-            outline: "none",
-            borderRadius: "2px",
-            minHeight: "1.4em",
           }}
-        >
-          {renderFormattedText(block.text)}
-        </p>
+          placeholder="Start writing notes…"
+        />
       );
     }
 
@@ -454,6 +451,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             gap: "12px",
             margin: block.level === 2 ? "28px 0 10px" : "18px 0 8px",
             flexWrap: "wrap",
+            width: "100%",
           }}
         >
           {block.ts && (
@@ -473,55 +471,41 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               {block.ts}
             </span>
           )}
-          {block.level === 2 ? (
-            <h2
-              contentEditable={!!onUpdateBlock}
-              suppressContentEditableWarning
-              onKeyDown={(e) => handleTextKeyDown(e, block.text)}
-              onBlur={(e) => {
-                const nextText = e.currentTarget.innerText;
-                if (nextText !== cleanText && onUpdateBlock) {
-                  onUpdateBlock({ ...block, text: nextText });
-                }
+          <div style={{ flex: "1 1 auto", minWidth: "200px" }}>
+            <InlineTextEditor
+              as={block.level === 2 ? "h2" : "h3"}
+              value={cleanText}
+              onChange={(nextText) => {
+                if (onUpdateBlock) onUpdateBlock({ ...block, text: nextText });
               }}
-              style={{
-                margin: 0,
-                fontFamily: "var(--display, sans-serif)",
-                fontWeight: 800,
-                fontSize: "clamp(21px, 3.2vw, 29px)",
-                letterSpacing: "-0.04em",
-                lineHeight: "1.06",
-                color: "inherit",
-                outline: "none",
-              }}
-            >
-              {cleanText}
-            </h2>
-          ) : (
-            <h3
-              contentEditable={!!onUpdateBlock}
-              suppressContentEditableWarning
-              onKeyDown={(e) => handleTextKeyDown(e, block.text)}
-              onBlur={(e) => {
-                const nextText = e.currentTarget.innerText;
-                if (nextText !== cleanText && onUpdateBlock) {
-                  onUpdateBlock({ ...block, text: nextText });
-                }
-              }}
-              style={{
-                margin: 0,
-                fontFamily: "var(--display, sans-serif)",
-                fontWeight: 800,
-                fontSize: "clamp(17px, 2.6vw, 22px)",
-                letterSpacing: "-0.03em",
-                lineHeight: "1.15",
-                color: "inherit",
-                outline: "none",
-              }}
-            >
-              {cleanText}
-            </h3>
-          )}
+              onInsertBelow={onInsertBelow}
+              onDeleteBlock={onDeleteBlock}
+              onFocusPrevious={onFocusPrevious}
+              renderFormatted={renderFormattedText}
+              style={
+                block.level === 2
+                  ? {
+                      margin: 0,
+                      fontFamily: "var(--display, sans-serif)",
+                      fontWeight: 800,
+                      fontSize: "clamp(21px, 3.2vw, 29px)",
+                      letterSpacing: "-0.04em",
+                      lineHeight: "1.06",
+                      color: "inherit",
+                    }
+                  : {
+                      margin: 0,
+                      fontFamily: "var(--display, sans-serif)",
+                      fontWeight: 800,
+                      fontSize: "clamp(17px, 2.6vw, 22px)",
+                      letterSpacing: "-0.03em",
+                      lineHeight: "1.15",
+                      color: "inherit",
+                    }
+              }
+              placeholder="Heading title…"
+            />
+          </div>
           <span style={{ flex: 1, height: "2px", background: "rgba(10,10,10,0.14)", minWidth: "20px" }} />
         </div>
       );
@@ -1035,18 +1019,20 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           >
             {config.title}
           </div>
-          <div
-            contentEditable={!!onUpdateBlock}
-            suppressContentEditableWarning
-            onBlur={(e) => {
-              const newText = e.currentTarget.innerText;
-              if (newText !== block.text && onUpdateBlock) {
-                onUpdateBlock({ ...block, text: newText });
-              }
-            }}
-            style={{ padding: "13px 15px", fontSize: "16px", lineHeight: "1.6", color: "#0A0A0A", outline: "none" }}
-          >
-            {renderFormattedText(block.text)}
+          <div style={{ padding: "13px 15px" }}>
+            <InlineTextEditor
+              as="div"
+              value={block.text}
+              onChange={(nextText) => {
+                if (onUpdateBlock) onUpdateBlock({ ...block, text: nextText });
+              }}
+              onInsertBelow={onInsertBelow}
+              onDeleteBlock={onDeleteBlock}
+              onFocusPrevious={onFocusPrevious}
+              renderFormatted={renderFormattedText}
+              style={{ fontSize: "16px", lineHeight: "1.6", color: "#0A0A0A" }}
+              placeholder="Callout text…"
+            />
           </div>
         </div>
       );
@@ -1232,18 +1218,32 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
 
     case "quote": {
       return (
-        <blockquote
+        <div
           style={{
             borderLeft: `6px solid ${accentColor}`,
             paddingLeft: "16px",
             margin: "16px 0",
-            fontFamily: "var(--quote, Georgia, serif)",
-            fontSize: "19px",
-            lineHeight: "1.5",
-            fontStyle: "italic",
           }}
         >
-          &ldquo;{block.text}&rdquo;
+          <InlineTextEditor
+            as="blockquote"
+            value={block.text}
+            onChange={(nextText) => {
+              if (onUpdateBlock) onUpdateBlock({ ...block, text: nextText });
+            }}
+            onInsertBelow={onInsertBelow}
+            onDeleteBlock={onDeleteBlock}
+            onFocusPrevious={onFocusPrevious}
+            renderFormatted={renderFormattedText}
+            style={{
+              fontFamily: "var(--quote, Georgia, serif)",
+              fontSize: "19px",
+              lineHeight: "1.5",
+              fontStyle: "italic",
+              margin: 0,
+            }}
+            placeholder="Quote text…"
+          />
           {block.attribution && (
             <cite
               style={{
@@ -1259,7 +1259,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               — {block.attribution}
             </cite>
           )}
-        </blockquote>
+        </div>
       );
     }
 
