@@ -137,6 +137,19 @@ const JS_BUILTINS = new Set([
   "document", "window", "localStorage", "sessionStorage"
 ]);
 
+const LANGUAGES = [
+  "PYTHON",
+  "TYPESCRIPT",
+  "JAVASCRIPT",
+  "SQL",
+  "BASH",
+  "HTML",
+  "CSS",
+  "JSON",
+  "RUST",
+  "GO",
+];
+
 export const CodeBlock: React.FC<CodeBlockProps> = ({
   block,
   onUpdateBlock,
@@ -145,6 +158,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   const [currentTheme, setCurrentTheme] = useState<CodeTheme>("neo-ink");
   const [isCopied, setIsCopied] = useState(false);
   const [isEditingCode, setIsEditingCode] = useState(false);
+  const [showLangPicker, setShowLangPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const theme = THEMES[currentTheme];
@@ -166,6 +180,12 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     const themeKeys = Object.keys(THEMES) as CodeTheme[];
     const nextIdx = (themeKeys.indexOf(currentTheme) + 1) % themeKeys.length;
     setCurrentTheme(themeKeys[nextIdx]);
+  };
+
+  const handleSelectLang = (newLang: string) => {
+    playSound.click();
+    if (onUpdateBlock) onUpdateBlock({ ...block, lang: newLang });
+    setShowLangPicker(false);
   };
 
   /**
@@ -323,8 +343,11 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         }}
       >
         {/* Left: Language badge & note */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", position: "relative" }}>
+          <button
+            type="button"
+            onClick={() => setShowLangPicker(!showLangPicker)}
+            title="Change code language"
             style={{
               background: theme.keyword,
               color: "#FFFFFF",
@@ -333,11 +356,64 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
               display: "inline-flex",
               alignItems: "center",
               gap: "4px",
+              border: "none",
+              cursor: "pointer",
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "9px",
+              fontWeight: 700,
             }}
           >
             <Code2 size={11} />
-            {lang}
-          </span>
+            {lang} ▾
+          </button>
+
+          {/* Language Dropdown Popover */}
+          {showLangPicker && (
+            <div
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                marginTop: "4px",
+                zIndex: 60,
+                background: "#0A0A0A",
+                border: "2px solid rgba(240,237,228,0.3)",
+                boxShadow: "4px 4px 0 rgba(0,0,0,0.5)",
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "2px",
+                padding: "4px",
+                minWidth: "180px",
+              }}
+            >
+              {LANGUAGES.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => handleSelectLang(l)}
+                  style={{
+                    background: lang === l ? theme.keyword : "transparent",
+                    color: "#FFFFFF",
+                    border: "none",
+                    padding: "4px 6px",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "8.5px",
+                    fontWeight: 700,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (lang !== l) e.currentTarget.style.background = "rgba(255,255,255,0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (lang !== l) e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
 
           <span
             contentEditable={!!onUpdateBlock}
@@ -447,6 +523,25 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
               setTimeout(() => {
                 if (textareaRef.current) {
                   textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 4;
+                }
+              }, 0);
+            } else if (e.key === "Enter") {
+              e.preventDefault();
+              const start = e.currentTarget.selectionStart;
+              const end = e.currentTarget.selectionEnd;
+              const before = block.code.substring(0, start);
+              const after = block.code.substring(end);
+              const currentLine = before.split("\n").pop() || "";
+              const matchIndent = currentLine.match(/^\s*/);
+              let indent = matchIndent ? matchIndent[0] : "";
+              if (currentLine.trim().endsWith(":") || currentLine.trim().endsWith("{")) {
+                indent += "    ";
+              }
+              const nextCode = before + "\n" + indent + after;
+              if (onUpdateBlock) onUpdateBlock({ ...block, code: nextCode });
+              setTimeout(() => {
+                if (textareaRef.current) {
+                  textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 1 + indent.length;
                 }
               }, 0);
             }

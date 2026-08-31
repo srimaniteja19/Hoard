@@ -308,7 +308,12 @@ export default function NotebooksPage() {
       currentBlocks.find((b) => b.type === "paragraph" || b.type === "callout")?.text ||
       "Agentic reflection with outside verification";
 
-    setExplainSelection(targetText);
+    await handleExplainWithSelection(targetText);
+  };
+
+  const handleExplainWithSelection = async (text: string) => {
+    if (!text.trim()) return;
+    setExplainSelection(text.trim());
     setExplainText("");
     setIsExplaining(true);
 
@@ -317,7 +322,7 @@ export default function NotebooksPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          selection: targetText,
+          selection: text.trim(),
           context: JSON.stringify(currentBlocks),
           courseTitle: currentCourse.title,
           lessonTitle: currentLesson.title,
@@ -895,6 +900,7 @@ export default function NotebooksPage() {
                 <BlockEditor
                   blocks={currentBlocks}
                   onChange={handleUpdateBlocks}
+                  onExplain={handleExplainWithSelection}
                   accentColor={currentCourse.accent}
                 />
               )}

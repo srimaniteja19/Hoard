@@ -13,6 +13,10 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
+  Maximize2,
+  Minimize2,
+  Trash2,
+  Image as ImageIcon,
 } from "lucide-react";
 import { CodeBlock } from "./CodeBlock";
 
@@ -20,6 +24,8 @@ interface BlockRendererProps {
   block: Block;
   onUpdateBlock?: (updated: Block) => void;
   onDeleteBlock?: () => void;
+  onInsertBelow?: () => void;
+  onFocusPrevious?: () => void;
   accentColor?: string;
 }
 
@@ -27,12 +33,21 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   block,
   onUpdateBlock,
   onDeleteBlock,
+  onInsertBelow,
+  onFocusPrevious,
   accentColor = "#7B5CF0",
 }) => {
   const [toggleOpen, setToggleOpen] = useState(false);
+  const [imageSize, setImageSize] = useState<"compact" | "standard" | "full">("standard");
 
   // Render Loop diagram SVG if block is loop image
   const renderImageContent = (url: string, caption?: string) => {
+    const sizeStyle = {
+      compact: { maxWidth: "480px" },
+      standard: { maxWidth: "760px" },
+      full: { maxWidth: "100%" },
+    }[imageSize];
+
     if (url.includes("loop-diagram") || url.includes("loop")) {
       return (
         <div
@@ -41,6 +56,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             boxShadow: "5px 5px 0 #0A0A0A",
             overflow: "hidden",
             background: "#FFFFFF",
+            margin: "16px 0",
+            ...sizeStyle,
           }}
         >
           <div
@@ -77,6 +94,13 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           </div>
           {caption && (
             <div
+              contentEditable={!!onUpdateBlock}
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                if (onUpdateBlock && block.type === "image") {
+                  onUpdateBlock({ ...block, caption: e.currentTarget.innerText });
+                }
+              }}
               style={{
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "9.5px",
@@ -85,6 +109,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 padding: "8px 13px",
                 borderTop: "2px solid rgba(10,10,10,0.14)",
                 color: "#4A4A4A",
+                outline: "none",
               }}
             >
               {caption}
@@ -95,13 +120,115 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
     }
 
     return (
-      <div style={{ border: "3px solid #0A0A0A", boxShadow: "5px 5px 0 #0A0A0A", overflow: "hidden", background: "#FFFFFF" }}>
-        <img src={url} alt={caption || "Image"} style={{ width: "100%", display: "block" }} />
-        {caption && (
-          <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "9.5px", fontWeight: 700, padding: "8px 13px", borderTop: "2px solid rgba(10,10,10,0.14)", opacity: 0.6 }}>
-            {caption}
+      <div
+        style={{
+          border: "3px solid #0A0A0A",
+          boxShadow: "5px 5px 0 #0A0A0A",
+          overflow: "hidden",
+          background: "#FFFFFF",
+          margin: "16px 0",
+          ...sizeStyle,
+        }}
+      >
+        {/* Image Toolbar */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "4px 10px",
+            background: "#EBE7DC",
+            borderBottom: "2px solid #0A0A0A",
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "8.5px",
+            fontWeight: 700,
+          }}
+        >
+          <div style={{ display: "flex", gap: "4px" }}>
+            <button
+              type="button"
+              onClick={() => setImageSize("compact")}
+              style={{
+                background: imageSize === "compact" ? "#0A0A0A" : "transparent",
+                color: imageSize === "compact" ? "#FFFFFF" : "#0A0A0A",
+                border: "1px solid #0A0A0A",
+                padding: "2px 5px",
+                cursor: "pointer",
+                fontSize: "8px",
+              }}
+            >
+              50%
+            </button>
+            <button
+              type="button"
+              onClick={() => setImageSize("standard")}
+              style={{
+                background: imageSize === "standard" ? "#0A0A0A" : "transparent",
+                color: imageSize === "standard" ? "#FFFFFF" : "#0A0A0A",
+                border: "1px solid #0A0A0A",
+                padding: "2px 5px",
+                cursor: "pointer",
+                fontSize: "8px",
+              }}
+            >
+              75%
+            </button>
+            <button
+              type="button"
+              onClick={() => setImageSize("full")}
+              style={{
+                background: imageSize === "full" ? "#0A0A0A" : "transparent",
+                color: imageSize === "full" ? "#FFFFFF" : "#0A0A0A",
+                border: "1px solid #0A0A0A",
+                padding: "2px 5px",
+                cursor: "pointer",
+                fontSize: "8px",
+              }}
+            >
+              100%
+            </button>
           </div>
-        )}
+          {onDeleteBlock && (
+            <button
+              type="button"
+              onClick={onDeleteBlock}
+              title="Delete image"
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#DC2626",
+                cursor: "pointer",
+                padding: "2px 4px",
+                fontSize: "10px",
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        <img src={url} alt={caption || "Pasted image"} style={{ width: "100%", display: "block" }} />
+
+        <div
+          contentEditable={!!onUpdateBlock}
+          suppressContentEditableWarning
+          onBlur={(e) => {
+            if (onUpdateBlock && block.type === "image") {
+              onUpdateBlock({ ...block, caption: e.currentTarget.innerText });
+            }
+          }}
+          style={{
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "9.5px",
+            fontWeight: 700,
+            padding: "8px 13px",
+            borderTop: "2px solid rgba(10,10,10,0.14)",
+            opacity: 0.7,
+            outline: "none",
+          }}
+        >
+          {caption || "Click to add caption…"}
+        </div>
       </div>
     );
   };
@@ -233,12 +360,68 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
     });
   };
 
+  const handleTextKeyDown = (e: React.KeyboardEvent<HTMLElement>, currentText: string) => {
+    // Enter without Shift -> create new paragraph below
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (onInsertBelow) {
+        playSound.click();
+        onInsertBelow();
+      }
+      return;
+    }
+
+    // Backspace on empty -> delete block and focus previous
+    if (e.key === "Backspace" && (!currentText || currentText.trim() === "")) {
+      e.preventDefault();
+      if (onDeleteBlock) {
+        playSound.pop();
+        onDeleteBlock();
+      }
+      if (onFocusPrevious) {
+        onFocusPrevious();
+      }
+      return;
+    }
+
+    // Cmd+B / Ctrl+B -> wrap selection in bold
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+      e.preventDefault();
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) {
+        const text = sel.toString();
+        if (text) document.execCommand("insertText", false, `**${text}**`);
+      }
+    }
+
+    // Cmd+E / Ctrl+E -> wrap selection in code
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") {
+      e.preventDefault();
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) {
+        const text = sel.toString();
+        if (text) document.execCommand("insertText", false, `\`${text}\``);
+      }
+    }
+
+    // Cmd+I / Ctrl+I -> wrap selection in italic
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "i") {
+      e.preventDefault();
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) {
+        const text = sel.toString();
+        if (text) document.execCommand("insertText", false, `*${text}*`);
+      }
+    }
+  };
+
   switch (block.type) {
     case "paragraph": {
       return (
         <p
           contentEditable={!!onUpdateBlock}
           suppressContentEditableWarning
+          onKeyDown={(e) => handleTextKeyDown(e, block.text)}
           onBlur={(e) => {
             const nextText = e.currentTarget.innerText;
             if (nextText !== block.text && onUpdateBlock) {
@@ -294,6 +477,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             <h2
               contentEditable={!!onUpdateBlock}
               suppressContentEditableWarning
+              onKeyDown={(e) => handleTextKeyDown(e, block.text)}
               onBlur={(e) => {
                 const nextText = e.currentTarget.innerText;
                 if (nextText !== cleanText && onUpdateBlock) {
@@ -317,6 +501,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             <h3
               contentEditable={!!onUpdateBlock}
               suppressContentEditableWarning
+              onKeyDown={(e) => handleTextKeyDown(e, block.text)}
               onBlur={(e) => {
                 const nextText = e.currentTarget.innerText;
                 if (nextText !== cleanText && onUpdateBlock) {

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { SeedCourse } from "@/lib/notebooks/seedData";
 import { lessonState, computeWordCount } from "@/lib/notebooks/blocks";
 import { playSound } from "@/lib/sound";
@@ -28,6 +28,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   onBackToIndex,
   onNewPage,
 }) => {
+  const [searchQuery, setSearchQuery] = useState("");
   const course = courses[currentCourseIndex] || courses[0];
   const allLessons = course.modules.flatMap((m) => m.lessons);
   const totalLessons = allLessons.length;
@@ -162,11 +163,40 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
           <span>{unwrittenCount} UNWRITTEN</span>
           <span>{totalLessons} TOTAL</span>
         </div>
+
+        {/* Quick Search Filter Bar */}
+        <div style={{ marginTop: "12px" }}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Filter pages…"
+            style={{
+              width: "100%",
+              padding: "6px 9px",
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "11px",
+              fontWeight: 600,
+              border: "1.5px solid #0A0A0A",
+              background: "#FFFFFF",
+              color: "#0A0A0A",
+              outline: "none",
+            }}
+          />
+        </div>
       </div>
 
       {/* Module & Lessons Outline */}
       <div style={{ flex: 1 }}>
         {course.modules.map((mod, modIdx) => {
+          const matchingLessons = mod.lessons.filter((l) =>
+            !searchQuery.trim() ||
+            l.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            l.meta.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+
+          if (matchingLessons.length === 0) return null;
+
           const modWritten = mod.lessons.filter(
             (l) => lessonState({ wordCount: computeWordCount(l.blocks || []) }) === "written"
           ).length;
@@ -195,7 +225,8 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
               </div>
 
               {/* Lesson Items */}
-              {mod.lessons.map((les, lesIdx) => {
+              {matchingLessons.map((les) => {
+                const lesIdx = mod.lessons.findIndex((l) => l.id === les.id);
                 const isSelected = modIdx === currentModuleIndex && lesIdx === currentLessonIndex;
                 const state = lessonState({ wordCount: computeWordCount(les.blocks || []) });
 
