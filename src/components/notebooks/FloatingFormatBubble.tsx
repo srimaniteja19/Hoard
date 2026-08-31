@@ -17,87 +17,149 @@ export const FloatingFormatBubble: React.FC<FloatingFormatBubbleProps> = ({
   const [selectedText, setSelectedText] = useState("");
   const bubbleRef = useRef<HTMLDivElement>(null);
 
+  // Selected text inside a block is either:
+  //  (a) inside a <textarea> (paragraph/heading/quote/callout blocks) — this
+  //      selection is NOT exposed via window.getSelection()/Range, only via
+  //      the element's own selectionStart/selectionEnd, or
+  //  (b) inside a contentEditable node (image captions, code label, toggle
+  //      summary/body, todo items) — the normal Selection API.
+  type Target =
+    | { kind: "textarea"; el: HTMLTextAreaElement }
+    | { kind: "range"; range: Range };
+  const targetRef = useRef<Target | null>(null);
+
   useEffect(() => {
-    const handleSelectionChange = () => {
+    const clearBubble = () => {
+      setPosition(null);
+      setSelectedText("");
+      targetRef.current = null;
+    };
+
+    const checkSelection = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      const active = document.activeElement;
+
+      if (active instanceof HTMLTextAreaElement && container.contains(active)) {
+        const start = active.selectionStart;
+        const end = active.selectionEnd;
+        if (start === null || end === null || start === end) {
+          clearBubble();
+          return;
+        }
+        const text = active.value.slice(start, end).trim();
+        if (!text) {
+          clearBubble();
+          return;
+        }
+        const rect = active.getBoundingClientRect();
+        setPosition({ x: rect.left + 24, y: rect.top - 10 });
+        setSelectedText(text);
+        targetRef.current = { kind: "textarea", el: active };
+        return;
+      }
+
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed || !selection.rangeCount) {
-        setPosition(null);
-        setSelectedText("");
+        clearBubble();
         return;
       }
 
       const text = selection.toString().trim();
-      if (!text || text.length < 1) {
-        setPosition(null);
-        setSelectedText("");
+      if (!text) {
+        clearBubble();
         return;
       }
 
-      // Check if selection is within the containerRef
       const range = selection.getRangeAt(0);
-      const container = containerRef.current;
-      if (!container || !container.contains(range.commonAncestorContainer)) {
-        setPosition(null);
-        setSelectedText("");
+      if (!container.contains(range.commonAncestorContainer)) {
+        clearBubble();
         return;
       }
 
       const rect = range.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
-
-      setPosition({
-        x: rect.left + rect.width / 2,
-        y: rect.top - 10,
-      });
+      setPosition({ x: rect.left + rect.width / 2, y: rect.top - 10 });
       setSelectedText(text);
+      targetRef.current = { kind: "range", range };
     };
 
-    document.addEventListener("selectionchange", handleSelectionChange);
-    return () => document.removeEventListener("selectionchange", handleSelectionChange);
+    // "selectionchange" alone doesn't reliably fire for textarea selections in
+    // every browser, so also check on mouseup/keyup (keyboard/shift-arrow selection).
+    document.addEventListener("selectionchange", checkSelection);
+    document.addEventListener("mouseup", checkSelection);
+    document.addEventListener("keyup", checkSelection);
+    return () => {
+      document.removeEventListener("selectionchange", checkSelection);
+      document.removeEventListener("mouseup", checkSelection);
+      document.removeEventListener("keyup", checkSelection);
+    };
   }, [containerRef]);
 
   const applyFormat = (type: "bold" | "code" | "italic") => {
     playSound.click();
-    const selection = window.getSelection();
-    if (!selection || !selection.rangeCount || selection.isCollapsed) return;
+    const target = targetRef.current;
+    if (!target) return;
 
-    const range = selection.getRangeAt(0);
-    const selectedContent = selection.toString();
+    if (target.kind === "textarea") {
+      const el = target.el;
+      const start = el.selectionStart ?? 0;
+      const end = el.selectionEnd ?? 0;
+      if (start === end) return;
+      const marker = type === "bold" ? "**" : type === "code" ? "`" : "*";
+      const value = el.value;
+      const nextValue = value.slice(0, start) + marker + value.slice(start, end) + marker + value.slice(end);
 
-    if (type === "bold") {
-      const span = document.createElement("strong");
-      span.style.background = "#FCE94F";
-      span.style.color = "#0A0A0A";
-      span.style.padding = "0 4px";
-      span.style.borderRadius = "1px";
-      span.textContent = selectedContent;
+      // React tracks the textarea's value via its own setter; setting el.value
+      // directly wouldn't notify the controlled component, so we go through
+      // the native setter and dispatch the "input" event React listens for.
+      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+      nativeSetter?.call(el, nextValue);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
 
-      range.deleteContents();
-      range.insertNode(span);
+      requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(start + marker.length, end + marker.length);
+      });
+    } else {
+      const { range } = target;
+      const selection = window.getSelection();
+      const selectedContent = range.toString();
 
-      range.setStartAfter(span);
-      range.setEndAfter(span);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    } else if (type === "code") {
-      const code = document.createElement("code");
-      code.style.fontFamily = "var(--mono, monospace)";
-      code.style.fontSize = "0.88em";
-      code.style.background = "#EBE7DC";
-      code.style.border = "1.5px solid #0A0A0A";
-      code.style.padding = "1px 5px";
-      code.style.color = "#0A0A0A";
-      code.textContent = selectedContent;
+      if (type === "bold") {
+        const span = document.createElement("strong");
+        span.style.background = "#FCE94F";
+        span.style.color = "#0A0A0A";
+        span.style.padding = "0 4px";
+        span.style.borderRadius = "1px";
+        span.textContent = selectedContent;
 
-      range.deleteContents();
-      range.insertNode(code);
+        range.deleteContents();
+        range.insertNode(span);
 
-      range.setStartAfter(code);
-      range.setEndAfter(code);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    } else if (type === "italic") {
-      document.execCommand("italic");
+        range.setStartAfter(span);
+        range.setEndAfter(span);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      } else if (type === "code") {
+        const code = document.createElement("code");
+        code.style.fontFamily = "var(--mono, monospace)";
+        code.style.fontSize = "0.88em";
+        code.style.background = "#EBE7DC";
+        code.style.border = "1.5px solid #0A0A0A";
+        code.style.padding = "1px 5px";
+        code.style.color = "#0A0A0A";
+        code.textContent = selectedContent;
+
+        range.deleteContents();
+        range.insertNode(code);
+
+        range.setStartAfter(code);
+        range.setEndAfter(code);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      } else if (type === "italic") {
+        document.execCommand("italic");
+      }
     }
 
     setPosition(null);

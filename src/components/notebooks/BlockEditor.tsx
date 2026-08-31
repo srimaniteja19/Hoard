@@ -55,6 +55,37 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [insertImageAfterIdx, setInsertImageAfterIdx] = useState<number | undefined>(undefined);
 
+  // Maps block id -> its live textarea element, so we can move focus between
+  // blocks (arrow keys, backspace-merge, split-on-enter) the way Notion does.
+  const textareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map());
+  const pendingFocusRef = useRef<{ blockId: string; position: "start" | "end" } | null>(null);
+
+  const registerTextareaRefFor = useCallback((blockId: string, el: HTMLTextAreaElement | null) => {
+    if (el) {
+      textareaRefs.current.set(blockId, el);
+    } else {
+      textareaRefs.current.delete(blockId);
+    }
+  }, []);
+
+  const focusBlockById = useCallback((blockId: string | undefined, position: "start" | "end") => {
+    if (!blockId) return;
+    const el = textareaRefs.current.get(blockId);
+    if (!el) return;
+    el.focus();
+    const pos = position === "start" ? 0 : el.value.length;
+    el.setSelectionRange(pos, pos);
+  }, []);
+
+  // After a commit that adds/removes a block, the target block's textarea may
+  // not exist in the DOM yet — resolve the focus request once it mounts.
+  useEffect(() => {
+    if (!pendingFocusRef.current) return;
+    const { blockId, position } = pendingFocusRef.current;
+    pendingFocusRef.current = null;
+    focusBlockById(blockId, position);
+  }, [blocks, focusBlockById]);
+
   // Undo / Redo history stacks
   const [history, setHistory] = useState<Block[][]>([blocks]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -123,6 +154,21 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     commitBlocks(next);
   };
 
+  // Enter pressed mid-text: keep text before the cursor in the current block,
+  // move text after the cursor into a brand-new paragraph block, and focus it.
+  const handleSplitBlock = (index: number, beforeText: string, afterText: string) => {
+    const current = blocks[index];
+    if (!current || !("text" in current)) return;
+    playSound.click();
+    const updatedCurrent = { ...current, text: beforeText } as Block;
+    const newBlock: Block = { id: generateBlockId(), type: "paragraph", text: afterText };
+    const next = [...blocks];
+    next[index] = updatedCurrent;
+    next.splice(index + 1, 0, newBlock);
+    pendingFocusRef.current = { blockId: newBlock.id, position: "start" };
+    commitBlocks(next);
+  };
+
   const handleMoveBlock = (index: number, direction: "up" | "down") => {
     if (direction === "up" && index === 0) return;
     if (direction === "down" && index === blocks.length - 1) return;
@@ -170,6 +216,12 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
 
     const next = [...blocks];
     next[index] = transformed;
+    // The transform swaps this block to a different rendered element (e.g.
+    // paragraph -> heading), which unmounts/remounts its textarea and drops
+    // focus. Re-focus the same block id (cursor at end) once it remounts, or
+    // anything typed right after the trigger (e.g. pasted "## some text") is
+    // silently lost instead of landing in the new block.
+    pendingFocusRef.current = { blockId: baseId, position: "end" };
     commitBlocks(next);
     setSlashMenu(null);
   };
@@ -647,6 +699,10 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                 onUpdateBlock={(updated) => handleUpdateBlock(idx, updated)}
                 onDeleteBlock={() => handleDeleteBlock(idx)}
                 onInsertBelow={() => handleInsertBlock("paragraph", idx)}
+                onSplitBlock={(before, after) => handleSplitBlock(idx, before, after)}
+                onFocusPrevious={() => focusBlockById(blocks[idx - 1]?.id, "end")}
+                onFocusNext={() => focusBlockById(blocks[idx + 1]?.id, "start")}
+                registerTextareaRef={(el) => registerTextareaRefFor(block.id, el)}
                 onTransformBlock={(props) => handleTransformBlock(idx, props)}
                 onSlashCommand={(query, rect) => {
                   if (query.startsWith("/")) {

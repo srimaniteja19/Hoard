@@ -43,25 +43,45 @@ export function getCourseById(courseId: string): SeedCourse | null {
 }
 
 /**
- * Saves blocks for a specific lesson
+ * Pure in-memory update of a lesson's blocks. Does NOT touch localStorage —
+ * callers that edit on every keystroke (the block editor) should debounce the
+ * actual persistence separately via saveStoredCourses, since re-stringifying
+ * every course/lesson/block (including any pasted base64 images) on every
+ * keystroke is the single biggest cause of editor lag.
+ */
+export function computeLessonBlocksUpdate(
+  courses: SeedCourse[],
+  courseId: string,
+  lessonId: string,
+  blocks: Block[]
+): SeedCourse[] {
+  const wc = computeWordCount(blocks);
+  const nextMeta = wc > 0 ? `${wc.toLocaleString()} WORDS · EDITED JUST NOW` : "NO NOTES YET";
+
+  return courses.map((course) => {
+    if (course.id !== courseId) return course;
+    return {
+      ...course,
+      modules: course.modules.map((mod) => ({
+        ...mod,
+        lessons: mod.lessons.map((les) =>
+          les.id === lessonId ? { ...les, blocks, meta: nextMeta } : les
+        ),
+      })),
+    };
+  });
+}
+
+/**
+ * Saves blocks for a specific lesson, persisting immediately. Prefer
+ * computeLessonBlocksUpdate + a debounced saveStoredCourses for hot paths
+ * like keystroke-by-keystroke editing.
  */
 export function saveLessonBlocks(courseId: string, lessonId: string, blocks: Block[]): SeedCourse[] {
   const courses = getStoredCourses();
-  const course = courses.find((c) => c.id === courseId);
-  if (!course) return courses;
-
-  for (const mod of course.modules) {
-    const les = mod.lessons.find((l) => l.id === lessonId);
-    if (les) {
-      les.blocks = blocks;
-      const wc = computeWordCount(blocks);
-      les.meta = wc > 0 ? `${wc.toLocaleString()} WORDS · EDITED JUST NOW` : "NO NOTES YET";
-      break;
-    }
-  }
-
-  saveStoredCourses(courses);
-  return courses;
+  const updated = computeLessonBlocksUpdate(courses, courseId, lessonId, blocks);
+  saveStoredCourses(updated);
+  return updated;
 }
 
 /**

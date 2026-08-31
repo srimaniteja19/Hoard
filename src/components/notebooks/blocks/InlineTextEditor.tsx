@@ -8,6 +8,7 @@ interface InlineTextEditorProps {
   value: string;
   onChange: (nextVal: string) => void;
   onInsertBelow?: () => void;
+  onSplitBlock?: (before: string, after: string) => void;
   onDeleteBlock?: () => void;
   onFocusPrevious?: () => void;
   onFocusNext?: () => void;
@@ -15,22 +16,46 @@ interface InlineTextEditorProps {
   onSlashCommand?: (query: string, rect: DOMRect | null) => void;
   onSlashKeyDown?: (e: React.KeyboardEvent) => boolean;
   renderFormatted?: (val: string) => React.ReactNode;
+  registerTextareaRef?: (el: HTMLTextAreaElement | null) => void;
   as?: "p" | "h2" | "h3" | "div" | "blockquote";
   style?: React.CSSProperties;
   placeholder?: string;
   autoFocus?: boolean;
 }
 
+// Notion-style markdown auto-transform triggers. Each pattern is matched against
+// the start of the block's value; anything typed/pasted after the trigger is
+// carried over into the new block instead of being discarded.
+const TRANSFORM_PATTERNS: Array<{
+  regex: RegExp;
+  build: (rest: string) => Partial<Block>;
+}> = [
+  { regex: /^###\s([\s\S]*)$/, build: (rest) => ({ type: "heading", level: 3, text: rest }) },
+  { regex: /^##\s([\s\S]*)$/, build: (rest) => ({ type: "heading", level: 3, text: rest }) },
+  { regex: /^#\s([\s\S]*)$/, build: (rest) => ({ type: "heading", level: 2, text: rest }) },
+  { regex: /^>\s([\s\S]*)$/, build: (rest) => ({ type: "quote", text: rest }) },
+  { regex: /^\[\]\s([\s\S]*)$/, build: (rest) => ({ type: "todo", items: [{ text: rest, done: false }] }) },
+  { regex: /^-\s\[\s?\]\s([\s\S]*)$/, build: (rest) => ({ type: "todo", items: [{ text: rest, done: false }] }) },
+  { regex: /^!gotcha\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "gotcha", text: rest }) },
+  { regex: /^!\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "gotcha", text: rest }) },
+  { regex: /^!q\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "question", text: rest }) },
+  { regex: /^\?\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "question", text: rest }) },
+  { regex: /^!fact\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "fact", text: rest }) },
+  { regex: /^★\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "fact", text: rest }) },
+];
+
 export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   value,
   onChange,
   onInsertBelow,
+  onSplitBlock,
   onDeleteBlock,
   onFocusPrevious,
   onFocusNext,
   onTransformBlock,
   onSlashCommand,
   onSlashKeyDown,
+  registerTextareaRef,
   style = {},
   placeholder = "Type note, or # for heading, > for quote, ! for callout…",
   autoFocus = false,
@@ -63,60 +88,24 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
 
     // ── Notion-style Markdown Auto-Transformations ──
     if (onTransformBlock) {
-      // 1. # -> Heading 1
-      if (val === "# " || val === "#\n") {
+      // Code block: ``` optionally followed by a language and/or pasted code
+      if (val.startsWith("```") && (val.includes("\n") || val.endsWith(" "))) {
         playSound.pop();
-        onTransformBlock({ type: "heading", level: 2, text: "" });
+        const firstNewline = val.indexOf("\n");
+        const firstLine = firstNewline === -1 ? val : val.slice(0, firstNewline);
+        const rest = firstNewline === -1 ? "" : val.slice(firstNewline + 1);
+        const lang = firstLine.replace(/^```/, "").trim().toUpperCase() || "PYTHON";
+        onTransformBlock({ type: "code", lang, note: "SNIPPET", code: rest || "# Write code here\n" });
         return;
       }
-      // 2. ## -> Heading 2
-      if (val === "## " || val === "##\n") {
-        playSound.pop();
-        onTransformBlock({ type: "heading", level: 2, text: "" });
-        return;
-      }
-      // 3. ### -> Heading 3
-      if (val === "### " || val === "###\n") {
-        playSound.pop();
-        onTransformBlock({ type: "heading", level: 3, text: "" });
-        return;
-      }
-      // 4. > -> Quote
-      if (val === "> " || val === ">\n") {
-        playSound.pop();
-        onTransformBlock({ type: "quote", text: "" });
-        return;
-      }
-      // 5. [] or - [ ] -> To-do Checklist
-      if (val === "[] " || val === "[]\n" || val === "- [ ] " || val === "- [ ]\n") {
-        playSound.pop();
-        onTransformBlock({ type: "todo", items: [{ text: "", done: false }] });
-        return;
-      }
-      // 6. ! -> Gotcha Callout (Pink)
-      if (val === "! " || val === "!\n" || val === "!gotcha ") {
-        playSound.pop();
-        onTransformBlock({ type: "callout", kind: "gotcha", text: "" });
-        return;
-      }
-      // 7. ? -> Question Callout (Yellow)
-      if (val === "? " || val === "?\n" || val === "!q ") {
-        playSound.pop();
-        onTransformBlock({ type: "callout", kind: "question", text: "" });
-        return;
-      }
-      // 8. !fact -> Key Takeaway Callout (Lime)
-      if (val === "!fact " || val === "★ ") {
-        playSound.pop();
-        onTransformBlock({ type: "callout", kind: "fact", text: "" });
-        return;
-      }
-      // 9. ``` -> Code Block
-      if (val === "```\n" || val === "``` " || (val.startsWith("```") && (val.includes("\n") || val.endsWith(" ")))) {
-        playSound.pop();
-        const lang = val.replace(/^```/, "").trim().toUpperCase() || "PYTHON";
-        onTransformBlock({ type: "code", lang, note: "SNIPPET", code: "# Write code here\n" });
-        return;
+
+      for (const { regex, build } of TRANSFORM_PATTERNS) {
+        const match = val.match(regex);
+        if (match) {
+          playSound.pop();
+          onTransformBlock(build(match[1]));
+          return;
+        }
       }
     }
 
@@ -142,6 +131,21 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
     const el = e.currentTarget;
     const start = el.selectionStart;
     const end = el.selectionEnd;
+
+    // Enter (no Shift) -> split into a new block below at the cursor.
+    // Shift+Enter keeps a soft line break inside the current block.
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      playSound.click();
+      if (onSplitBlock) {
+        const before = value.slice(0, start);
+        const after = value.slice(end);
+        onSplitBlock(before, after);
+      } else if (onInsertBelow) {
+        onInsertBelow();
+      }
+      return;
+    }
 
     // Backspace on empty line -> delete block & focus previous
     if (e.key === "Backspace" && value === "") {
@@ -204,24 +208,34 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
       return;
     }
 
-    // ArrowUp at top position -> move to previous block
+    // ArrowUp at top position -> move to previous block. Must preventDefault:
+    // otherwise the browser's own ArrowUp still runs against whichever
+    // textarea ends up focused after onFocusPrevious moves focus there,
+    // clobbering the caret position we just set.
     if (e.key === "ArrowUp" && start === 0 && end === 0) {
+      e.preventDefault();
       if (onFocusPrevious) {
         onFocusPrevious();
       }
+      return;
     }
 
-    // ArrowDown at bottom position -> move to next block
+    // ArrowDown at bottom position -> move to next block (same reasoning).
     if (e.key === "ArrowDown" && start === value.length && end === value.length) {
+      e.preventDefault();
       if (onFocusNext) {
         onFocusNext();
       }
+      return;
     }
   };
 
   return (
     <textarea
-      ref={textareaRef}
+      ref={(el) => {
+        textareaRef.current = el;
+        if (registerTextareaRef) registerTextareaRef(el);
+      }}
       value={value}
       onChange={handleChange}
       onKeyDown={handleKeyDown}

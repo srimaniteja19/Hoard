@@ -26,10 +26,13 @@ interface BlockRendererProps {
   onUpdateBlock?: (updated: Block) => void;
   onDeleteBlock?: () => void;
   onInsertBelow?: () => void;
+  onSplitBlock?: (before: string, after: string) => void;
   onFocusPrevious?: () => void;
+  onFocusNext?: () => void;
   onTransformBlock?: (props: Partial<Block>) => void;
   onSlashCommand?: (query: string, rect: DOMRect | null) => void;
   onSlashKeyDown?: (e: React.KeyboardEvent) => boolean;
+  registerTextareaRef?: (el: HTMLTextAreaElement | null) => void;
   accentColor?: string;
 }
 
@@ -38,10 +41,13 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   onUpdateBlock,
   onDeleteBlock,
   onInsertBelow,
+  onSplitBlock,
   onFocusPrevious,
+  onFocusNext,
   onTransformBlock,
   onSlashCommand,
   onSlashKeyDown,
+  registerTextareaRef,
   accentColor = "#7B5CF0",
 }) => {
   const [toggleOpen, setToggleOpen] = useState(false);
@@ -367,61 +373,6 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
     });
   };
 
-  const handleTextKeyDown = (e: React.KeyboardEvent<HTMLElement>, currentText: string) => {
-    // Enter without Shift -> create new paragraph below
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (onInsertBelow) {
-        playSound.click();
-        onInsertBelow();
-      }
-      return;
-    }
-
-    // Backspace on empty -> delete block and focus previous
-    if (e.key === "Backspace" && (!currentText || currentText.trim() === "")) {
-      e.preventDefault();
-      if (onDeleteBlock) {
-        playSound.pop();
-        onDeleteBlock();
-      }
-      if (onFocusPrevious) {
-        onFocusPrevious();
-      }
-      return;
-    }
-
-    // Cmd+B / Ctrl+B -> wrap selection in bold
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
-      e.preventDefault();
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount) {
-        const text = sel.toString();
-        if (text) document.execCommand("insertText", false, `**${text}**`);
-      }
-    }
-
-    // Cmd+E / Ctrl+E -> wrap selection in code
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") {
-      e.preventDefault();
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount) {
-        const text = sel.toString();
-        if (text) document.execCommand("insertText", false, `\`${text}\``);
-      }
-    }
-
-    // Cmd+I / Ctrl+I -> wrap selection in italic
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "i") {
-      e.preventDefault();
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount) {
-        const text = sel.toString();
-        if (text) document.execCommand("insertText", false, `*${text}*`);
-      }
-    }
-  };
-
   switch (block.type) {
     case "paragraph": {
       return (
@@ -432,11 +383,14 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             if (onUpdateBlock) onUpdateBlock({ ...block, text: nextText });
           }}
           onInsertBelow={onInsertBelow}
+          onSplitBlock={onSplitBlock}
           onDeleteBlock={onDeleteBlock}
           onFocusPrevious={onFocusPrevious}
+          onFocusNext={onFocusNext}
           onTransformBlock={onTransformBlock}
           onSlashCommand={onSlashCommand}
           onSlashKeyDown={onSlashKeyDown}
+          registerTextareaRef={registerTextareaRef}
           renderFormatted={renderFormattedText}
           style={{
             margin: "6px 0 14px",
@@ -450,8 +404,6 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
     }
 
     case "heading": {
-      const cleanText = block.text.replace(/^\s*\d+:\d+\s*[-—–:]?\s*/, "").trim();
-
       return (
         <div
           style={{
@@ -483,16 +435,19 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           <div style={{ flex: "1 1 auto", minWidth: "200px" }}>
             <InlineTextEditor
               as={block.level === 2 ? "h2" : "h3"}
-              value={cleanText}
+              value={block.text}
               onChange={(nextText) => {
                 if (onUpdateBlock) onUpdateBlock({ ...block, text: nextText });
               }}
               onInsertBelow={onInsertBelow}
+              onSplitBlock={onSplitBlock}
               onDeleteBlock={onDeleteBlock}
               onFocusPrevious={onFocusPrevious}
+              onFocusNext={onFocusNext}
               onTransformBlock={onTransformBlock}
               onSlashCommand={onSlashCommand}
               onSlashKeyDown={onSlashKeyDown}
+              registerTextareaRef={registerTextareaRef}
               renderFormatted={renderFormattedText}
               style={
                 block.level === 2
@@ -1039,11 +994,14 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 if (onUpdateBlock) onUpdateBlock({ ...block, text: nextText });
               }}
               onInsertBelow={onInsertBelow}
+              onSplitBlock={onSplitBlock}
               onDeleteBlock={onDeleteBlock}
               onFocusPrevious={onFocusPrevious}
+              onFocusNext={onFocusNext}
               onTransformBlock={onTransformBlock}
               onSlashCommand={onSlashCommand}
               onSlashKeyDown={onSlashKeyDown}
+              registerTextareaRef={registerTextareaRef}
               renderFormatted={renderFormattedText}
               style={{ fontSize: "16px", lineHeight: "1.6", color: "#0A0A0A" }}
               placeholder="Callout text…"
@@ -1247,11 +1205,14 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               if (onUpdateBlock) onUpdateBlock({ ...block, text: nextText });
             }}
             onInsertBelow={onInsertBelow}
+            onSplitBlock={onSplitBlock}
             onDeleteBlock={onDeleteBlock}
             onFocusPrevious={onFocusPrevious}
+            onFocusNext={onFocusNext}
             onTransformBlock={onTransformBlock}
             onSlashCommand={onSlashCommand}
             onSlashKeyDown={onSlashKeyDown}
+            registerTextareaRef={registerTextareaRef}
             renderFormatted={renderFormattedText}
             style={{
               fontFamily: "var(--quote, Georgia, serif)",

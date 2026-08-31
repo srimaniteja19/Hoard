@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   getStoredCourses,
   saveStoredCourses,
-  saveLessonBlocks,
+  computeLessonBlocksUpdate,
   addLessonGapStub,
   deleteLesson,
   clearLessonNotes,
@@ -181,11 +181,47 @@ export default function NotebooksPage() {
   const currentBlocks = currentLesson?.blocks || [];
   const wordCount = computeWordCount(currentBlocks);
 
+  // Persisting to localStorage re-serializes every course/lesson/block (including
+  // any pasted base64 images), so doing it on every keystroke is what made typing
+  // laggy. React state updates instantly for a responsive UI; the localStorage
+  // write itself is debounced and flushed on navigation/unload so nothing is lost.
+  const pendingSaveRef = useRef<{ courses: SeedCourse[]; timer: ReturnType<typeof setTimeout> } | null>(null);
+
+  const flushPendingSave = useCallback(() => {
+    if (pendingSaveRef.current) {
+      clearTimeout(pendingSaveRef.current.timer);
+      saveStoredCourses(pendingSaveRef.current.courses);
+      pendingSaveRef.current = null;
+    }
+  }, []);
+
   const handleUpdateBlocks = (newBlocks: Block[]) => {
     if (!currentCourse || !currentLesson) return;
-    const updated = saveLessonBlocks(currentCourse.id, currentLesson.id, newBlocks);
-    setCourses([...updated]);
+    const updated = computeLessonBlocksUpdate(courses, currentCourse.id, currentLesson.id, newBlocks);
+    setCourses(updated);
+
+    if (pendingSaveRef.current) clearTimeout(pendingSaveRef.current.timer);
+    pendingSaveRef.current = {
+      courses: updated,
+      timer: setTimeout(() => {
+        saveStoredCourses(updated);
+        pendingSaveRef.current = null;
+      }, 500),
+    };
   };
+
+  // Flush any pending debounced save before switching pages, and on unload.
+  useEffect(() => {
+    return () => flushPendingSave();
+  }, [currentCourseIdx, currentModuleIdx, currentLessonIdx, flushPendingSave]);
+
+  useEffect(() => {
+    window.addEventListener("beforeunload", flushPendingSave);
+    return () => {
+      window.removeEventListener("beforeunload", flushPendingSave);
+      flushPendingSave();
+    };
+  }, [flushPendingSave]);
 
   const handleSelectCourseFromCard = (idx: number) => {
     playSound.click();
@@ -302,7 +338,15 @@ export default function NotebooksPage() {
 
   // AI: EXPLAIN AGAIN
   const handleExplain = async () => {
-    const selectedText = window.getSelection()?.toString().trim();
+    // Note text lives in <textarea> elements, whose selection isn't exposed via
+    // window.getSelection() — read it directly off the focused textarea first.
+    const active = document.activeElement;
+    let selectedText = "";
+    if (active instanceof HTMLTextAreaElement && active.selectionStart !== active.selectionEnd) {
+      selectedText = active.value.slice(active.selectionStart ?? 0, active.selectionEnd ?? 0).trim();
+    } else {
+      selectedText = window.getSelection()?.toString().trim() || "";
+    }
     const targetText =
       selectedText ||
       currentBlocks.find((b) => b.type === "paragraph" || b.type === "callout")?.text ||
@@ -898,6 +942,7 @@ export default function NotebooksPage() {
                 />
               ) : (
                 <BlockEditor
+                  key={currentLesson.id}
                   blocks={currentBlocks}
                   onChange={handleUpdateBlocks}
                   onExplain={handleExplainWithSelection}
