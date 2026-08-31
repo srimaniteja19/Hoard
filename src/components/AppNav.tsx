@@ -6,6 +6,7 @@ import { useHydratedPathname } from "@/hooks/useHydratedPathname";
 const LINKS = [
   { href: "/", label: "Home", match: (path: string) => path === "/" },
   { href: "/library", label: "Library", match: (path: string) => path.startsWith("/library") || path.startsWith("/session") },
+  { href: "/notebooks", label: "Notebooks", match: (path: string) => path.startsWith("/notebooks") },
   { href: "/marginalia", label: "Marginalia", match: (path: string) => path.startsWith("/marginalia") },
   { href: "/ask", label: "Ask", match: (path: string) => path === "/ask" || path.startsWith("/ask/") },
   { href: "/scratch", label: "Scratch", match: (path: string) => path.startsWith("/scratch") },

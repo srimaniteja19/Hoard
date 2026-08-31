@@ -1176,6 +1176,148 @@ export const financialInvestments = pgTable(
 export type FinancialInvestmentRow = typeof financialInvestments.$inferSelect;
 export type NewFinancialInvestmentRow = typeof financialInvestments.$inferInsert;
 
+// ==========================================
+// NOTEBOOKS TABLES (Course-bound long-form notes)
+// ==========================================
+
+export const notebookCourses = pgTable(
+  "notebook_courses",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    provider: text("provider").notNull().default("DeepLearning.AI"),
+    accent: varchar("accent", { length: 32 }).notNull().default("#7B5CF0"),
+    accentFg: varchar("accent_fg", { length: 32 }).notNull().default("#FFFFFF"),
+    url: text("url"),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    archivedAt: timestamp("archived_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("notebook_course_user_idx").on(table.userId, table.createdAt.desc()),
+  ]
+);
+
+export type NotebookCourseRow = typeof notebookCourses.$inferSelect;
+export type NewNotebookCourseRow = typeof notebookCourses.$inferInsert;
+
+export const notebookModules = pgTable(
+  "notebook_modules",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    courseId: text("course_id")
+      .notNull()
+      .references(() => notebookCourses.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("notebook_module_course_pos_idx").on(table.courseId, table.position),
+  ]
+);
+
+export type NotebookModuleRow = typeof notebookModules.$inferSelect;
+export type NewNotebookModuleRow = typeof notebookModules.$inferInsert;
+
+export const notebookLessons = pgTable(
+  "notebook_lessons",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    moduleId: text("module_id")
+      .notNull()
+      .references(() => notebookModules.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    position: integer("position").notNull().default(0),
+    watchedAt: timestamp("watched_at"),
+    lessonUrl: text("lesson_url"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("notebook_lesson_module_pos_idx").on(table.moduleId, table.position),
+  ]
+);
+
+export type NotebookLessonRow = typeof notebookLessons.$inferSelect;
+export type NewNotebookLessonRow = typeof notebookLessons.$inferInsert;
+
+export const notebookPages = pgTable(
+  "notebook_pages",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    lessonId: text("lesson_id")
+      .notNull()
+      .unique()
+      .references(() => notebookLessons.id, { onDelete: "cascade" }),
+    blocks: jsonb("blocks").$type<any[]>().notNull().default(sql`'[]'::jsonb`),
+    wordCount: integer("word_count").notNull().default(0),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("notebook_page_lesson_idx").on(table.lessonId),
+  ]
+);
+
+export type NotebookPageRow = typeof notebookPages.$inferSelect;
+export type NewNotebookPageRow = typeof notebookPages.$inferInsert;
+
+export const notebookTranscripts = pgTable(
+  "notebook_transcripts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    lessonId: text("lesson_id")
+      .notNull()
+      .unique()
+      .references(() => notebookLessons.id, { onDelete: "cascade" }),
+    text: text("text").notNull(),
+    cues: jsonb("cues").$type<{ t: string; text: string }[]>().notNull().default(sql`'[]'::jsonb`),
+    source: varchar("source", { length: 32 }).notNull().default("pasted"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("notebook_transcript_lesson_idx").on(table.lessonId),
+  ]
+);
+
+export type NotebookTranscriptRow = typeof notebookTranscripts.$inferSelect;
+export type NewNotebookTranscriptRow = typeof notebookTranscripts.$inferInsert;
+
+export const notebookChunks = pgTable(
+  "notebook_chunks",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    pageId: text("page_id")
+      .notNull()
+      .references(() => notebookPages.id, { onDelete: "cascade" }),
+    blockId: text("block_id").notNull(),
+    text: text("text").notNull(),
+    embedding: jsonb("embedding").$type<number[]>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("notebook_chunk_page_idx").on(table.pageId),
+  ]
+);
+
+export type NotebookChunkRow = typeof notebookChunks.$inferSelect;
+export type NewNotebookChunkRow = typeof notebookChunks.$inferInsert;
+
 
 
 
