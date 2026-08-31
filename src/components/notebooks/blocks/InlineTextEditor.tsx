@@ -15,6 +15,7 @@ interface InlineTextEditorProps {
   style?: React.CSSProperties;
   placeholder?: string;
   autoFocus?: boolean;
+  onSlashCommand?: (query: string, rect: DOMRect | null) => void;
 }
 
 export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
@@ -27,26 +28,27 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   renderFormatted,
   as = "p",
   style = {},
-  placeholder = "Start writing…",
+  placeholder = "Type something, or / for blocks…",
   autoFocus = false,
+  onSlashCommand,
 }) => {
   const [isEditing, setIsEditing] = useState(autoFocus || value === "");
   const [localVal, setLocalVal] = useState(value);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Synchronize local value when external value changes and not editing
+  // Synchronize when external value changes
   useEffect(() => {
     if (!isEditing) {
       setLocalVal(value);
     }
   }, [value, isEditing]);
 
-  // Auto-resize textarea height to match text content precisely
+  // Auto-resize textarea to fit text
   const adjustHeight = () => {
     const el = textareaRef.current;
     if (el) {
-      el.style.height = "auto";
-      el.style.height = `${Math.max(el.scrollHeight, 24)}px`;
+      el.style.height = "0px";
+      el.style.height = `${Math.max(el.scrollHeight, 26)}px`;
     }
   };
 
@@ -56,7 +58,6 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
       const el = textareaRef.current;
       if (el) {
         el.focus();
-        // Place cursor at end of text
         const len = el.value.length;
         el.setSelectionRange(len, len);
       }
@@ -75,10 +76,9 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
     const start = el.selectionStart;
     const end = el.selectionEnd;
 
-    // Enter without Shift -> create new paragraph below
+    // Enter without Shift -> create clean new paragraph below
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      // If cursor is in middle of paragraph, we can split text
       const before = localVal.slice(0, start);
       const after = localVal.slice(end);
 
@@ -94,7 +94,7 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
       return;
     }
 
-    // Backspace on empty -> delete block and focus previous
+    // Backspace on empty line -> delete block & focus previous
     if (e.key === "Backspace" && localVal.trim() === "") {
       e.preventDefault();
       setIsEditing(false);
@@ -166,7 +166,7 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
       return;
     }
 
-    // ArrowUp at beginning -> previous block
+    // ArrowUp at start of line -> previous block
     if (e.key === "ArrowUp" && start === 0 && end === 0) {
       if (onFocusPrevious) {
         setIsEditing(false);
@@ -174,7 +174,7 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
       }
     }
 
-    // ArrowDown at end -> next block
+    // ArrowDown at end of line -> next block
     if (e.key === "ArrowDown" && start === localVal.length && end === localVal.length) {
       if (onFocusNext) {
         setIsEditing(false);
@@ -184,8 +184,19 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setLocalVal(e.target.value);
+    const val = e.target.value;
+    setLocalVal(val);
     adjustHeight();
+
+    // Check for slash command
+    if (onSlashCommand) {
+      if (val.startsWith("/")) {
+        const rect = textareaRef.current?.getBoundingClientRect() || null;
+        onSlashCommand(val, rect);
+      } else {
+        onSlashCommand("", null);
+      }
+    }
   };
 
   const Tag = as;
@@ -209,7 +220,13 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
           overflow: "hidden",
           display: "block",
           padding: 0,
+          margin: 0,
           color: "inherit",
+          fontFamily: "inherit",
+          fontSize: "inherit",
+          lineHeight: "inherit",
+          fontWeight: "inherit",
+          letterSpacing: "inherit",
           ...style,
         }}
       />
@@ -219,18 +236,18 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   return (
     <Tag
       onClick={() => setIsEditing(true)}
-      title="Click to edit"
       style={{
         ...style,
         cursor: "text",
         minHeight: "1.4em",
         borderRadius: "2px",
+        margin: 0,
       }}
     >
       {value ? (
         renderFormatted(value)
       ) : (
-        <span style={{ opacity: 0.35, fontStyle: "italic" }}>{placeholder}</span>
+        <span style={{ opacity: 0.3, fontStyle: "normal" }}>{placeholder}</span>
       )}
     </Tag>
   );

@@ -12,7 +12,6 @@ import {
   ArrowDown,
   RotateCcw,
   RotateCw,
-  Sparkles,
 } from "lucide-react";
 
 interface BlockEditorProps {
@@ -23,19 +22,18 @@ interface BlockEditorProps {
 }
 
 const SLASH_MENU_ITEMS: { type: string; glyph: string; label: string; shortcut: string }[] = [
-  { type: "paragraph", glyph: "¶", label: "Text paragraph", shortcut: "/text" },
+  { type: "paragraph", glyph: "¶", label: "Text Paragraph", shortcut: "/text" },
   { type: "h2", glyph: "H2", label: "Heading 2", shortcut: "/h2" },
   { type: "h3", glyph: "H3", label: "Heading 3", shortcut: "/h3" },
-  { type: "image", glyph: "📷", label: "Paste / Upload Image", shortcut: "/image" },
   { type: "code", glyph: "<>", label: "Code Snippet", shortcut: "/code" },
-  { type: "gotcha", glyph: "!", label: "Gotcha callout (Pink)", shortcut: "/gotcha" },
-  { type: "question", glyph: "?", label: "Question for me (Yellow)", shortcut: "/q" },
-  { type: "fact", glyph: "★", label: "Key takeaway (Lime)", shortcut: "/fact" },
-  { type: "connects", glyph: "↗", label: "Connects to (Cyan)", shortcut: "/connects" },
-  { type: "todo", glyph: "☑", label: "To-do items", shortcut: "/todo" },
-  { type: "toggle", glyph: "▸", label: "Toggle section", shortcut: "/toggle" },
-  { type: "quote", glyph: '"', label: "Quote", shortcut: "/quote" },
-  { type: "mark", glyph: "⏱", label: "Timestamp mark", shortcut: "/mark" },
+  { type: "gotcha", glyph: "!", label: "Gotcha Callout (Pink)", shortcut: "/gotcha" },
+  { type: "question", glyph: "?", label: "Question for Me (Yellow)", shortcut: "/q" },
+  { type: "fact", glyph: "★", label: "Key Takeaway (Lime)", shortcut: "/fact" },
+  { type: "connects", glyph: "↗", label: "Connects To (Cyan)", shortcut: "/connects" },
+  { type: "todo", glyph: "☑", label: "To-Do Checklist", shortcut: "/todo" },
+  { type: "image", glyph: "📷", label: "Image / Screenshot", shortcut: "/image" },
+  { type: "toggle", glyph: "▸", label: "Collapsible Toggle", shortcut: "/toggle" },
+  { type: "quote", glyph: '"', label: "Quote Block", shortcut: "/quote" },
 ];
 
 export const BlockEditor: React.FC<BlockEditorProps> = ({
@@ -45,18 +43,17 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   accentColor = "#7B5CF0",
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [newInput, setNewInput] = useState("");
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
+  const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const [slashMenu, setSlashMenu] = useState<{
     isOpen: boolean;
-    insertAfterIndex?: number;
+    blockIndex: number;
     query: string;
     activeIndex: number;
   } | null>(null);
 
-  const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [insertAfterIdx, setInsertAfterIdx] = useState<number | undefined>(undefined);
+  const [insertImageAfterIdx, setInsertImageAfterIdx] = useState<number | undefined>(undefined);
 
   // Undo / Redo history stacks
   const [history, setHistory] = useState<Block[][]>([blocks]);
@@ -67,7 +64,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       onChange(nextBlocks);
       setHistory((prev) => {
         const sliced = prev.slice(0, historyIndex + 1);
-        return [...sliced, nextBlocks].slice(-50); // keep last 50 states
+        return [...sliced, nextBlocks].slice(-50);
       });
       setHistoryIndex((prev) => Math.min(prev + 1, 49));
     },
@@ -120,6 +117,9 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   const handleDeleteBlock = (index: number) => {
     playSound.pop();
     const next = blocks.filter((_, idx) => idx !== index);
+    if (next.length === 0) {
+      next.push({ id: generateBlockId(), type: "paragraph", text: "" });
+    }
     commitBlocks(next);
   };
 
@@ -139,7 +139,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     playSound.click();
 
     if (type === "image") {
-      setInsertAfterIdx(afterIndex);
+      setInsertImageAfterIdx(afterIndex);
       fileInputRef.current?.click();
       setSlashMenu(null);
       return;
@@ -149,53 +149,47 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
 
     switch (type) {
       case "h2":
-        newBlock = { id: generateBlockId(), type: "heading", level: 2, text: "New Heading" };
+        newBlock = { id: generateBlockId(), type: "heading", level: 2, text: "" };
         break;
       case "h3":
-        newBlock = { id: generateBlockId(), type: "heading", level: 3, text: "Subheading" };
+        newBlock = { id: generateBlockId(), type: "heading", level: 3, text: "" };
         break;
       case "gotcha":
-        newBlock = { id: generateBlockId(), type: "callout", kind: "gotcha", text: "The subtle trap to watch out for." };
+        newBlock = { id: generateBlockId(), type: "callout", kind: "gotcha", text: "" };
         break;
       case "question":
-        newBlock = { id: generateBlockId(), type: "callout", kind: "question", text: "Open question to verify." };
+        newBlock = { id: generateBlockId(), type: "callout", kind: "question", text: "" };
         break;
       case "fact":
-        newBlock = { id: generateBlockId(), type: "callout", kind: "fact", text: "Core takeaway or rule." };
+        newBlock = { id: generateBlockId(), type: "callout", kind: "fact", text: "" };
         break;
       case "connects":
-        newBlock = { id: generateBlockId(), type: "callout", kind: "connects", text: "Connects to concept in another course." };
+        newBlock = { id: generateBlockId(), type: "callout", kind: "connects", text: "" };
         break;
       case "code":
-        newBlock = { id: generateBlockId(), type: "code", lang: "PYTHON", note: "SNIPPET", code: "# Write code snippet here\n" };
+        newBlock = { id: generateBlockId(), type: "code", lang: "PYTHON", note: "SNIPPET", code: "# Write code here\n" };
         break;
       case "toggle":
-        newBlock = { id: generateBlockId(), type: "toggle", summary: "Toggle heading", body: "Hidden detail notes." };
+        newBlock = { id: generateBlockId(), type: "toggle", summary: "Toggle heading", body: "" };
         break;
       case "todo":
-        newBlock = { id: generateBlockId(), type: "todo", items: [{ text: "Action item before next lesson", done: false }] };
+        newBlock = { id: generateBlockId(), type: "todo", items: [{ text: "", done: false }] };
         break;
       case "quote":
-        newBlock = { id: generateBlockId(), type: "quote", text: "A phrase worth keeping in their words.", attribution: "Instructor" };
-        break;
-      case "mark":
-        newBlock = { id: generateBlockId(), type: "mark", timestamp: "00:00", text: "Marked during lecture" };
+        newBlock = { id: generateBlockId(), type: "quote", text: "", attribution: "" };
         break;
       case "paragraph":
       default:
-        newBlock = { id: generateBlockId(), type: "paragraph", text: newInput.trim() || "Start writing…" };
+        newBlock = { id: generateBlockId(), type: "paragraph", text: "" };
         break;
     }
 
     const next = [...blocks];
-    if (typeof afterIndex === "number") {
-      next.splice(afterIndex + 1, 0, newBlock);
-    } else {
-      next.push(newBlock);
-    }
+    const insertIdx = typeof afterIndex === "number" ? afterIndex + 1 : next.length;
+    next.splice(insertIdx, 0, newBlock);
 
+    setFocusedBlockId(newBlock.id);
     commitBlocks(next);
-    setNewInput("");
     setSlashMenu(null);
   };
 
@@ -214,11 +208,8 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           caption: file.name || "IMAGE ATTACHMENT",
         };
         const next = [...blocks];
-        if (typeof insertAfterIdx === "number") {
-          next.splice(insertAfterIdx + 1, 0, imageBlock);
-        } else {
-          next.push(imageBlock);
-        }
+        const insertIdx = typeof insertImageAfterIdx === "number" ? insertImageAfterIdx + 1 : next.length;
+        next.splice(insertIdx, 0, imageBlock);
         commitBlocks(next);
         playSound.fileIt();
       }
@@ -227,7 +218,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     e.target.value = "";
   };
 
-  // Filter slash menu items based on current query
+  // Filter slash menu items based on query
   const filteredSlashItems = SLASH_MENU_ITEMS.filter((item) => {
     if (!slashMenu || !slashMenu.query) return true;
     const q = slashMenu.query.toLowerCase().replace(/^\//, "");
@@ -238,55 +229,8 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     );
   });
 
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (slashMenu?.isOpen) {
-      if (e.key === "Escape") {
-        setSlashMenu(null);
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setSlashMenu((prev) =>
-          prev ? { ...prev, activeIndex: (prev.activeIndex + 1) % filteredSlashItems.length } : null
-        );
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSlashMenu((prev) =>
-          prev
-            ? {
-                ...prev,
-                activeIndex:
-                  (prev.activeIndex - 1 + filteredSlashItems.length) % filteredSlashItems.length,
-              }
-            : null
-        );
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        const selected = filteredSlashItems[slashMenu.activeIndex] || filteredSlashItems[0];
-        if (selected) {
-          handleInsertBlock(selected.type, slashMenu.insertAfterIndex);
-        }
-      }
-    } else if (e.key === "Enter" && newInput.trim()) {
-      handleInsertBlock("paragraph");
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setNewInput(val);
-    if (val.startsWith("/")) {
-      setSlashMenu({
-        isOpen: true,
-        query: val,
-        activeIndex: 0,
-      });
-    } else {
-      setSlashMenu(null);
-    }
-  };
-
-  // Handle image pasting (clipboard files & image URLs) and link cards
+  // Handle clipboard paste (images & links)
   const handlePaste = (e: React.ClipboardEvent) => {
-    // 1. Direct Clipboard Image Paste (e.g. screenshots, copied images)
     const items = e.clipboardData?.items;
     if (items) {
       for (let i = 0; i < items.length; i++) {
@@ -305,7 +249,6 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                   caption: `PASTED IMAGE · ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
                 };
                 commitBlocks([...blocks, imageBlock]);
-                setNewInput("");
                 playSound.fileIt();
               }
             };
@@ -318,7 +261,6 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
 
     const text = e.clipboardData?.getData("text");
 
-    // 2. Image URL Paste
     if (text && (/\.(png|jpg|jpeg|gif|webp|svg)(\?.*)?$/i.test(text.trim()) || text.trim().startsWith("data:image/"))) {
       e.preventDefault();
       const imageBlock: Block = {
@@ -328,12 +270,10 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         caption: "PASTED IMAGE",
       };
       commitBlocks([...blocks, imageBlock]);
-      setNewInput("");
       playSound.fileIt();
       return;
     }
 
-    // 3. Web URL Paste (into a link preview card)
     if (text && /^https?:\/\//i.test(text.trim())) {
       e.preventDefault();
       try {
@@ -347,15 +287,14 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           site: `${hostname} · PASTED LINK`,
         };
         commitBlocks([...blocks, linkBlock]);
-        setNewInput("");
         playSound.fileIt();
       } catch {
-        // regular text paste
+        // regular paste
       }
     }
   };
 
-  // Drag and Drop Images directly into note area
+  // Drag and drop images directly onto the document
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const files = e.dataTransfer?.files;
@@ -384,12 +323,19 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   return (
     <div
       ref={containerRef}
-      style={{ display: "flex", flexDirection: "column", gap: "2px", position: "relative" }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "4px",
+        position: "relative",
+        minHeight: "450px",
+        paddingBottom: "120px",
+      }}
       onPaste={handlePaste}
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
     >
-      {/* Floating Selection Formatter Tooltip */}
+      {/* Floating Selection Tooltip */}
       <FloatingFormatBubble containerRef={containerRef} onExplain={onExplain} />
 
       {/* Hidden Image File Input */}
@@ -401,14 +347,14 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         onChange={handleFileUpload}
       />
 
-      {/* Undo / Redo mini status bar if history exists */}
+      {/* Mini Undo / Redo Bar */}
       <div
         style={{
           display: "flex",
           justifyContent: "flex-end",
           alignItems: "center",
           gap: "8px",
-          marginBottom: "6px",
+          marginBottom: "4px",
           fontFamily: "var(--mono, monospace)",
           fontSize: "9px",
           fontWeight: 700,
@@ -419,7 +365,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           type="button"
           disabled={historyIndex <= 0}
           onClick={handleUndo}
-          title="Undo last change (Cmd+Z)"
+          title="Undo (Cmd+Z)"
           style={{
             background: "transparent",
             border: "1px solid rgba(10,10,10,0.2)",
@@ -440,7 +386,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           type="button"
           disabled={historyIndex >= history.length - 1}
           onClick={handleRedo}
-          title="Redo change (Cmd+Shift+Z)"
+          title="Redo (Cmd+Shift+Z)"
           style={{
             background: "transparent",
             border: "1px solid rgba(10,10,10,0.2)",
@@ -459,8 +405,8 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         </button>
       </div>
 
-      {/* Blocks List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+      {/* Note Blocks List */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
         {blocks.map((block, idx) => {
           const isHovered = hoveredBlockId === block.id;
 
@@ -471,26 +417,24 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
               onMouseLeave={() => setHoveredBlockId(null)}
               style={{
                 position: "relative",
-                padding: "4px 0 4px 44px",
-                margin: "2px 0",
-                borderRadius: "2px",
-                transition: "background 0.1s ease",
+                paddingLeft: "38px", // Clean left gutter for handles without overlapping text
+                minHeight: "28px",
               }}
             >
-              {/* Hover Reorder & Action Controls */}
+              {/* Hover Action Gutter */}
               <div
                 style={{
                   position: "absolute",
-                  left: 0,
-                  top: "6px",
+                  left: "0px",
+                  top: "4px",
                   display: "flex",
                   alignItems: "center",
-                  gap: "1px",
+                  gap: "2px",
                   opacity: isHovered ? 1 : 0,
                   transition: "opacity 0.12s ease",
+                  userSelect: "none",
                 }}
               >
-                {/* Insert Below Button */}
                 <button
                   type="button"
                   title="Insert block below"
@@ -498,14 +442,14 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                     playSound.click();
                     setSlashMenu({
                       isOpen: true,
-                      insertAfterIndex: idx,
+                      blockIndex: idx,
                       query: "",
                       activeIndex: 0,
                     });
                   }}
                   style={{
                     width: "16px",
-                    height: "22px",
+                    height: "20px",
                     border: "none",
                     background: "transparent",
                     cursor: "pointer",
@@ -513,22 +457,21 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                     opacity: 0.5,
                     fontSize: "14px",
                     padding: 0,
+                    lineHeight: 1,
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
                   onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
                 >
                   ＋
                 </button>
-
-                {/* Move Up */}
                 <button
                   type="button"
                   disabled={idx === 0}
-                  title="Move block up"
+                  title="Move up"
                   onClick={() => handleMoveBlock(idx, "up")}
                   style={{
                     width: "14px",
-                    height: "22px",
+                    height: "20px",
                     border: "none",
                     background: "transparent",
                     cursor: idx > 0 ? "pointer" : "default",
@@ -538,25 +481,17 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                     display: "grid",
                     placeItems: "center",
                   }}
-                  onMouseEnter={(e) => {
-                    if (idx > 0) e.currentTarget.style.opacity = "1";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (idx > 0) e.currentTarget.style.opacity = "0.45";
-                  }}
                 >
                   <ArrowUp size={11} />
                 </button>
-
-                {/* Move Down */}
                 <button
                   type="button"
                   disabled={idx === blocks.length - 1}
-                  title="Move block down"
+                  title="Move down"
                   onClick={() => handleMoveBlock(idx, "down")}
                   style={{
                     width: "14px",
-                    height: "22px",
+                    height: "20px",
                     border: "none",
                     background: "transparent",
                     cursor: idx < blocks.length - 1 ? "pointer" : "default",
@@ -566,24 +501,16 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                     display: "grid",
                     placeItems: "center",
                   }}
-                  onMouseEnter={(e) => {
-                    if (idx < blocks.length - 1) e.currentTarget.style.opacity = "1";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (idx < blocks.length - 1) e.currentTarget.style.opacity = "0.45";
-                  }}
                 >
                   <ArrowDown size={11} />
                 </button>
-
-                {/* Delete Block */}
                 <button
                   type="button"
-                  title="Delete block"
+                  title="Delete line"
                   onClick={() => handleDeleteBlock(idx)}
                   style={{
                     width: "14px",
-                    height: "22px",
+                    height: "20px",
                     border: "none",
                     background: "transparent",
                     cursor: "pointer",
@@ -600,24 +527,21 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                 </button>
               </div>
 
-              {/* Rendered Block */}
+              {/* Block Content */}
               <BlockRenderer
                 block={block}
                 onUpdateBlock={(updated) => handleUpdateBlock(idx, updated)}
                 onDeleteBlock={() => handleDeleteBlock(idx)}
                 onInsertBelow={() => handleInsertBlock("paragraph", idx)}
-                onFocusPrevious={() => {
-                  // Handled naturally by block state
-                }}
                 accentColor={accentColor}
               />
 
-              {/* In-Line Slash Command Popover if triggered at this index */}
-              {slashMenu?.isOpen && slashMenu.insertAfterIndex === idx && (
+              {/* In-Line Slash Palette Popover */}
+              {slashMenu?.isOpen && slashMenu.blockIndex === idx && (
                 <div
                   style={{
                     position: "absolute",
-                    left: "44px",
+                    left: "38px",
                     top: "100%",
                     zIndex: 60,
                     width: "292px",
@@ -705,115 +629,35 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         })}
       </div>
 
-      {/* New Line Input with Slash Command Popover at Bottom */}
-      <div style={{ position: "relative", padding: "8px 0 8px 44px", marginTop: "10px" }}>
-        <input
-          ref={inputRef}
-          type="text"
-          value={newInput}
-          onChange={handleInputChange}
-          onKeyDown={handleInputKeyDown}
-          placeholder="Write, or press / for blocks — paste an image or a link and it lands as a card"
+      {/* Blank Document Click Area at Bottom */}
+      <div
+        onClick={() => {
+          const lastBlock = blocks[blocks.length - 1];
+          if (!lastBlock || (lastBlock.type === "paragraph" && lastBlock.text === "")) {
+            // Already has empty block
+            return;
+          }
+          handleInsertBlock("paragraph", blocks.length - 1);
+        }}
+        style={{
+          flex: 1,
+          minHeight: "180px",
+          cursor: "text",
+          paddingLeft: "38px",
+          paddingTop: "12px",
+        }}
+      >
+        <span
           style={{
-            width: "100%",
-            border: "none",
-            outline: "none",
-            background: "transparent",
-            fontFamily: "var(--body, sans-serif)",
-            fontSize: "16.5px",
-            padding: "6px 0",
-            color: "inherit",
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "10px",
+            letterSpacing: "0.1em",
+            opacity: 0.25,
+            userSelect: "none",
           }}
-        />
-
-        {/* Bottom Slash Menu Popover */}
-        {slashMenu?.isOpen && slashMenu.insertAfterIndex === undefined && (
-          <div
-            style={{
-              position: "absolute",
-              left: "44px",
-              top: "100%",
-              zIndex: 50,
-              width: "292px",
-              border: "3px solid #0A0A0A",
-              background: "#FFFFFF",
-              boxShadow: "7px 7px 0 #0A0A0A",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "9px",
-                fontWeight: 700,
-                letterSpacing: "0.16em",
-                padding: "7px 12px",
-                background: "#EBE7DC",
-                borderBottom: "2px solid #0A0A0A",
-                color: "#0A0A0A",
-                display: "flex",
-                justifyContent: "space-between",
-              }}
-            >
-              <span>BLOCKS</span>
-              <span>ESC TO CLOSE</span>
-            </div>
-            {filteredSlashItems.map((item, itemIdx) => {
-              const isActive = slashMenu.activeIndex === itemIdx;
-              return (
-                <button
-                  key={item.type}
-                  type="button"
-                  onClick={() => handleInsertBlock(item.type)}
-                  style={{
-                    display: "flex",
-                    width: "100%",
-                    alignItems: "center",
-                    gap: "11px",
-                    background: isActive ? "#FCE94F" : "transparent",
-                    border: "none",
-                    borderBottom: "2px solid rgba(10,10,10,0.14)",
-                    padding: "8px 12px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    color: "#0A0A0A",
-                    transition: "background 0.1s ease",
-                  }}
-                  onMouseEnter={() => setSlashMenu((prev) => (prev ? { ...prev, activeIndex: itemIdx } : null))}
-                >
-                  <span
-                    style={{
-                      width: "22px",
-                      height: "22px",
-                      border: "2px solid #0A0A0A",
-                      display: "grid",
-                      placeItems: "center",
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "10.5px",
-                      fontWeight: 700,
-                      flex: "none",
-                      background: "#FFFFFF",
-                    }}
-                  >
-                    {item.glyph}
-                  </span>
-                  <b style={{ fontSize: "13.5px", fontWeight: 700 }}>{item.label}</b>
-                  <span
-                    style={{
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "8.5px",
-                      letterSpacing: "0.08em",
-                      opacity: 0.45,
-                      marginLeft: "auto",
-                    }}
-                  >
-                    {item.shortcut}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+        >
+          Click to continue typing notes…
+        </span>
       </div>
     </div>
   );
