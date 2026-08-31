@@ -56,21 +56,54 @@ export const FloatingFormatBubble: React.FC<FloatingFormatBubbleProps> = ({
     return () => document.removeEventListener("selectionchange", handleSelectionChange);
   }, [containerRef]);
 
-  if (!position || !selectedText) return null;
-
-  const applyFormat = (wrapper: (text: string) => string) => {
+  const applyFormat = (type: "bold" | "code" | "italic") => {
     playSound.click();
     const selection = window.getSelection();
-    if (!selection || !selection.rangeCount) return;
+    if (!selection || !selection.rangeCount || selection.isCollapsed) return;
 
     const range = selection.getRangeAt(0);
     const selectedContent = selection.toString();
-    const formatted = wrapper(selectedContent);
 
-    // If inside contentEditable or textarea
-    document.execCommand("insertText", false, formatted);
+    if (type === "bold") {
+      const span = document.createElement("strong");
+      span.style.background = "#FCE94F";
+      span.style.color = "#0A0A0A";
+      span.style.padding = "0 4px";
+      span.style.borderRadius = "1px";
+      span.textContent = selectedContent;
+
+      range.deleteContents();
+      range.insertNode(span);
+
+      range.setStartAfter(span);
+      range.setEndAfter(span);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else if (type === "code") {
+      const code = document.createElement("code");
+      code.style.fontFamily = "var(--mono, monospace)";
+      code.style.fontSize = "0.88em";
+      code.style.background = "#EBE7DC";
+      code.style.border = "1.5px solid #0A0A0A";
+      code.style.padding = "1px 5px";
+      code.style.color = "#0A0A0A";
+      code.textContent = selectedContent;
+
+      range.deleteContents();
+      range.insertNode(code);
+
+      range.setStartAfter(code);
+      range.setEndAfter(code);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else if (type === "italic") {
+      document.execCommand("italic");
+    }
+
     setPosition(null);
   };
+
+  if (!position || !selectedText) return null;
 
   return (
     <div
@@ -100,7 +133,7 @@ export const FloatingFormatBubble: React.FC<FloatingFormatBubbleProps> = ({
       <button
         type="button"
         title="Bold Highlight (Cmd+B)"
-        onClick={() => applyFormat((t) => `**${t}**`)}
+        onClick={() => applyFormat("bold")}
         style={{
           background: "transparent",
           border: "none",
@@ -130,7 +163,7 @@ export const FloatingFormatBubble: React.FC<FloatingFormatBubbleProps> = ({
       <button
         type="button"
         title="Code Inline (Cmd+E)"
-        onClick={() => applyFormat((t) => `\`${t}\``)}
+        onClick={() => applyFormat("code")}
         style={{
           background: "transparent",
           border: "none",
@@ -160,7 +193,7 @@ export const FloatingFormatBubble: React.FC<FloatingFormatBubbleProps> = ({
       <button
         type="button"
         title="Italic (Cmd+I)"
-        onClick={() => applyFormat((t) => `*${t}*`)}
+        onClick={() => applyFormat("italic")}
         style={{
           background: "transparent",
           border: "none",
