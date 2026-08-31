@@ -53,9 +53,20 @@ export async function POST(req: NextRequest) {
     const clean = text.trim();
     const intake = analyzeIntake(clean);
 
-    const systemPrompt = `You are a master digest planner. You analyze source text and construct a lean, precise PRE-GENERATION PLAN for a 3-5 minute digest.
+    const strategy = intake.strategy;
 
-RULES FOR THE PLAN:
+    const systemPrompt = `You are a master digest planner operating under an AUTONOMOUS DOMAIN DIRECTIVE.
+You analyze source text and construct a lean, precise PRE-GENERATION PLAN for a 3-5 minute digest.
+
+═══ AUTONOMOUS DOMAIN ADAPTATION ═══
+Archetype: ${strategy?.label || "GENERAL ANALYSIS"}
+Expert Persona: ${strategy?.expertPersona || "Master Synthesizer"}
+Load-Bearing Focus: ${strategy?.loadBearingFocus || "Isolate core insight"}
+Pruning Strategy: ${strategy?.pruningRule || "Drop secondary fluff"}
+
+${strategy?.tailoredDirectives || ""}
+
+═══ CORE RULES FOR THE PLAN ═══
 1. Thesis: Exactly ONE sentence, under 20 words, stating the actual insight — NOT the topic.
    Bad: "An overview of how the Black-Scholes formula was developed."
    Good: "The breakthrough wasn't predicting where a stock goes. It was proving you never needed to know."
@@ -71,7 +82,8 @@ RULES FOR THE PLAN:
 5. Terms: 0-8 pieces of domain jargon.
 6. Skipped: Tangents, sponsor reads, repeated intros (>5% of source).`;
 
-    const userPrompt = `SOURCE FORMAT: ${intake.sourceFormat}
+    const userPrompt = `AUTONOMOUS ARCHETYPE: ${strategy?.label || "GENERAL"}
+SOURCE FORMAT: ${intake.sourceFormat}
 WORD COUNT: ${intake.wordCount}
 EXTRACTED ENTITIES: ${intake.namedEntities.join(", ") || "None"}
 YEARS DETECTED: ${intake.datesFound.join(", ") || "None"} (Span: ${intake.dateSpanYears ? `${intake.dateSpanYears} years` : "N/A"})
@@ -92,6 +104,7 @@ ${clean.slice(0, 14000)}`;
       intake,
       plan: {
         ...plan,
+        strategy,
         includeCast: plan.candidateCast.length >= 4,
         includeFigures: plan.candidateFigures.length > 0,
         includeTerms: plan.candidateTerms.length > 0,

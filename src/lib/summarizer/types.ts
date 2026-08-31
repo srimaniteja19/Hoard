@@ -133,6 +133,7 @@ export interface IntakeAnalysis {
   candidateFigures: CandidateFigureProposal[];
   hasTimestamps: boolean;
   paragraphsCount: number;
+  strategy?: import("./autonomousPrompt").AutonomousStrategy;
 }
 
 export interface DigestPlan {
@@ -151,4 +152,5 @@ export interface DigestPlan {
   includeClaimsAudit: boolean;
   includeSkippedFooter: boolean;
   depth: "concise" | "standard" | "thorough";
+  strategy?: import("./autonomousPrompt").AutonomousStrategy;
 }

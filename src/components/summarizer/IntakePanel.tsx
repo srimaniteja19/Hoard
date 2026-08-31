@@ -74,6 +74,25 @@ export const IntakePanel: React.FC<IntakePanelProps> = ({
             <b style={{ color: "#FFFFFF" }}>{intake.wordCount.toLocaleString()}</b> words · <b style={{ color: "#FFE600" }}>{intake.readMinutesSource} min</b> source read
           </span>
 
+          {intake.strategy && (
+            <span
+              style={{
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "10px",
+                fontWeight: 900,
+                padding: "3px 8px",
+                borderRadius: "2px",
+                background: "#181818",
+                color: intake.strategy.badgeColor || "#FFE600",
+                border: `1px solid ${intake.strategy.badgeColor || "#FFE600"}`,
+                letterSpacing: "0.04em",
+              }}
+              title={intake.strategy.loadBearingFocus}
+            >
+              🤖 {intake.strategy.label} ({intake.strategy.expertPersona})
+            </span>
+          )}
+
           {intake.dateSpanYears && (
             <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", color: "#FBBF24", background: "#1C1917", padding: "2px 6px", borderRadius: "2px", border: "1px solid #78350F" }}>
               ⏳ {intake.dateSpanYears}-yr span ({intake.datesFound.length} dates)

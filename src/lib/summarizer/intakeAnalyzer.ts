@@ -1,4 +1,5 @@
 import { IntakeAnalysis, SourceFormat, CandidateFigureProposal, FigureKind } from "./types";
+import { determineAutonomousStrategy } from "./autonomousPrompt";
 
 /**
  * Fast real-time intake analyzer for source text (<5ms execution time)
@@ -168,7 +169,7 @@ export function analyzeIntake(text: string): IntakeAnalysis {
   const paragraphs = clean.split(/\n\s*\n/).filter((p) => p.trim().length > 20);
   const paragraphsCount = Math.max(1, paragraphs.length);
 
-  return {
+  const partialIntake = {
     wordCount,
     charCount,
     readMinutesSource,
@@ -183,5 +184,12 @@ export function analyzeIntake(text: string): IntakeAnalysis {
     candidateFigures,
     hasTimestamps,
     paragraphsCount,
+  };
+
+  const strategy = determineAutonomousStrategy(clean, partialIntake);
+
+  return {
+    ...partialIntake,
+    strategy,
   };
 }

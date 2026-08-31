@@ -140,8 +140,17 @@ export async function POST(req: NextRequest) {
     }
 
     const clean = text.trim();
+    const strategy = planOverrides?.strategy;
 
     const systemPrompt = `You turn a source into a digest someone reads in 3–5 minutes instead of reading the original. Return one JSON object, nothing else.
+
+═══ AUTONOMOUS DOMAIN POSTURE ═══
+Domain Archetype: ${strategy?.label || "ANALYTICAL SYNTHESIS"}
+Persona & Voice: ${strategy?.expertPersona || "Master Subject Synthesizer"}
+Load-Bearing Priority: ${strategy?.loadBearingFocus || "Isolate core breakthrough"}
+Pruning Directive: ${strategy?.pruningRule || "Drop secondary filler"}
+
+${strategy?.tailoredDirectives || ""}
 
 ═══ THE ONE RULE ═══
 Write about the SUBJECT, not about the source. Never "the author explains", "this article covers", "the piece goes on to". Say the thing.
@@ -207,7 +216,10 @@ Only list content occupying more than roughly 5% of the source. Do not invent ta
 ═══ WHEN THE SOURCE IS THIN ═══
 Fewer sections, no figures, a short takeaway, and a line in skipped saying the content was mostly X. A short honest digest is a correct output. Padding is not.`;
 
-    const userPrompt = `USER PLAN PREFERENCES:
+    const userPrompt = `AUTONOMOUS DIRECTIVE APPLIED: ${strategy?.label || "GENERAL SYNTHESIS"}
+EXPERT PERSONA: ${strategy?.expertPersona || "Master Synthesizer"}
+
+USER PLAN PREFERENCES:
 - Include Cast Dossier: ${planOverrides?.includeCast ? "YES" : "NO"}
 - Include Figures: ${planOverrides?.includeFigures ? "YES" : "NO"}
 - Include Terms Glossary: ${planOverrides?.includeTerms ? "YES" : "NO"}

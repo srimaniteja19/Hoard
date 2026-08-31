@@ -86,6 +86,33 @@ export const PlanEditor: React.FC<PlanEditorProps> = ({
         </button>
       </div>
 
+      {/* ── AUTONOMOUS STRATEGY DIRECTIVE BANNER ── */}
+      {plan.strategy && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+            background: "#141414",
+            border: `1px solid ${plan.strategy.badgeColor || "#FFE600"}`,
+            padding: "10px 14px",
+            borderRadius: "3px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 900, color: plan.strategy.badgeColor || "#FFE600", letterSpacing: "0.04em" }}>
+              🤖 AUTONOMOUS DIRECTIVE: {plan.strategy.label}
+            </span>
+            <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", background: "#1E1E1E", color: "#FFFFFF", padding: "1px 6px", borderRadius: "2px" }}>
+              Persona: {plan.strategy.expertPersona}
+            </span>
+          </div>
+          <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", color: "#A3A3A3", marginTop: "2px" }}>
+            <b>Load-Bearing Priority:</b> {plan.strategy.loadBearingFocus}
+          </div>
+        </div>
+      )}
+
       {/* ── THESIS HYPOTHESIS ── */}
       <div
         style={{
