@@ -26,6 +26,7 @@ import { ExplainModal } from "@/components/notebooks/ExplainModal";
 import { TranscriptModal } from "@/components/notebooks/TranscriptModal";
 import { AddCourseModal } from "@/components/notebooks/AddCourseModal";
 import { AddPageModal } from "@/components/notebooks/AddPageModal";
+import { ConfirmModal } from "@/components/notebooks/ConfirmModal";
 import { playSound } from "@/lib/sound";
 import { Plus } from "lucide-react";
 
@@ -41,6 +42,21 @@ export default function NotebooksPage() {
   // Dialog / Modal States
   const [showAddCourseModal, setShowAddCourseModal] = useState(false);
   const [showAddPageModal, setShowAddPageModal] = useState(false);
+  const [confirmModalState, setConfirmModalState] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    confirmVariant: "danger" | "warning" | "default";
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    confirmLabel: "CONFIRM",
+    confirmVariant: "danger",
+    onConfirm: () => {},
+  });
 
   // AI Modal States
   const [diffOriginal, setDiffOriginal] = useState<Block[] | null>(null);
@@ -186,38 +202,50 @@ export default function NotebooksPage() {
     const targetLesson = targetModule?.lessons[lesIdx];
     if (!targetLesson) return;
 
-    if (!confirm(`Are you sure you want to delete the page "${targetLesson.title}"?`)) {
-      return;
-    }
+    setConfirmModalState({
+      isOpen: true,
+      title: "DELETE LESSON PAGE",
+      description: `Are you sure you want to delete "${targetLesson.title}"? All notes on this page will be permanently removed.`,
+      confirmLabel: "DELETE PAGE",
+      confirmVariant: "danger",
+      onConfirm: () => {
+        const updated = deleteLesson(currentCourse.id, targetLesson.id);
+        setCourses([...updated]);
 
-    playSound.pop();
-    const updated = deleteLesson(currentCourse.id, targetLesson.id);
-    setCourses([...updated]);
-
-    // Handle index updates if currently viewing the deleted lesson
-    if (modIdx === currentModuleIdx && lesIdx === currentLessonIdx) {
-      const remainingInMod = targetModule.lessons.length - 1;
-      if (remainingInMod > 0) {
-        setCurrentLessonIdx(Math.max(0, lesIdx - 1));
-      } else {
-        // Module is now empty, switch to previous module
-        const nextModIdx = Math.max(0, modIdx - 1);
-        setCurrentModuleIdx(nextModIdx);
-        setCurrentLessonIdx(0);
-      }
-    } else if (modIdx === currentModuleIdx && lesIdx < currentLessonIdx) {
-      setCurrentLessonIdx(currentLessonIdx - 1);
-    }
+        // Handle index updates if currently viewing the deleted lesson
+        if (modIdx === currentModuleIdx && lesIdx === currentLessonIdx) {
+          const remainingInMod = targetModule.lessons.length - 1;
+          if (remainingInMod > 0) {
+            setCurrentLessonIdx(Math.max(0, lesIdx - 1));
+          } else {
+            // Module is now empty, switch to previous module
+            const nextModIdx = Math.max(0, modIdx - 1);
+            setCurrentModuleIdx(nextModIdx);
+            setCurrentLessonIdx(0);
+          }
+        } else if (modIdx === currentModuleIdx && lesIdx < currentLessonIdx) {
+          setCurrentLessonIdx(currentLessonIdx - 1);
+        }
+        setConfirmModalState((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   const handleClearCurrentNotes = () => {
     if (!currentCourse || !currentLesson) return;
-    if (!confirm(`Reset all notes on "${currentLesson.title}" back to empty?`)) {
-      return;
-    }
-    playSound.pop();
-    const updated = clearLessonNotes(currentCourse.id, currentLesson.id);
-    setCourses([...updated]);
+
+    setConfirmModalState({
+      isOpen: true,
+      title: "CLEAR ALL NOTES?",
+      description: `Are you sure you want to clear all notes on "${currentLesson.title}"? This page will be reset to an empty state.`,
+      confirmLabel: "RESET TO EMPTY",
+      confirmVariant: "warning",
+      onConfirm: () => {
+        const updated = clearLessonNotes(currentCourse.id, currentLesson.id);
+        setCourses([...updated]);
+        setConfirmModalState((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   // AI: TIDY MY NOTES
@@ -964,6 +992,17 @@ export default function NotebooksPage() {
         onClose={() => setShowAddPageModal(false)}
         onSubmit={handleCreatePage}
         courseTitle={currentCourse?.title}
+      />
+
+      {/* 7. Confirmation Modal Popup */}
+      <ConfirmModal
+        isOpen={confirmModalState.isOpen}
+        onClose={() => setConfirmModalState((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModalState.onConfirm}
+        title={confirmModalState.title}
+        description={confirmModalState.description}
+        confirmLabel={confirmModalState.confirmLabel}
+        confirmVariant={confirmModalState.confirmVariant}
       />
     </div>
   );
