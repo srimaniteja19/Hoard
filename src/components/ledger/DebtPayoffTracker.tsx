@@ -8,6 +8,7 @@ import {
 } from "@/lib/ledger/types";
 import { formatCurrency, formatSignedCurrency, getCurrencySymbol } from "@/lib/ledger/formatters";
 import { calculateDebtPayoff } from "@/lib/ledger/debtPayoff";
+import { getDebtCycleRecord, recordCyclePayment } from "@/lib/ledger/debtCycleTracker";
 import { playSound } from "@/lib/sound";
 import { DebtAmortizationChart } from "./charts/DebtAmortizationChart";
 import { CreditCard, DollarSign, CheckCircle, Plus, Minus, TrendingUp as TrendingUpIcon } from "lucide-react";
@@ -49,14 +50,29 @@ const PaymentPanel: React.FC<{
   const monthlyRate = (debt.interestRate || 0) / 100 / 12;
   const monthlyInterest = Math.round(debt.balance * monthlyRate * 100) / 100;
 
+  // Load current monthly cycle payment history
+  const [cycleRecord, setCycleRecord] = useState(() =>
+    getDebtCycleRecord(debt.id, monthlyInterest)
+  );
+
+  const interestPaidThisMonth = cycleRecord.interestPaidThisCycle;
+  const remainingInterestDue = Math.max(0, monthlyInterest - interestPaidThisMonth);
+  const isInterestFullyCovered = remainingInterestDue <= 0.009;
+
   const applyPayment = async (paymentAmount: number, label: string) => {
     if (paymentAmount <= 0 || saving) return;
     setSaving(true);
     try {
-      // Split payment: interest first, then principal reduction
-      const interestPortion = Math.min(monthlyInterest, paymentAmount);
-      const principalReduction = Math.max(0, paymentAmount - interestPortion);
-      const newBalance = Math.max(0, debt.balance - principalReduction);
+      // Calculate split and record payment in this month's cycle
+      const { record: updatedCycle, calculation } = recordCyclePayment(
+        debt.id,
+        paymentAmount,
+        monthlyInterest,
+        label
+      );
+      setCycleRecord(updatedCycle);
+
+      const newBalance = Math.round(Math.max(0, debt.balance - calculation.principalReduction) * 100) / 100;
 
       const res = await fetch(`/api/financial/debts/${debt.id}`, {
         method: "PATCH",
@@ -70,16 +86,23 @@ const PaymentPanel: React.FC<{
       const updated = await res.json();
       playSound.fileIt();
 
-      const interestNote = interestPortion > 0
-        ? ` (Interest: ${formatCurrency(interestPortion, 2, currency)} · Principal: ${formatCurrency(principalReduction, 2, currency)})`
-        : "";
+      let interestNote = "";
+      if (calculation.interestPortion > 0) {
+        const clearedStatus = calculation.isInterestFullyCleared
+          ? " [Monthly interest 100% cleared! ✓]"
+          : ` [Remaining interest: ${formatCurrency(calculation.remainingInterestAfterPayment, 2, currency)}]`;
+        interestNote = ` (Interest: ${formatCurrency(calculation.interestPortion, 2, currency)}${clearedStatus} · Principal: ${formatCurrency(calculation.principalReduction, 2, currency)})`;
+      } else {
+        interestNote = ` (Interest: $0.00 [Already cleared this cycle ✓] · Principal: ${formatCurrency(calculation.principalReduction, 2, currency)})`;
+      }
+
       setFlash(
         `${label} of ${formatCurrency(paymentAmount, 2, currency)} applied!${interestNote} New balance: ${formatCurrency(newBalance, 2, currency)}`
       );
       setTimeout(() => {
         onUpdated(updated);
         onClose();
-      }, 2200);
+      }, 2400);
     } catch {
       setFlash("Payment failed — please try again.");
     } finally {
@@ -160,25 +183,43 @@ const PaymentPanel: React.FC<{
       {monthlyInterest > 0 && (
         <div
           style={{
-            background: "#FFF9C4",
-            border: "1px solid #D97706",
+            background: isInterestFullyCovered ? "#F0FDF4" : "#FFF9C4",
+            border: `1px solid ${isInterestFullyCovered ? "#16A34A" : "#D97706"}`,
             borderRadius: "3px",
-            padding: "7px 10px",
+            padding: "8px 10px",
             display: "flex",
-            flexWrap: "wrap",
-            gap: "10px",
+            flexDirection: "column",
+            gap: "4px",
             fontFamily: "var(--mono, monospace)",
             fontSize: "10.5px",
           }}
         >
-          <span style={{ color: "#92400E", fontWeight: 900 }}>⚠ THIS MONTH'S INTEREST:</span>
-          <span style={{ color: "#DC2626", fontWeight: 900 }}>{formatCurrency(monthlyInterest, 2, currency)}</span>
-          <span style={{ color: "#555555" }}>
-            Of your <b>{formatCurrency(debt.minPayment, 2, currency)}</b> minimum,{" "}
-            <b style={{ color: "#DC2626" }}>{formatCurrency(Math.min(monthlyInterest, debt.minPayment), 2, currency)}</b> goes to interest
-            {" "}and only{" "}
-            <b style={{ color: "#15803D" }}>{formatCurrency(Math.max(0, debt.minPayment - monthlyInterest), 2, currency)}</b> reduces principal.
-          </span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+            <span style={{ color: isInterestFullyCovered ? "#15803D" : "#92400E", fontWeight: 900 }}>
+              {isInterestFullyCovered ? "✓ THIS MONTH'S INTEREST FULLY CLEARED:" : "⚠ THIS MONTH'S ACCRUED INTEREST:"}
+            </span>
+            <span style={{ color: isInterestFullyCovered ? "#15803D" : "#DC2626", fontWeight: 900 }}>
+              {formatCurrency(monthlyInterest, 2, currency)}
+            </span>
+          </div>
+
+          {interestPaidThisMonth > 0 && !isInterestFullyCovered && (
+            <div style={{ color: "#4B5563" }}>
+              Already credited this month: <b style={{ color: "#15803D" }}>{formatCurrency(interestPaidThisMonth, 2, currency)}</b> · Remaining to clear: <b style={{ color: "#DC2626" }}>{formatCurrency(remainingInterestDue, 2, currency)}</b>
+            </div>
+          )}
+
+          <div style={{ color: "#555555" }}>
+            {isInterestFullyCovered ? (
+              <span style={{ color: "#166534", fontWeight: 800 }}>
+                Next payment goes <b>100% straight to principal reduction</b> ($0 interest deducted).
+              </span>
+            ) : (
+              <span>
+                Any payment above <b>{formatCurrency(remainingInterestDue, 2, currency)}</b> goes 100% to principal reduction.
+              </span>
+            )}
+          </div>
         </div>
       )}
 
