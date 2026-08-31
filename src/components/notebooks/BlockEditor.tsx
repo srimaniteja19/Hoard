@@ -405,62 +405,115 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         onChange={handleFileUpload}
       />
 
-      {/* Mini Undo / Redo Bar */}
+      {/* Top Document Controls: Inserters + Undo/Redo */}
       <div
         style={{
           display: "flex",
-          justifyContent: "flex-end",
+          justifyContent: "space-between",
           alignItems: "center",
-          gap: "8px",
-          marginBottom: "4px",
-          fontFamily: "var(--mono, monospace)",
-          fontSize: "9px",
-          fontWeight: 700,
-          opacity: 0.5,
+          gap: "10px",
+          marginBottom: "12px",
+          paddingBottom: "8px",
+          borderBottom: "1.5px solid rgba(10,10,10,0.12)",
+          flexWrap: "wrap",
         }}
       >
-        <button
-          type="button"
-          disabled={historyIndex <= 0}
-          onClick={handleUndo}
-          title="Undo (Cmd+Z)"
+        {/* Quick Block Inserter Chips */}
+        <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+          {[
+            { label: "¶ Text", type: "paragraph" },
+            { label: "H1", type: "h2" },
+            { label: "H2", type: "h3" },
+            { label: "<> Code", type: "code" },
+            { label: "☑ Todo", type: "todo" },
+            { label: '" Quote', type: "quote" },
+            { label: "! Gotcha", type: "gotcha" },
+            { label: "📷 Image", type: "image" },
+          ].map((chip) => (
+            <button
+              key={chip.type}
+              type="button"
+              onClick={() => handleInsertBlock(chip.type, blocks.length - 1)}
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(10,10,10,0.25)",
+                color: "#0A0A0A",
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "8.5px",
+                fontWeight: 700,
+                padding: "3px 7px",
+                cursor: "pointer",
+                borderRadius: "2px",
+                transition: "all 0.1s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#FCE94F";
+                e.currentTarget.style.borderColor = "#0A0A0A";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.borderColor = "rgba(10,10,10,0.25)";
+              }}
+            >
+              ＋ {chip.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Undo / Redo */}
+        <div
           style={{
-            background: "transparent",
-            border: "1px solid rgba(10,10,10,0.2)",
-            color: "inherit",
-            cursor: historyIndex > 0 ? "pointer" : "default",
-            opacity: historyIndex > 0 ? 1 : 0.3,
-            padding: "2px 6px",
-            display: "inline-flex",
+            display: "flex",
             alignItems: "center",
-            gap: "3px",
-            fontSize: "8.5px",
+            gap: "6px",
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "9px",
+            fontWeight: 700,
           }}
         >
-          <RotateCcw size={10} />
-          UNDO
-        </button>
-        <button
-          type="button"
-          disabled={historyIndex >= history.length - 1}
-          onClick={handleRedo}
-          title="Redo (Cmd+Shift+Z)"
-          style={{
-            background: "transparent",
-            border: "1px solid rgba(10,10,10,0.2)",
-            color: "inherit",
-            cursor: historyIndex < history.length - 1 ? "pointer" : "default",
-            opacity: historyIndex < history.length - 1 ? 1 : 0.3,
-            padding: "2px 6px",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "3px",
-            fontSize: "8.5px",
-          }}
-        >
-          <RotateCw size={10} />
-          REDO
-        </button>
+          <button
+            type="button"
+            disabled={historyIndex <= 0}
+            onClick={handleUndo}
+            title="Undo (Cmd+Z)"
+            style={{
+              background: "transparent",
+              border: "1px solid rgba(10,10,10,0.2)",
+              color: "inherit",
+              cursor: historyIndex > 0 ? "pointer" : "default",
+              opacity: historyIndex > 0 ? 1 : 0.3,
+              padding: "2px 6px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "3px",
+              fontSize: "8.5px",
+            }}
+          >
+            <RotateCcw size={10} />
+            UNDO
+          </button>
+          <button
+            type="button"
+            disabled={historyIndex >= history.length - 1}
+            onClick={handleRedo}
+            title="Redo (Cmd+Shift+Z)"
+            style={{
+              background: "transparent",
+              border: "1px solid rgba(10,10,10,0.2)",
+              color: "inherit",
+              cursor: historyIndex < history.length - 1 ? "pointer" : "default",
+              opacity: historyIndex < history.length - 1 ? 1 : 0.3,
+              padding: "2px 6px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "3px",
+              fontSize: "8.5px",
+            }}
+          >
+            <RotateCw size={10} />
+            REDO
+          </button>
+        </div>
       </div>
 
       {/* Note Blocks List */}

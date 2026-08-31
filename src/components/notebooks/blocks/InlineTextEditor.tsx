@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useCallback } from "react";
+import React, { useRef, useEffect } from "react";
 import { Block } from "@/lib/notebooks/blocks";
 import { playSound } from "@/lib/sound";
 
@@ -21,39 +21,6 @@ interface InlineTextEditorProps {
   autoFocus?: boolean;
 }
 
-/**
- * Converts raw markdown/HTML into rich formatted HTML for the WYSIWYG contentEditable view
- */
-export const formatToHTML = (text: string): string => {
-  if (!text) return "";
-
-  let html = text;
-
-  // Convert **bold** to <strong style="...">
-  html = html.replace(
-    /\*\*(.+?)\*\*/g,
-    '<strong style="background: #FCE94F; color: #0A0A0A; padding: 0 4px; border-radius: 1px;">$1</strong>'
-  );
-
-  // Convert `code` to <code style="...">
-  html = html.replace(
-    /`([^`]+)`/g,
-    '<code style="font-family: var(--mono, monospace); font-size: 0.88em; background: #EBE7DC; border: 1.5px solid #0A0A0A; padding: 1px 5px; color: #0A0A0A;">$1</code>'
-  );
-
-  // Convert *italic* or _italic_ to <em>
-  html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "<em>$1</em>");
-  html = html.replace(/(?<!_)_([^_]+)_(?!_)/g, "<em>$1</em>");
-
-  // Format existing <strong> tags with the signature yellow highlight if not styled
-  html = html.replace(
-    /<strong>((?!style=)[\s\S])*?<\/strong>/gi,
-    (match) => match.replace('<strong', '<strong style="background: #FCE94F; color: #0A0A0A; padding: 0 4px; border-radius: 1px;"')
-  );
-
-  return html;
-};
-
 export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   value,
   onChange,
@@ -64,325 +31,218 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   onTransformBlock,
   onSlashCommand,
   onSlashKeyDown,
-  as = "p",
   style = {},
-  placeholder = "Type something, or press '/' for commands…",
+  placeholder = "Type note, or # for heading, > for quote, ! for callout…",
   autoFocus = false,
 }) => {
-  const elRef = useRef<HTMLElement>(null);
-  const isComposingRef = useRef(false);
-  const lastSavedValueRef = useRef(value);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Set initial content without causing React reconciliation loops
-  useEffect(() => {
-    const el = elRef.current;
+  // Auto-resize textarea to fit text naturally without scrollbars
+  const adjustHeight = () => {
+    const el = textareaRef.current;
     if (el) {
-      if (document.activeElement !== el) {
-        const formatted = formatToHTML(value);
-        if (el.innerHTML !== formatted) {
-          el.innerHTML = formatted;
-        }
-      }
-      lastSavedValueRef.current = value;
+      el.style.height = "auto";
+      el.style.height = `${Math.max(el.scrollHeight, 26)}px`;
     }
+  };
+
+  useEffect(() => {
+    adjustHeight();
   }, [value]);
 
-  // Handle auto-focus on mount
   useEffect(() => {
-    if (autoFocus && elRef.current) {
-      elRef.current.focus();
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(elRef.current);
-      range.collapse(false);
-      selection?.removeAllRanges();
-      selection?.addRange(range);
+    if (autoFocus && textareaRef.current) {
+      textareaRef.current.focus();
+      const len = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(len, len);
     }
   }, [autoFocus]);
 
-  const saveContent = useCallback(() => {
-    if (!elRef.current) return;
-    const currentHTML = elRef.current.innerHTML;
-    // Normalize content
-    let clean = currentHTML
-      .replace(/<strong[^>]*style="[^"]*background:[^"]*"[^>]*>([\s\S]*?)<\/strong>/gi, "**$1**")
-      .replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, "**$1**")
-      .replace(/<b[^>]*>([\s\S]*?)<\/b>/gi, "**$1**")
-      .replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, "`$1`")
-      .replace(/<em[^>]*>([\s\S]*?)<\/em>/gi, "*$1*")
-      .replace(/<i[^>]*>([\s\S]*?)<\/i>/gi, "*$1*")
-      .replace(/<br\s*[\/]?>/gi, "\n")
-      .replace(/&nbsp;/g, " ")
-      .replace(/<div>/gi, "\n")
-      .replace(/<\/div>/gi, "");
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
 
-    // Strip remaining tags if any
-    clean = clean.replace(/<\/?[^>]+(>|$)/g, "");
-
-    if (clean !== lastSavedValueRef.current) {
-      lastSavedValueRef.current = clean;
-      onChange(clean);
-    }
-  }, [onChange]);
-
-  const handleInput = () => {
-    if (isComposingRef.current || !elRef.current) return;
-
-    const rawText = elRef.current.innerText || "";
-
-    // ── 1. Notion-Style Block Markdown Auto-Transformations ──
+    // ── Notion-style Markdown Auto-Transformations ──
     if (onTransformBlock) {
-      // # -> Heading 1
-      if (rawText === "#\n" || rawText === "# " || rawText.startsWith("# ")) {
-        const textAfter = rawText.replace(/^#\s*/, "").replace(/\n$/, "");
+      // 1. # -> Heading 1
+      if (val === "# " || val === "#\n") {
         playSound.pop();
-        if (elRef.current) elRef.current.innerHTML = "";
-        onTransformBlock({ type: "heading", level: 2, text: textAfter });
+        onTransformBlock({ type: "heading", level: 2, text: "" });
         return;
       }
-      // ## -> Heading 2
-      if (rawText === "##\n" || rawText === "## " || rawText.startsWith("## ")) {
-        const textAfter = rawText.replace(/^##\s*/, "").replace(/\n$/, "");
+      // 2. ## -> Heading 2
+      if (val === "## " || val === "##\n") {
         playSound.pop();
-        if (elRef.current) elRef.current.innerHTML = "";
-        onTransformBlock({ type: "heading", level: 2, text: textAfter });
+        onTransformBlock({ type: "heading", level: 2, text: "" });
         return;
       }
-      // ### -> Heading 3
-      if (rawText === "###\n" || rawText === "### " || rawText.startsWith("### ")) {
-        const textAfter = rawText.replace(/^###\s*/, "").replace(/\n$/, "");
+      // 3. ### -> Heading 3
+      if (val === "### " || val === "###\n") {
         playSound.pop();
-        if (elRef.current) elRef.current.innerHTML = "";
-        onTransformBlock({ type: "heading", level: 3, text: textAfter });
+        onTransformBlock({ type: "heading", level: 3, text: "" });
         return;
       }
-      // > -> Quote Block
-      if (rawText === ">\n" || rawText === "> " || rawText.startsWith("> ")) {
-        const textAfter = rawText.replace(/^>\s*/, "").replace(/\n$/, "");
+      // 4. > -> Quote
+      if (val === "> " || val === ">\n") {
         playSound.pop();
-        if (elRef.current) elRef.current.innerHTML = "";
-        onTransformBlock({ type: "quote", text: textAfter });
+        onTransformBlock({ type: "quote", text: "" });
         return;
       }
-      // [] or - [ ] -> To-do Checklist
-      if (rawText === "[]\n" || rawText === "[] " || rawText === "- [ ] " || rawText.startsWith("[] ") || rawText.startsWith("- [ ] ")) {
-        const textAfter = rawText.replace(/^(\[\]|- \[ \])\s*/, "").replace(/\n$/, "");
+      // 5. [] or - [ ] -> To-do Checklist
+      if (val === "[] " || val === "[]\n" || val === "- [ ] " || val === "- [ ]\n") {
         playSound.pop();
-        if (elRef.current) elRef.current.innerHTML = "";
-        onTransformBlock({ type: "todo", items: [{ text: textAfter, done: false }] });
+        onTransformBlock({ type: "todo", items: [{ text: "", done: false }] });
         return;
       }
-      // ! -> Gotcha Callout (Pink)
-      if (rawText === "!\n" || rawText === "! " || rawText.startsWith("!gotcha ")) {
-        const textAfter = rawText.replace(/^(!|!gotcha)\s*/, "").replace(/\n$/, "");
+      // 6. ! -> Gotcha Callout (Pink)
+      if (val === "! " || val === "!\n" || val === "!gotcha ") {
         playSound.pop();
-        if (elRef.current) elRef.current.innerHTML = "";
-        onTransformBlock({ type: "callout", kind: "gotcha", text: textAfter });
+        onTransformBlock({ type: "callout", kind: "gotcha", text: "" });
         return;
       }
-      // ? -> Question Callout (Yellow)
-      if (rawText === "?\n" || rawText === "? " || rawText.startsWith("!q ")) {
-        const textAfter = rawText.replace(/^(\?|!q)\s*/, "").replace(/\n$/, "");
+      // 7. ? -> Question Callout (Yellow)
+      if (val === "? " || val === "?\n" || val === "!q ") {
         playSound.pop();
-        if (elRef.current) elRef.current.innerHTML = "";
-        onTransformBlock({ type: "callout", kind: "question", text: textAfter });
+        onTransformBlock({ type: "callout", kind: "question", text: "" });
         return;
       }
-      // !fact or ★ -> Key Takeaway Callout (Lime)
-      if (rawText.startsWith("!fact ") || rawText.startsWith("★ ")) {
-        const textAfter = rawText.replace(/^(!fact|★)\s*/, "").replace(/\n$/, "");
+      // 8. !fact -> Key Takeaway Callout (Lime)
+      if (val === "!fact " || val === "★ ") {
         playSound.pop();
-        if (elRef.current) elRef.current.innerHTML = "";
-        onTransformBlock({ type: "callout", kind: "fact", text: textAfter });
+        onTransformBlock({ type: "callout", kind: "fact", text: "" });
         return;
       }
-      // ``` -> Code Block
-      if (rawText.startsWith("```") && (rawText.includes("\n") || rawText.endsWith(" "))) {
-        const lang = rawText.replace(/^```/, "").trim().toUpperCase() || "PYTHON";
+      // 9. ``` -> Code Block
+      if (val === "```\n" || val === "``` " || (val.startsWith("```") && (val.includes("\n") || val.endsWith(" ")))) {
         playSound.pop();
-        if (elRef.current) elRef.current.innerHTML = "";
-        onTransformBlock({ type: "code", lang, note: "SNIPPET", code: "# Write code snippet here\n" });
+        const lang = val.replace(/^```/, "").trim().toUpperCase() || "PYTHON";
+        onTransformBlock({ type: "code", lang, note: "SNIPPET", code: "# Write code here\n" });
         return;
       }
     }
 
-    // ── 2. Live Inline Markdown Auto-Replacements (**bold**, `code`, *italic*) ──
-    const html = elRef.current.innerHTML;
+    onChange(val);
 
-    // Check if user just closed a markdown tag like **word** + space
-    if (/\*\*(.+?)\*\*\s$/.test(rawText) || /`([^`]+)`\s$/.test(rawText) || /\*([^*]+)\*\s$/.test(rawText)) {
-      const formatted = formatToHTML(rawText);
-      elRef.current.innerHTML = formatted;
-      // Move cursor to end
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(elRef.current);
-      range.collapse(false);
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-    }
-
-    // ── 3. Slash Command Trigger ──
+    // Slash command trigger
     if (onSlashCommand) {
-      if (rawText.startsWith("/")) {
-        const rect = elRef.current.getBoundingClientRect();
-        onSlashCommand(rawText.trim(), rect);
+      if (val.startsWith("/")) {
+        const rect = textareaRef.current?.getBoundingClientRect() || null;
+        onSlashCommand(val, rect);
       } else {
         onSlashCommand("", null);
       }
     }
-
-    saveContent();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
-    // Check if slash menu handled this key event
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // If slash menu handled key
     if (onSlashKeyDown && onSlashKeyDown(e)) {
       return;
     }
 
-    // Enter without Shift -> create new block below
-    if (e.key === "Enter" && !e.shiftKey) {
+    const el = e.currentTarget;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+
+    // Backspace on empty line -> delete block & focus previous
+    if (e.key === "Backspace" && value === "") {
       e.preventDefault();
-      saveContent();
-      if (onInsertBelow) {
-        playSound.click();
-        onInsertBelow();
+      if (onDeleteBlock) {
+        playSound.pop();
+        onDeleteBlock();
+      }
+      if (onFocusPrevious) {
+        onFocusPrevious();
       }
       return;
     }
 
-    // Backspace on empty -> delete block & focus previous
-    if (e.key === "Backspace") {
-      const text = elRef.current?.innerText?.trim() || "";
-      if (text === "") {
-        e.preventDefault();
-        if (onDeleteBlock) {
-          playSound.pop();
-          onDeleteBlock();
-        }
-        if (onFocusPrevious) {
-          onFocusPrevious();
-        }
-        return;
-      }
-    }
-
-    // Cmd+B / Ctrl+B -> WYSIWYG Bold with signature highlight
+    // Cmd+B / Ctrl+B -> wrap selection with **
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
       e.preventDefault();
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
-        const selectedText = selection.toString();
-        const span = document.createElement("strong");
-        span.style.background = "#FCE94F";
-        span.style.color = "#0A0A0A";
-        span.style.padding = "0 4px";
-        span.style.borderRadius = "1px";
-        span.textContent = selectedText;
-
-        const range = selection.getRangeAt(0);
-        range.deleteContents();
-        range.insertNode(span);
-
-        // Move caret after formatted span
-        range.setStartAfter(span);
-        range.setEndAfter(span);
-        selection.removeAllRanges();
-        selection.addRange(range);
-
-        saveContent();
-        playSound.click();
-      }
+      const selected = value.slice(start, end);
+      const wrapped = selected ? `**${selected}**` : `****`;
+      const next = value.slice(0, start) + wrapped + value.slice(end);
+      onChange(next);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const newPos = selected ? start + wrapped.length : start + 2;
+          textareaRef.current.setSelectionRange(newPos, newPos);
+        }
+      }, 0);
       return;
     }
 
-    // Cmd+E / Ctrl+E -> WYSIWYG Inline Code badge
+    // Cmd+E / Ctrl+E -> wrap selection with `
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") {
       e.preventDefault();
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
-        const selectedText = selection.toString();
-        const code = document.createElement("code");
-        code.style.fontFamily = "var(--mono, monospace)";
-        code.style.fontSize = "0.88em";
-        code.style.background = "#EBE7DC";
-        code.style.border = "1.5px solid #0A0A0A";
-        code.style.padding = "1px 5px";
-        code.style.color = "#0A0A0A";
-        code.textContent = selectedText;
-
-        const range = selection.getRangeAt(0);
-        range.deleteContents();
-        range.insertNode(code);
-
-        range.setStartAfter(code);
-        range.setEndAfter(code);
-        selection.removeAllRanges();
-        selection.addRange(range);
-
-        saveContent();
-        playSound.click();
-      }
+      const selected = value.slice(start, end);
+      const wrapped = selected ? `\`${selected}\`` : `\`\``;
+      const next = value.slice(0, start) + wrapped + value.slice(end);
+      onChange(next);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const newPos = selected ? start + wrapped.length : start + 1;
+          textareaRef.current.setSelectionRange(newPos, newPos);
+        }
+      }, 0);
       return;
     }
 
-    // Cmd+I / Ctrl+I -> WYSIWYG Italic
+    // Cmd+I / Ctrl+I -> wrap selection with *
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "i") {
       e.preventDefault();
-      document.execCommand("italic");
-      saveContent();
+      const selected = value.slice(start, end);
+      const wrapped = selected ? `*${selected}*` : `**`;
+      const next = value.slice(0, start) + wrapped + value.slice(end);
+      onChange(next);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const newPos = selected ? start + wrapped.length : start + 1;
+          textareaRef.current.setSelectionRange(newPos, newPos);
+        }
+      }, 0);
       return;
     }
 
-    // ArrowUp at start -> previous block
-    if (e.key === "ArrowUp") {
-      const sel = window.getSelection();
-      if (sel && sel.anchorOffset === 0) {
-        if (onFocusPrevious) {
-          onFocusPrevious();
-        }
+    // ArrowUp at top position -> move to previous block
+    if (e.key === "ArrowUp" && start === 0 && end === 0) {
+      if (onFocusPrevious) {
+        onFocusPrevious();
       }
     }
 
-    // ArrowDown at end -> next block
-    if (e.key === "ArrowDown") {
-      const text = elRef.current?.innerText || "";
-      const sel = window.getSelection();
-      if (sel && sel.anchorOffset >= text.length - 1) {
-        if (onFocusNext) {
-          onFocusNext();
-        }
+    // ArrowDown at bottom position -> move to next block
+    if (e.key === "ArrowDown" && start === value.length && end === value.length) {
+      if (onFocusNext) {
+        onFocusNext();
       }
     }
   };
 
-  const Tag = as as any;
-
   return (
-    <Tag
-      ref={elRef}
-      contentEditable
-      suppressContentEditableWarning
-      onInput={handleInput}
-      onBlur={saveContent}
+    <textarea
+      ref={textareaRef}
+      value={value}
+      onChange={handleChange}
       onKeyDown={handleKeyDown}
-      onCompositionStart={() => (isComposingRef.current = true)}
-      onCompositionEnd={() => {
-        isComposingRef.current = false;
-        handleInput();
-      }}
-      data-placeholder={placeholder}
+      placeholder={placeholder}
+      rows={1}
       style={{
-        outline: "none",
-        border: "none",
+        width: "100%",
         background: "transparent",
-        minHeight: "1.4em",
-        wordBreak: "break-word",
-        whiteSpace: "pre-wrap",
-        cursor: "text",
-        borderRadius: "2px",
+        border: "none",
+        outline: "none",
+        resize: "none",
+        overflow: "hidden",
+        display: "block",
+        padding: 0,
         margin: 0,
+        color: "inherit",
+        fontFamily: "inherit",
+        fontSize: "inherit",
+        lineHeight: "inherit",
+        fontWeight: "inherit",
+        letterSpacing: "inherit",
         ...style,
       }}
     />
