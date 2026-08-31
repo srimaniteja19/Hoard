@@ -4,7 +4,7 @@ import { z } from "zod";
 import { languageModel, gatewayProviderOptions, gatewayErrorMessage } from "@/lib/ai/models";
 
 export const runtime = "nodejs";
-const NOTEBOOK_MODEL = "google/gemini-3.5-flash";
+const NOTEBOOK_MODEL = "google/gemini-3.5-flash-lite";
 
 const CollisionSchema = z.object({
   collisions: z
@@ -65,6 +65,11 @@ ${JSON.stringify(coursesDump, null, 2).slice(0, 16000)}`;
       schema: CollisionSchema,
       system: COLLISION_SYSTEM,
       prompt: userPrompt,
+      providerOptions: {
+        google: {
+          thinking: { budgetTokens: 0 },
+        },
+      },
       ...gatewayProviderOptions(NOTEBOOK_MODEL, ["feature:notebook-collisions"]),
     });
 

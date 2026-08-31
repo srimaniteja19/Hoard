@@ -12,6 +12,7 @@ interface OutlineSidebarProps {
   currentLessonIndex: number;
   onSelectCourse: (index: number) => void;
   onSelectLesson: (moduleIndex: number, lessonIndex: number) => void;
+  onDeleteLesson?: (moduleIndex: number, lessonIndex: number) => void;
   onBackToIndex: () => void;
   onNewPage: () => void;
 }
@@ -23,6 +24,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   currentLessonIndex,
   onSelectCourse,
   onSelectLesson,
+  onDeleteLesson,
   onBackToIndex,
   onNewPage,
 }) => {
@@ -263,6 +265,30 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                         {les.meta}
                       </em>
                     </div>
+                    {onDeleteLesson && (
+                      <button
+                        type="button"
+                        title={`Delete ${les.title}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteLesson(modIdx, lesIdx);
+                        }}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          color: isSelected ? "#F3F0E8" : "#991B1B",
+                          opacity: 0.35,
+                          cursor: "pointer",
+                          fontSize: "11px",
+                          padding: "2px 4px",
+                          marginTop: "2px",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                 );
               })}

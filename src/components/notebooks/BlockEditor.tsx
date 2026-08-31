@@ -16,6 +16,7 @@ const SLASH_MENU_ITEMS: { type: string; glyph: string; label: string; shortcut: 
   { type: "h2", glyph: "H2", label: "Heading 2", shortcut: "/h2" },
   { type: "h3", glyph: "H3", label: "Heading 3", shortcut: "/h3" },
   { type: "paragraph", glyph: "¶", label: "Text paragraph", shortcut: "/text" },
+  { type: "image", glyph: "📷", label: "Paste / Upload Image", shortcut: "/image" },
   { type: "gotcha", glyph: "!", label: "Gotcha callout (Pink)", shortcut: "/gotcha" },
   { type: "question", glyph: "?", label: "Question for me (Yellow)", shortcut: "/q" },
   { type: "fact", glyph: "★", label: "Key takeaway (Lime)", shortcut: "/fact" },
@@ -36,6 +37,8 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   const [showSlash, setShowSlash] = useState(false);
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [insertAfterIdx, setInsertAfterIdx] = useState<number | undefined>(undefined);
 
   const handleUpdateBlock = (index: number, updated: Block) => {
     const next = [...blocks];
@@ -63,6 +66,14 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
 
   const handleInsertBlock = (type: string, afterIndex?: number) => {
     playSound.click();
+
+    if (type === "image") {
+      setInsertAfterIdx(afterIndex);
+      fileInputRef.current?.click();
+      setShowSlash(false);
+      return;
+    }
+
     let newBlock: Block;
 
     switch (type) {
@@ -117,6 +128,34 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     setShowSlash(false);
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        const imageBlock: Block = {
+          id: generateBlockId(),
+          type: "image",
+          url: dataUrl,
+          caption: file.name || "IMAGE ATTACHMENT",
+        };
+        const next = [...blocks];
+        if (typeof insertAfterIdx === "number") {
+          next.splice(insertAfterIdx + 1, 0, imageBlock);
+        } else {
+          next.push(imageBlock);
+        }
+        onChange(next);
+        playSound.fileIt();
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       setShowSlash(false);
@@ -131,10 +170,56 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     setShowSlash(/^\/\w*$/.test(val.trim()));
   };
 
-  // Handle URL and clipboard image pastes
+  // Handle image pasting (clipboard files & image URLs) and link cards
   const handlePaste = (e: React.ClipboardEvent) => {
-    const text = e.clipboardData.getData("text");
+    // 1. Direct Clipboard Image Paste (e.g. screenshots, copied images)
+    const items = e.clipboardData?.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith("image/")) {
+          const file = items[i].getAsFile();
+          if (file) {
+            e.preventDefault();
+            const reader = new FileReader();
+            reader.onload = (uploadEvent) => {
+              const dataUrl = uploadEvent.target?.result as string;
+              if (dataUrl) {
+                const imageBlock: Block = {
+                  id: generateBlockId(),
+                  type: "image",
+                  url: dataUrl,
+                  caption: `PASTED IMAGE · ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+                };
+                onChange([...blocks, imageBlock]);
+                setNewInput("");
+                playSound.fileIt();
+              }
+            };
+            reader.readAsDataURL(file);
+            return;
+          }
+        }
+      }
+    }
 
+    const text = e.clipboardData?.getData("text");
+
+    // 2. Image URL Paste
+    if (text && (/\.(png|jpg|jpeg|gif|webp|svg)(\?.*)?$/i.test(text.trim()) || text.trim().startsWith("data:image/"))) {
+      e.preventDefault();
+      const imageBlock: Block = {
+        id: generateBlockId(),
+        type: "image",
+        url: text.trim(),
+        caption: "PASTED IMAGE",
+      };
+      onChange([...blocks, imageBlock]);
+      setNewInput("");
+      playSound.fileIt();
+      return;
+    }
+
+    // 3. Web URL Paste (into a link preview card)
     if (text && /^https?:\/\//i.test(text.trim())) {
       e.preventDefault();
       try {
@@ -156,8 +241,47 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     }
   };
 
+  // Drag and Drop Images directly into note area
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (uploadEvent) => {
+          const dataUrl = uploadEvent.target?.result as string;
+          if (dataUrl) {
+            const imageBlock: Block = {
+              id: generateBlockId(),
+              type: "image",
+              url: dataUrl,
+              caption: file.name || "DROPPED IMAGE",
+            };
+            onChange([...blocks, imageBlock]);
+            playSound.fileIt();
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }} onPaste={handlePaste}>
+    <div
+      style={{ display: "flex", flexDirection: "column", gap: "2px" }}
+      onPaste={handlePaste}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={handleDrop}
+    >
+      {/* Hidden Image File Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={handleFileUpload}
+      />
       {/* Blocks List */}
       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
         {blocks.map((block, idx) => {

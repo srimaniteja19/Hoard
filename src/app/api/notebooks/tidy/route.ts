@@ -5,34 +5,27 @@ import { languageModel, gatewayProviderOptions, gatewayErrorMessage } from "@/li
 import { BlocksSchema } from "@/lib/notebooks/blocks";
 
 export const runtime = "nodejs";
-const NOTEBOOK_MODEL = "google/gemini-3.5-flash";
+const NOTEBOOK_MODEL = "google/gemini-3.5-flash-lite";
 
 const TIDY_SYSTEM = `
-You restructure someone's live lecture notes. Return a Block[] array and nothing else.
+You restructure someone's live lecture notes into clean, well-organized blocks. Return a Block[] array and nothing else.
 
-WHAT YOU MAY DO
-- Group loose lines under headings (level 2 or 3) that name what the section is about
-- Turn a warning, trap, or pitfall into a callout with kind "gotcha"
-- Turn an open question the writer asked themselves into kind "question"
-- Turn a discovered connection or link to another course/concept into kind "connects" or "fact"
-- Turn an action item or todo into a "todo" block with items: [{ text: string, done: boolean }]
-- Fix typos, capitalisation, and broken markdown
-- Merge two fragments that are obviously one thought
-- Preserve every block id you did not change
+WHAT YOU MAY DO:
+- Group loose lines under concise headings (level 2 or 3).
+- Turn a warning, trap, or pitfall into a callout with kind "gotcha".
+- Turn an open question the writer asked themselves into kind "question".
+- Turn a discovered connection or link into kind "connects" or "fact".
+- Turn an action item into a "todo" block with items: [{ text: string, done: boolean }].
+- Preserve existing "anchors" blocks with items: [{ timestamp: string, label: string, sectionTag: string }].
+- Preserve existing "scale" blocks with items: [{ name: string, pct: number, color?: string }].
+- Fix typos, capitalization, and broken formatting.
+- Preserve every block id and block type you did not change.
 
-WHAT YOU MAY NOT DO
-- Add information that is not in the notes. You are reorganising, not teaching.
-- Expand shorthand into full sentences that assert more than the writer wrote.
-  "reflection needs outside evidence" stays that claim; it does not become a
-  paragraph explaining why, unless the reason is already in the notes.
-- Delete a block because it seems unfinished. A one-line fragment is a note.
-- Touch mark blocks with text: null. Those are unfilled lecture marks and the
-  writer is the only one who knows what they meant.
-- Change code blocks except to fix indentation.
-- Smooth the writer's voice into neutral prose. Terse is not a defect.
-
-If the notes are already structured, return them unchanged. Doing nothing is a
-correct output.
+WHAT YOU MAY NOT DO:
+- DO NOT ADD information that is not in the notes. You are reorganizing, not teaching.
+- DO NOT hallucinate extra explanations or paragraphs.
+- DO NOT expand shorthand into long essays.
+- Keep the writer's terse voice.
 `;
 
 const OutputSchema = z.object({
@@ -59,6 +52,11 @@ ${JSON.stringify(blocks, null, 2)}`;
       schema: OutputSchema,
       system: TIDY_SYSTEM,
       prompt: userPrompt,
+      providerOptions: {
+        google: {
+          thinking: { budgetTokens: 0 },
+        },
+      },
       ...gatewayProviderOptions(NOTEBOOK_MODEL, ["feature:notebook-tidy"]),
     });
 

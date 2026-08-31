@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Sparkles,
 } from "lucide-react";
+import { CodeBlock } from "./CodeBlock";
 
 interface BlockRendererProps {
   block: Block;
@@ -105,67 +106,715 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
     );
   };
 
+  /**
+   * Helper that robustly parses both HTML tags (<strong>, <code>, <em>, <br>) and markdown (**bold**, `code`, *italic*)
+   */
+  const renderFormattedText = (text: string): React.ReactNode => {
+    if (!text) return null;
+
+    const tokenRegex = /(<strong>[\s\S]*?<\/strong>|<b>[\s\S]*?<\/b>|\*\*[\s\S]*?\*\*|<code>[\s\S]*?<\/code>|`[^`\n]+`|<em>[\s\S]*?<\/em>|\*[^*\n]+?\*|<mark[\s\S]*?<\/mark>)/g;
+    const parts = text.split(tokenRegex);
+
+    return parts.map((part, idx) => {
+      if (!part) return null;
+
+      // HTML <strong> or <b>
+      if (
+        (part.startsWith("<strong>") && part.endsWith("</strong>")) ||
+        (part.startsWith("<b>") && part.endsWith("</b>"))
+      ) {
+        const content = part.replace(/^<(strong|b)>/, "").replace(/<\/(strong|b)>$/, "");
+        return (
+          <strong
+            key={idx}
+            style={{
+              fontWeight: 700,
+              background: "#FCE94F",
+              color: "#0A0A0A",
+              padding: "0 4px",
+              boxDecorationBreak: "clone",
+            }}
+          >
+            {content}
+          </strong>
+        );
+      }
+
+      // Markdown **bold**
+      if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
+        const content = part.slice(2, -2);
+        return (
+          <strong
+            key={idx}
+            style={{
+              fontWeight: 700,
+              background: "#FCE94F",
+              color: "#0A0A0A",
+              padding: "0 4px",
+              boxDecorationBreak: "clone",
+            }}
+          >
+            {content}
+          </strong>
+        );
+      }
+
+      // HTML <mark>
+      if (part.startsWith("<mark") && part.endsWith("</mark>")) {
+        const content = part.replace(/^<mark[^>]*>/, "").replace(/<\/mark>$/, "");
+        return (
+          <mark
+            key={idx}
+            style={{
+              fontWeight: 700,
+              background: "#FCE94F",
+              color: "#0A0A0A",
+              padding: "0 4px",
+            }}
+          >
+            {content}
+          </mark>
+        );
+      }
+
+      // HTML <code>
+      if (part.startsWith("<code>") && part.endsWith("</code>")) {
+        const content = part.replace(/^<code>/, "").replace(/<\/code>$/, "");
+        return (
+          <code
+            key={idx}
+            style={{
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "0.88em",
+              background: "#EBE7DC",
+              border: "1.5px solid #0A0A0A",
+              padding: "1px 5px",
+              color: "#0A0A0A",
+            }}
+          >
+            {content}
+          </code>
+        );
+      }
+
+      // Markdown `code`
+      if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+        const content = part.slice(1, -1);
+        return (
+          <code
+            key={idx}
+            style={{
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "0.88em",
+              background: "#EBE7DC",
+              border: "1.5px solid #0A0A0A",
+              padding: "1px 5px",
+              color: "#0A0A0A",
+            }}
+          >
+            {content}
+          </code>
+        );
+      }
+
+      // HTML <em>
+      if (part.startsWith("<em>") && part.endsWith("</em>")) {
+        const content = part.replace(/^<em>/, "").replace(/<\/em>$/, "");
+        return <em key={idx}>{content}</em>;
+      }
+
+      // Markdown *italic*
+      if (part.startsWith("*") && part.endsWith("*") && part.length >= 2) {
+        const content = part.slice(1, -1);
+        return <em key={idx}>{content}</em>;
+      }
+
+      return part;
+    });
+  };
+
   switch (block.type) {
     case "paragraph": {
-      // Parse markdown bold **text** into styled highlight
-      const parts = block.text.split(/(\*\*.*?\*\*)/g);
       return (
-        <p style={{ margin: "4px 0", fontSize: "16.5px", lineHeight: "1.68", color: "inherit" }}>
-          {parts.map((part, idx) => {
-            if (part.startsWith("**") && part.endsWith("**")) {
-              const inner = part.slice(2, -2);
-              return (
-                <strong
-                  key={idx}
-                  style={{
-                    fontWeight: 700,
-                    background: "#FCE94F",
-                    color: "#0A0A0A",
-                    padding: "0 3px",
-                  }}
-                >
-                  {inner}
-                </strong>
-              );
+        <p
+          contentEditable={!!onUpdateBlock}
+          suppressContentEditableWarning
+          onBlur={(e) => {
+            const nextText = e.currentTarget.innerText;
+            if (nextText !== block.text && onUpdateBlock) {
+              onUpdateBlock({ ...block, text: nextText });
             }
-            return part;
-          })}
+          }}
+          style={{
+            margin: "6px 0 14px",
+            fontSize: "16.5px",
+            lineHeight: "1.7",
+            color: "inherit",
+            outline: "none",
+            borderRadius: "2px",
+            minHeight: "1.4em",
+          }}
+        >
+          {renderFormattedText(block.text)}
         </p>
       );
     }
 
     case "heading": {
-      if (block.level === 2) {
-        return (
-          <h2
-            style={{
-              margin: "24px 0 8px",
-              fontFamily: "var(--display, sans-serif)",
-              fontWeight: 800,
-              fontSize: "27px",
-              letterSpacing: "-0.04em",
-              lineHeight: "1.1",
-              color: "inherit",
-            }}
-          >
-            {block.text}
-          </h2>
-        );
-      }
+      const cleanText = block.text.replace(/^\s*\d+:\d+\s*[-—–:]?\s*/, "").trim();
+
       return (
-        <h3
+        <div
           style={{
-            margin: "18px 0 6px",
-            fontFamily: "var(--display, sans-serif)",
-            fontWeight: 800,
-            fontSize: "20px",
-            letterSpacing: "-0.03em",
-            lineHeight: "1.15",
-            color: "inherit",
+            display: "flex",
+            alignItems: "baseline",
+            gap: "12px",
+            margin: block.level === 2 ? "28px 0 10px" : "18px 0 8px",
+            flexWrap: "wrap",
           }}
         >
-          {block.text}
-        </h3>
+          {block.ts && (
+            <span
+              style={{
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "9.5px",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                background: "#0A0A0A",
+                color: "#FCE94F",
+                padding: "3px 7px",
+                cursor: "pointer",
+                flex: "none",
+              }}
+            >
+              {block.ts}
+            </span>
+          )}
+          {block.level === 2 ? (
+            <h2
+              contentEditable={!!onUpdateBlock}
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                const nextText = e.currentTarget.innerText;
+                if (nextText !== cleanText && onUpdateBlock) {
+                  onUpdateBlock({ ...block, text: nextText });
+                }
+              }}
+              style={{
+                margin: 0,
+                fontFamily: "var(--display, sans-serif)",
+                fontWeight: 800,
+                fontSize: "clamp(21px, 3.2vw, 29px)",
+                letterSpacing: "-0.04em",
+                lineHeight: "1.06",
+                color: "inherit",
+                outline: "none",
+              }}
+            >
+              {cleanText}
+            </h2>
+          ) : (
+            <h3
+              contentEditable={!!onUpdateBlock}
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                const nextText = e.currentTarget.innerText;
+                if (nextText !== cleanText && onUpdateBlock) {
+                  onUpdateBlock({ ...block, text: nextText });
+                }
+              }}
+              style={{
+                margin: 0,
+                fontFamily: "var(--display, sans-serif)",
+                fontWeight: 800,
+                fontSize: "clamp(17px, 2.6vw, 22px)",
+                letterSpacing: "-0.03em",
+                lineHeight: "1.15",
+                color: "inherit",
+                outline: "none",
+              }}
+            >
+              {cleanText}
+            </h3>
+          )}
+          <span style={{ flex: 1, height: "2px", background: "rgba(10,10,10,0.14)", minWidth: "20px" }} />
+        </div>
+      );
+    }
+
+    case "example": {
+      return (
+        <div
+          style={{
+            border: "3px solid #0A0A0A",
+            background: "#FFFFFF",
+            boxShadow: "6px 6px 0 #0A0A0A",
+            margin: "18px 0 22px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: "10px",
+              flexWrap: "wrap",
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "9.5px",
+              fontWeight: 700,
+              letterSpacing: "0.17em",
+              padding: "8px 14px",
+              background: "#EBE7DC",
+              borderBottom: "3px solid #0A0A0A",
+            }}
+          >
+            <span
+              contentEditable={!!onUpdateBlock}
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                if (onUpdateBlock) onUpdateBlock({ ...block, title: e.currentTarget.innerText });
+              }}
+              style={{ outline: "none" }}
+            >
+              {block.title || "THE EXAMPLE HE USED"}
+            </span>
+            {block.timestampRange && <span>{block.timestampRange}</span>}
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 46px 1fr",
+              alignItems: "stretch",
+            }}
+          >
+            {/* Draft 1 */}
+            <div style={{ padding: "15px 16px", borderRight: "2px solid rgba(10,10,10,0.14)" }}>
+              <span
+                contentEditable={!!onUpdateBlock}
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  if (onUpdateBlock) onUpdateBlock({ ...block, v1Title: e.currentTarget.innerText });
+                }}
+                style={{
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "8.5px",
+                  fontWeight: 700,
+                  letterSpacing: "0.15em",
+                  padding: "2px 7px",
+                  display: "inline-block",
+                  marginBottom: "11px",
+                  border: "2px solid #0A0A0A",
+                  background: "#FFFFFF",
+                  opacity: 0.7,
+                  outline: "none",
+                }}
+              >
+                {block.v1Title || "DRAFT 1 · TYPED FAST"}
+              </span>
+              <p
+                contentEditable={!!onUpdateBlock}
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  if (onUpdateBlock) onUpdateBlock({ ...block, v1Text: e.currentTarget.innerText });
+                }}
+                style={{
+                  fontFamily: "var(--quote, Georgia, serif)",
+                  fontSize: "16.5px",
+                  lineHeight: "1.55",
+                  margin: 0,
+                  color: "#0A0A0A",
+                  whiteSpace: "pre-wrap",
+                  outline: "none",
+                }}
+              >
+                {block.v1BadWords && block.v1BadWords.length > 0 ? (
+                  block.v1Text.split(new RegExp(`(${block.v1BadWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')).map((seg, i) =>
+                    block.v1BadWords?.includes(seg) ? (
+                      <span key={i} style={{ background: "#FF2D8A", color: "#FFFFFF", padding: "0 3px" }}>
+                        {seg}
+                      </span>
+                    ) : (
+                      seg
+                    )
+                  )
+                ) : (
+                  block.v1Text
+                )}
+              </p>
+            </div>
+
+            {/* Arrow */}
+            <div
+              style={{
+                display: "grid",
+                placeItems: "center",
+                borderLeft: "2px solid rgba(10,10,10,0.14)",
+                borderRight: "2px solid rgba(10,10,10,0.14)",
+                fontFamily: "var(--mono, monospace)",
+                fontWeight: 700,
+                fontSize: "16px",
+                background: "#EBE7DC",
+                color: "#0A0A0A",
+              }}
+            >
+              →
+            </div>
+
+            {/* Draft 2 */}
+            <div style={{ padding: "15px 16px" }}>
+              <span
+                contentEditable={!!onUpdateBlock}
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  if (onUpdateBlock) onUpdateBlock({ ...block, v2Title: e.currentTarget.innerText });
+                }}
+                style={{
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "8.5px",
+                  fontWeight: 700,
+                  letterSpacing: "0.15em",
+                  padding: "2px 7px",
+                  display: "inline-block",
+                  marginBottom: "11px",
+                  border: "2px solid #0A0A0A",
+                  background: "#B8F04A",
+                  color: "#0A0A0A",
+                  outline: "none",
+                }}
+              >
+                {block.v2Title || "DRAFT 2 · AFTER REREADING"}
+              </span>
+              <p
+                contentEditable={!!onUpdateBlock}
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  if (onUpdateBlock) onUpdateBlock({ ...block, v2Text: e.currentTarget.innerText });
+                }}
+                style={{
+                  fontFamily: "var(--quote, Georgia, serif)",
+                  fontSize: "16.5px",
+                  lineHeight: "1.55",
+                  margin: 0,
+                  color: "#0A0A0A",
+                  whiteSpace: "pre-wrap",
+                  outline: "none",
+                }}
+              >
+                {block.v2FixWords && block.v2FixWords.length > 0 ? (
+                  block.v2Text.split(new RegExp(`(${block.v2FixWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')).map((seg, i) =>
+                    block.v2FixWords?.includes(seg) ? (
+                      <span key={i} style={{ background: "#B8F04A", color: "#0A0A0A", padding: "0 3px" }}>
+                        {seg}
+                      </span>
+                    ) : (
+                      seg
+                    )
+                  )
+                ) : (
+                  block.v2Text
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Footer Legend */}
+          <div
+            style={{
+              display: "flex",
+              gap: "16px",
+              flexWrap: "wrap",
+              padding: "10px 14px",
+              borderTop: "2px solid rgba(10,10,10,0.14)",
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "9px",
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              opacity: 0.65,
+              background: "#FAFAFA",
+            }}
+          >
+            <span>
+              <i
+                style={{
+                  width: "9px",
+                  height: "9px",
+                  display: "inline-block",
+                  marginRight: "6px",
+                  verticalAlign: "-1px",
+                  border: "2px solid #0A0A0A",
+                  background: "#FF2D8A",
+                }}
+              />
+              {block.caughtLegend || "WHAT THE REREAD CAUGHT"}
+            </span>
+            <span>
+              <i
+                style={{
+                  width: "9px",
+                  height: "9px",
+                  display: "inline-block",
+                  marginRight: "6px",
+                  verticalAlign: "-1px",
+                  border: "2px solid #0A0A0A",
+                  background: "#B8F04A",
+                }}
+              />
+              {block.fixedLegend || "WHAT THE REVISION FIXED"}
+            </span>
+            {block.summaryPill && (
+              <span style={{ marginLeft: "auto", opacity: 0.9 }}>{block.summaryPill}</span>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    case "scale": {
+      return (
+        <div
+          style={{
+            border: "3px solid #0A0A0A",
+            background: "#FFFFFF",
+            boxShadow: "5px 5px 0 #0A0A0A",
+            margin: "18px 0 22px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            contentEditable={!!onUpdateBlock}
+            suppressContentEditableWarning
+            onBlur={(e) => {
+              if (onUpdateBlock) onUpdateBlock({ ...block, title: e.currentTarget.innerText });
+            }}
+            style={{
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "9.5px",
+              fontWeight: 700,
+              letterSpacing: "0.17em",
+              padding: "8px 14px",
+              background: "#EBE7DC",
+              borderBottom: "3px solid #0A0A0A",
+              outline: "none",
+            }}
+          >
+            {block.title || "HIS WORDS, NOT MEASUREMENTS"}
+          </div>
+          <div style={{ padding: "15px 14px 13px" }}>
+            {block.items.map((item, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "160px minmax(0, 1fr)",
+                  gap: "12px",
+                  alignItems: "center",
+                  marginBottom: "9px",
+                }}
+              >
+                <span
+                  contentEditable={!!onUpdateBlock}
+                  suppressContentEditableWarning
+                  onBlur={(e) => {
+                    if (onUpdateBlock) {
+                      const nextItems = [...block.items];
+                      nextItems[idx] = { ...nextItems[idx], name: e.currentTarget.innerText };
+                      onUpdateBlock({ ...block, items: nextItems });
+                    }
+                  }}
+                  style={{
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    outline: "none",
+                  }}
+                >
+                  {item.name}
+                </span>
+                <div
+                  style={{
+                    height: "20px",
+                    border: "2px solid #0A0A0A",
+                    background: "#FFFFFF",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${item.pct}%`,
+                      background:
+                        item.color === "lime"
+                          ? "#B8F04A"
+                          : item.color === "yellow"
+                          ? "#FCE94F"
+                          : item.color === "pink"
+                          ? "#FF2D8A"
+                          : "#EBE7DC",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+            {block.footer && (
+              <div
+                contentEditable={!!onUpdateBlock}
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  if (onUpdateBlock) onUpdateBlock({ ...block, footer: e.currentTarget.innerText });
+                }}
+                style={{
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "9.5px",
+                  letterSpacing: "0.07em",
+                  opacity: 0.55,
+                  paddingTop: "11px",
+                  borderTop: "2px dashed rgba(10,10,10,0.14)",
+                  lineHeight: 1.75,
+                  marginTop: "6px",
+                  outline: "none",
+                }}
+              >
+                {block.footer}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    case "anchors": {
+      return (
+        <div
+          style={{
+            border: "3px solid #0A0A0A",
+            background: "#FFFFFF",
+            boxShadow: "5px 5px 0 #0A0A0A",
+            margin: "28px 0 16px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: "10px",
+              flexWrap: "wrap",
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "9.5px",
+              fontWeight: 700,
+              letterSpacing: "0.17em",
+              padding: "9px 14px",
+              background: "#EBE7DC",
+              borderBottom: "3px solid #0A0A0A",
+            }}
+          >
+            <span>{block.title || "THE LECTURE, INDEXED"}</span>
+            {block.duration && <span>{block.duration}</span>}
+          </div>
+          <div>
+            {block.items.map((row, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "66px minmax(0, 1fr) auto",
+                  gap: "13px",
+                  alignItems: "center",
+                  padding: "9px 14px",
+                  borderBottom: idx === block.items.length - 1 ? "none" : "2px solid rgba(10,10,10,0.14)",
+                  cursor: "pointer",
+                  transition: "background 0.1s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <span
+                  style={{
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "10.5px",
+                    fontWeight: 700,
+                    background: "#0A0A0A",
+                    color: "#FCE94F",
+                    padding: "3px 6px",
+                    textAlign: "center",
+                  }}
+                >
+                  {row.timestamp}
+                </span>
+                <span style={{ fontSize: "15.5px", lineHeight: "1.35" }}>{row.label}</span>
+                <span
+                  style={{
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "8.5px",
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    padding: "2px 7px",
+                    background: "#B8F04A",
+                    whiteSpace: "nowrap",
+                    color: "#0A0A0A",
+                  }}
+                >
+                  {row.sectionTag}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    case "next": {
+      return (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "13px",
+            border: "3px solid #0A0A0A",
+            background: "#FFFFFF",
+            boxShadow: "4px 4px 0 #0A0A0A",
+            padding: "12px 15px",
+            margin: "20px 0",
+            cursor: "pointer",
+            transition: "background 0.15s ease",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
+        >
+          <div
+            style={{
+              width: "32px",
+              height: "32px",
+              border: "2px solid #0A0A0A",
+              background: accentColor,
+              color: "#FFFFFF",
+              display: "grid",
+              placeItems: "center",
+              fontFamily: "var(--display, sans-serif)",
+              fontWeight: 800,
+              fontSize: "16px",
+              flex: "none",
+            }}
+          >
+            {block.initial || "A"}
+          </div>
+          <div>
+            <b style={{ display: "block", fontSize: "15px", fontWeight: 700 }}>{block.title}</b>
+            <span
+              style={{
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "9px",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                opacity: 0.45,
+              }}
+            >
+              {block.meta}
+            </span>
+          </div>
+        </div>
       );
     }
 
@@ -201,8 +850,18 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           >
             {config.title}
           </div>
-          <div style={{ padding: "13px 15px", fontSize: "16px", lineHeight: "1.6", color: "#0A0A0A" }}>
-            {block.text}
+          <div
+            contentEditable={!!onUpdateBlock}
+            suppressContentEditableWarning
+            onBlur={(e) => {
+              const newText = e.currentTarget.innerText;
+              if (newText !== block.text && onUpdateBlock) {
+                onUpdateBlock({ ...block, text: newText });
+              }
+            }}
+            style={{ padding: "13px 15px", fontSize: "16px", lineHeight: "1.6", color: "#0A0A0A", outline: "none" }}
+          >
+            {renderFormattedText(block.text)}
           </div>
         </div>
       );
@@ -210,46 +869,11 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
 
     case "code": {
       return (
-        <div
-          style={{
-            border: "3px solid #0A0A0A",
-            background: "#0A0A0A",
-            color: "#F0EDE4",
-            overflow: "hidden",
-            margin: "14px 0",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: "10px",
-              fontFamily: "var(--mono, monospace)",
-              fontSize: "9px",
-              fontWeight: 700,
-              letterSpacing: "0.14em",
-              padding: "6px 13px",
-              borderBottom: "2px solid rgba(240,237,228,0.22)",
-              color: "#B8F04A",
-            }}
-          >
-            <span>{block.lang}</span>
-            <span>{block.note || "SNIPPET"}</span>
-          </div>
-          <pre
-            style={{
-              margin: 0,
-              padding: "14px 15px",
-              overflowX: "auto",
-              fontFamily: "var(--mono, monospace)",
-              fontSize: "13.5px",
-              lineHeight: "1.75",
-              color: "#F0EDE4",
-            }}
-          >
-            <code>{block.code}</code>
-          </pre>
-        </div>
+        <CodeBlock
+          block={block}
+          onUpdateBlock={onUpdateBlock}
+          accentColor={accentColor}
+        />
       );
     }
 
@@ -263,10 +887,6 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           }}
         >
           <div
-            onClick={() => {
-              playSound.click();
-              setToggleOpen(!toggleOpen);
-            }}
             style={{
               display: "flex",
               alignItems: "center",
@@ -277,6 +897,10 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             }}
           >
             <span
+              onClick={() => {
+                playSound.click();
+                setToggleOpen(!toggleOpen);
+              }}
               style={{
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "11px",
@@ -287,18 +911,33 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             >
               ▸
             </span>
-            <span>{block.summary}</span>
+            <span
+              contentEditable={!!onUpdateBlock}
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                if (onUpdateBlock) onUpdateBlock({ ...block, summary: e.currentTarget.innerText });
+              }}
+              style={{ outline: "none" }}
+            >
+              {block.summary}
+            </span>
           </div>
           {toggleOpen && (
             <div
+              contentEditable={!!onUpdateBlock}
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                if (onUpdateBlock) onUpdateBlock({ ...block, body: e.currentTarget.innerText });
+              }}
               style={{
                 padding: "9px 0 3px",
                 fontSize: "16px",
                 lineHeight: "1.62",
                 color: "#4A4A4A",
+                outline: "none",
               }}
             >
-              {block.body}
+              {renderFormattedText(block.body)}
             </div>
           )}
         </div>
@@ -312,6 +951,14 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
         const newItems = [...block.items];
         newItems[idx] = { ...newItems[idx], done: !newItems[idx].done };
         onUpdateBlock({ ...block, items: newItems });
+      };
+
+      const handleAddItem = () => {
+        if (!onUpdateBlock) return;
+        onUpdateBlock({
+          ...block,
+          items: [...block.items, { text: "New task", done: false }],
+        });
       };
 
       return (
@@ -348,17 +995,52 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 ✓
               </button>
               <span
+                contentEditable={!!onUpdateBlock}
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  const newText = e.currentTarget.innerText;
+                  if (newText !== item.text && onUpdateBlock) {
+                    const newItems = [...block.items];
+                    newItems[idx] = { ...newItems[idx], text: newText };
+                    onUpdateBlock({ ...block, items: newItems });
+                  }
+                }}
                 style={{
                   fontSize: "16.5px",
                   lineHeight: "1.55",
                   textDecoration: item.done ? "line-through" : "none",
                   opacity: item.done ? 0.45 : 1,
+                  outline: "none",
+                  flex: 1,
                 }}
               >
-                {item.text}
+                {renderFormattedText(item.text)}
               </span>
             </div>
           ))}
+          {onUpdateBlock && (
+            <button
+              type="button"
+              onClick={handleAddItem}
+              style={{
+                alignSelf: "flex-start",
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "9px",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                background: "transparent",
+                border: "1.5px dashed rgba(10,10,10,0.3)",
+                padding: "3px 8px",
+                cursor: "pointer",
+                marginTop: "4px",
+                opacity: 0.6,
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              ＋ ADD ITEM
+            </button>
+          )}
         </div>
       );
     }

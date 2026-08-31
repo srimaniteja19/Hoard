@@ -3,7 +3,7 @@ import { generateText } from "ai";
 import { languageModel, gatewayProviderOptions, gatewayErrorMessage } from "@/lib/ai/models";
 
 export const runtime = "nodejs";
-const NOTEBOOK_MODEL = "google/gemini-3.5-flash";
+const NOTEBOOK_MODEL = "google/gemini-3.5-flash-lite";
 
 const EXPLAIN_SYSTEM = `
 Explain the selected passage from someone's course notes at the level of a competent programmer who is new to this specific topic. Two to four short paragraphs.
@@ -33,6 +33,11 @@ ${context ? context.slice(0, 3000) : "None"}`;
       model: languageModel(NOTEBOOK_MODEL),
       system: EXPLAIN_SYSTEM,
       prompt: userPrompt,
+      providerOptions: {
+        google: {
+          thinking: { budgetTokens: 0 },
+        },
+      },
       ...gatewayProviderOptions(NOTEBOOK_MODEL, ["feature:notebook-explain"]),
     });
 

@@ -6,6 +6,8 @@ import {
   saveStoredCourses,
   saveLessonBlocks,
   addLessonGapStub,
+  deleteLesson,
+  clearLessonNotes,
   createNewCourse,
   getCollisions,
 } from "@/lib/notebooks/storage";
@@ -51,12 +53,104 @@ export default function NotebooksPage() {
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [isAnalyzingGaps, setIsAnalyzingGaps] = useState(false);
 
-  // Load courses on mount
+  // Load courses & restore active location on mount
   useEffect(() => {
     const loaded = getStoredCourses();
     setCourses(loaded);
     setCollisions(getCollisions());
+
+    // Restore paper theme
+    const savedTheme = localStorage.getItem("hoard_notebook_theme") as "cream" | "ink" | null;
+    if (savedTheme === "cream" || savedTheme === "ink") {
+      setPaperTheme(savedTheme);
+    }
+
+    // Check URL parameters first, then localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramCourse = urlParams.get("course") || urlParams.get("c");
+    const paramMod = urlParams.get("m") || urlParams.get("module");
+    const paramLes = urlParams.get("l") || urlParams.get("lesson");
+
+    let restored = false;
+
+    if (paramCourse) {
+      const cIdx = loaded.findIndex((c) => c.id === paramCourse || c.title.toLowerCase() === paramCourse.toLowerCase());
+      if (cIdx >= 0) {
+        const mIdx = paramMod ? Math.max(0, Math.min(parseInt(paramMod, 10) || 0, loaded[cIdx].modules.length - 1)) : 0;
+        const lIdx = paramLes ? Math.max(0, Math.min(parseInt(paramLes, 10) || 0, (loaded[cIdx].modules[mIdx]?.lessons.length || 1) - 1)) : 0;
+        setCurrentCourseIdx(cIdx);
+        setCurrentModuleIdx(mIdx);
+        setCurrentLessonIdx(lIdx);
+        setView("course");
+        restored = true;
+      }
+    }
+
+    if (!restored) {
+      try {
+        const savedLoc = localStorage.getItem("hoard_notebook_location");
+        if (savedLoc) {
+          const parsed = JSON.parse(savedLoc);
+          if (parsed.view === "course" && parsed.courseId) {
+            const cIdx = loaded.findIndex((c) => c.id === parsed.courseId);
+            if (cIdx >= 0) {
+              const mIdx = Math.max(0, Math.min(parsed.m || 0, loaded[cIdx].modules.length - 1));
+              const lIdx = Math.max(0, Math.min(parsed.l || 0, (loaded[cIdx].modules[mIdx]?.lessons.length || 1) - 1));
+              setCurrentCourseIdx(cIdx);
+              setCurrentModuleIdx(mIdx);
+              setCurrentLessonIdx(lIdx);
+              setView("course");
+              restored = true;
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
   }, []);
+
+  // Synchronize URL and localStorage on location change
+  useEffect(() => {
+    if (courses.length === 0) return;
+    const course = courses[currentCourseIdx] || courses[0];
+
+    if (view === "course" && course) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("course", course.id);
+      url.searchParams.set("m", currentModuleIdx.toString());
+      url.searchParams.set("l", currentLessonIdx.toString());
+      window.history.replaceState({}, "", url.toString());
+
+      localStorage.setItem(
+        "hoard_notebook_location",
+        JSON.stringify({
+          view: "course",
+          courseId: course.id,
+          m: currentModuleIdx,
+          l: currentLessonIdx,
+        })
+      );
+    } else if (view === "index") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("course");
+      url.searchParams.delete("c");
+      url.searchParams.delete("m");
+      url.searchParams.delete("l");
+      window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+
+      localStorage.setItem(
+        "hoard_notebook_location",
+        JSON.stringify({ view: "index" })
+      );
+    }
+  }, [view, currentCourseIdx, currentModuleIdx, currentLessonIdx, courses]);
+
+  // Synchronize paper theme
+  const handleToggleTheme = (theme: "cream" | "ink") => {
+    setPaperTheme(theme);
+    localStorage.setItem("hoard_notebook_theme", theme);
+  };
 
   const currentCourse = courses[currentCourseIdx] || courses[0];
   const currentModule = currentCourse?.modules[currentModuleIdx] || currentCourse?.modules[0];
@@ -78,6 +172,46 @@ export default function NotebooksPage() {
     setCurrentLessonIdx(0);
     setView("course");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleDeleteLesson = (modIdx: number, lesIdx: number) => {
+    if (!currentCourse) return;
+    const targetModule = currentCourse.modules[modIdx];
+    const targetLesson = targetModule?.lessons[lesIdx];
+    if (!targetLesson) return;
+
+    if (!confirm(`Are you sure you want to delete the page "${targetLesson.title}"?`)) {
+      return;
+    }
+
+    playSound.pop();
+    const updated = deleteLesson(currentCourse.id, targetLesson.id);
+    setCourses([...updated]);
+
+    // Handle index updates if currently viewing the deleted lesson
+    if (modIdx === currentModuleIdx && lesIdx === currentLessonIdx) {
+      const remainingInMod = targetModule.lessons.length - 1;
+      if (remainingInMod > 0) {
+        setCurrentLessonIdx(Math.max(0, lesIdx - 1));
+      } else {
+        // Module is now empty, switch to previous module
+        const nextModIdx = Math.max(0, modIdx - 1);
+        setCurrentModuleIdx(nextModIdx);
+        setCurrentLessonIdx(0);
+      }
+    } else if (modIdx === currentModuleIdx && lesIdx < currentLessonIdx) {
+      setCurrentLessonIdx(currentLessonIdx - 1);
+    }
+  };
+
+  const handleClearCurrentNotes = () => {
+    if (!currentCourse || !currentLesson) return;
+    if (!confirm(`Reset all notes on "${currentLesson.title}" back to empty?`)) {
+      return;
+    }
+    playSound.pop();
+    const updated = clearLessonNotes(currentCourse.id, currentLesson.id);
+    setCourses([...updated]);
   };
 
   // AI: TIDY MY NOTES
@@ -164,6 +298,34 @@ export default function NotebooksPage() {
       setExplainText("Failed to generate contextual explanation.");
     } finally {
       setIsExplaining(false);
+    }
+  };
+
+  // AI: CONVERT TRANSCRIPT TO STRUCTURED NOTES
+  const handleConvertToNotes = async (transcriptText: string) => {
+    setIsAnalyzingGaps(true);
+    try {
+      const res = await fetch("/api/notebooks/draft-transcript", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transcript: transcriptText,
+          courseTitle: currentCourse.title,
+          lessonTitle: currentLesson.title,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setDiffOriginal(currentBlocks);
+      setDiffProposed(data.blocks);
+      setDiffSummary(data.summary || "Structured lecture transcript into clean notebook blocks.");
+      setShowTranscriptModal(false);
+      playSound.fileIt();
+    } catch {
+      alert("Failed to convert transcript into notes.");
+    } finally {
+      setIsAnalyzingGaps(false);
     }
   };
 
@@ -284,7 +446,7 @@ export default function NotebooksPage() {
         <div style={{ display: "flex", border: "2px solid #0A0A0A" }}>
           <button
             type="button"
-            onClick={() => setPaperTheme("cream")}
+            onClick={() => handleToggleTheme("cream")}
             style={{
               fontFamily: "var(--mono, monospace)",
               fontSize: "9px",
@@ -302,7 +464,7 @@ export default function NotebooksPage() {
           </button>
           <button
             type="button"
-            onClick={() => setPaperTheme("ink")}
+            onClick={() => handleToggleTheme("ink")}
             style={{
               fontFamily: "var(--mono, monospace)",
               fontSize: "9px",
@@ -461,6 +623,7 @@ export default function NotebooksPage() {
               setCurrentModuleIdx(modIdx);
               setCurrentLessonIdx(lesIdx);
             }}
+            onDeleteLesson={handleDeleteLesson}
             onBackToIndex={() => setView("index")}
             onNewPage={() => {
               const newTitle = prompt("Lesson title:");
@@ -482,6 +645,60 @@ export default function NotebooksPage() {
 
           {/* Main Notebook Page Area */}
           <main
+            onPaste={(e) => {
+              const items = e.clipboardData?.items;
+              if (items) {
+                for (let i = 0; i < items.length; i++) {
+                  if (items[i].type.startsWith("image/")) {
+                    const file = items[i].getAsFile();
+                    if (file) {
+                      e.preventDefault();
+                      const reader = new FileReader();
+                      reader.onload = (uploadEvent) => {
+                        const dataUrl = uploadEvent.target?.result as string;
+                        if (dataUrl) {
+                          const imageBlock: Block = {
+                            id: generateBlockId(),
+                            type: "image",
+                            url: dataUrl,
+                            caption: `PASTED IMAGE · ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+                          };
+                          handleUpdateBlocks([...currentBlocks, imageBlock]);
+                          playSound.fileIt();
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                      return;
+                    }
+                  }
+                }
+              }
+            }}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const files = e.dataTransfer?.files;
+              if (files && files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith("image/")) {
+                  const reader = new FileReader();
+                  reader.onload = (uploadEvent) => {
+                    const dataUrl = uploadEvent.target?.result as string;
+                    if (dataUrl) {
+                      const imageBlock: Block = {
+                        id: generateBlockId(),
+                        type: "image",
+                        url: dataUrl,
+                        caption: file.name || "DROPPED IMAGE",
+                      };
+                      handleUpdateBlocks([...currentBlocks, imageBlock]);
+                      playSound.fileIt();
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }
+            }}
             style={{
               padding: "32px clamp(16px, 4vw, 58px) 120px",
               overflowY: "auto",
@@ -519,22 +736,73 @@ export default function NotebooksPage() {
                 {currentLesson.title}
               </h1>
 
-              {/* Meta Row */}
+              {/* Meta Row & Page Action Buttons */}
               <div
                 style={{
                   display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                   gap: "14px",
                   flexWrap: "wrap",
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "9.5px",
                   fontWeight: 700,
                   letterSpacing: "0.12em",
-                  opacity: 0.5,
+                  opacity: 0.85,
                   marginBottom: "8px",
                 }}
               >
-                <span>{currentLesson.meta}</span>
-                <span>{wordCount.toLocaleString()} WORDS</span>
+                <div style={{ display: "flex", gap: "14px", opacity: 0.6 }}>
+                  <span>{currentLesson.meta}</span>
+                  <span>{wordCount.toLocaleString()} WORDS</span>
+                </div>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {currentBlocks.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearCurrentNotes}
+                      style={{
+                        border: "1.5px solid rgba(10,10,10,0.25)",
+                        background: "transparent",
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        padding: "3px 8px",
+                        cursor: "pointer",
+                        color: "inherit",
+                        opacity: 0.65,
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      CLEAR NOTES
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteLesson(currentModuleIdx, currentLessonIdx)}
+                    style={{
+                      border: "1.5px solid #DC2626",
+                      background: "transparent",
+                      color: "#DC2626",
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      padding: "3px 8px",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "#DC2626";
+                      e.currentTarget.style.color = "#FFFFFF";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = "#DC2626";
+                    }}
+                  >
+                    ✕ DELETE PAGE
+                  </button>
+                </div>
               </div>
 
               {/* 5 AI Action Triggers */}
@@ -649,9 +917,10 @@ export default function NotebooksPage() {
         />
       )}
 
-      {/* 4. Transcript Gap Modal */}
+      {/* 4. Transcript Modal */}
       {showTranscriptModal && (
         <TranscriptModal
+          onConvertToNotes={handleConvertToNotes}
           onAnalyzeGaps={handleAnalyzeTranscript}
           onClose={() => setShowTranscriptModal(false)}
           loading={isAnalyzingGaps}

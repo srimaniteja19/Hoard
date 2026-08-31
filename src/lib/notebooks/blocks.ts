@@ -8,6 +8,42 @@ export const TodoItemSchema = z.union([
   z.string().transform((str) => ({ text: str, done: false })),
 ]);
 
+export const AnchorItemSchema = z.union([
+  z.object({
+    timestamp: z.string().optional().default("0:00"),
+    label: z.string(),
+    sectionTag: z.string().optional().default("§"),
+  }),
+  z.string().transform((str) => {
+    const match = str.match(/^(\d+:\d+)\s+(.+?)(?:\s*—\s*(§\d+|NEXT))?$/);
+    if (match) {
+      return {
+        timestamp: match[1],
+        label: match[2],
+        sectionTag: match[3] || "§",
+      };
+    }
+    return {
+      timestamp: "0:00",
+      label: str,
+      sectionTag: "§",
+    };
+  }),
+]);
+
+export const ScaleItemSchema = z.union([
+  z.object({
+    name: z.string(),
+    pct: z.number().optional().default(50),
+    color: z.string().optional(),
+  }),
+  z.string().transform((str) => ({
+    name: str,
+    pct: 50,
+    color: "shade",
+  })),
+]);
+
 export const BlockSchema = z.discriminatedUnion("type", [
   z.object({
     id: z.string(),
@@ -19,6 +55,7 @@ export const BlockSchema = z.discriminatedUnion("type", [
     type: z.literal("heading"),
     level: z.union([z.literal(2), z.literal(3)]).default(2),
     text: z.string(),
+    ts: z.string().optional(), // timestamp anchor e.g. "0:07", "1:01"
   }),
   z.object({
     id: z.string(),
@@ -74,6 +111,42 @@ export const BlockSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     id: z.string(),
+    type: z.literal("example"), // Before/After worked example
+    title: z.string().default("THE EXAMPLE HE USED"),
+    timestampRange: z.string().optional(),
+    v1Title: z.string().default("DRAFT 1 · TYPED FAST"),
+    v1Text: z.string(),
+    v1BadWords: z.array(z.string()).optional(),
+    v2Title: z.string().default("DRAFT 2 · AFTER REREADING"),
+    v2Text: z.string(),
+    v2FixWords: z.array(z.string()).optional(),
+    caughtLegend: z.string().optional(),
+    fixedLegend: z.string().optional(),
+    summaryPill: z.string().optional(),
+  }),
+  z.object({
+    id: z.string(),
+    type: z.literal("scale"), // Honest size of the win
+    title: z.string().default("HIS WORDS, NOT MEASUREMENTS"),
+    items: z.array(ScaleItemSchema),
+    footer: z.string().optional(),
+  }),
+  z.object({
+    id: z.string(),
+    type: z.literal("anchors"), // The lecture, indexed
+    title: z.string().default("THE LECTURE, INDEXED"),
+    duration: z.string().optional(),
+    items: z.array(AnchorItemSchema),
+  }),
+  z.object({
+    id: z.string(),
+    type: z.literal("next"), // Next lecture trailer
+    initial: z.string().default("A"),
+    title: z.string(),
+    meta: z.string().default("ANNOUNCED · NOT YET WATCHED"),
+  }),
+  z.object({
+    id: z.string(),
     type: z.literal("divider"),
   }),
 ]);
@@ -115,6 +188,18 @@ export function computeWordCount(blocks: Block[]): number {
         break;
       case "code":
         textAccum += " " + b.code;
+        break;
+      case "example":
+        textAccum += " " + b.v1Text + " " + b.v2Text + " " + (b.summaryPill || "");
+        break;
+      case "scale":
+        textAccum += " " + b.items.map((i) => i.name).join(" ") + " " + (b.footer || "");
+        break;
+      case "anchors":
+        textAccum += " " + b.items.map((i) => i.label).join(" ");
+        break;
+      case "next":
+        textAccum += " " + b.title + " " + b.meta;
         break;
       case "mark":
         if (b.text) textAccum += " " + b.text;

@@ -1,7 +1,7 @@
 import { Block, computeWordCount, generateBlockId } from "./blocks";
 import { SEED_COURSES, SEED_COLLISIONS, SeedCourse, CourseCollision } from "./seedData";
 
-const COURSES_STORAGE_KEY = "hoard_notebook_courses_v1";
+const COURSES_STORAGE_KEY = "hoard_notebook_courses_v2";
 
 /**
  * Loads all courses with fallback to SEED_COURSES
@@ -119,6 +119,47 @@ export function addLessonGapStub(
       }
       const wc = computeWordCount(les.blocks);
       les.meta = `${wc.toLocaleString()} WORDS · STUB ADDED`;
+      break;
+    }
+  }
+
+  saveStoredCourses(courses);
+  return courses;
+}
+
+/**
+ * Deletes a lesson/page completely from a course module
+ */
+export function deleteLesson(courseId: string, lessonId: string): SeedCourse[] {
+  const courses = getStoredCourses();
+  const course = courses.find((c) => c.id === courseId);
+  if (!course) return courses;
+
+  for (const mod of course.modules) {
+    const idx = mod.lessons.findIndex((l) => l.id === lessonId);
+    if (idx !== -1) {
+      mod.lessons.splice(idx, 1);
+      break;
+    }
+  }
+
+  saveStoredCourses(courses);
+  return courses;
+}
+
+/**
+ * Clears all notes from a lesson/page (resets back to empty state)
+ */
+export function clearLessonNotes(courseId: string, lessonId: string): SeedCourse[] {
+  const courses = getStoredCourses();
+  const course = courses.find((c) => c.id === courseId);
+  if (!course) return courses;
+
+  for (const mod of course.modules) {
+    const les = mod.lessons.find((l) => l.id === lessonId);
+    if (les) {
+      les.blocks = [];
+      les.meta = "NO NOTES YET";
       break;
     }
   }

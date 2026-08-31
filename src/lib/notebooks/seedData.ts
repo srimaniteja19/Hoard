@@ -132,111 +132,233 @@ export const SEED_COURSES: SeedCourse[] = [
             id: "les-a2-1",
             title: "Reflection",
             watched: true,
-            meta: "OPEN · EDITED 12 MIN AGO",
+            meta: "512 WORDS · FROM A 3:53 LECTURE · GENERATED, THEN EDITED",
             gap: [
-              { timestamp: "06:12", topic: "The distinction between self-critique and critique against a rubric" },
-              { timestamp: "14:35", topic: "Why reflection helps writing tasks more than arithmetic" },
-              { timestamp: "21:08", topic: "The failure mode where a correct answer gets revised into a wrong one" },
+              { timestamp: "2:35", topic: "The specific syntax-error walkthrough — he steps through the error log going back in" },
             ],
             transcript: {
-              text: "Welcome to Reflection. In this lesson we examine why having a model inspect its own output can dramatically improve performance, but only when given outside evidence...",
+              text: `0:03 The reflection design pattern is something I've used in many applications, and it's surprisingly easy to implement.
+0:06 Let's take a look.
+0:07 Just as humans will sometimes reflect their own output and find a way to improve it, so can OMs.
+0:14 For example, I might write an email like this, and if I'm typing quickly, I might end up with a first draft that's not great.
+0:21 And if I read over it, I might say, huh, next month isn't that clear for what dates Tommy might be free for dinner.
+0:28 And there's such a typo that I had, and also forgot to sign my name.
+0:32 And this would let me revise the draft to be more specific in saying, hey, Tommy, are you free for dinner on the 5th to the 7th?
+0:39 A similar process lets OMs also improve their outputs.
+0:43 You can prompt an OM to write the first draft in email, and given email version 1, email v1,
+0:49 you can pass it to maybe the same model, the same large language model, but with a different prompt,
+0:55 and tell it to reflect and write an improved second draft to then get you the final output, email v2.
+1:01 Here, I have just hard-coded this workflow of prompting the OMs once and then prompting them again to reflect and improve, and that gives email v2.
+1:11 It turns out that a similar process can be used to improve other types of outputs.
+1:17 For example, if you are having an OM write code, you might prompt an OM to write code to do a certain task,
+1:23 and it may give you v1 of the code, and then pass it to the same OM or maybe a different OM to ask it to check the bugs and write an improved second draft of the code.
+1:35 Different OMs have different strengths, and so sometimes I would choose different models for writing the first draft and for reflecting and trying to improve it.
+1:45 For example, it turns out reasoning models, sometimes also called thinking models, are pretty good at finding bugs,
+1:52 and so I'll sometimes write the first draft of the code by direct generation, but then use a reasoning model to check for bugs.
+1:59 Now, rather than just having an OM reflect on the code, it turns out that if you can get external feedback, meaning new information from outside the OM, reflection becomes much more powerful.
+2:13 In the case of code, one thing you can do is just execute the code to see what the code does,
+2:19 and by examining the output, including any error messages of the code, this is incredibly useful information for the OM to reflect and to find a way to improve his code.
+2:29 So in this example, the OM generated the first draft of the code, but when I run it, it generates a syntax error.
+2:35 When you pass this code output and error logs back into the OM and ask it to reflect on the feedback and write a new draft, this gives it a lot of very useful information to come up with a much better version 2 of the code.
+2:49 So the reflection design pattern isn't magic. It does not make an OM always get everything right 100% of the time, but it can often give it maybe a modest bump in performance.
+3:00 But one design consideration to keep in mind is reflection is much more powerful when there is new additional external information that you can ingest into the reflection process.
+3:11 So in this example, if you can run the code and have that code output or error messages as an additional input to the reflection step,
+3:19 that really lets the OM reflect much more deeply and figure out what may be going wrong, if anything, and results in a much better second version of the code than if there wasn't this external information that you can ingest.
+3:31 So one thing to keep in mind, whenever reflection has an opportunity to get additional information, that makes it much more powerful.
+3:40 Now with that, let's go on to the next video where I want to share with you a more systematic comparison of using reflection versus direct generation or something we sometimes call zero-shot prompting.
+3:53 Let's go on to the next video.`,
               cues: [
-                { t: "00:00", text: "Introduction to Reflection pattern" },
-                { t: "06:12", text: "Rubric evaluation vs unguided self-critique" },
-                { t: "14:35", text: "Domain sensitivity: code and prose vs math" },
-                { t: "21:08", text: "Degradation loops and false correction traps" },
+                { t: "0:07", text: "The human analogy — rereading your own email" },
+                { t: "0:43", text: "Two prompts, one model — email v1 → v2" },
+                { t: "1:01", text: "The workflow is hard-coded" },
+                { t: "1:17", text: "Generalising to code" },
+                { t: "1:35", text: "Different models for drafting vs reflecting" },
+                { t: "1:59", text: "External feedback — running the code" },
+                { t: "2:49", text: "Not magic; a modest bump" },
+                { t: "3:40", text: "Trailer for the systematic comparison" },
               ],
             },
             blocks: [
+              // 1
               {
                 id: "b-a21-1",
-                type: "paragraph",
-                text: "The pattern is embarrassingly simple: **have the model look at its own output and revise it.** One generation pass, one critique pass, then a rewrite. Most of the gain shows up in the first revision.",
+                type: "heading",
+                level: 2,
+                ts: "0:07",
+                text: "Reread your own email",
               },
               {
                 id: "b-a21-2",
-                type: "callout",
-                kind: "gotcha",
-                text: "Reflection on the *same* context is much weaker than reflection with fresh evidence. If the critic can only see what the generator saw, it mostly agrees with itself. Give the critic a test result, a linter, a retrieved doc — something the generator didn't have.",
+                type: "paragraph",
+                text: "The whole pattern comes from something you already do. You type an email fast, read it back, and see three things wrong with it: the date is vague, there's a typo, and you forgot to sign your name. So you rewrite it.",
               },
               {
                 id: "b-a21-3",
-                type: "heading",
-                level: 2,
-                text: "The loop, drawn",
+                type: "example",
+                title: "THE EXAMPLE HE USED",
+                timestampRange: "0:14 → 0:32",
+                v1Title: "DRAFT 1 · TYPED FAST",
+                v1Text: "Hey Tommy — are you free for dinner next month? Let me know what wroks for you.",
+                v1BadWords: ["next month", "wroks"],
+                v2Title: "DRAFT 2 · AFTER REREADING",
+                v2Text: "Hey Tommy — are you free for dinner on the 5th to the 7th? Let me know what works for you.\n— Andrew",
+                v2FixWords: ["on the 5th to the 7th", "works", "— Andrew"],
+                caughtLegend: "WHAT THE REREAD CAUGHT",
+                fixedLegend: "WHAT THE REVISION FIXED",
+                summaryPill: "VAGUE DATE · TYPO · NO SIGNATURE",
               },
               {
                 id: "b-a21-4",
-                type: "image",
-                url: "/loop-diagram.svg",
-                caption: "FIG · SKETCHED DURING THE LECTURE — LOOP 1–2×, THEN STOP (NEEDS OUTSIDE EVIDENCE)",
+                type: "paragraph",
+                text: "The model version is the same move with two prompts. Prompt once to get `email v1`. Then hand v1 **back to the same model with a different prompt** — reflect and improve — and take `email v2`.",
               },
+
+              // 2
               {
                 id: "b-a21-5",
-                type: "toggle",
-                summary: "Why more loops stop helping",
-                body: "After the second pass the critique starts restating itself, and each extra round costs a full generation. Treat loop count as a budget, not a quality dial — the returns fall off steeply.",
+                type: "heading",
+                level: 2,
+                ts: "1:01",
+                text: "It's hard-coded, not agentic",
               },
               {
                 id: "b-a21-6",
-                type: "heading",
-                level: 3,
-                text: "Minimal implementation",
+                type: "paragraph",
+                text: "Worth being precise about what this is. He says outright he **hard-coded the workflow** — prompt, then prompt again. Nothing decides whether to reflect; the second call always happens. That's a pipeline, not an agent.",
               },
               {
                 id: "b-a21-7",
-                type: "code",
-                lang: "PYTHON",
-                note: "FROM THE LAB NOTEBOOK",
-                code: `def reflect(task, rounds=2):
-    draft = llm(f"Do this task: {task}")
-    for _ in range(rounds):
-        evidence = run_tests(draft)        # the outside voice
-        critique = llm(f"Draft + test output:\\n{draft}\\n{evidence}\\n"
-                       f"List only concrete defects.")
-        if "no defects" in critique.lower(): break
-        draft = llm(f"Revise using:\\n{critique}\\n{draft}")
-    return draft`,
+                type: "image",
+                url: "/loop-diagram.svg",
+                caption: "the dashed loop is the version most people build. the pink box is what makes it work.",
               },
+
+              // 3
               {
                 id: "b-a21-8",
-                type: "callout",
-                kind: "question",
-                text: 'Does the break-on-"no defects" check actually fire, or does the critic always find something? Measure it on the assignment.',
+                type: "heading",
+                level: 2,
+                ts: "1:17",
+                text: "Same move, applied to code",
               },
               {
                 id: "b-a21-9",
-                type: "quote",
-                text: "The critic and the generator being the same model isn't the problem. The critic and the generator having the same information is.",
-                attribution: "Andrew Ng",
+                type: "paragraph",
+                text: "Prompt for code, get v1, pass it back and ask it to check for bugs, get v2. Identical shape to the email.",
               },
               {
                 id: "b-a21-10",
-                type: "heading",
-                level: 3,
-                text: "Before the next lesson",
+                type: "paragraph",
+                text: "But he adds a wrinkle here: **the two roles don't have to be the same model.** Reasoning models — thinking models — are good at finding bugs, so he'll often write the first draft by direct generation and then use a reasoning model to critique it. Draft cheap, critique smart.",
               },
+
+              // 4
               {
                 id: "b-a21-11",
-                type: "todo",
-                items: [
-                  { text: "Run the reflection lab with 1, 2 and 4 rounds", done: true },
-                  { text: "Log token cost per round — is round 3 ever worth it?", done: false },
-                  { text: "Try a critic with a linter attached vs a bare critic", done: false },
-                ],
+                type: "heading",
+                level: 2,
+                ts: "1:59",
+                text: "External evidence is the thing that matters",
               },
               {
                 id: "b-a21-12",
-                type: "link",
-                url: "https://learn.deeplearning.ai/agentic-reflection",
-                title: "Reflection — lesson notebook and slides",
-                site: "LEARN.DEEPLEARNING.AI",
+                type: "paragraph",
+                text: "This is the part I'd keep if I could only keep one. Reflecting on code is fine. **Running the code and feeding back the output and error messages is a different tier.** His example: v1 has a syntax error, the error log goes back into the prompt, and v2 is much better than anything self-critique would have produced.",
               },
               {
                 id: "b-a21-13",
-                type: "mark",
-                timestamp: "18:40",
-                text: "Surprising result on Python coding benchmarks with AST verification",
+                type: "code",
+                lang: "PYTHON",
+                note: "THE SHAPE · MY OWN, NOT FROM THE LECTURE",
+                code: `draft = llm("write code for X")
+
+evidence = run(draft)          # ← the outside voice
+critique = llm(f"draft + its actual output:\\n{draft}\\n{evidence}\\n"
+               f"what's wrong?")
+
+final = llm(f"revise using:\\n{critique}\\n{draft}")`,
+              },
+              {
+                id: "b-a21-14",
+                type: "callout",
+                kind: "gotcha",
+                text: "A critic that sees exactly what the generator saw is mostly agreeing with itself. The gain doesn't come from the second pass — it comes from *new information arriving* at the second pass. If there's no way to get external evidence, expect very little.",
+              },
+
+              // 5
+              {
+                id: "b-a21-15",
+                type: "heading",
+                level: 2,
+                ts: "2:49",
+                text: "How big is the win, honestly",
+              },
+              {
+                id: "b-a21-16",
+                type: "paragraph",
+                text: "He is careful here and it's worth not smoothing over. Reflection **\"isn't magic\"** and does not get things right 100% of the time. His words for the improvement: a *modest bump*. With external evidence it's much better than that — but he doesn't put a number on either.",
+              },
+              {
+                id: "b-a21-17",
+                type: "scale",
+                title: "HIS WORDS, NOT MEASUREMENTS",
+                items: [
+                  { name: "DIRECT GENERATION", pct: 42, color: "shade" },
+                  { name: "+ SELF-REFLECTION", pct: 54, color: "yellow" },
+                  { name: "+ EXTERNAL EVIDENCE", pct: 84, color: "lime" },
+                ],
+                footer: "NO NUMBERS WERE GIVEN. THESE BARS ARE ORDERING ONLY — \"MODEST BUMP\" AND \"MUCH MORE POWERFUL\" DRAWN AS A RANKING, NOT A MEASUREMENT. THE NEXT LESSON IS THE SYSTEMATIC COMPARISON.",
+              },
+              {
+                id: "b-a21-18",
+                type: "callout",
+                kind: "question",
+                text: 'If the second pass only pays off when new information arrives, is "reflection" even the right name for it? It looks less like introspection and more like a second call with a better context. Check whether the next lesson\'s comparison isolates that.',
+              },
+
+              // 6
+              {
+                id: "b-a21-19",
+                type: "heading",
+                level: 2,
+                ts: "3:40",
+                text: "Before the next lesson",
+              },
+              {
+                id: "b-a21-20",
+                type: "todo",
+                items: [
+                  { text: "Run one task three ways: direct, self-reflect, reflect-with-execution-output", done: true },
+                  { text: "Try a cheap model for the draft and a reasoning model for the critique — measure whether the split beats using the good model twice", done: false },
+                  { text: 'Count how often the critique says "no issues" when there are issues', done: false },
+                ],
+              },
+
+              // 7
+              {
+                id: "b-a21-21",
+                type: "next",
+                initial: "A",
+                title: "Next · Reflection vs direct generation, compared systematically",
+                meta: "ANNOUNCED AT 3:40 · NOT YET WATCHED",
+              },
+
+              // 8
+              {
+                id: "b-a21-22",
+                type: "anchors",
+                title: "THE LECTURE, INDEXED",
+                duration: "3:53 · ALL COVERED",
+                items: [
+                  { timestamp: "0:07", label: "The human analogy — rereading your own email", sectionTag: "§1" },
+                  { timestamp: "0:43", label: "Two prompts, one model — email v1 → v2", sectionTag: "§1" },
+                  { timestamp: "1:01", label: "The workflow is hard-coded", sectionTag: "§2" },
+                  { timestamp: "1:17", label: "Generalising to code", sectionTag: "§3" },
+                  { timestamp: "1:35", label: "Different models for drafting vs reflecting", sectionTag: "§3" },
+                  { timestamp: "1:59", label: "External feedback — running the code", sectionTag: "§4" },
+                  { timestamp: "2:49", label: "Not magic; a modest bump", sectionTag: "§5" },
+                  { timestamp: "3:40", label: "Trailer for the systematic comparison", sectionTag: "NEXT" },
+                ],
               },
             ],
           },
