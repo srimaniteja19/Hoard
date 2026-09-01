@@ -26,7 +26,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { InvestmentCompoundingChart } from "./charts/InvestmentCompoundingChart";
-import { parseAccrualNotes, computeDueAccrualPlan } from "@/lib/ledger/investmentAccrual";
+import { parseAccrualNotes, computeDueAccrualPlan, getNextAccrualDate } from "@/lib/ledger/investmentAccrual";
 
 const CADENCE_ACCRUAL_LABEL: Partial<Record<string, string>> = {
   DAILY: "daily",
@@ -418,6 +418,19 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
                     </div>
                   </div>
 
+                  {/* Monthly-equivalent contribution — lets a DAILY/WEEKLY/QUARTERLY/etc. amount be compared at a glance against MONTHLY ones */}
+                  {inv.cadence !== "MONTHLY" && (
+                    <div
+                      style={{
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "10px",
+                        color: "#888888",
+                      }}
+                    >
+                      ≈ {formatCurrency(monthlyAmount, 2, inv.currency)}/mo equivalent
+                    </div>
+                  )}
+
                   {/* Meta Details: Platform & Execution Day */}
                   <div
                     style={{
@@ -471,6 +484,9 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
                     const isCaughtUp = computeDueAccrualPlan(inv) === null;
                     const cadenceLabel =
                       CADENCE_ACCRUAL_LABEL[inv.cadence] || `on Day ${inv.investmentDay || 1}`;
+                    const statusText = isCaughtUp
+                      ? `✓ Up to date · Next: ${getNextAccrualDate(inv).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                      : `🗓️ Auto-accrues ${cadenceLabel}`;
 
                     return (
                       <div
@@ -484,9 +500,7 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
                           color: isCaughtUp ? "#166534" : "#0369A1",
                         }}
                       >
-                        <span>
-                          {isCaughtUp ? "✓ Up to date" : `🗓️ Auto-accrues ${cadenceLabel}`}
-                        </span>
+                        <span>{statusText}</span>
                         <span style={{ opacity: 0.85 }}>🔗 Net Worth Synced</span>
                       </div>
                     );

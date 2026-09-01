@@ -316,6 +316,35 @@ export function computeDueAccrualPlan(
 }
 
 /**
+ * When an investment is caught up (nothing due right now), returns the date
+ * its next contribution is expected — for display only, not used by the
+ * accrual engine itself.
+ */
+export function getNextAccrualDate(
+  inv: Pick<FinancialInvestmentRow, "cadence" | "investmentDay" | "notes">,
+  now: Date = new Date()
+): Date {
+  const cadence = (inv.cadence as InvestmentCadence) || "MONTHLY";
+  const { lastAccruedMonth, lastExecutedAt } = parseAccrualNotes(inv.notes);
+  const targetDay = inv.investmentDay && inv.investmentDay >= 1 && inv.investmentDay <= 31 ? inv.investmentDay : 1;
+
+  const subMonthDays = SUB_MONTH_CADENCE_DAYS[cadence];
+  if (subMonthDays) {
+    const anchor = lastExecutedAt ? new Date(lastExecutedAt) : now;
+    return new Date(anchor.getTime() + subMonthDays * 24 * 60 * 60 * 1000);
+  }
+
+  const interval = CALENDAR_CADENCE_MONTHS[cadence] ?? 1;
+  if (!lastAccruedMonth) {
+    return new Date(now.getFullYear(), now.getMonth(), targetDay);
+  }
+  const [lastYearStr, lastMonthStr] = lastAccruedMonth.split("-");
+  const lastYear = Number(lastYearStr);
+  const lastMonthIdx = Number(lastMonthStr) - 1;
+  return new Date(lastYear, lastMonthIdx + interval, targetDay);
+}
+
+/**
  * Evaluates and executes automatic accrual for every active recurring
  * investment, according to each investment's own cadence.
  */

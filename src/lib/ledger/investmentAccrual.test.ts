@@ -4,6 +4,7 @@ import {
   encodeAccrualNotes,
   mapAssetTypeToNetWorthCategory,
   computeDueAccrualPlan,
+  getNextAccrualDate,
 } from "./investmentAccrual";
 
 describe("Investment Accrual Engine", () => {
@@ -118,5 +119,40 @@ describe("computeDueAccrualPlan (cadence-aware accrual scheduling)", () => {
     const inv = { ...baseInv, cadence: "QUARTERLY" as const, investmentDay: 1, notes };
     const oneMonthLater = computeDueAccrualPlan(inv, new Date(2026, 6, 15));
     expect(oneMonthLater).toBeNull();
+  });
+});
+
+describe("getNextAccrualDate (display-only projection of the next contribution)", () => {
+  it("projects the next DAILY contribution one day after the last one", () => {
+    const notes = encodeAccrualNotes("", null, "2026-08-25T12:00:00.000Z");
+    const inv = { cadence: "DAILY" as const, investmentDay: 1, notes };
+    const next = getNextAccrualDate(inv);
+    expect(next.toISOString()).toBe("2026-08-26T12:00:00.000Z");
+  });
+
+  it("projects the next MONTHLY contribution on the chosen day of the following month", () => {
+    const notes = encodeAccrualNotes("", "2026-08", "2026-08-05T00:00:00.000Z");
+    const inv = { cadence: "MONTHLY" as const, investmentDay: 5, notes };
+    const next = getNextAccrualDate(inv);
+    expect(next.getFullYear()).toBe(2026);
+    expect(next.getMonth()).toBe(8); // September (0-indexed)
+    expect(next.getDate()).toBe(5);
+  });
+
+  it("projects the next QUARTERLY contribution three calendar months out", () => {
+    const notes = encodeAccrualNotes("", "2026-06", "2026-06-01T00:00:00.000Z");
+    const inv = { cadence: "QUARTERLY" as const, investmentDay: 1, notes };
+    const next = getNextAccrualDate(inv);
+    expect(next.getFullYear()).toBe(2026);
+    expect(next.getMonth()).toBe(8); // September
+    expect(next.getDate()).toBe(1);
+  });
+
+  it("projects the target day of the current month for a never-accrued schedule", () => {
+    const inv = { cadence: "MONTHLY" as const, investmentDay: 20, notes: null };
+    const next = getNextAccrualDate(inv, new Date(2026, 7, 5)); // Aug 5, target day 20
+    expect(next.getFullYear()).toBe(2026);
+    expect(next.getMonth()).toBe(7); // August
+    expect(next.getDate()).toBe(20);
   });
 });
