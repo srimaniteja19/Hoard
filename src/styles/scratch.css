@@ -136,6 +136,14 @@
   display: flex;
   align-items: center;
   padding: 0 14px;
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  /* A keyboard-shortcut hint ("⌘↵ FILES IT") is meaningless on a touch
+     device anyway, and was pushing the mode row past the viewport width. */
+  .slab__modes .hintk {
+    display: none;
+  }
 }
 
 .slab textarea {
@@ -663,6 +671,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   padding: 8px 14px 0 46px;
   min-height: 24px;
   gap: 8px;
@@ -4176,6 +4185,8 @@ code.md-slash-cmd:hover {
 }
 .views {
   display: flex;
+  flex-wrap: wrap;
+  row-gap: 6px;
 }
 .views button {
   font-family: var(--mono);
@@ -4197,6 +4208,15 @@ code.md-slash-cmd:hover {
 }
 .views button:hover:not([aria-pressed="true"]) {
   background: var(--yellow);
+}
+/* Four buttons at full padding don't fit a phone-width row — this was
+   previously nowrap with no fallback, so it just overflowed the page. */
+@media (max-width: 480px) {
+  .views button {
+    flex: 1 1 auto;
+    padding: 10px 12px;
+    font-size: 10px;
+  }
 }
 
 /* ── THE SLAB ISLOG THEME ── */
@@ -5268,6 +5288,15 @@ code.md-slash-cmd:hover {
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   min-width: 380px;
+}
+@media (max-width: 460px) {
+  /* A fixed 380px floor forces horizontal page overflow on most phones
+     (iPhone SE is 375px wide). Drop the floor and go 2x2 instead of 1x4. */
+  .pinboard-hud {
+    grid-template-columns: repeat(2, 1fr);
+    min-width: 0;
+    width: 100%;
+  }
 }
 .pinboard-hud__card {
   background: var(--card);

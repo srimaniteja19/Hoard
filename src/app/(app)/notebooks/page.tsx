@@ -38,6 +38,20 @@ export default function NotebooksPage() {
   const [currentLessonIdx, setCurrentLessonIdx] = useState(0);
   const [paperTheme, setPaperTheme] = useState<"cream" | "ink">("cream");
 
+  // The two-column course workspace (fixed 300px sidebar + fluid content) has
+  // no room to breathe below ~860px — a phone would show a squeezed sliver of
+  // note content next to an unshrinkable sidebar. Below that width the
+  // sidebar becomes an off-canvas drawer instead of a permanent column.
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 860);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   // Dialog / Modal States
   const [showAddCourseModal, setShowAddCourseModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<SeedCourse | null>(null);
@@ -591,6 +605,24 @@ export default function NotebooksPage() {
           zIndex: 40,
         }}
       >
+        {view === "course" && isMobile && (
+          <button
+            type="button"
+            onClick={() => setMobileSidebarOpen(true)}
+            aria-label="Open lesson outline"
+            style={{
+              background: "transparent",
+              border: "2px solid #0A0A0A",
+              color: "inherit",
+              cursor: "pointer",
+              padding: "4px 8px",
+              fontSize: "13px",
+              lineHeight: 1,
+            }}
+          >
+            ☰
+          </button>
+        )}
         <span
           onClick={() => setView("index")}
           style={{ cursor: "pointer", opacity: view === "index" ? 1 : 0.4 }}
@@ -763,37 +795,79 @@ export default function NotebooksPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "300px minmax(0, 1fr)",
+            gridTemplateColumns: isMobile ? "1fr" : "300px minmax(0, 1fr)",
             flex: 1,
             minHeight: 0,
             overflow: "hidden",
+            position: "relative",
           }}
         >
-          {/* Outline Sidebar */}
-          <OutlineSidebar
-            courses={courses}
-            currentCourseIndex={currentCourseIdx}
-            currentModuleIndex={currentModuleIdx}
-            currentLessonIndex={currentLessonIdx}
-            onSelectCourse={(idx) => {
-              setCurrentCourseIdx(idx);
-              setCurrentModuleIdx(0);
-              setCurrentLessonIdx(0);
-            }}
-            onSelectLesson={(modIdx, lesIdx) => {
-              setCurrentModuleIdx(modIdx);
-              setCurrentLessonIdx(lesIdx);
-            }}
-            onDeleteLesson={handleDeleteLesson}
-            onToggleWatched={handleToggleWatched}
-            onEditCourse={() => handleStartEditCourse(currentCourse)}
-            onDeleteCourse={() => handleStartDeleteCourse(currentCourse)}
-            onBackToIndex={() => setView("index")}
-            onNewPage={() => {
-              playSound.click();
-              setShowAddPageModal(true);
-            }}
-          />
+          {/* On mobile the sidebar becomes an off-canvas drawer instead of a
+              permanent 300px column — there's no room for both next to any
+              usable amount of note content below ~860px. */}
+          {isMobile && mobileSidebarOpen && (
+            <div
+              onClick={() => setMobileSidebarOpen(false)}
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(10,10,10,0.5)",
+                zIndex: 70,
+              }}
+            />
+          )}
+
+          {/* Outline Sidebar — a normal grid column on desktop, a sliding
+              off-canvas drawer on mobile (closes itself after a selection,
+              same as any mobile nav drawer). */}
+          <div
+            style={
+              isMobile
+                ? {
+                    position: "fixed",
+                    top: 0,
+                    bottom: 0,
+                    left: 0,
+                    width: "min(300px, 85vw)",
+                    zIndex: 71,
+                    transform: mobileSidebarOpen ? "translateX(0)" : "translateX(-100%)",
+                    transition: "transform 0.22s ease",
+                    boxShadow: mobileSidebarOpen ? "8px 0 24px rgba(0,0,0,0.35)" : "none",
+                  }
+                : undefined
+            }
+          >
+            <OutlineSidebar
+              courses={courses}
+              currentCourseIndex={currentCourseIdx}
+              currentModuleIndex={currentModuleIdx}
+              currentLessonIndex={currentLessonIdx}
+              onSelectCourse={(idx) => {
+                setCurrentCourseIdx(idx);
+                setCurrentModuleIdx(0);
+                setCurrentLessonIdx(0);
+                if (isMobile) setMobileSidebarOpen(false);
+              }}
+              onSelectLesson={(modIdx, lesIdx) => {
+                setCurrentModuleIdx(modIdx);
+                setCurrentLessonIdx(lesIdx);
+                if (isMobile) setMobileSidebarOpen(false);
+              }}
+              onDeleteLesson={handleDeleteLesson}
+              onToggleWatched={handleToggleWatched}
+              onEditCourse={() => handleStartEditCourse(currentCourse)}
+              onDeleteCourse={() => handleStartDeleteCourse(currentCourse)}
+              onBackToIndex={() => {
+                setView("index");
+                if (isMobile) setMobileSidebarOpen(false);
+              }}
+              onNewPage={() => {
+                playSound.click();
+                setShowAddPageModal(true);
+                if (isMobile) setMobileSidebarOpen(false);
+              }}
+            />
+          </div>
 
           {/* Main Notebook Page Area */}
           <main
