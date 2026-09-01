@@ -9,12 +9,10 @@ interface AiBarProps {
   onTidy: () => void;
   onQuiz: () => void;
   onExplain: () => void;
-  onCollisions: () => void;
   onGaps: () => void;
   isTidying?: boolean;
   isQuizzing?: boolean;
   isExplaining?: boolean;
-  isFindingCollisions?: boolean;
   isAnalyzingGaps?: boolean;
 }
 
@@ -24,12 +22,10 @@ export const AiBar: React.FC<AiBarProps> = ({
   onTidy,
   onQuiz,
   onExplain,
-  onCollisions,
   onGaps,
   isTidying = false,
   isQuizzing = false,
   isExplaining = false,
-  isFindingCollisions = false,
   isAnalyzingGaps = false,
 }) => {
   return (
@@ -50,7 +46,7 @@ export const AiBar: React.FC<AiBarProps> = ({
           color: accentFg,
           display: "flex",
           alignItems: "center",
-          padding: "0 13px",
+          padding: "0 14px",
           fontFamily: "var(--mono, monospace)",
           fontSize: "9.5px",
           fontWeight: 700,
@@ -78,9 +74,9 @@ export const AiBar: React.FC<AiBarProps> = ({
           color: "#0A0A0A",
           border: "none",
           borderRight: "2px solid #0A0A0A",
-          padding: "11px 6px",
+          padding: "11px 8px",
           cursor: isTidying ? "wait" : "pointer",
-          minWidth: "114px",
+          minWidth: "120px",
           whiteSpace: "nowrap",
           transition: "background 0.12s ease",
         }}
@@ -111,9 +107,9 @@ export const AiBar: React.FC<AiBarProps> = ({
           color: "#0A0A0A",
           border: "none",
           borderRight: "2px solid #0A0A0A",
-          padding: "11px 6px",
+          padding: "11px 8px",
           cursor: isQuizzing ? "wait" : "pointer",
-          minWidth: "90px",
+          minWidth: "100px",
           whiteSpace: "nowrap",
           transition: "background 0.12s ease",
         }}
@@ -124,7 +120,7 @@ export const AiBar: React.FC<AiBarProps> = ({
           if (!isQuizzing) e.currentTarget.style.background = "#FFFFFF";
         }}
       >
-        {isQuizzing ? "QUIZZING…" : "QUIZ ME"}
+        {isQuizzing ? "GENERATING QUIZ…" : "QUIZ ME"}
       </button>
 
       <button
@@ -144,9 +140,9 @@ export const AiBar: React.FC<AiBarProps> = ({
           color: "#0A0A0A",
           border: "none",
           borderRight: "2px solid #0A0A0A",
-          padding: "11px 6px",
+          padding: "11px 8px",
           cursor: isExplaining ? "wait" : "pointer",
-          minWidth: "114px",
+          minWidth: "120px",
           whiteSpace: "nowrap",
           transition: "background 0.12s ease",
         }}
@@ -158,39 +154,6 @@ export const AiBar: React.FC<AiBarProps> = ({
         }}
       >
         {isExplaining ? "EXPLAINING…" : "EXPLAIN AGAIN"}
-      </button>
-
-      <button
-        type="button"
-        disabled={isFindingCollisions}
-        onClick={() => {
-          playSound.click();
-          onCollisions();
-        }}
-        style={{
-          flex: 1,
-          fontFamily: "var(--mono, monospace)",
-          fontSize: "9.5px",
-          fontWeight: 700,
-          letterSpacing: "0.11em",
-          background: isFindingCollisions ? "#FCE94F" : "#FFFFFF",
-          color: "#0A0A0A",
-          border: "none",
-          borderRight: "2px solid #0A0A0A",
-          padding: "11px 6px",
-          cursor: isFindingCollisions ? "wait" : "pointer",
-          minWidth: "114px",
-          whiteSpace: "nowrap",
-          transition: "background 0.12s ease",
-        }}
-        onMouseEnter={(e) => {
-          if (!isFindingCollisions) e.currentTarget.style.background = "#FCE94F";
-        }}
-        onMouseLeave={(e) => {
-          if (!isFindingCollisions) e.currentTarget.style.background = "#FFFFFF";
-        }}
-      >
-        {isFindingCollisions ? "SCANNING…" : "FIND COLLISIONS"}
       </button>
 
       <button
@@ -209,9 +172,9 @@ export const AiBar: React.FC<AiBarProps> = ({
           background: isAnalyzingGaps ? "#FCE94F" : "#FFFFFF",
           color: "#0A0A0A",
           border: "none",
-          padding: "11px 6px",
+          padding: "11px 8px",
           cursor: isAnalyzingGaps ? "wait" : "pointer",
-          minWidth: "124px",
+          minWidth: "130px",
           whiteSpace: "nowrap",
           transition: "background 0.12s ease",
         }}

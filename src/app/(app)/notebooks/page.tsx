@@ -9,11 +9,9 @@ import {
   deleteLesson,
   clearLessonNotes,
   createNewCourse,
-  getCollisions,
-  saveCollisions,
   toggleLessonWatched,
 } from "@/lib/notebooks/storage";
-import { SeedCourse, CourseCollision } from "@/lib/notebooks/seedData";
+import { SeedCourse } from "@/lib/notebooks/seedData";
 import { Block, computeWordCount, generateBlockId } from "@/lib/notebooks/blocks";
 import { CourseCard } from "@/components/notebooks/CourseCard";
 import { OutlineSidebar } from "@/components/notebooks/OutlineSidebar";
@@ -21,7 +19,6 @@ import { BlockEditor } from "@/components/notebooks/BlockEditor";
 import { AiBar } from "@/components/notebooks/AiBar";
 import { EmptyPage } from "@/components/notebooks/EmptyPage";
 import { GapPanel } from "@/components/notebooks/GapPanel";
-import { CollisionsPanel } from "@/components/notebooks/CollisionsPanel";
 import { DiffSheet } from "@/components/notebooks/DiffSheet";
 import { QuizModal } from "@/components/notebooks/QuizModal";
 import { ExplainModal } from "@/components/notebooks/ExplainModal";
@@ -40,7 +37,6 @@ export default function NotebooksPage() {
   const [currentModuleIdx, setCurrentModuleIdx] = useState(1);
   const [currentLessonIdx, setCurrentLessonIdx] = useState(0);
   const [paperTheme, setPaperTheme] = useState<"cream" | "ink">("cream");
-  const [collisions, setCollisions] = useState<CourseCollision[]>([]);
 
   // Dialog / Modal States
   const [showAddCourseModal, setShowAddCourseModal] = useState(false);
@@ -80,13 +76,11 @@ export default function NotebooksPage() {
 
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [isAnalyzingGaps, setIsAnalyzingGaps] = useState(false);
-  const [isFindingCollisions, setIsFindingCollisions] = useState(false);
 
   // Load courses & restore active location on mount
   useEffect(() => {
     const loaded = getStoredCourses();
     setCourses(loaded);
-    setCollisions(getCollisions());
 
     // Restore paper theme
     const savedTheme = localStorage.getItem("hoard_notebook_theme") as "cream" | "ink" | null;
@@ -464,35 +458,6 @@ export default function NotebooksPage() {
     }
   };
 
-  // AI: FIND COLLISIONS
-  const handleFindCollisions = async () => {
-    if (isFindingCollisions) return;
-    playSound.click();
-    setIsFindingCollisions(true);
-    try {
-      const res = await fetch("/api/notebooks/collisions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courses }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.collisions && data.collisions.length > 0) {
-          setCollisions(data.collisions);
-          saveCollisions(data.collisions);
-        }
-      }
-    } catch {
-      // keep fallback
-    } finally {
-      setIsFindingCollisions(false);
-    }
-    setView("index");
-    setTimeout(() => {
-      window.scrollTo({ top: 600, behavior: "smooth" });
-    }, 100);
-  };
-
   const handleAddCourse = () => {
     playSound.click();
     setShowAddCourseModal(true);
@@ -717,8 +682,7 @@ export default function NotebooksPage() {
                 }}
               >
                 {courses.length} COURSES ·{" "}
-                {courses.flatMap((c) => c.modules.flatMap((m) => m.lessons)).length} LESSONS ·{" "}
-                {collisions.length} CROSS-COURSE COLLISIONS
+                {courses.flatMap((c) => c.modules.flatMap((m) => m.lessons)).length} LESSONS
               </div>
             </div>
 
@@ -791,9 +755,6 @@ export default function NotebooksPage() {
               </span>
             </div>
           </div>
-
-          {/* Cross-Course Collisions Matrix */}
-          <CollisionsPanel collisions={collisions} />
         </div>
       )}
 
@@ -996,14 +957,13 @@ export default function NotebooksPage() {
                 </div>
               </div>
 
-              {/* 5 AI Action Triggers */}
+              {/* AI Action Triggers */}
               <AiBar
                 accentColor={currentCourse.accent}
                 accentFg={currentCourse.accentFg}
                 onTidy={handleTidyNotes}
                 onQuiz={handleQuizMe}
                 onExplain={handleExplain}
-                onCollisions={handleFindCollisions}
                 onGaps={() => {
                   if (currentLesson.transcript) {
                     handleAnalyzeTranscript(currentLesson.transcript.text);
@@ -1014,7 +974,6 @@ export default function NotebooksPage() {
                 isTidying={isTidying}
                 isQuizzing={isQuizzing}
                 isExplaining={isExplaining}
-                isFindingCollisions={isFindingCollisions}
                 isAnalyzingGaps={isAnalyzingGaps}
               />
 
