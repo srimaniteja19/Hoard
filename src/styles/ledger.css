@@ -744,9 +744,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 20px;
   padding-bottom: 12px;
   border-bottom: 1.5px solid var(--ink, #0A0A0A);
+}
+
+/* Some titles run 35+ characters ("ADD RECURRING INVESTMENT (SIP / DCA)")
+   — without min-width: 0 a flex item won't shrink below its own text's
+   natural width, so on a narrow modal the close button could get pushed
+   out past the (overflow-x: hidden) edge instead of wrapping. */
+.ledger-modal-header h2,
+.ledger-modal-header > div {
+  min-width: 0;
 }
 
 .ledger-modal-header h2 {

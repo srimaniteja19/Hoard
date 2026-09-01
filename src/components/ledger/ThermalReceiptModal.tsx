@@ -150,13 +150,15 @@ CHECKSUM: #HDR-ARCHIVE-${new Date().getFullYear()}-${Math.floor(Math.random() * 
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexWrap: "wrap",
+            gap: "8px",
           }}
         >
           <span style={{ fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 900, color: "#FFE600", letterSpacing: "0.06em" }}>
             🧾 DOVER STREET FISCAL RECEIPT
           </span>
 
-          <div style={{ display: "flex", gap: "6px" }}>
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
             <button
               type="button"
               className="btn-card-action"
@@ -404,6 +406,8 @@ CHECKSUM: #HDR-ARCHIVE-${new Date().getFullYear()}-${Math.floor(Math.random() * 
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexWrap: "wrap",
+            gap: "10px",
           }}
         >
           <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", color: "#666" }}>

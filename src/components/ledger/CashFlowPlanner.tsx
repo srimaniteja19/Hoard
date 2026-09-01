@@ -211,7 +211,7 @@ export const CashFlowPlanner: React.FC<CashFlowPlannerProps> = ({
       </div>
 
       {/* ── INCOME SOURCES GRID ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "10px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", marginTop: "10px" }}>
         <h3 style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900, margin: 0 }}>
           INCOME STREAMS ({incomes.length})
         </h3>

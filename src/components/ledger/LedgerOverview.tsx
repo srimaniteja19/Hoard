@@ -197,8 +197,21 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
         </div>
       )}
 
-      {/* ── CHARTS & ANALYTICS VISUALIZATIONS ── */}
-      <div style={{ display: "grid", gridTemplateColumns: overview.subscriptions.length > 0 && overview.incomes.length > 0 ? "1fr 1fr" : "1fr", gap: "20px" }}>
+      {/* ── CHARTS & ANALYTICS VISUALIZATIONS ──
+          A hard "1fr 1fr" here (as opposed to every other grid on this page)
+          squeezed both charts to ~half a phone's width with no floor —
+          auto-fit/minmax lets it collapse to one column when there's no
+          room for two legible charts side by side. */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            overview.subscriptions.length > 0 && overview.incomes.length > 0
+              ? "repeat(auto-fit, minmax(320px, 1fr))"
+              : "1fr",
+          gap: "20px",
+        }}
+      >
         {overview.subscriptions.length > 0 && (
           <SubscriptionBreakdownChart
             subscriptions={overview.subscriptions}
@@ -219,7 +232,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
       <div className="cashflow-dashboard">
         {/* Left: Debt Payoff Horizon */}
         <div className="cashflow-box">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", rowGap: "8px", marginBottom: "14px" }}>
             <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
               <CreditCard size={18} aria-hidden="true" />
               DEBT FREEDOM ACCELERATOR
@@ -285,7 +298,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
 
         {/* Right: Cash Flow Velocity */}
         <div className="cashflow-box">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", rowGap: "8px", marginBottom: "14px" }}>
             <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
               <TrendingUp size={18} aria-hidden="true" />
               CASH FLOW VELOCITY

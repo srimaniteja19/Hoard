@@ -905,7 +905,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
       )}
 
       {/* ── DEBT ACCOUNTS GRID ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "4px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", marginTop: "4px" }}>
         <h3 style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900, margin: 0 }}>
           ACTIVE LIABILITIES ({debts.length})
         </h3>
