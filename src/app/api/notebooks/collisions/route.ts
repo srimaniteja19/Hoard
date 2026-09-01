@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { languageModel, gatewayProviderOptions, gatewayErrorMessage } from "@/lib/ai/models";
+import { requireUserId, AuthError } from "@/lib/session";
+import { getNotebookCollisions, saveNotebookCollisions } from "@/lib/dal/notebooks";
 
 export const runtime = "nodejs";
 const NOTEBOOK_MODEL = "google/gemini-3.5-flash-lite";
@@ -36,8 +38,29 @@ Rules:
 - Never invent a connection to fill the list.
 `;
 
+export async function GET(req: NextRequest) {
+  try {
+    const userId = await requireUserId(req);
+    const collisions = await getNotebookCollisions(userId);
+    return NextResponse.json({ collisions });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    console.error("[GET /api/notebooks/collisions] Error:", err);
+    return NextResponse.json({ error: "Failed to fetch collisions" }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
+    let userId: string | null = null;
+    try {
+      userId = await requireUserId(req);
+    } catch {
+      // Allow unauthenticated AI test calls if any
+    }
+
     const { courses } = await req.json();
 
     if (!Array.isArray(courses) || courses.length < 2) {
@@ -73,8 +96,17 @@ ${JSON.stringify(coursesDump, null, 2).slice(0, 16000)}`;
       ...gatewayProviderOptions(NOTEBOOK_MODEL, ["feature:notebook-collisions"]),
     });
 
+    const formattedCollisions = object.collisions.map((c, idx) => ({
+      id: `collision-${Date.now().toString(36)}-${idx}`,
+      ...c,
+    }));
+
+    if (userId) {
+      await saveNotebookCollisions(userId, formattedCollisions);
+    }
+
     return NextResponse.json({
-      collisions: object.collisions.map((c, idx) => ({ id: `collision-${Date.now().toString(36)}-${idx}`, ...c })),
+      collisions: formattedCollisions,
     });
   } catch (err) {
     console.error("Notebook collisions failed:", err);
@@ -84,3 +116,4 @@ ${JSON.stringify(coursesDump, null, 2).slice(0, 16000)}`;
     );
   }
 }
+

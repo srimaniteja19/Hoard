@@ -1193,6 +1193,7 @@ export const notebookCourses = pgTable(
     provider: text("provider").notNull().default("DeepLearning.AI"),
     accent: varchar("accent", { length: 32 }).notNull().default("#7B5CF0"),
     accentFg: varchar("accent_fg", { length: 32 }).notNull().default("#FFFFFF"),
+    init: varchar("init", { length: 16 }).notNull().default("C"),
     url: text("url"),
     startedAt: timestamp("started_at").defaultNow().notNull(),
     archivedAt: timestamp("archived_at"),
@@ -1240,6 +1241,7 @@ export const notebookLessons = pgTable(
     position: integer("position").notNull().default(0),
     watchedAt: timestamp("watched_at"),
     lessonUrl: text("lesson_url"),
+    gap: jsonb("gap").$type<{ timestamp: string; topic: string }[]>().default(sql`'[]'::jsonb`),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
@@ -1317,6 +1319,31 @@ export const notebookChunks = pgTable(
 
 export type NotebookChunkRow = typeof notebookChunks.$inferSelect;
 export type NewNotebookChunkRow = typeof notebookChunks.$inferInsert;
+
+export const notebookCollisions = pgTable(
+  "notebook_collisions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    relation: varchar("relation", { length: 32 }).notNull().default("same-idea"),
+    sourceA: jsonb("source_a").$type<{ course: string; lesson: string }>().notNull(),
+    sourceB: jsonb("source_b").$type<{ course: string; lesson: string }>().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("notebook_collision_user_idx").on(table.userId, table.createdAt.desc()),
+  ]
+);
+
+export type NotebookCollisionRow = typeof notebookCollisions.$inferSelect;
+export type NewNotebookCollisionRow = typeof notebookCollisions.$inferInsert;
+
 
 
 

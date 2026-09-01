@@ -113,6 +113,13 @@
       "when": 1788032000000,
       "tag": "0023_add_recurring_investments",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1788040000000,
+      "tag": "0024_add_notebooks",
+      "breakpoints": true
     }
   ]
 }

@@ -2,9 +2,10 @@ import { Block, computeWordCount, generateBlockId } from "./blocks";
 import { SEED_COURSES, SEED_COLLISIONS, SeedCourse, CourseCollision } from "./seedData";
 
 const COURSES_STORAGE_KEY = "hoard_notebook_courses_v2";
+const COLLISIONS_STORAGE_KEY = "hoard_notebook_collisions_v1";
 
 /**
- * Loads all courses with fallback to SEED_COURSES
+ * Loads all courses from localStorage with fallback to SEED_COURSES
  */
 export function getStoredCourses(): SeedCourse[] {
   if (typeof window === "undefined") return SEED_COURSES;
@@ -23,7 +24,7 @@ export function getStoredCourses(): SeedCourse[] {
 }
 
 /**
- * Saves all courses
+ * Saves all courses to localStorage mirror
  */
 export function saveStoredCourses(courses: SeedCourse[]): void {
   if (typeof window === "undefined") return;
@@ -35,7 +36,7 @@ export function saveStoredCourses(courses: SeedCourse[]): void {
 }
 
 /**
- * Gets a course by ID
+ * Gets a course by ID from local cache
  */
 export function getCourseById(courseId: string): SeedCourse | null {
   const courses = getStoredCourses();
@@ -43,11 +44,7 @@ export function getCourseById(courseId: string): SeedCourse | null {
 }
 
 /**
- * Pure in-memory update of a lesson's blocks. Does NOT touch localStorage —
- * callers that edit on every keystroke (the block editor) should debounce the
- * actual persistence separately via saveStoredCourses, since re-stringifying
- * every course/lesson/block (including any pasted base64 images) on every
- * keystroke is the single biggest cause of editor lag.
+ * Pure in-memory update of a lesson's blocks.
  */
 export function computeLessonBlocksUpdate(
   courses: SeedCourse[],
@@ -73,9 +70,7 @@ export function computeLessonBlocksUpdate(
 }
 
 /**
- * Saves blocks for a specific lesson, persisting immediately. Prefer
- * computeLessonBlocksUpdate + a debounced saveStoredCourses for hot paths
- * like keystroke-by-keystroke editing.
+ * Saves blocks for a specific lesson locally and mirrors to localStorage
  */
 export function saveLessonBlocks(courseId: string, lessonId: string, blocks: Block[]): SeedCourse[] {
   const courses = getStoredCourses();
@@ -85,7 +80,7 @@ export function saveLessonBlocks(courseId: string, lessonId: string, blocks: Blo
 }
 
 /**
- * Toggles whether a lesson has been watched
+ * Toggles whether a lesson has been watched in local state
  */
 export function toggleLessonWatched(courseId: string, lessonId: string): SeedCourse[] {
   const courses = getStoredCourses();
@@ -104,16 +99,47 @@ export function toggleLessonWatched(courseId: string, lessonId: string): SeedCou
   return courses;
 }
 
-/**
- * Adds a stub for a gap topic found in the transcript
- */
 export function addLessonGapStub(
+  courses: SeedCourse[],
   courseId: string,
   lessonId: string,
   timestamp: string,
   topic: string
+): SeedCourse[];
+export function addLessonGapStub(
+  courseId: string,
+  lessonId: string,
+  timestamp: string,
+  topic: string,
+  currentCourses?: SeedCourse[]
+): SeedCourse[];
+export function addLessonGapStub(
+  arg1: string | SeedCourse[],
+  arg2: string,
+  arg3: string,
+  arg4: string,
+  arg5?: string | SeedCourse[]
 ): SeedCourse[] {
-  const courses = getStoredCourses();
+  let courses: SeedCourse[];
+  let courseId: string;
+  let lessonId: string;
+  let timestamp: string;
+  let topic: string;
+
+  if (Array.isArray(arg1)) {
+    courses = arg1;
+    courseId = arg2;
+    lessonId = arg3;
+    timestamp = arg4;
+    topic = (arg5 as string) || "";
+  } else {
+    courses = Array.isArray(arg5) ? arg5 : getStoredCourses();
+    courseId = arg1;
+    lessonId = arg2;
+    timestamp = arg3;
+    topic = arg4;
+  }
+
   const course = courses.find((c) => c.id === courseId);
   if (!course) return courses;
 
@@ -235,11 +261,8 @@ export function createNewCourse(
   return newCourse;
 }
 
-const COLLISIONS_STORAGE_KEY = "hoard_notebook_collisions_v1";
-
 /**
- * Returns all active collisions, preferring the last AI-found set over the seed
- * examples once the user has actually run "Find Collisions".
+ * Returns all active collisions from local cache
  */
 export function getCollisions(): CourseCollision[] {
   if (typeof window === "undefined") return SEED_COLLISIONS;
@@ -255,8 +278,7 @@ export function getCollisions(): CourseCollision[] {
 }
 
 /**
- * Persists the results of an AI collision run so they survive a page reload
- * instead of reverting to the seed examples every time.
+ * Persists the results of an AI collision run to local storage
  */
 export function saveCollisions(collisions: CourseCollision[]): void {
   if (typeof window === "undefined") return;
@@ -264,5 +286,205 @@ export function saveCollisions(collisions: CourseCollision[]): void {
     localStorage.setItem(COLLISIONS_STORAGE_KEY, JSON.stringify(collisions));
   } catch (err) {
     console.error("Failed to save notebook collisions:", err);
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// SERVER DATABASE API CALLS
+// ─────────────────────────────────────────────────────────
+
+/**
+ * Fetches courses and collisions from the PostgreSQL database API
+ */
+export async function fetchNotebooksFromDbApi(): Promise<{
+  courses: SeedCourse[];
+  collisions: CourseCollision[];
+} | null> {
+  try {
+    const res = await fetch("/api/notebooks", { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      courses: data.courses || [],
+      collisions: data.collisions || [],
+    };
+  } catch (err) {
+    console.error("[fetchNotebooksFromDbApi] Failed:", err);
+    return null;
+  }
+}
+
+/**
+ * Syncs/imports courses and collisions into PostgreSQL
+ */
+export async function syncCoursesToDbApi(
+  courses: SeedCourse[],
+  collisions?: CourseCollision[]
+): Promise<SeedCourse[] | null> {
+  try {
+    const res = await fetch("/api/notebooks/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courses, collisions }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.courses || null;
+  } catch (err) {
+    console.error("[syncCoursesToDbApi] Failed:", err);
+    return null;
+  }
+}
+
+/**
+ * Saves note blocks for a lesson to PostgreSQL
+ */
+export async function saveLessonBlocksToDbApi(
+  lessonId: string,
+  blocks: Block[]
+): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/notebooks/lessons/${encodeURIComponent(lessonId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blocks }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("[saveLessonBlocksToDbApi] Failed:", err);
+    return false;
+  }
+}
+
+/**
+ * Creates a course in PostgreSQL
+ */
+export async function createCourseInDbApi(data: {
+  title: string;
+  provider?: string;
+  accent?: string;
+  accentFg?: string;
+  init?: string;
+  url?: string;
+}): Promise<SeedCourse | null> {
+  try {
+    const res = await fetch("/api/notebooks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.course || null;
+  } catch (err) {
+    console.error("[createCourseInDbApi] Failed:", err);
+    return null;
+  }
+}
+
+/**
+ * Updates a course in PostgreSQL
+ */
+export async function updateCourseInDbApi(
+  courseId: string,
+  data: Partial<{
+    title: string;
+    provider: string;
+    accent: string;
+    accentFg: string;
+    init: string;
+    url: string;
+  }>
+): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/notebooks/${encodeURIComponent(courseId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("[updateCourseInDbApi] Failed:", err);
+    return false;
+  }
+}
+
+/**
+ * Deletes a course from PostgreSQL
+ */
+export async function deleteCourseFromDbApi(courseId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/notebooks/${encodeURIComponent(courseId)}`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("[deleteCourseFromDbApi] Failed:", err);
+    return false;
+  }
+}
+
+/**
+ * Creates a new lesson/page in PostgreSQL
+ */
+export async function createLessonInDbApi(
+  moduleId: string,
+  title: string,
+  blocks?: Block[]
+): Promise<any | null> {
+  try {
+    const res = await fetch("/api/notebooks/lessons", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ moduleId, title, blocks }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.lesson || null;
+  } catch (err) {
+    console.error("[createLessonInDbApi] Failed:", err);
+    return null;
+  }
+}
+
+/**
+ * Updates lesson metadata or toggles watched status in PostgreSQL
+ */
+export async function updateLessonInDbApi(
+  lessonId: string,
+  data: {
+    title?: string;
+    gap?: { timestamp: string; topic: string }[];
+    lessonUrl?: string;
+    watched?: boolean;
+    toggleWatched?: boolean;
+    clearNotes?: boolean;
+  }
+): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/notebooks/lessons/${encodeURIComponent(lessonId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("[updateLessonInDbApi] Failed:", err);
+    return false;
+  }
+}
+
+/**
+ * Deletes a lesson/page from PostgreSQL
+ */
+export async function deleteLessonFromDbApi(lessonId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/notebooks/lessons/${encodeURIComponent(lessonId)}`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("[deleteLessonFromDbApi] Failed:", err);
+    return false;
   }
 }

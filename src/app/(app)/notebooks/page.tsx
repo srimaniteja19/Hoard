@@ -10,6 +10,15 @@ import {
   clearLessonNotes,
   createNewCourse,
   toggleLessonWatched,
+  fetchNotebooksFromDbApi,
+  saveLessonBlocksToDbApi,
+  createCourseInDbApi,
+  updateCourseInDbApi,
+  deleteCourseFromDbApi,
+  createLessonInDbApi,
+  updateLessonInDbApi,
+  deleteLessonFromDbApi,
+  saveCollisions,
 } from "@/lib/notebooks/storage";
 import { SeedCourse } from "@/lib/notebooks/seedData";
 import { Block, computeWordCount, generateBlockId } from "@/lib/notebooks/blocks";
@@ -93,8 +102,20 @@ export default function NotebooksPage() {
 
   // Load courses & restore active location on mount
   useEffect(() => {
+    // 1. Immediate local cache load
     const loaded = getStoredCourses();
     setCourses(loaded);
+
+    // 2. Asynchronously fetch from PostgreSQL database
+    fetchNotebooksFromDbApi().then((dbData) => {
+      if (dbData && dbData.courses && dbData.courses.length > 0) {
+        setCourses(dbData.courses);
+        saveStoredCourses(dbData.courses);
+        if (dbData.collisions && dbData.collisions.length > 0) {
+          saveCollisions(dbData.collisions);
+        }
+      }
+    });
 
     // Restore paper theme
     const savedTheme = localStorage.getItem("hoard_notebook_theme") as "cream" | "ink" | null;
@@ -199,13 +220,19 @@ export default function NotebooksPage() {
   // Persisting to localStorage re-serializes every course/lesson/block (including
   // any pasted base64 images), so doing it on every keystroke is what made typing
   // laggy. React state updates instantly for a responsive UI; the localStorage
-  // write itself is debounced and flushed on navigation/unload so nothing is lost.
-  const pendingSaveRef = useRef<{ courses: SeedCourse[]; timer: ReturnType<typeof setTimeout> } | null>(null);
+  // write and DB sync is debounced and flushed on navigation/unload so nothing is lost.
+  const pendingSaveRef = useRef<{
+    courses: SeedCourse[];
+    lessonId: string;
+    blocks: Block[];
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
 
   const flushPendingSave = useCallback(() => {
     if (pendingSaveRef.current) {
       clearTimeout(pendingSaveRef.current.timer);
       saveStoredCourses(pendingSaveRef.current.courses);
+      saveLessonBlocksToDbApi(pendingSaveRef.current.lessonId, pendingSaveRef.current.blocks);
       pendingSaveRef.current = null;
     }
   }, []);
@@ -218,8 +245,11 @@ export default function NotebooksPage() {
     if (pendingSaveRef.current) clearTimeout(pendingSaveRef.current.timer);
     pendingSaveRef.current = {
       courses: updated,
+      lessonId: currentLesson.id,
+      blocks: newBlocks,
       timer: setTimeout(() => {
         saveStoredCourses(updated);
+        saveLessonBlocksToDbApi(currentLesson.id, newBlocks);
         pendingSaveRef.current = null;
       }, 500),
     };
@@ -253,6 +283,7 @@ export default function NotebooksPage() {
     if (!targetLesson) return;
     const updated = toggleLessonWatched(currentCourse.id, targetLesson.id);
     setCourses([...updated]);
+    updateLessonInDbApi(targetLesson.id, { toggleWatched: true });
   };
 
   const handleDeleteLesson = (modIdx: number, lesIdx: number) => {
@@ -270,6 +301,7 @@ export default function NotebooksPage() {
       onConfirm: () => {
         const updated = deleteLesson(currentCourse.id, targetLesson.id);
         setCourses([...updated]);
+        deleteLessonFromDbApi(targetLesson.id);
 
         // Handle index updates if currently viewing the deleted lesson
         if (modIdx === currentModuleIdx && lesIdx === currentLessonIdx) {
@@ -302,6 +334,7 @@ export default function NotebooksPage() {
       onConfirm: () => {
         const updated = clearLessonNotes(currentCourse.id, currentLesson.id);
         setCourses([...updated]);
+        updateLessonInDbApi(currentLesson.id, { clearNotes: true });
         setConfirmModalState((prev) => ({ ...prev, isOpen: false }));
       },
     });
@@ -462,6 +495,7 @@ export default function NotebooksPage() {
         currentLesson.gap = data.gaps;
         saveStoredCourses(courses);
         setCourses([...courses]);
+        updateLessonInDbApi(currentLesson.id, { gap: data.gaps });
       }
       setShowTranscriptModal(false);
       playSound.fileIt();
@@ -477,7 +511,7 @@ export default function NotebooksPage() {
     setShowAddCourseModal(true);
   };
 
-  const handleCreateCourse = ({
+  const handleCreateCourse = async ({
     title,
     provider,
     accent,
@@ -488,8 +522,16 @@ export default function NotebooksPage() {
     accent?: string;
     accentFg?: string;
   }) => {
-    const newCourse = createNewCourse(title, provider || "DEEPLEARNING.AI", accent || "#7B5CF0", accentFg || "#FFFFFF");
-    const updated = [...courses, newCourse];
+    const newCourse = await createCourseInDbApi({
+      title,
+      provider: provider || "DEEPLEARNING.AI",
+      accent: accent || "#7B5CF0",
+      accentFg: accentFg || "#FFFFFF",
+    });
+    const courseToAdd =
+      newCourse ||
+      createNewCourse(title, provider || "DEEPLEARNING.AI", accent || "#7B5CF0", accentFg || "#FFFFFF");
+    const updated = [...courses, courseToAdd];
     saveStoredCourses(updated);
     setCourses(updated);
     setCurrentCourseIdx(courses.length);
@@ -527,6 +569,7 @@ export default function NotebooksPage() {
     });
     saveStoredCourses(nextCourses);
     setCourses(nextCourses);
+    updateCourseInDbApi(editingCourse.id, updated);
     setShowEditCourseModal(false);
     setEditingCourse(null);
   };
@@ -543,6 +586,7 @@ export default function NotebooksPage() {
         const nextCourses = courses.filter((c) => c.id !== course.id);
         saveStoredCourses(nextCourses);
         setCourses(nextCourses);
+        deleteCourseFromDbApi(course.id);
         if (currentCourse?.id === course.id) {
           setView("index");
           setCurrentCourseIdx(0);
@@ -554,21 +598,26 @@ export default function NotebooksPage() {
     });
   };
 
-  const handleCreatePage = (newTitle: string) => {
+  const handleCreatePage = async (newTitle: string) => {
     if (!currentCourse) return;
     const targetModIdx = currentModule ? currentModuleIdx : 0;
-    const newLesson = {
+    const targetMod = currentCourse.modules[targetModIdx];
+    if (!targetMod) return;
+
+    const createdLesson = await createLessonInDbApi(targetMod.id, newTitle);
+    const newLesson = createdLesson || {
       id: "les-" + Date.now().toString(36),
       title: newTitle,
       watched: false,
       meta: "STUB · 1 LINE",
       blocks: [{ id: generateBlockId(), type: "paragraph" as const, text: "" }],
     };
-    currentCourse.modules[targetModIdx].lessons.push(newLesson);
+
+    targetMod.lessons.push(newLesson);
     saveStoredCourses(courses);
     setCourses([...courses]);
     setCurrentModuleIdx(targetModIdx);
-    setCurrentLessonIdx(currentCourse.modules[targetModIdx].lessons.length - 1);
+    setCurrentLessonIdx(targetMod.lessons.length - 1);
     setShowAddPageModal(false);
   };
 
@@ -1081,9 +1130,17 @@ export default function NotebooksPage() {
                       currentCourse.id,
                       currentLesson.id,
                       timestamp,
-                      topic
+                      topic,
+                      courses
                     );
                     setCourses([...updated]);
+                    const targetLes = updated
+                      .find((c) => c.id === currentCourse.id)
+                      ?.modules[currentModuleIdx]?.lessons.find((l) => l.id === currentLesson.id);
+                    if (targetLes) {
+                      saveLessonBlocksToDbApi(currentLesson.id, targetLes.blocks || []);
+                      updateLessonInDbApi(currentLesson.id, { gap: targetLes.gap || [] });
+                    }
                   }}
                 />
               )}
