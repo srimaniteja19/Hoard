@@ -13,6 +13,8 @@ export interface FxRateSnapshot {
   lastUpdated: string; // ISO string
   inrPerUsd: number;
   usdPerInr: number;
+  /** False when these are hardcoded fallback rates, not a live/cached fetch. */
+  isLive: boolean;
 }
 
 // Fallback baseline rates (updated daily/fallback)
@@ -32,11 +34,11 @@ let cachedSnapshot: FxRateSnapshot | null = null;
 let cacheExpiry: number = 0;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour cache
 
-function buildSnapshot(rates: Record<string, number>, dateStr?: string): FxRateSnapshot {
+function buildSnapshot(rates: Record<string, number>, dateStr?: string, isLive: boolean = false): FxRateSnapshot {
   const now = new Date();
   const date = dateStr || now.toISOString().split("T")[0];
   const inrRate = rates["INR"] && rates["INR"] > 0 ? rates["INR"] : FALLBACK_FX_RATES.INR;
-  
+
   return {
     base: "USD",
     rates: { ...FALLBACK_FX_RATES, ...rates, USD: 1 },
@@ -45,17 +47,20 @@ function buildSnapshot(rates: Record<string, number>, dateStr?: string): FxRateS
     lastUpdated: now.toISOString(),
     inrPerUsd: inrRate,
     usdPerInr: inrRate > 0 ? 1 / inrRate : 1 / 86.85,
+    isLive,
   };
 }
 
 /**
- * Returns synchronous cached or fallback FX rates immediately
+ * Returns synchronous cached or fallback FX rates immediately. Never fetches
+ * live rates itself — callers on a cold instance that haven't awaited
+ * getLiveFxSnapshot() yet will get hardcoded fallback rates (isLive: false).
  */
 export function getFxSnapshotSync(): FxRateSnapshot {
   if (cachedSnapshot && Date.now() < cacheExpiry) {
     return cachedSnapshot;
   }
-  const snapshot = buildSnapshot(cachedSnapshot?.rates || FALLBACK_FX_RATES);
+  const snapshot = buildSnapshot(cachedSnapshot?.rates || FALLBACK_FX_RATES, undefined, cachedSnapshot?.isLive ?? false);
   cachedSnapshot = snapshot;
   cacheExpiry = Date.now() + CACHE_TTL_MS;
   return snapshot;
@@ -82,7 +87,11 @@ export async function getLiveFxSnapshot(): Promise<FxRateSnapshot> {
     if (res.ok) {
       const data = await res.json();
       if (data.rates && typeof data.rates === "object") {
-        const snapshot = buildSnapshot(data.rates, data.time_last_update_utc ? new Date(data.time_last_update_utc).toISOString().split("T")[0] : undefined);
+        const snapshot = buildSnapshot(
+          data.rates,
+          data.time_last_update_utc ? new Date(data.time_last_update_utc).toISOString().split("T")[0] : undefined,
+          true
+        );
         cachedSnapshot = snapshot;
         cacheExpiry = Date.now() + CACHE_TTL_MS;
         return snapshot;
@@ -92,7 +101,7 @@ export async function getLiveFxSnapshot(): Promise<FxRateSnapshot> {
     // Network or timeout - use fallback smoothly
   }
 
-  const fallback = buildSnapshot(FALLBACK_FX_RATES);
+  const fallback = buildSnapshot(FALLBACK_FX_RATES, undefined, false);
   cachedSnapshot = fallback;
   cacheExpiry = Date.now() + CACHE_TTL_MS;
   return fallback;
@@ -121,6 +130,7 @@ export function convertToUsd(
     return Math.round((amount / rateToUsd) * 100) / 100;
   }
 
+  console.warn(`[fx] No exchange rate for currency "${code}" — treating ${amount} as USD unconverted.`);
   return amount;
 }
 
@@ -147,5 +157,6 @@ export function convertFromUsd(
     return Math.round(usdAmount * rate * 100) / 100;
   }
 
+  console.warn(`[fx] No exchange rate for currency "${code}" — treating ${usdAmount} as unconverted.`);
   return usdAmount;
 }

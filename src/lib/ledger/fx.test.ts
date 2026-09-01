@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   convertToUsd,
   convertFromUsd,
@@ -34,5 +34,14 @@ describe("Real-time FX Currency Converter", () => {
     expect(snapshot.inrPerUsd).toBeGreaterThan(50);
     expect(snapshot.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(snapshot.formattedDate).toBeTruthy();
+    expect(typeof snapshot.isLive).toBe("boolean");
+  });
+
+  it("warns and passes the amount through unconverted for an unrecognized currency", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(convertToUsd(100, "CHF")).toBe(100);
+    expect(convertFromUsd(100, "CHF")).toBe(100);
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+    warnSpy.mockRestore();
   });
 });

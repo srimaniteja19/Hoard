@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   FinancialDebtRow,
   DebtPayoffStrategy,
@@ -8,7 +8,7 @@ import {
 } from "@/lib/ledger/types";
 import { formatCurrency, formatSignedCurrency, getCurrencySymbol } from "@/lib/ledger/formatters";
 import { calculateDebtPayoff } from "@/lib/ledger/debtPayoff";
-import { getDebtCycleRecord, recordCyclePayment } from "@/lib/ledger/debtCycleTracker";
+import { getDebtCycleRecord, recordCyclePayment, markCarriedOverInterestApplied } from "@/lib/ledger/debtCycleTracker";
 import { playSound } from "@/lib/sound";
 import { DebtAmortizationChart } from "./charts/DebtAmortizationChart";
 import { CreditCard, DollarSign, CheckCircle, Plus, Minus, TrendingUp as TrendingUpIcon } from "lucide-react";
@@ -45,6 +45,7 @@ const PaymentPanel: React.FC<{
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
+  const [capitalizationNotice, setCapitalizationNotice] = useState<string | null>(null);
 
   // Monthly interest on the current balance (APR / 12)
   const monthlyRate = (debt.interestRate || 0) / 100 / 12;
@@ -52,8 +53,37 @@ const PaymentPanel: React.FC<{
 
   // Load current monthly cycle payment history
   const [cycleRecord, setCycleRecord] = useState(() =>
-    getDebtCycleRecord(debt.id, monthlyInterest)
+    getDebtCycleRecord(debt.id, monthlyInterest, debt.dueDay || 1)
   );
+
+  // If the previous billing cycle closed with interest still unpaid, that
+  // interest capitalizes onto the balance (negative amortization) exactly
+  // once — surface it and persist the corrected balance.
+  useEffect(() => {
+    if (!(cycleRecord.carriedOverInterest > 0) || cycleRecord.carriedOverInterestApplied) return;
+    const capitalizedAmount = cycleRecord.carriedOverInterest;
+    const capitalizedBalance = Math.round((debt.balance + capitalizedAmount) * 100) / 100;
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/financial/debts/${debt.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ balance: capitalizedBalance }),
+        });
+        if (!res.ok) throw new Error("Failed to capitalize carried-over interest");
+        const updated = await res.json();
+        onUpdated(updated);
+        setCycleRecord(markCarriedOverInterestApplied(cycleRecord));
+        setCapitalizationNotice(
+          `⚠ ${formatCurrency(capitalizedAmount, 2, currency)} of unpaid interest from last billing cycle was added to this balance (negative amortization). New balance: ${formatCurrency(capitalizedBalance, 2, currency)}`
+        );
+      } catch (err) {
+        console.error("Failed to capitalize carried-over interest:", err);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const interestPaidThisMonth = cycleRecord.interestPaidThisCycle;
   const remainingInterestDue = Math.max(0, monthlyInterest - interestPaidThisMonth);
@@ -68,7 +98,8 @@ const PaymentPanel: React.FC<{
         debt.id,
         paymentAmount,
         monthlyInterest,
-        label
+        label,
+        debt.dueDay || 1
       );
       setCycleRecord(updatedCycle);
 
@@ -90,7 +121,7 @@ const PaymentPanel: React.FC<{
       if (calculation.interestPortion > 0) {
         const clearedStatus = calculation.isInterestFullyCleared
           ? " [Monthly interest 100% cleared! ✓]"
-          : ` [Remaining interest: ${formatCurrency(calculation.remainingInterestAfterPayment, 2, currency)}]`;
+          : ` [⚠ Remaining interest: ${formatCurrency(calculation.remainingInterestAfterPayment, 2, currency)} — will capitalize onto your balance (negative amortization) if unpaid by next cycle]`;
         interestNote = ` (Interest: ${formatCurrency(calculation.interestPortion, 2, currency)}${clearedStatus} · Principal: ${formatCurrency(calculation.principalReduction, 2, currency)})`;
       } else {
         interestNote = ` (Interest: $0.00 [Already cleared this cycle ✓] · Principal: ${formatCurrency(calculation.principalReduction, 2, currency)})`;
@@ -178,6 +209,23 @@ const PaymentPanel: React.FC<{
           ✕
         </button>
       </div>
+
+      {capitalizationNotice && (
+        <div
+          style={{
+            background: "#FEF3C7",
+            border: "1.5px solid #D97706",
+            color: "#92400E",
+            padding: "8px 10px",
+            borderRadius: "3px",
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "10.5px",
+            fontWeight: 800,
+          }}
+        >
+          {capitalizationNotice}
+        </div>
+      )}
 
       {/* ── This Month's Interest Breakdown ── */}
       {monthlyInterest > 0 && (

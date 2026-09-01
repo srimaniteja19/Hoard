@@ -515,6 +515,7 @@ export interface FinancialOverviewPayload {
     formattedDate: string;
     inrPerUsd: number;
     usdPerInr: number;
+    isLive: boolean;
   };
   metrics: {
     subscriptionMetrics: SubscriptionMetrics;

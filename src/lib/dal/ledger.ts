@@ -341,6 +341,7 @@ export async function getFinancialOverview(
       formattedDate: fxSnapshot.formattedDate,
       inrPerUsd: fxSnapshot.inrPerUsd,
       usdPerInr: fxSnapshot.usdPerInr,
+      isLive: fxSnapshot.isLive,
     },
     metrics: {
       subscriptionMetrics,

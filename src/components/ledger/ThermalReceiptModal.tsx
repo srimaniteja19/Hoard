@@ -31,6 +31,7 @@ export const ThermalReceiptModal: React.FC<ThermalReceiptModalProps> = ({
   const inrRate = overview.fxSnapshot?.inrPerUsd || 86.85;
   const dateStr = overview.fxSnapshot?.formattedDate || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const timeStr = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  const fxRateLabel = overview.fxSnapshot?.isLive === false ? " [OFFLINE FALLBACK RATE]" : "";
 
   const auditScore = (latestAudit?.analysis as any)?.healthScore || 82;
 
@@ -42,7 +43,7 @@ export const ThermalReceiptModal: React.FC<ThermalReceiptModalProps> = ({
                  TERMINAL // STORE NO. 0019
 ============================================================
 DATE: ${dateStr} · ${timeStr}
-BASE LEDGER: USD ($) · FX RATE: 1 USD = ${inrRate.toFixed(2)} INR
+BASE LEDGER: USD ($) · FX RATE: 1 USD = ${inrRate.toFixed(2)} INR${fxRateLabel}
 ------------------------------------------------------------
 CASH FLOW & VELOCITY BREAKDOWN:
   (+) Gross Monthly Inflow ............... $${cashFlow.monthlyGrossIncome.toFixed(2)}
@@ -270,7 +271,7 @@ CHECKSUM: #HDR-ARCHIVE-${new Date().getFullYear()}-${Math.floor(Math.random() * 
                 DATE: {dateStr} · {timeStr}
               </div>
               <div style={{ fontSize: "9.5px", color: "#666666" }}>
-                EXCHANGE: 1 USD = ₹{inrRate.toFixed(2)} INR (LIVE TIMESTAMP)
+                EXCHANGE: 1 USD = ₹{inrRate.toFixed(2)} INR {overview.fxSnapshot?.isLive === false ? "(OFFLINE FALLBACK)" : "(LIVE)"}
               </div>
             </div>
 
