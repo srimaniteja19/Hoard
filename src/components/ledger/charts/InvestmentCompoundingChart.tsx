@@ -332,7 +332,7 @@ export const InvestmentCompoundingChart: React.FC<InvestmentCompoundingChartProp
         </div>
 
         <div>
-          Investing <b>{formatCurrency(monthlyInvestment, 0)}/mo</b> at {returnRate}% CAGR turns into{" "}
+          Investing <b>{formatCurrency(monthlyInvestment, 0, currency)}/mo</b> at {returnRate}% CAGR turns into{" "}
           <b style={{ color: "#166534" }}>{formatCurrency(projectionData[3]?.projectedWealth || 0, 0, currency)}</b> in 10 years.
         </div>
       </div>

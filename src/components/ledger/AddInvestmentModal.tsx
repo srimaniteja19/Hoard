@@ -11,6 +11,7 @@ import {
 } from "@/lib/ledger/types";
 import { playSound } from "@/lib/sound";
 import { getCurrencySymbol } from "@/lib/ledger/formatters";
+import { parseAccrualNotes, encodeAccrualNotes } from "@/lib/ledger/investmentAccrual";
 import { Sparkles, Coins, TrendingUp } from "lucide-react";
 
 const CURRENCY_OPTIONS = [
@@ -150,7 +151,10 @@ export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({
           : ""
       );
       setStatus(investmentToEdit.status || "ACTIVE");
-      setNotes(investmentToEdit.notes || "");
+      // Show only the user-facing note text — the raw `notes` column also
+      // carries an internal "[accrual:{...}]" bookkeeping tag (last accrual
+      // date/cadence progress) that shouldn't be surfaced or hand-edited.
+      setNotes(parseAccrualNotes(investmentToEdit.notes).userNote);
     } else {
       setName("");
       setAssetType("STOCKS_ETF");
@@ -185,6 +189,18 @@ export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({
       setSaving(true);
       setError(null);
 
+      // Re-attach the investment's existing accrual bookkeeping tag (last
+      // accrual date) so editing unrelated fields — or the note text itself
+      // — never resets its auto-accrual schedule back to "never accrued".
+      const cleanNote = notes.trim();
+      let notesPayload: string | null = cleanNote || null;
+      if (investmentToEdit) {
+        const { lastAccruedMonth, lastExecutedAt } = parseAccrualNotes(investmentToEdit.notes);
+        notesPayload = lastAccruedMonth || lastExecutedAt
+          ? encodeAccrualNotes(cleanNote, lastAccruedMonth, lastExecutedAt)
+          : cleanNote || null;
+      }
+
       const payload = {
         name: name.trim(),
         assetType,
@@ -196,7 +212,7 @@ export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({
         expectedReturnRate: expectedReturnRate !== "" ? parseFloat(expectedReturnRate) : null,
         currentValuation: currentValuation !== "" ? parseFloat(currentValuation) : null,
         status,
-        notes: notes.trim() || null,
+        notes: notesPayload,
       };
 
       const url = investmentToEdit

@@ -436,7 +436,12 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
                     <span>
                       🏛️ <b>{inv.platform || "Direct / Self-Custody"}</b>
                     </span>
-                    <span>🗓️ Day {inv.investmentDay || 1} of month</span>
+                    <span>
+                      🗓️{" "}
+                      {CADENCE_ACCRUAL_LABEL[inv.cadence]
+                        ? `Contributes ${CADENCE_ACCRUAL_LABEL[inv.cadence]}`
+                        : `Day ${inv.investmentDay || 1} of month`}
+                    </span>
                   </div>
 
                   {/* Accumulated Valuation & Net Worth Sync Status */}
@@ -511,7 +516,7 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
                       padding: "5px 8px",
                     }}
                     onClick={() => handleExecuteSIP(inv)}
-                    title="Log 1 monthly installment to accumulated valuation and sync Net Worth"
+                    title={`Log 1 ${inv.cadence.toLowerCase()} installment to accumulated valuation and sync Net Worth`}
                   >
                     <Zap size={11} aria-hidden="true" />
                     {executingId === inv.id ? "LOGGING..." : `+ RECORD SIP`}
