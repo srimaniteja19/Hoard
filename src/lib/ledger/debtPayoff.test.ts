@@ -96,4 +96,27 @@ describe("calculateDebtPayoff", () => {
     expect(withLump.totalInterestPaid).toBeLessThan(withoutLump.totalInterestPaid);
     expect(withLump.interestSavedVsMinimums).toBeGreaterThan(withoutLump.interestSavedVsMinimums);
   });
+
+  it("flags a non-converging payoff instead of claiming the full balance was paid off", () => {
+    // Minimum payment ($10, the simulator's floor) doesn't come close to
+    // covering the ~$208/mo interest this balance accrues at 25% APR.
+    const neverPayableDebt: FinancialDebtRow[] = [
+      {
+        ...mockDebts[0],
+        id: "runaway-debt",
+        balance: 10000,
+        interestRate: 25.0,
+        minPayment: 10,
+      },
+    ];
+
+    const result = calculateDebtPayoff(neverPayableDebt, "AVALANCHE", 0);
+
+    expect(result.isDivergent).toBe(true);
+    expect(result.monthsToPayoff).toBe(360);
+    expect(result.debtFreeDate).not.toMatch(/^[A-Z][a-z]{2} \d{4}$/); // not a fake "Mon YYYY" date
+    // Balance only ever grew (interest vastly outpaces the minimum), so no
+    // real progress was made on principal — never negative.
+    expect(result.totalPrincipalPaid).toBe(0);
+  });
 });

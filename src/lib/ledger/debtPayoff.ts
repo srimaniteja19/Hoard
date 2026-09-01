@@ -48,6 +48,8 @@ export function calculateDebtPayoff(
       monthsSavedVsMinimums: 0,
       monthlySchedule: [],
       payoffMilestones: [],
+      isDivergent: false,
+      baselineIsDivergent: false,
     };
   }
 
@@ -67,16 +69,22 @@ export function calculateDebtPayoff(
     extraMonthlyPayment,
     oneTimeLumpSum,
     monthsToPayoff: simulated.monthsToPayoff,
-    debtFreeDate: formatPayoffDate(simulated.monthsToPayoff),
+    debtFreeDate: simulated.isDivergent
+      ? "⚠ Not payable off within 30 years at this rate"
+      : formatPayoffDate(simulated.monthsToPayoff),
     totalInterestPaid: simulated.totalInterestPaid,
     totalPrincipalPaid: simulated.totalPrincipalPaid,
     baselineMonthsToPayoff: baseline.monthsToPayoff,
     baselineTotalInterestPaid: baseline.totalInterestPaid,
-    baselineDebtFreeDate: formatPayoffDate(baseline.monthsToPayoff),
+    baselineDebtFreeDate: baseline.isDivergent
+      ? "⚠ Not payable off within 30 years at this rate"
+      : formatPayoffDate(baseline.monthsToPayoff),
     interestSavedVsMinimums: interestSaved,
     monthsSavedVsMinimums: monthsSaved,
     monthlySchedule: simulated.monthlySchedule,
     payoffMilestones: simulated.payoffMilestones,
+    isDivergent: simulated.isDivergent,
+    baselineIsDivergent: baseline.isDivergent,
   };
 }
 
@@ -92,6 +100,7 @@ function runSimulation(
   totalPrincipalPaid: number;
   monthlySchedule: PayoffMonthSnapshot[];
   payoffMilestones: DebtPayoffMilestone[];
+  isDivergent: boolean;
 } {
   const state: ActiveDebtState[] = debts.map((d) => ({
     id: d.id,
@@ -240,12 +249,22 @@ function runSimulation(
   }
 
   const grandTotalInterest = Math.round(state.reduce((sum, d) => sum + d.totalInterestPaid, 0) * 100) / 100;
+  const isDivergent = state.some((d) => !d.isPaid);
+  const remainingBalance = Math.round(state.reduce((sum, d) => sum + d.balance, 0) * 100) / 100;
+  // Equivalent to initialPrincipalTotal when every debt actually reaches
+  // zero; when the simulation cap was hit first (isDivergent), this
+  // correctly reports only what was actually paid down, not the full
+  // starting balance.
+  // Floored at 0: if unpaid interest outpaced payments, the balance grew
+  // rather than shrank, and "principal paid" shouldn't read as negative.
+  const totalPrincipalPaid = Math.max(0, Math.round((initialPrincipalTotal - remainingBalance) * 100) / 100);
 
   return {
     monthsToPayoff: currentMonth,
     totalInterestPaid: grandTotalInterest,
-    totalPrincipalPaid: initialPrincipalTotal,
+    totalPrincipalPaid,
     monthlySchedule,
     payoffMilestones,
+    isDivergent,
   };
 }

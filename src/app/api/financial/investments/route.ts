@@ -33,16 +33,16 @@ export async function POST(req: NextRequest) {
       userId,
       name: body.name.trim(),
       assetType: body.assetType || "STOCKS_ETF",
-      amount: parseFloat(body.amount) || 0,
+      amount: Math.max(0, parseFloat(body.amount) || 0),
       currency: body.currency || "USD",
       cadence: body.cadence || "MONTHLY",
       investmentDay: body.investmentDay ? parseInt(body.investmentDay, 10) : 1,
       platform: body.platform ? body.platform.trim() : null,
       expectedReturnRate: body.expectedReturnRate !== undefined && body.expectedReturnRate !== null && body.expectedReturnRate !== ""
-        ? parseFloat(body.expectedReturnRate)
+        ? parseFloat(body.expectedReturnRate) || 0
         : 8.0,
       currentValuation: body.currentValuation !== undefined && body.currentValuation !== null && body.currentValuation !== ""
-        ? parseFloat(body.currentValuation)
+        ? Math.max(0, parseFloat(body.currentValuation) || 0)
         : null,
       status: body.status || "ACTIVE",
       targetAssetId: body.targetAssetId || null,

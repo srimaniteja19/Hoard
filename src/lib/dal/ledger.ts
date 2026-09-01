@@ -19,7 +19,7 @@ import {
   FinancialInvestmentRow,
   NewFinancialInvestmentRow,
 } from "@/db/schema";
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc, isNull } from "drizzle-orm";
 import { calculateSubscriptionMetrics } from "@/lib/ledger/subscriptionMetrics";
 import { calculateInvestmentMetrics } from "@/lib/ledger/investmentMetrics";
 import { calculateCashFlow } from "@/lib/ledger/cashFlow";
@@ -260,6 +260,29 @@ export async function updateInvestment(
     .update(financialInvestments)
     .set({ ...data, updatedAt: new Date() })
     .where(and(eq(financialInvestments.id, id), eq(financialInvestments.userId, userId)))
+    .returning();
+  return updated || null;
+}
+
+/**
+ * Same as updateInvestment, but only applies the write if the row's `notes`
+ * column still matches `expectedNotes` — an optimistic-concurrency guard so
+ * two concurrent auto-accrual runs (e.g. two tabs loading the overview at
+ * once) can't both apply a month's accrual on top of the same stale read.
+ * Returns null (no-op) if another writer already changed the row first.
+ */
+export async function updateInvestmentIfNotesMatch(
+  userId: string,
+  id: string,
+  expectedNotes: string | null,
+  data: Partial<NewFinancialInvestmentRow>
+): Promise<FinancialInvestmentRow | null> {
+  const notesCondition =
+    expectedNotes === null ? isNull(financialInvestments.notes) : eq(financialInvestments.notes, expectedNotes);
+  const [updated] = await db
+    .update(financialInvestments)
+    .set({ ...data, updatedAt: new Date() })
+    .where(and(eq(financialInvestments.id, id), eq(financialInvestments.userId, userId), notesCondition))
     .returning();
   return updated || null;
 }

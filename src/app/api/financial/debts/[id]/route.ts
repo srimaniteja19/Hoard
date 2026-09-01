@@ -33,14 +33,14 @@ export async function PATCH(
     if (body.name !== undefined) patchData.name = body.name.trim();
     if (body.debtType !== undefined) patchData.debtType = body.debtType;
     if (body.balance !== undefined) {
-      const b = parseFloat(body.balance);
+      const b = Math.max(0, parseFloat(body.balance) || 0);
       patchData.balance = b;
       if (b <= 0) patchData.isPaidOff = true;
     }
-    if (body.originalPrincipal !== undefined) patchData.originalPrincipal = parseFloat(body.originalPrincipal);
-    if (body.interestRate !== undefined) patchData.interestRate = parseFloat(body.interestRate);
-    if (body.minPayment !== undefined) patchData.minPayment = parseFloat(body.minPayment);
-    if (body.targetPayment !== undefined) patchData.targetPayment = body.targetPayment ? parseFloat(body.targetPayment) : null;
+    if (body.originalPrincipal !== undefined) patchData.originalPrincipal = Math.max(0, parseFloat(body.originalPrincipal) || 0);
+    if (body.interestRate !== undefined) patchData.interestRate = Math.max(0, parseFloat(body.interestRate) || 0);
+    if (body.minPayment !== undefined) patchData.minPayment = Math.max(0, parseFloat(body.minPayment) || 0);
+    if (body.targetPayment !== undefined) patchData.targetPayment = body.targetPayment ? Math.max(0, parseFloat(body.targetPayment) || 0) : null;
     if (body.dueDay !== undefined) patchData.dueDay = parseInt(body.dueDay, 10);
     if (body.lender !== undefined) patchData.lender = body.lender ? body.lender.trim() : null;
     if (body.isPaidOff !== undefined) patchData.isPaidOff = Boolean(body.isPaidOff);

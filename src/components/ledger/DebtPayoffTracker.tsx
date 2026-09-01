@@ -804,17 +804,17 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
           {/* Card 1: Debt Free Horizon */}
           <div
             style={{
-              background: "#F0FDF4",
-              border: "2px solid #16A34A",
-              boxShadow: "3.5px 3.5px 0 #16A34A",
+              background: simulation.isDivergent ? "#FEF2F2" : "#F0FDF4",
+              border: `2px solid ${simulation.isDivergent ? "#DC2626" : "#16A34A"}`,
+              boxShadow: `3.5px 3.5px 0 ${simulation.isDivergent ? "#DC2626" : "#16A34A"}`,
               padding: "16px",
               borderRadius: "3px",
             }}
           >
-            <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 900, color: "#166534", textTransform: "uppercase", marginBottom: "4px" }}>
-              🚀 ACCELERATED DEBT-FREE DATE
+            <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 900, color: simulation.isDivergent ? "#991B1B" : "#166534", textTransform: "uppercase", marginBottom: "4px" }}>
+              {simulation.isDivergent ? "⚠ DEBT IS GROWING, NOT SHRINKING" : "🚀 ACCELERATED DEBT-FREE DATE"}
             </div>
-            <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "28px", fontWeight: 900, color: "#0A0A0A", lineHeight: 1.1 }}>
+            <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: simulation.isDivergent ? "16px" : "28px", fontWeight: 900, color: "#0A0A0A", lineHeight: 1.1 }}>
               {simulation.debtFreeDate}
             </div>
             <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 800, color: "#15803D", marginTop: "6px" }}>

@@ -111,5 +111,72 @@ describe("Investment Metrics & Compounding Calculator", () => {
       expect(metrics.categoryBreakdown.MUTUAL_FUND.monthlyTotal).toBe(0); // paused
       expect(metrics.compoundProjections.length).toBeGreaterThan(0);
     });
+
+    it("converts every investment into the dominant currency before summing (no raw cross-currency addition)", () => {
+      const mixedInvestments: FinancialInvestmentRow[] = [
+        {
+          id: "inv-inr-1",
+          userId: "user-1",
+          name: "INR SIP A",
+          assetType: "MUTUAL_FUND",
+          amount: 5000,
+          currency: "INR",
+          cadence: "MONTHLY",
+          investmentDay: 1,
+          platform: "Groww",
+          expectedReturnRate: 12.0,
+          currentValuation: 0,
+          status: "ACTIVE",
+          targetAssetId: null,
+          notes: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "inv-inr-2",
+          userId: "user-1",
+          name: "INR SIP B",
+          assetType: "MUTUAL_FUND",
+          amount: 5000,
+          currency: "INR",
+          cadence: "MONTHLY",
+          investmentDay: 1,
+          platform: "Groww",
+          expectedReturnRate: 12.0,
+          currentValuation: 0,
+          status: "ACTIVE",
+          targetAssetId: null,
+          notes: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "inv-usd-1",
+          userId: "user-1",
+          name: "USD Brokerage",
+          assetType: "STOCKS_ETF",
+          amount: 500,
+          currency: "USD",
+          cadence: "MONTHLY",
+          investmentDay: 5,
+          platform: "Vanguard",
+          expectedReturnRate: 10.0,
+          currentValuation: 0,
+          status: "ACTIVE",
+          targetAssetId: null,
+          notes: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      // 2 INR investments vs 1 USD investment => dominant currency is INR.
+      const metrics = calculateInvestmentMetrics(mixedInvestments, 86.85);
+      expect(metrics.currency).toBe("INR");
+      // Naively summing raw amounts would give 5000 + 5000 + 500 = 10500.
+      // The USD leg must be converted to INR (~43,425) before summing.
+      expect(metrics.monthlyTotal).not.toBe(10500);
+      expect(metrics.monthlyTotal).toBeCloseTo(5000 + 5000 + 500 * 86.85, 0);
+    });
   });
 });

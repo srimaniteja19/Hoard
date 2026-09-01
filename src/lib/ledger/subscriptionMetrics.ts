@@ -48,7 +48,15 @@ export function calculateDaysUntilRenewal(billingDay?: number | null, nextRenewa
   now.setHours(0, 0, 0, 0);
 
   if (nextRenewalDate) {
-    const target = new Date(nextRenewalDate);
+    // Parse a plain "YYYY-MM-DD" (no time component) as a local calendar
+    // date, not UTC midnight — `new Date("YYYY-MM-DD")` parses as UTC, which
+    // then shifts back a day once re-anchored to local midnight below for
+    // any negative UTC offset. Full ISO timestamps are left to `new Date()`,
+    // which already resolves them to the correct local calendar day.
+    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(nextRenewalDate);
+    const target = dateOnlyMatch
+      ? new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]))
+      : new Date(nextRenewalDate);
     if (!isNaN(target.getTime())) {
       target.setHours(0, 0, 0, 0);
       const diffMs = target.getTime() - now.getTime();

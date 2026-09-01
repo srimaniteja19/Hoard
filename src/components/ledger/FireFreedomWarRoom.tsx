@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   calculateFireMetrics,
   simulateFireDelta,
@@ -41,8 +41,32 @@ export const FireFreedomWarRoom: React.FC<FireFreedomWarRoomProps> = ({
   currency = "USD",
   inrRate = 86.85,
 }) => {
+  // Tracked ledger outflows (subscriptions + debt minimums) alone drastically
+  // understate real spending — there's no rent/groceries/utilities field
+  // anywhere in the app. Let the user tell us their actual monthly living
+  // expenses so the FIRE number reflects what they'd really need to cover.
+  const LIVING_EXPENSES_STORAGE_KEY = "hoard_fire_monthly_living_expenses";
+  const [livingExpenses, setLivingExpenses] = useState<number>(0);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LIVING_EXPENSES_STORAGE_KEY);
+      if (stored) setLivingExpenses(Math.max(0, parseFloat(stored) || 0));
+    } catch {
+      // ignore
+    }
+  }, []);
+  const updateLivingExpenses = (value: number) => {
+    const clean = Math.max(0, value || 0);
+    setLivingExpenses(clean);
+    try {
+      localStorage.setItem(LIVING_EXPENSES_STORAGE_KEY, String(clean));
+    } catch {
+      // ignore
+    }
+  };
+
   // Baseline initial estimates
-  const initialAnnualExpenses = Math.max(12000, monthlyExpenses * 12);
+  const initialAnnualExpenses = Math.max(12000, (monthlyExpenses + livingExpenses) * 12);
   const initialContribution = Math.max(500, monthlySurplus);
 
   // Interactive Scenario Sliders State
@@ -285,6 +309,52 @@ export const FireFreedomWarRoom: React.FC<FireFreedomWarRoomProps> = ({
                 }}
               />
             </div>
+          </div>
+
+          {/* ── MONTHLY LIVING EXPENSES INPUT ── */}
+          <div
+            style={{
+              background: livingExpenses > 0 ? "#F8FAFC" : "#FFF7ED",
+              border: `2px solid ${livingExpenses > 0 ? "#0A0A0A" : "#EA580C"}`,
+              boxShadow: `3.5px 3.5px 0 ${livingExpenses > 0 ? "#0A0A0A" : "#EA580C"}`,
+              padding: "14px 18px",
+              borderRadius: "3px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
+            }}
+          >
+            <label htmlFor="fire-living-expenses" style={{ fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 900, textTransform: "uppercase" }}>
+              Monthly Living Expenses (rent, food, utilities, insurance, etc.)
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontFamily: "var(--mono)", fontWeight: 900 }}>{getCurrencySymbol(currency)}</span>
+              <input
+                id="fire-living-expenses"
+                type="number"
+                min="0"
+                step="50"
+                value={livingExpenses || ""}
+                placeholder="0"
+                onChange={(e) => updateLivingExpenses(Number(e.target.value))}
+                style={{
+                  fontFamily: "var(--mono)",
+                  fontSize: "13px",
+                  fontWeight: 800,
+                  padding: "6px 8px",
+                  border: "1.5px solid #0A0A0A",
+                  borderRadius: "3px",
+                  width: "140px",
+                }}
+              />
+              <span style={{ fontFamily: "var(--mono)", fontSize: "10.5px", color: "#666" }}>/month</span>
+            </div>
+            {livingExpenses <= 0 && (
+              <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", color: "#9A3412", fontWeight: 700 }}>
+                ⚠ Without this, your FIRE number only accounts for subscriptions + debt minimums — it will be a
+                large underestimate of what you actually need to retire on.
+              </div>
+            )}
           </div>
 
           {/* ── INTERACTIVE WHAT-IF SLIDERS ── */}

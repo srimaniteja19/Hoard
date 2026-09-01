@@ -16,6 +16,7 @@ import {
 import {
   getInvestmentById,
   updateInvestment,
+  updateInvestmentIfNotesMatch,
   getUserAssets,
   createAsset,
   updateAsset,
@@ -240,7 +241,11 @@ export async function processAutomaticMonthlyAccruals(
       const newNotes = encodeAccrualNotes(userNote, currentYearMonth, now.toISOString());
 
       try {
-        const updated = await updateInvestment(userId, inv.id, {
+        // Guarded by the row's current `notes` value: if a concurrent
+        // request already accrued this investment for this month since we
+        // read it, this update is a no-op instead of layering a second
+        // month's growth on top of the same stale reading.
+        const updated = await updateInvestmentIfNotesMatch(userId, inv.id, inv.notes ?? null, {
           currentValuation: newValuation,
           notes: newNotes,
         });

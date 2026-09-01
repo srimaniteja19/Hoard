@@ -27,6 +27,17 @@ describe("subscriptionMetrics", () => {
     expect(daysUntil).toBe(5);
   });
 
+  it("treats a plain YYYY-MM-DD renewal date as a local calendar date (no UTC-offset drift)", () => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const target = new Date(now);
+    target.setDate(target.getDate() + 5);
+    const dateOnly = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}-${String(target.getDate()).padStart(2, "0")}`;
+
+    const { daysUntil } = calculateDaysUntilRenewal(null, dateOnly);
+    expect(daysUntil).toBe(5);
+  });
+
   it("should calculate aggregate metrics and categorize subscriptions", () => {
     const subs: FinancialSubscriptionRow[] = [
       {

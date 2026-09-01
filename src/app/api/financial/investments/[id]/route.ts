@@ -4,6 +4,7 @@ import {
   getInvestmentById,
   updateInvestment,
   deleteInvestment,
+  getAssetById,
 } from "@/lib/dal/ledger";
 
 interface RouteParams {
@@ -38,23 +39,33 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     const updateData: Record<string, unknown> = {};
     if (body.name !== undefined) updateData.name = body.name.trim();
     if (body.assetType !== undefined) updateData.assetType = body.assetType;
-    if (body.amount !== undefined) updateData.amount = parseFloat(body.amount) || 0;
+    if (body.amount !== undefined) updateData.amount = Math.max(0, parseFloat(body.amount) || 0);
     if (body.currency !== undefined) updateData.currency = body.currency;
     if (body.cadence !== undefined) updateData.cadence = body.cadence;
     if (body.investmentDay !== undefined) updateData.investmentDay = parseInt(body.investmentDay, 10);
     if (body.platform !== undefined) updateData.platform = body.platform ? body.platform.trim() : null;
     if (body.expectedReturnRate !== undefined) {
       updateData.expectedReturnRate = body.expectedReturnRate !== null && body.expectedReturnRate !== ""
-        ? parseFloat(body.expectedReturnRate)
+        ? parseFloat(body.expectedReturnRate) || 0
         : null;
     }
     if (body.currentValuation !== undefined) {
       updateData.currentValuation = body.currentValuation !== null && body.currentValuation !== ""
-        ? parseFloat(body.currentValuation)
+        ? Math.max(0, parseFloat(body.currentValuation) || 0)
         : null;
     }
     if (body.status !== undefined) updateData.status = body.status;
-    if (body.targetAssetId !== undefined) updateData.targetAssetId = body.targetAssetId;
+    if (body.targetAssetId !== undefined) {
+      if (body.targetAssetId) {
+        // Reject a targetAssetId that doesn't belong to (or doesn't exist
+        // for) the requesting user, instead of silently accepting it.
+        const targetAsset = await getAssetById(userId, body.targetAssetId);
+        if (!targetAsset) {
+          return NextResponse.json({ error: "targetAssetId not found" }, { status: 400 });
+        }
+      }
+      updateData.targetAssetId = body.targetAssetId || null;
+    }
     if (body.notes !== undefined) updateData.notes = body.notes ? body.notes.trim() : null;
 
     const updated = await updateInvestment(userId, id, updateData);

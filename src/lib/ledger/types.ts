@@ -307,6 +307,10 @@ export interface PayoffSimulationResult {
   monthsSavedVsMinimums: number;
   monthlySchedule: PayoffMonthSnapshot[];
   payoffMilestones: DebtPayoffMilestone[];
+  /** True when the 30-year simulation cap was hit with debts still unpaid — payments don't cover accruing interest. */
+  isDivergent: boolean;
+  /** True when the baseline (minimum-payments-only) simulation never converges. */
+  baselineIsDivergent: boolean;
 }
 
 export interface UpcomingRenewal {

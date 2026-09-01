@@ -92,7 +92,7 @@ export function calculateCompoundWealth(
   };
 }
 
-import { convertToUsd, getFxSnapshotSync } from "./fx";
+import { convertToUsd, convertFromUsd, getFxSnapshotSync } from "./fx";
 
 export function calculateInvestmentMetrics(
   investments: FinancialInvestmentRow[],
@@ -146,26 +146,33 @@ export function calculateInvestmentMetrics(
       inv.cadence as InvestmentCadence
     );
 
-    monthlyTotal += monthlyAmount;
-    yearlyTotal += yearlyAmount;
-
     const invCurrency = inv.currency || "INR";
     const monthlyUsd = convertToUsd(monthlyAmount, invCurrency, effectiveInrRate);
     const yearlyUsd = convertToUsd(yearlyAmount, invCurrency, effectiveInrRate);
     monthlyTotalUsd += monthlyUsd;
     yearlyTotalUsd += yearlyUsd;
 
+    // monthlyTotal/yearlyTotal/initialPrincipalSum are all reported in
+    // `dominantCurrency` — convert every investment into it (via USD) before
+    // summing, so amounts from different currencies aren't added as if they
+    // were the same unit.
+    const monthlyInDominant = convertFromUsd(monthlyUsd, dominantCurrency, effectiveInrRate);
+    const yearlyInDominant = convertFromUsd(yearlyUsd, dominantCurrency, effectiveInrRate);
+    monthlyTotal += monthlyInDominant;
+    yearlyTotal += yearlyInDominant;
+
     if (inv.currentValuation && inv.currentValuation > 0) {
-      initialPrincipalSum += inv.currentValuation;
+      const valuationUsd = convertToUsd(inv.currentValuation, invCurrency, effectiveInrRate);
+      initialPrincipalSum += convertFromUsd(valuationUsd, dominantCurrency, effectiveInrRate);
     }
 
     const returnRate = inv.expectedReturnRate ?? 8.0; // default 8% realistic nominal return
-    totalWeightedReturnSum += monthlyAmount * returnRate;
+    totalWeightedReturnSum += monthlyInDominant * returnRate;
 
     const assetType = (inv.assetType as InvestmentAssetType) || "OTHER";
     if (categoryBreakdown[assetType]) {
-      categoryBreakdown[assetType].monthlyTotal += monthlyAmount;
-      categoryBreakdown[assetType].yearlyTotal += yearlyAmount;
+      categoryBreakdown[assetType].monthlyTotal += monthlyInDominant;
+      categoryBreakdown[assetType].yearlyTotal += yearlyInDominant;
       categoryBreakdown[assetType].count += 1;
     }
   }
