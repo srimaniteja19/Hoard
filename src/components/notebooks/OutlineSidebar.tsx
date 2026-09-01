@@ -57,14 +57,16 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
         background: "#EBE7DC",
         padding: "0 0 60px",
         height: "100%",
+        minHeight: 0,
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
         display: "flex",
         flexDirection: "column",
+        flex: 1,
       }}
     >
       {/* Course Switcher Tabs */}
-      <div style={{ display: "flex", borderBottom: "3px solid #0A0A0A" }}>
+      <div style={{ display: "flex", borderBottom: "3px solid #0A0A0A", flexShrink: 0 }}>
         {courses.map((c, idx) => {
           const isSelected = idx === currentCourseIndex;
           return (
@@ -100,7 +102,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
       </div>
 
       {/* Course Header Banner */}
-      <div style={{ padding: "18px", borderBottom: "2px solid rgba(10,10,10,0.14)", color: "#0A0A0A" }}>
+      <div style={{ padding: "18px", borderBottom: "2px solid rgba(10,10,10,0.14)", color: "#0A0A0A", flexShrink: 0 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "11px" }}>
           <span
             style={{
@@ -421,7 +423,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
       </div>
 
       {/* Sidebar Footer Action Buttons */}
-      <div style={{ padding: "16px 18px 0", marginTop: "12px", borderTop: "2px solid rgba(10,10,10,0.14)" }}>
+      <div style={{ padding: "16px 18px 0", marginTop: "12px", borderTop: "2px solid rgba(10,10,10,0.14)", flexShrink: 0 }}>
         <button
           type="button"
           onClick={onNewPage}

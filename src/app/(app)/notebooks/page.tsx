@@ -847,6 +847,7 @@ export default function NotebooksPage() {
             gridTemplateColumns: isMobile ? "1fr" : "300px minmax(0, 1fr)",
             flex: 1,
             minHeight: 0,
+            height: "100%",
             overflow: "hidden",
             position: "relative",
           }}
@@ -883,7 +884,13 @@ export default function NotebooksPage() {
                     transition: "transform 0.22s ease",
                     boxShadow: mobileSidebarOpen ? "8px 0 24px rgba(0,0,0,0.35)" : "none",
                   }
-                : undefined
+                : {
+                    height: "100%",
+                    minHeight: 0,
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
+                  }
             }
           >
             <OutlineSidebar
