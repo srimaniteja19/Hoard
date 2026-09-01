@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { SeedCourse } from "@/lib/notebooks/seedData";
 import { lessonState, computeWordCount } from "@/lib/notebooks/blocks";
 import { playSound } from "@/lib/sound";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
 
 interface OutlineSidebarProps {
   courses: SeedCourse[];
@@ -15,6 +15,8 @@ interface OutlineSidebarProps {
   onSelectLesson: (moduleIndex: number, lessonIndex: number) => void;
   onDeleteLesson?: (moduleIndex: number, lessonIndex: number) => void;
   onToggleWatched?: (moduleIndex: number, lessonIndex: number) => void;
+  onEditCourse?: () => void;
+  onDeleteCourse?: () => void;
   onBackToIndex: () => void;
   onNewPage: () => void;
 }
@@ -28,6 +30,8 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   onSelectLesson,
   onDeleteLesson,
   onToggleWatched,
+  onEditCourse,
+  onDeleteCourse,
   onBackToIndex,
   onNewPage,
 }) => {
@@ -97,22 +101,80 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
 
       {/* Course Header Banner */}
       <div style={{ padding: "18px", borderBottom: "2px solid rgba(10,10,10,0.14)", color: "#0A0A0A" }}>
-        <span
-          style={{
-            display: "inline-block",
-            fontFamily: "var(--mono, monospace)",
-            fontSize: "8.5px",
-            fontWeight: 700,
-            letterSpacing: "0.15em",
-            background: course.accent,
-            color: course.accentFg,
-            border: "2px solid #0A0A0A",
-            padding: "3px 8px",
-            marginBottom: "11px",
-          }}
-        >
-          COURSE · IN PROGRESS
-        </span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "11px" }}>
+          <span
+            style={{
+              display: "inline-block",
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "8.5px",
+              fontWeight: 700,
+              letterSpacing: "0.15em",
+              background: course.accent,
+              color: course.accentFg,
+              border: "2px solid #0A0A0A",
+              padding: "3px 8px",
+            }}
+          >
+            COURSE · IN PROGRESS
+          </span>
+          <div style={{ display: "flex", gap: "4px" }}>
+            {onEditCourse && (
+              <button
+                type="button"
+                onClick={onEditCourse}
+                title="Edit Course"
+                style={{
+                  background: "transparent",
+                  border: "1.5px solid #0A0A0A",
+                  color: "#0A0A0A",
+                  padding: "2px 6px",
+                  cursor: "pointer",
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "8.5px",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "3px",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <Pencil size={10} />
+                EDIT
+              </button>
+            )}
+            {onDeleteCourse && (
+              <button
+                type="button"
+                onClick={onDeleteCourse}
+                title="Delete Course"
+                style={{
+                  background: "transparent",
+                  border: "1.5px solid #0A0A0A",
+                  color: "#DC2626",
+                  padding: "2px 6px",
+                  cursor: "pointer",
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "8.5px",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "3px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#DC2626";
+                  e.currentTarget.style.color = "#FFFFFF";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "#DC2626";
+                }}
+              >
+                <Trash2 size={10} />
+              </button>
+            )}
+          </div>
+        </div>
         <h2
           style={{
             margin: "0 0 4px",

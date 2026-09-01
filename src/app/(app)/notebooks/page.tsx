@@ -27,6 +27,7 @@ import { QuizModal } from "@/components/notebooks/QuizModal";
 import { ExplainModal } from "@/components/notebooks/ExplainModal";
 import { TranscriptModal } from "@/components/notebooks/TranscriptModal";
 import { AddCourseModal } from "@/components/notebooks/AddCourseModal";
+import { EditCourseModal } from "@/components/notebooks/EditCourseModal";
 import { AddPageModal } from "@/components/notebooks/AddPageModal";
 import { ConfirmModal } from "@/components/notebooks/ConfirmModal";
 import { playSound } from "@/lib/sound";
@@ -43,6 +44,8 @@ export default function NotebooksPage() {
 
   // Dialog / Modal States
   const [showAddCourseModal, setShowAddCourseModal] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<SeedCourse | null>(null);
+  const [showEditCourseModal, setShowEditCourseModal] = useState(false);
   const [showAddPageModal, setShowAddPageModal] = useState(false);
   const [confirmModalState, setConfirmModalState] = useState<{
     isOpen: boolean;
@@ -508,12 +511,68 @@ export default function NotebooksPage() {
   }) => {
     const newCourse = createNewCourse(title, provider || "DEEPLEARNING.AI", accent || "#7B5CF0", accentFg || "#FFFFFF");
     const updated = [...courses, newCourse];
+    saveStoredCourses(updated);
     setCourses(updated);
     setCurrentCourseIdx(courses.length);
     setCurrentModuleIdx(0);
     setCurrentLessonIdx(0);
     setView("course");
     setShowAddCourseModal(false);
+  };
+
+  const handleStartEditCourse = (course: SeedCourse) => {
+    playSound.click();
+    setEditingCourse(course);
+    setShowEditCourseModal(true);
+  };
+
+  const handleSaveEditedCourse = (updated: {
+    title: string;
+    provider: string;
+    accent: string;
+    accentFg: string;
+  }) => {
+    if (!editingCourse) return;
+    const nextCourses = courses.map((c) => {
+      if (c.id === editingCourse.id) {
+        return {
+          ...c,
+          title: updated.title,
+          provider: updated.provider,
+          accent: updated.accent,
+          accentFg: updated.accentFg,
+          init: updated.title.trim().charAt(0).toUpperCase() || c.init,
+        };
+      }
+      return c;
+    });
+    saveStoredCourses(nextCourses);
+    setCourses(nextCourses);
+    setShowEditCourseModal(false);
+    setEditingCourse(null);
+  };
+
+  const handleStartDeleteCourse = (course: SeedCourse) => {
+    playSound.pop();
+    setConfirmModalState({
+      isOpen: true,
+      title: `DELETE "${course.title.toUpperCase()}"?`,
+      description: `This will permanently remove "${course.title}" and all ${course.modules.flatMap((m) => m.lessons).length} pages inside it. This action cannot be undone.`,
+      confirmLabel: "DELETE COURSE",
+      confirmVariant: "danger",
+      onConfirm: () => {
+        const nextCourses = courses.filter((c) => c.id !== course.id);
+        saveStoredCourses(nextCourses);
+        setCourses(nextCourses);
+        if (currentCourse?.id === course.id) {
+          setView("index");
+          setCurrentCourseIdx(0);
+          setCurrentModuleIdx(0);
+          setCurrentLessonIdx(0);
+        }
+        setConfirmModalState((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   const handleCreatePage = (newTitle: string) => {
@@ -699,6 +758,8 @@ export default function NotebooksPage() {
                 key={course.id}
                 course={course}
                 onClick={() => handleSelectCourseFromCard(idx)}
+                onEdit={() => handleStartEditCourse(course)}
+                onDelete={() => handleStartDeleteCourse(course)}
               />
             ))}
 
@@ -764,6 +825,8 @@ export default function NotebooksPage() {
             }}
             onDeleteLesson={handleDeleteLesson}
             onToggleWatched={handleToggleWatched}
+            onEditCourse={() => handleStartEditCourse(currentCourse)}
+            onDeleteCourse={() => handleStartDeleteCourse(currentCourse)}
             onBackToIndex={() => setView("index")}
             onNewPage={() => {
               playSound.click();
@@ -1061,6 +1124,17 @@ export default function NotebooksPage() {
         isOpen={showAddCourseModal}
         onClose={() => setShowAddCourseModal(false)}
         onSubmit={handleCreateCourse}
+      />
+
+      {/* 5b. Edit Course Modal Popup */}
+      <EditCourseModal
+        isOpen={showEditCourseModal}
+        course={editingCourse}
+        onClose={() => {
+          setShowEditCourseModal(false);
+          setEditingCourse(null);
+        }}
+        onSubmit={handleSaveEditedCourse}
       />
 
       {/* 6. Add Page / Lesson Modal Popup */}

@@ -4,12 +4,16 @@ import React from "react";
 import { SeedCourse } from "@/lib/notebooks/seedData";
 import { lessonState, computeWordCount } from "@/lib/notebooks/blocks";
 
+import { Pencil, Trash2 } from "lucide-react";
+
 interface CourseCardProps {
   course: SeedCourse;
   onClick: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick }) => {
+export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit, onDelete }) => {
   // Aggregate all lessons across modules
   const allLessons = course.modules.flatMap((m) => m.lessons);
   const totalLessons = allLessons.length;
@@ -89,16 +93,85 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick }) => {
         </span>
         <div
           style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
             position: "relative",
-            fontFamily: "var(--mono, monospace)",
-            fontSize: "8.5px",
-            fontWeight: 700,
-            letterSpacing: "0.18em",
-            opacity: 0.8,
             marginBottom: "9px",
           }}
         >
-          {course.provider} · IN PROGRESS
+          <div
+            style={{
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "8.5px",
+              fontWeight: 700,
+              letterSpacing: "0.18em",
+              opacity: 0.8,
+            }}
+          >
+            {course.provider} · IN PROGRESS
+          </div>
+          {(onEdit || onDelete) && (
+            <div style={{ display: "flex", gap: "5px", zIndex: 5 }} onClick={(e) => e.stopPropagation()}>
+              {onEdit && (
+                <button
+                  type="button"
+                  title="Edit Course Details"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  style={{
+                    background: "rgba(0,0,0,0.2)",
+                    border: "1px solid rgba(0,0,0,0.3)",
+                    color: course.accentFg,
+                    padding: "3px 6px",
+                    cursor: "pointer",
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "8.5px",
+                    fontWeight: 700,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "3px",
+                    borderRadius: "2px",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#0A0A0A")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.2)")}
+                >
+                  <Pencil size={10} />
+                  EDIT
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  title="Delete Course"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  style={{
+                    background: "rgba(0,0,0,0.2)",
+                    border: "1px solid rgba(0,0,0,0.3)",
+                    color: course.accentFg,
+                    padding: "3px 6px",
+                    cursor: "pointer",
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "8.5px",
+                    fontWeight: 700,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "3px",
+                    borderRadius: "2px",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#DC2626")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.2)")}
+                >
+                  <Trash2 size={10} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <h2
           style={{
