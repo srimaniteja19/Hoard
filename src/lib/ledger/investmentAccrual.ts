@@ -12,6 +12,7 @@ import {
   FinancialAssetRow,
   AssetCategory,
   InvestmentAssetType,
+  InvestmentCadence,
 } from "./types";
 import {
   getInvestmentById,
@@ -204,60 +205,159 @@ export async function executeManualSIP(
   return { investment: updated, addedAmount, newTotal };
 }
 
+// Sub-month cadences accrue on a fixed day-count cycle — day-of-month
+// ("investmentDay") isn't a meaningful concept for these.
+const SUB_MONTH_CADENCE_DAYS: Partial<Record<InvestmentCadence, number>> = {
+  DAILY: 1,
+  WEEKLY: 7,
+  BIWEEKLY: 14,
+};
+
+// Calendar-anchored cadences accrue once every N calendar months, gated by
+// the investment's chosen day-of-month.
+const CALENDAR_CADENCE_MONTHS: Partial<Record<InvestmentCadence, number>> = {
+  MONTHLY: 1,
+  QUARTERLY: 3,
+  ANNUAL: 12,
+};
+
+// Sanity cap on how many missed periods a single pass will catch up in one
+// go (guards against a corrupted/ancient timestamp causing a huge loop).
+const MAX_CATCHUP_PERIODS = 2000;
+
+export interface AccrualPlan {
+  /** How many contribution+growth periods are due to be caught up. */
+  periods: number;
+  /** Fraction of a year each period represents, for compounding the expected annual return. */
+  periodFractionOfYear: number;
+  newValuation: number;
+  /** "YYYY-MM" of the accrual run, stored back onto the investment's notes. */
+  newAccrualMonth: string;
+}
+
+function accrueOverPeriods(
+  startingValuation: number,
+  contributionPerPeriod: number,
+  annualReturnRatePct: number,
+  periodFractionOfYear: number,
+  periods: number
+): number {
+  let valuation = startingValuation;
+  for (let i = 0; i < periods; i++) {
+    const growth = valuation > 0 ? valuation * (annualReturnRatePct / 100) * periodFractionOfYear : 0;
+    valuation = valuation + growth + contributionPerPeriod;
+  }
+  return Math.round(valuation * 100) / 100;
+}
+
 /**
- * Evaluates and executes automatic monthly accrual if investmentDay has arrived
+ * Pure calculation of how many contribution+growth periods are due for an
+ * investment, honoring its actual cadence (DAILY/WEEKLY/BIWEEKLY accrue on a
+ * fixed day-count cycle; MONTHLY/QUARTERLY/ANNUAL accrue on calendar-month
+ * boundaries gated by `investmentDay`). Returns null when nothing is due.
  */
-export async function processAutomaticMonthlyAccruals(
+export function computeDueAccrualPlan(
+  inv: Pick<FinancialInvestmentRow, "amount" | "cadence" | "investmentDay" | "currentValuation" | "expectedReturnRate" | "notes">,
+  now: Date = new Date()
+): AccrualPlan | null {
+  if (!inv.amount || inv.amount <= 0) return null;
+
+  const cadence = (inv.cadence as InvestmentCadence) || "MONTHLY";
+  const { lastAccruedMonth, lastExecutedAt } = parseAccrualNotes(inv.notes);
+  const targetDay = inv.investmentDay && inv.investmentDay >= 1 && inv.investmentDay <= 31 ? inv.investmentDay : 1;
+
+  const currentYear = now.getFullYear();
+  const currentMonthIdx = now.getMonth();
+  const currentDay = now.getDate();
+  const currentYearMonth = `${currentYear}-${String(currentMonthIdx + 1).padStart(2, "0")}`;
+
+  let periods = 0;
+  let periodFractionOfYear = 1 / 12;
+
+  const subMonthDays = SUB_MONTH_CADENCE_DAYS[cadence];
+  if (subMonthDays) {
+    periodFractionOfYear = subMonthDays / 365;
+    if (lastExecutedAt) {
+      const daysSince = Math.floor((now.getTime() - new Date(lastExecutedAt).getTime()) / (1000 * 60 * 60 * 24));
+      periods = Math.max(0, Math.min(MAX_CATCHUP_PERIODS, Math.floor(daysSince / subMonthDays)));
+    }
+    // else: brand new schedule — starts counting from now, first accrual
+    // lands after one full period rather than firing immediately.
+  } else {
+    const interval = CALENDAR_CADENCE_MONTHS[cadence] ?? 1;
+    periodFractionOfYear = interval / 12;
+    const dayGateOpen = currentDay >= targetDay;
+
+    if (!lastAccruedMonth) {
+      periods = dayGateOpen ? 1 : 0;
+    } else {
+      const [lastYearStr, lastMonthStr] = lastAccruedMonth.split("-");
+      const lastYear = Number(lastYearStr);
+      const lastMonthIdx = Number(lastMonthStr) - 1;
+      const monthsElapsed = currentYear * 12 + currentMonthIdx - (lastYear * 12 + lastMonthIdx);
+      // Don't count the current, still-incomplete interval until its day-of-month gate opens.
+      const effectiveMonthsElapsed = monthsElapsed - (dayGateOpen ? 0 : 1);
+      periods = Math.max(0, Math.min(MAX_CATCHUP_PERIODS, Math.floor(effectiveMonthsElapsed / interval)));
+    }
+  }
+
+  if (periods <= 0) return null;
+
+  const annualReturnRatePct = inv.expectedReturnRate ?? 10.0;
+  const newValuation = accrueOverPeriods(
+    inv.currentValuation || 0,
+    inv.amount,
+    annualReturnRatePct,
+    periodFractionOfYear,
+    periods
+  );
+
+  return { periods, periodFractionOfYear, newValuation, newAccrualMonth: currentYearMonth };
+}
+
+/**
+ * Evaluates and executes automatic accrual for every active recurring
+ * investment, according to each investment's own cadence.
+ */
+export async function processAutomaticInvestmentAccruals(
   userId: string,
   investments: FinancialInvestmentRow[]
 ): Promise<FinancialInvestmentRow[]> {
   const now = new Date();
-  const currentDay = now.getDate();
-  const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-
   const updatedList: FinancialInvestmentRow[] = [];
 
   for (const inv of investments) {
-    if (inv.status !== "ACTIVE" || !inv.amount || inv.amount <= 0) {
+    if (inv.status !== "ACTIVE") {
       updatedList.push(inv);
       continue;
     }
 
-    const { userNote, lastAccruedMonth } = parseAccrualNotes(inv.notes);
-    const targetDay = inv.investmentDay && inv.investmentDay >= 1 && inv.investmentDay <= 31
-      ? inv.investmentDay
-      : 1;
+    const plan = computeDueAccrualPlan(inv, now);
+    if (!plan) {
+      updatedList.push(inv);
+      continue;
+    }
 
-    // Check if target day has arrived for the current month and hasn't accrued yet
-    const shouldAccrue = currentDay >= targetDay && lastAccruedMonth !== currentYearMonth;
+    const { userNote } = parseAccrualNotes(inv.notes);
+    const newNotes = encodeAccrualNotes(userNote, plan.newAccrualMonth, now.toISOString());
 
-    if (shouldAccrue) {
-      const prevValuation = inv.currentValuation || 0;
-      const expectedCAGR = inv.expectedReturnRate ?? 10.0;
-      // 1-month compound growth on existing principal
-      const monthlyYieldGrowth = prevValuation > 0 ? (prevValuation * (expectedCAGR / 100)) / 12 : 0;
-      const newValuation = Math.round((prevValuation + monthlyYieldGrowth + inv.amount) * 100) / 100;
+    try {
+      // Guarded by the row's current `notes` value: if a concurrent
+      // request already accrued this investment since we read it, this
+      // update is a no-op instead of layering a second accrual on top of
+      // the same stale reading.
+      const updated = await updateInvestmentIfNotesMatch(userId, inv.id, inv.notes ?? null, {
+        currentValuation: plan.newValuation,
+        notes: newNotes,
+      });
 
-      const newNotes = encodeAccrualNotes(userNote, currentYearMonth, now.toISOString());
-
-      try {
-        // Guarded by the row's current `notes` value: if a concurrent
-        // request already accrued this investment for this month since we
-        // read it, this update is a no-op instead of layering a second
-        // month's growth on top of the same stale reading.
-        const updated = await updateInvestmentIfNotesMatch(userId, inv.id, inv.notes ?? null, {
-          currentValuation: newValuation,
-          notes: newNotes,
-        });
-
-        if (updated) {
-          await syncInvestmentWithNetWorthAsset(userId, updated);
-          updatedList.push(updated);
-          continue;
-        }
-      } catch (err) {
-        console.error(`[investmentAccrual] Failed auto-accrual for ${inv.name}:`, err);
+      if (updated) {
+        await syncInvestmentWithNetWorthAsset(userId, updated);
+        updatedList.push(updated);
+        continue;
       }
+    } catch (err) {
+      console.error(`[investmentAccrual] Failed auto-accrual for ${inv.name}:`, err);
     }
 
     updatedList.push(inv);

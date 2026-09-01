@@ -3,14 +3,14 @@ import { requireUserId, AuthError } from "@/lib/session";
 import { getUserInvestments, createInvestment } from "@/lib/dal/ledger";
 import {
   syncInvestmentWithNetWorthAsset,
-  processAutomaticMonthlyAccruals,
+  processAutomaticInvestmentAccruals,
 } from "@/lib/ledger/investmentAccrual";
 
 export async function GET(req: NextRequest) {
   try {
     const userId = await requireUserId(req);
     const rawInvestments = await getUserInvestments(userId);
-    const investments = await processAutomaticMonthlyAccruals(userId, rawInvestments);
+    const investments = await processAutomaticInvestmentAccruals(userId, rawInvestments);
     return NextResponse.json({ investments });
   } catch (error) {
     if (error instanceof AuthError) {

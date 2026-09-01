@@ -333,8 +333,8 @@ export async function getFinancialOverview(
   ]);
   let investments = investmentsResult;
   try {
-    const { processAutomaticMonthlyAccruals } = await import("@/lib/ledger/investmentAccrual");
-    investments = await processAutomaticMonthlyAccruals(userId, investmentsResult);
+    const { processAutomaticInvestmentAccruals } = await import("@/lib/ledger/investmentAccrual");
+    investments = await processAutomaticInvestmentAccruals(userId, investmentsResult);
   } catch (e) {
     console.error("[ledger] Auto accrual error:", e);
   }

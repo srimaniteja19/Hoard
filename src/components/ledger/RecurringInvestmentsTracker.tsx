@@ -26,7 +26,13 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { InvestmentCompoundingChart } from "./charts/InvestmentCompoundingChart";
-import { parseAccrualNotes } from "@/lib/ledger/investmentAccrual";
+import { parseAccrualNotes, computeDueAccrualPlan } from "@/lib/ledger/investmentAccrual";
+
+const CADENCE_ACCRUAL_LABEL: Partial<Record<string, string>> = {
+  DAILY: "daily",
+  WEEKLY: "weekly",
+  BIWEEKLY: "bi-weekly",
+};
 
 interface RecurringInvestmentsTrackerProps {
   investments: FinancialInvestmentRow[];
@@ -457,10 +463,9 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
 
                   {/* Accrual / Execution Status Badge */}
                   {(() => {
-                    const { userNote, lastAccruedMonth } = parseAccrualNotes(inv.notes);
-                    const now = new Date();
-                    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-                    const isAccrued = lastAccruedMonth === currentMonth;
+                    const isCaughtUp = computeDueAccrualPlan(inv) === null;
+                    const cadenceLabel =
+                      CADENCE_ACCRUAL_LABEL[inv.cadence] || `on Day ${inv.investmentDay || 1}`;
 
                     return (
                       <div
@@ -471,11 +476,11 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
                           fontFamily: "var(--mono, monospace)",
                           fontSize: "10px",
                           fontWeight: 700,
-                          color: isAccrued ? "#166534" : "#0369A1",
+                          color: isCaughtUp ? "#166534" : "#0369A1",
                         }}
                       >
                         <span>
-                          {isAccrued ? "✓ Accrued for this month" : `🗓️ Auto-accrues on Day ${inv.investmentDay || 1}`}
+                          {isCaughtUp ? "✓ Up to date" : `🗓️ Auto-accrues ${cadenceLabel}`}
                         </span>
                         <span style={{ opacity: 0.85 }}>🔗 Net Worth Synced</span>
                       </div>
