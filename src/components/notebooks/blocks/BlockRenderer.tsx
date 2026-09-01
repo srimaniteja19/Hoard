@@ -71,6 +71,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             boxShadow: "5px 5px 0 #0A0A0A",
             overflow: "hidden",
             background: "#FFFFFF",
+            color: "#0A0A0A",
             margin: "16px 0",
             ...sizeStyle,
           }}
@@ -141,6 +142,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           boxShadow: "5px 5px 0 #0A0A0A",
           overflow: "hidden",
           background: "#FFFFFF",
+          color: "#0A0A0A",
           margin: "16px 0",
           ...sizeStyle,
         }}
@@ -488,6 +490,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           style={{
             border: "3px solid #0A0A0A",
             background: "#FFFFFF",
+            color: "#0A0A0A",
             boxShadow: "6px 6px 0 #0A0A0A",
             margin: "18px 0 22px",
             overflow: "hidden",
@@ -716,6 +719,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           style={{
             border: "3px solid #0A0A0A",
             background: "#FFFFFF",
+            color: "#0A0A0A",
             boxShadow: "5px 5px 0 #0A0A0A",
             margin: "18px 0 22px",
             overflow: "hidden",
@@ -830,6 +834,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           style={{
             border: "3px solid #0A0A0A",
             background: "#FFFFFF",
+            color: "#0A0A0A",
             boxShadow: "5px 5px 0 #0A0A0A",
             margin: "28px 0 16px",
             overflow: "hidden",
@@ -914,6 +919,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             gap: "13px",
             border: "3px solid #0A0A0A",
             background: "#FFFFFF",
+            color: "#0A0A0A",
             boxShadow: "4px 4px 0 #0A0A0A",
             padding: "12px 15px",
             margin: "20px 0",
@@ -960,7 +966,10 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
 
     case "callout": {
       const config = {
-        gotcha: { bg: "#FF2D8A", fg: "#FFFFFF", title: "GOTCHA", border: "#0A0A0A" },
+        // fg is dark, not white: white-on-#FF2D8A is ~3.5:1 contrast, below the
+        // WCAG AA 4.5:1 threshold for text — every other kind here already
+        // uses dark text on its bright background, this one just didn't match.
+        gotcha: { bg: "#FF2D8A", fg: "#0A0A0A", title: "GOTCHA", border: "#0A0A0A" },
         question: { bg: "#FCE94F", fg: "#0A0A0A", title: "QUESTION FOR ME", border: "#0A0A0A" },
         fact: { bg: "#B8F04A", fg: "#0A0A0A", title: "KEY TAKEAWAY", border: "#0A0A0A" },
         connects: { bg: "#7FE9F7", fg: "#0A0A0A", title: "CONNECTS TO", border: "#0A0A0A" },
@@ -1082,7 +1091,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 padding: "9px 0 3px",
                 fontSize: "16px",
                 lineHeight: "1.62",
-                color: "#4A4A4A",
+                color: "inherit",
+                opacity: 0.65,
                 outline: "none",
               }}
             >

@@ -465,7 +465,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           gap: "10px",
           marginBottom: "12px",
           paddingBottom: "8px",
-          borderBottom: "1.5px solid rgba(10,10,10,0.12)",
+          borderBottom: "1.5px solid rgba(128,128,128,0.25)",
           flexWrap: "wrap",
         }}
       >
@@ -487,8 +487,10 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
               onClick={() => handleInsertBlock(chip.type, blocks.length - 1)}
               style={{
                 background: "transparent",
-                border: "1px solid rgba(10,10,10,0.25)",
-                color: "#0A0A0A",
+                // Neutral gray (not black-based) so the outline stays visible
+                // in both the cream and ink page themes.
+                border: "1px solid rgba(128,128,128,0.4)",
+                color: "inherit",
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "8.5px",
                 fontWeight: 700,
@@ -500,10 +502,14 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = "#FCE94F";
                 e.currentTarget.style.borderColor = "#0A0A0A";
+                // Hover fill is always bright yellow regardless of theme, so
+                // the label always needs fixed dark text to stay readable.
+                e.currentTarget.style.color = "#0A0A0A";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.borderColor = "rgba(10,10,10,0.25)";
+                e.currentTarget.style.borderColor = "rgba(128,128,128,0.4)";
+                e.currentTarget.style.color = "";
               }}
             >
               ＋ {chip.label}
@@ -529,7 +535,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
             title="Undo (Cmd+Z)"
             style={{
               background: "transparent",
-              border: "1px solid rgba(10,10,10,0.2)",
+              border: "1px solid rgba(128,128,128,0.35)",
               color: "inherit",
               cursor: historyIndex > 0 ? "pointer" : "default",
               opacity: historyIndex > 0 ? 1 : 0.3,
@@ -550,7 +556,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
             title="Redo (Cmd+Shift+Z)"
             style={{
               background: "transparent",
-              border: "1px solid rgba(10,10,10,0.2)",
+              border: "1px solid rgba(128,128,128,0.35)",
               color: "inherit",
               cursor: historyIndex < history.length - 1 ? "pointer" : "default",
               opacity: historyIndex < history.length - 1 ? 1 : 0.3,

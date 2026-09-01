@@ -305,12 +305,27 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
               pendingFocusPosRef.current = "end";
               setIsEditing(true);
             },
+        // A subtle hover tint is the only signal this text is editable at
+        // all — without it, clicking into a block to edit it is invisible
+        // until you've already done it once.
+        onMouseEnter: readOnly
+          ? undefined
+          : (e: React.MouseEvent<HTMLElement>) => {
+              e.currentTarget.style.background = "rgba(128,128,128,0.08)";
+            },
+        onMouseLeave: readOnly
+          ? undefined
+          : (e: React.MouseEvent<HTMLElement>) => {
+              e.currentTarget.style.background = "transparent";
+            },
         style: {
           ...baseStyle,
           display: "block",
           whiteSpace: "pre-wrap",
           overflowWrap: "break-word",
           cursor: readOnly ? "default" : "text",
+          borderRadius: "3px",
+          transition: "background 0.08s ease",
         },
       },
       value ? (renderFormatted ? renderFormatted(value) : value) : null
