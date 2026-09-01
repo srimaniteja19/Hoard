@@ -9,7 +9,6 @@ export function pageLabelFromPath(pathname: string): string {
   if (path === "/todos/history" || path.startsWith("/todos/history/")) return "HISTORY";
   if (path === "/todos" || path.startsWith("/todos/")) return "TODOS";
   if (path === "/atlas" || path.startsWith("/atlas/")) return "ATLAS";
-  if (path === "/summarizer" || path.startsWith("/summarizer/") || path === "/digest" || path.startsWith("/digest/")) return "DIGEST";
   if (path === "/til" || path.startsWith("/til/")) return "TIL";
   if (path === "/ledger" || path.startsWith("/ledger/")) return "LEDGER";
   if (path === "/stats" || path.startsWith("/stats/")) return "STATS";
