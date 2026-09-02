@@ -21,7 +21,8 @@ interface InlineTextEditorProps {
   onSlashKeyDown?: (e: React.KeyboardEvent) => boolean;
   renderFormatted?: (val: string) => React.ReactNode;
   registerEditorHandle?: (handle: InlineEditorHandle | null) => void;
-  as?: "p" | "h2" | "h3" | "div" | "blockquote";
+  as?: "p" | "h2" | "h3" | "div" | "blockquote" | "li";
+  blockType?: string;
   style?: React.CSSProperties;
   placeholder?: string;
   autoFocus?: boolean;
@@ -33,7 +34,7 @@ interface InlineTextEditorProps {
 // carried over into the new block instead of being discarded.
 const TRANSFORM_PATTERNS: Array<{
   regex: RegExp;
-  build: (rest: string) => Partial<Block>;
+  build: (rest: string, match: RegExpMatchArray) => Partial<Block>;
 }> = [
   { regex: /^###\s([\s\S]*)$/, build: (rest) => ({ type: "heading", level: 3, text: rest }) },
   { regex: /^##\s([\s\S]*)$/, build: (rest) => ({ type: "heading", level: 3, text: rest }) },
@@ -41,12 +42,17 @@ const TRANSFORM_PATTERNS: Array<{
   { regex: /^>\s([\s\S]*)$/, build: (rest) => ({ type: "quote", text: rest }) },
   { regex: /^\[\]\s([\s\S]*)$/, build: (rest) => ({ type: "todo", items: [{ text: rest, done: false }] }) },
   { regex: /^-\s\[\s?\]\s([\s\S]*)$/, build: (rest) => ({ type: "todo", items: [{ text: rest, done: false }] }) },
-  { regex: /^!gotcha\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "gotcha", text: rest }) },
+  { regex: /^!gotcha\s([\s\S]*)$/i, build: (rest) => ({ type: "callout", kind: "gotcha", text: rest }) },
   { regex: /^!\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "gotcha", text: rest }) },
-  { regex: /^!q\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "question", text: rest }) },
+  { regex: /^!q\s([\s\S]*)$/i, build: (rest) => ({ type: "callout", kind: "question", text: rest }) },
   { regex: /^\?\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "question", text: rest }) },
-  { regex: /^!fact\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "fact", text: rest }) },
+  { regex: /^!fact\s([\s\S]*)$/i, build: (rest) => ({ type: "callout", kind: "fact", text: rest }) },
   { regex: /^★\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "fact", text: rest }) },
+  { regex: /^!connects\s([\s\S]*)$/i, build: (rest) => ({ type: "callout", kind: "connects", text: rest }) },
+  // Bullet List: -, *, • followed by space
+  { regex: /^[*\-•]\s([\s\S]*)$/, build: (rest) => ({ type: "bullet", text: rest }) },
+  // Numbered List: 1. or 1) followed by space
+  { regex: /^(\d+)[\.\)]\s([\s\S]*)$/, build: (rest, match) => ({ type: "numbered", number: parseInt(match[1] || "1", 10), text: rest }) },
 ];
 
 export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
@@ -63,8 +69,9 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   renderFormatted,
   registerEditorHandle,
   as = "p",
+  blockType = "paragraph",
   style = {},
-  placeholder = "Type note, or # for heading, > for quote, ! for callout…",
+  placeholder = "Type note, or # for heading, - for bullet, > for quote…",
   autoFocus = false,
   readOnly = false,
 }) => {
@@ -143,7 +150,7 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
         const match = val.match(regex);
         if (match) {
           playSound.pop();
-          onTransformBlock(build(match[1]));
+          onTransformBlock(build(match[1] || "", match));
           return;
         }
       }
@@ -189,9 +196,14 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
       return;
     }
 
-    // Backspace on empty line -> delete block & focus previous
+    // Backspace on empty line -> convert bullet/numbered back to paragraph, or delete block
     if (e.key === "Backspace" && value === "") {
       e.preventDefault();
+      if ((blockType === "bullet" || blockType === "numbered") && onTransformBlock) {
+        playSound.pop();
+        onTransformBlock({ type: "paragraph", text: "" });
+        return;
+      }
       if (onDeleteBlock) {
         playSound.pop();
         onDeleteBlock();

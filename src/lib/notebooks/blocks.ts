@@ -52,6 +52,17 @@ export const BlockSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     id: z.string(),
+    type: z.literal("bullet"),
+    text: z.string(),
+  }),
+  z.object({
+    id: z.string(),
+    type: z.literal("numbered"),
+    number: z.number().optional().default(1),
+    text: z.string(),
+  }),
+  z.object({
+    id: z.string(),
     type: z.literal("heading"),
     level: z.union([z.literal(2), z.literal(3)]).default(2),
     text: z.string(),
@@ -178,6 +189,8 @@ export function computeWordCount(blocks: Block[]): number {
       case "heading":
       case "quote":
       case "callout":
+      case "bullet":
+      case "numbered":
         textAccum += " " + b.text;
         break;
       case "toggle":
@@ -222,7 +235,14 @@ export function blocksToChunks(blocks: Block[]): { blockId: string; text: string
 
   for (const b of blocks) {
     let t = "";
-    if (b.type === "paragraph" || b.type === "heading" || b.type === "callout" || b.type === "quote") {
+    if (
+      b.type === "paragraph" ||
+      b.type === "heading" ||
+      b.type === "callout" ||
+      b.type === "quote" ||
+      b.type === "bullet" ||
+      b.type === "numbered"
+    ) {
       t = b.text.trim();
     } else if (b.type === "toggle") {
       t = `${b.summary} — ${b.body}`.trim();
@@ -257,6 +277,12 @@ export function convertBlocksToMarkdown(title: string, blocks: Block[]): string 
     switch (b.type) {
       case "paragraph":
         lines.push(`${b.text}\n`);
+        break;
+      case "bullet":
+        lines.push(`- ${b.text}`);
+        break;
+      case "numbered":
+        lines.push(`${b.number || 1}. ${b.text}`);
         break;
       case "heading": {
         const prefix = b.level === 3 ? "###" : "##";

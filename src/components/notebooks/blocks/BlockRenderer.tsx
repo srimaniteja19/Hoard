@@ -254,13 +254,15 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   };
 
   /**
-   * Helper that robustly parses both HTML tags (<strong>, <code>, <em>, <br>) and markdown (**bold**, `code`, *italic*)
+   * Helper that robustly parses:
+   * 1. Multi-line bullet points (*, -, •) and numbered points (1., 2.)
+   * 2. Markdown bold (**bold**), code (`code`), italic (*italic*), and HTML tags (<strong>, <code>, <em>, <mark>)
    */
-  const renderFormattedText = (text: string): React.ReactNode => {
-    if (!text) return null;
+  const renderFormattedInline = (lineText: string): React.ReactNode => {
+    if (!lineText) return null;
 
-    const tokenRegex = /(<strong>[\s\S]*?<\/strong>|<b>[\s\S]*?<\/b>|\*\*[\s\S]*?\*\*|<code>[\s\S]*?<\/code>|`[^`\n]+`|<em>[\s\S]*?<\/em>|\*[^*\n]+?\*|<mark[\s\S]*?<\/mark>)/g;
-    const parts = text.split(tokenRegex);
+    const tokenRegex = /(<strong>[\s\S]*?<\/strong>|<b>[\s\S]*?<\/b>|\*\*[^*\n]+?\*\*|<code>[\s\S]*?<\/code>|`[^`\n]+`|<em>[\s\S]*?<\/em>|(?<=\s|^)\*(?!\s)[^*\n]+?\*(?=\s|$|<|[.,:;!?])|<mark[\s\S]*?<\/mark>)/g;
+    const parts = lineText.split(tokenRegex);
 
     return parts.map((part, idx) => {
       if (!part) return null;
@@ -333,10 +335,10 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             style={{
               fontFamily: "var(--mono, monospace)",
               fontSize: "0.88em",
-              background: "#EBE7DC",
-              border: "1.5px solid #0A0A0A",
+              background: isInk ? "#252A36" : "#EBE7DC",
+              border: isInk ? "1.5px solid rgba(255,255,255,0.2)" : "1.5px solid #0A0A0A",
               padding: "1px 5px",
-              color: "#0A0A0A",
+              color: isInk ? "#F0EDE4" : "#0A0A0A",
             }}
           >
             {content}
@@ -353,10 +355,10 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             style={{
               fontFamily: "var(--mono, monospace)",
               fontSize: "0.88em",
-              background: "#EBE7DC",
-              border: "1.5px solid #0A0A0A",
+              background: isInk ? "#252A36" : "#EBE7DC",
+              border: isInk ? "1.5px solid rgba(255,255,255,0.2)" : "1.5px solid #0A0A0A",
               padding: "1px 5px",
-              color: "#0A0A0A",
+              color: isInk ? "#F0EDE4" : "#0A0A0A",
             }}
           >
             {content}
@@ -380,11 +382,99 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
     });
   };
 
+  const renderFormattedText = (text: string): React.ReactNode => {
+    if (!text) return null;
+
+    // Check if the text contains multiple lines or bullet lines (e.g. "* ...", "- ...", "1. ...")
+    const lines = text.split("\n");
+    if (lines.length > 1 || lines.some((l) => /^[*\-•]\s|^\d+[\.\)]\s/.test(l.trim()))) {
+      return (
+        <span style={{ display: "block" }}>
+          {lines.map((line, lineIdx) => {
+            const trimmed = line.trim();
+            const bulletMatch = trimmed.match(/^[*\-•]\s+([\s\S]*)$/);
+            const numMatch = trimmed.match(/^(\d+)[\.\)]\s+([\s\S]*)$/);
+
+            if (bulletMatch) {
+              return (
+                <span
+                  key={lineIdx}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "8px",
+                    margin: "2px 0 4px",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      background: isInk ? "#FCE94F" : "#0A0A0A",
+                      flex: "none",
+                      marginTop: "9px",
+                      display: "inline-block",
+                    }}
+                  />
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    {renderFormattedInline(bulletMatch[1])}
+                  </span>
+                </span>
+              );
+            }
+
+            if (numMatch) {
+              return (
+                <span
+                  key={lineIdx}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "8px",
+                    margin: "2px 0 4px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      color: isInk ? "#FCE94F" : "#0A0A0A",
+                      flex: "none",
+                      marginTop: "3px",
+                      minWidth: "16px",
+                      textAlign: "right",
+                    }}
+                  >
+                    {numMatch[1]}.
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    {renderFormattedInline(numMatch[2])}
+                  </span>
+                </span>
+              );
+            }
+
+            return (
+              <span key={lineIdx} style={{ display: "block", minHeight: trimmed ? undefined : "1em" }}>
+                {renderFormattedInline(line)}
+              </span>
+            );
+          })}
+        </span>
+      );
+    }
+
+    return renderFormattedInline(text);
+  };
+
   switch (block.type) {
     case "paragraph": {
       return (
         <InlineTextEditor
           as="p"
+          blockType="paragraph"
           value={block.text}
           onChange={(nextText) => {
             if (onUpdateBlock) onUpdateBlock({ ...block, text: nextText });
@@ -408,6 +498,117 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           }}
           placeholder="Type something, or press '/' for blocks…"
         />
+      );
+    }
+
+    case "bullet": {
+      return (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "10px",
+            margin: "2px 0 4px",
+            paddingLeft: "4px",
+          }}
+        >
+          <span
+            style={{
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
+              background: isInk ? "#FCE94F" : "#0A0A0A",
+              flex: "none",
+              marginTop: "9px",
+              display: "inline-block",
+            }}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <InlineTextEditor
+              as="div"
+              blockType="bullet"
+              value={block.text}
+              onChange={(nextText) => {
+                if (onUpdateBlock) onUpdateBlock({ ...block, text: nextText });
+              }}
+              onInsertBelow={onInsertBelow}
+              onSplitBlock={onSplitBlock}
+              onDeleteBlock={onDeleteBlock}
+              onFocusPrevious={onFocusPrevious}
+              onFocusNext={onFocusNext}
+              onTransformBlock={onTransformBlock}
+              onSlashCommand={onSlashCommand}
+              onSlashKeyDown={onSlashKeyDown}
+              registerEditorHandle={registerEditorHandle}
+              readOnly={readOnly}
+              renderFormatted={renderFormattedText}
+              style={{
+                fontSize: "16px",
+                lineHeight: "1.65",
+                color: "inherit",
+                margin: 0,
+              }}
+              placeholder="List item…"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    case "numbered": {
+      return (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "10px",
+            margin: "2px 0 4px",
+            paddingLeft: "2px",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "12px",
+              fontWeight: 800,
+              color: isInk ? "#FCE94F" : "#0A0A0A",
+              flex: "none",
+              marginTop: "3px",
+              minWidth: "18px",
+              textAlign: "right",
+            }}
+          >
+            {block.number || 1}.
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <InlineTextEditor
+              as="div"
+              blockType="numbered"
+              value={block.text}
+              onChange={(nextText) => {
+                if (onUpdateBlock) onUpdateBlock({ ...block, text: nextText });
+              }}
+              onInsertBelow={onInsertBelow}
+              onSplitBlock={onSplitBlock}
+              onDeleteBlock={onDeleteBlock}
+              onFocusPrevious={onFocusPrevious}
+              onFocusNext={onFocusNext}
+              onTransformBlock={onTransformBlock}
+              onSlashCommand={onSlashCommand}
+              onSlashKeyDown={onSlashKeyDown}
+              registerEditorHandle={registerEditorHandle}
+              readOnly={readOnly}
+              renderFormatted={renderFormattedText}
+              style={{
+                fontSize: "16px",
+                lineHeight: "1.65",
+                color: "inherit",
+                margin: 0,
+              }}
+              placeholder="Numbered item…"
+            />
+          </div>
+        </div>
       );
     }
 

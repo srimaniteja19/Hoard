@@ -25,6 +25,8 @@ interface BlockEditorProps {
 
 const SLASH_MENU_ITEMS: { type: string; glyph: string; label: string; shortcut: string }[] = [
   { type: "paragraph", glyph: "¶", label: "Text Paragraph", shortcut: "/text" },
+  { type: "bullet", glyph: "•", label: "Bulleted List (- or *)", shortcut: "/bullet" },
+  { type: "numbered", glyph: "1.", label: "Numbered List (1.)", shortcut: "/num" },
   { type: "h2", glyph: "H2", label: "Heading 1 (#)", shortcut: "/h1" },
   { type: "h3", glyph: "H3", label: "Heading 2 (##)", shortcut: "/h2" },
   { type: "code", glyph: "<>", label: "Code Snippet (```)", shortcut: "/code" },
@@ -158,13 +160,32 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   };
 
   // Enter pressed mid-text: keep text before the cursor in the current block,
-  // move text after the cursor into a brand-new paragraph block, and focus it.
+  // move text after the cursor into a brand-new block, and focus it.
   const handleSplitBlock = (index: number, beforeText: string, afterText: string) => {
     const current = blocks[index];
     if (!current || !("text" in current)) return;
     playSound.click();
+
+    // If Enter is pressed on an empty bullet/numbered line, convert it to a paragraph
+    if ((current.type === "bullet" || current.type === "numbered") && !beforeText.trim() && !afterText.trim()) {
+      const next = [...blocks];
+      next[index] = { id: current.id, type: "paragraph", text: "" };
+      commitBlocks(next);
+      pendingFocusRef.current = { blockId: current.id, position: "start" };
+      return;
+    }
+
     const updatedCurrent = { ...current, text: beforeText } as Block;
-    const newBlock: Block = { id: generateBlockId(), type: "paragraph", text: afterText };
+    let newBlock: Block;
+    if (current.type === "bullet") {
+      newBlock = { id: generateBlockId(), type: "bullet", text: afterText };
+    } else if (current.type === "numbered") {
+      const prevNum = (current as any).number || 1;
+      newBlock = { id: generateBlockId(), type: "numbered", number: prevNum + 1, text: afterText };
+    } else {
+      newBlock = { id: generateBlockId(), type: "paragraph", text: afterText };
+    }
+
     const next = [...blocks];
     next[index] = updatedCurrent;
     next.splice(index + 1, 0, newBlock);
@@ -184,7 +205,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     commitBlocks(next);
   };
 
-  // Transform existing block (e.g. from typing '# ', '> ', or from slash menu)
+  // Transform existing block (e.g. from typing '# ', '- ', or from slash menu)
   const handleTransformBlock = (index: number, props: any) => {
     playSound.pop();
     const current = blocks[index] || { id: generateBlockId(), type: "paragraph", text: "" };
@@ -193,6 +214,12 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     const baseId = current.id || generateBlockId();
 
     switch (props.type) {
+      case "bullet":
+        transformed = { id: baseId, type: "bullet", text: props.text || "" };
+        break;
+      case "numbered":
+        transformed = { id: baseId, type: "numbered", number: props.number || 1, text: props.text || "" };
+        break;
       case "heading":
         transformed = { id: baseId, type: "heading", level: props.level || 2, text: props.text || "" };
         break;
@@ -219,11 +246,6 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
 
     const next = [...blocks];
     next[index] = transformed;
-    // The transform swaps this block to a different rendered element (e.g.
-    // paragraph -> heading), which unmounts/remounts its textarea and drops
-    // focus. Re-focus the same block id (cursor at end) once it remounts, or
-    // anything typed right after the trigger (e.g. pasted "## some text") is
-    // silently lost instead of landing in the new block.
     pendingFocusRef.current = { blockId: baseId, position: "end" };
     commitBlocks(next);
     setSlashMenu(null);
@@ -242,6 +264,17 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     let newBlock: Block;
 
     switch (type) {
+      case "bullet":
+        newBlock = { id: generateBlockId(), type: "bullet", text: "" };
+        break;
+      case "numbered": {
+        let nextNum = 1;
+        if (typeof afterIndex === "number" && blocks[afterIndex]?.type === "numbered") {
+          nextNum = ((blocks[afterIndex] as any).number || 1) + 1;
+        }
+        newBlock = { id: generateBlockId(), type: "numbered", number: nextNum, text: "" };
+        break;
+      }
       case "h2":
         newBlock = { id: generateBlockId(), type: "heading", level: 2, text: "" };
         break;
@@ -574,6 +607,8 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
           {[
             { label: "¶ Text", type: "paragraph" },
+            { label: "• Bullet", type: "bullet" },
+            { label: "1. List", type: "numbered" },
             { label: "H1", type: "h2" },
             { label: "H2", type: "h3" },
             { label: "<> Code", type: "code" },

@@ -20,6 +20,8 @@ describe("Notebooks Block Contract & Logic", () => {
   it("validates all 11 block types with BlockSchema", () => {
     const testBlocks: Block[] = [
       { id: "1", type: "paragraph", text: "Hello **world**" },
+      { id: "1b", type: "bullet", text: "Bullet point item" },
+      { id: "1c", type: "numbered", number: 1, text: "Numbered list item" },
       { id: "2", type: "heading", level: 2, text: "Heading text", ts: "0:07" },
       { id: "3", type: "callout", kind: "gotcha", text: "Watch out" },
       { id: "4", type: "code", lang: "PYTHON", code: "print(1)" },
