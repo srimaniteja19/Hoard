@@ -6,14 +6,20 @@ import { lessonState, computeWordCount } from "@/lib/notebooks/blocks";
 
 import { Pencil, Trash2 } from "lucide-react";
 
+import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
+
 interface CourseCardProps {
   course: SeedCourse;
   onClick: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  theme?: NotebookTheme;
 }
 
-export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit, onDelete }) => {
+export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit, onDelete, theme = "cream" }) => {
+  const tokens = getThemeTokens(theme);
+  const isDark = tokens.isDark;
+
   // Aggregate all lessons across modules
   const allLessons = course.modules.flatMap((m) => m.lessons);
   const totalLessons = allLessons.length;
@@ -47,21 +53,28 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
     <div
       onClick={onClick}
       style={{
-        border: "3px solid #0A0A0A",
-        background: "#FFFFFF",
-        boxShadow: `8px 8px 0 ${course.accent}, 16px 16px 0 #0A0A0A`,
+        border: `3px solid ${tokens.borderPrimary}`,
+        background: tokens.cardBg,
+        boxShadow: isDark
+          ? `6px 6px 0 ${course.accent}, 12px 12px 0 rgba(0,0,0,0.8)`
+          : `8px 8px 0 ${course.accent}, 16px 16px 0 #0A0A0A`,
         cursor: "pointer",
         transition: "transform 0.16s ease, box-shadow 0.16s ease",
         display: "flex",
         flexDirection: "column",
+        color: tokens.textPrimary,
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translate(-3px, -3px)";
-        e.currentTarget.style.boxShadow = `11px 11px 0 ${course.accent}, 22px 22px 0 #0A0A0A`;
+        e.currentTarget.style.boxShadow = isDark
+          ? `8px 8px 0 ${course.accent}, 16px 16px 0 rgba(0,0,0,0.9)`
+          : `11px 11px 0 ${course.accent}, 22px 22px 0 #0A0A0A`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "translate(0, 0)";
-        e.currentTarget.style.boxShadow = `8px 8px 0 ${course.accent}, 16px 16px 0 #0A0A0A`;
+        e.currentTarget.style.boxShadow = isDark
+          ? `6px 6px 0 ${course.accent}, 12px 12px 0 rgba(0,0,0,0.8)`
+          : `8px 8px 0 ${course.accent}, 16px 16px 0 #0A0A0A`;
       }}
     >
       {/* Top Banner with Ghost Initial */}
@@ -189,16 +202,16 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
       </div>
 
       {/* Body & Progress Bars */}
-      <div style={{ padding: "16px 20px", flex: 1, color: "#0A0A0A" }}>
+      <div style={{ padding: "16px 20px", flex: 1, color: tokens.textPrimary }}>
         <div style={{ marginBottom: "14px" }}>
           {/* Two-Segment Progress Bar */}
           <div
             style={{
               display: "flex",
               height: "12px",
-              border: "2px solid #0A0A0A",
+              border: `2px solid ${tokens.borderPrimary}`,
               marginBottom: "6px",
-              background: "#FFFFFF",
+              background: isDark ? "#121214" : "#FFFFFF",
               overflow: "hidden",
             }}
           >
@@ -228,7 +241,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
               fontSize: "8.5px",
               fontWeight: 700,
               letterSpacing: "0.11em",
-              opacity: 0.55,
+              color: tokens.textSecondary,
               marginBottom: "11px",
             }}
           >
@@ -244,7 +257,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
             <b style={{ display: "block", fontFamily: "var(--display, sans-serif)", fontWeight: 800, fontSize: "23px", lineHeight: 1 }}>
               {pagesCount}
             </b>
-            <span style={{ display: "block", fontFamily: "var(--mono, monospace)", fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.12em", opacity: 0.45, marginTop: "5px" }}>
+            <span style={{ display: "block", fontFamily: "var(--mono, monospace)", fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.12em", color: tokens.textMuted, marginTop: "5px" }}>
               PAGES
             </span>
           </div>
@@ -252,7 +265,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
             <b style={{ display: "block", fontFamily: "var(--display, sans-serif)", fontWeight: 800, fontSize: "23px", lineHeight: 1 }}>
               {tilCandidateCount}
             </b>
-            <span style={{ display: "block", fontFamily: "var(--mono, monospace)", fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.12em", opacity: 0.45, marginTop: "5px" }}>
+            <span style={{ display: "block", fontFamily: "var(--mono, monospace)", fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.12em", color: tokens.textMuted, marginTop: "5px" }}>
               → TIL
             </span>
           </div>
@@ -260,7 +273,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
             <b style={{ display: "block", fontFamily: "var(--display, sans-serif)", fontWeight: 800, fontSize: "23px", lineHeight: 1 }}>
               {stubCount}
             </b>
-            <span style={{ display: "block", fontFamily: "var(--mono, monospace)", fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.12em", opacity: 0.45, marginTop: "5px" }}>
+            <span style={{ display: "block", fontFamily: "var(--mono, monospace)", fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.12em", color: tokens.textMuted, marginTop: "5px" }}>
               STUBS
             </span>
           </div>
@@ -274,16 +287,16 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
           alignItems: "center",
           gap: "10px",
           padding: "10px 20px",
-          borderTop: "2px solid rgba(10,10,10,0.14)",
-          background: "#EBE7DC",
+          borderTop: `2px solid ${tokens.borderSubtle}`,
+          background: isDark ? "#141417" : "#EBE7DC",
           fontFamily: "var(--mono, monospace)",
           fontSize: "9.5px",
           fontWeight: 700,
           letterSpacing: "0.1em",
-          color: "#0A0A0A",
+          color: tokens.textPrimary,
         }}
       >
-        <span style={{ opacity: 0.55 }}>TOUCHED RECENTLY</span>
+        <span style={{ color: tokens.textSecondary }}>TOUCHED RECENTLY</span>
         <span style={{ flex: 1 }} />
         {unwrittenCount > 0 && (
           <span

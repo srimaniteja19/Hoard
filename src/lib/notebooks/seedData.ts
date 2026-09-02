@@ -5,6 +5,8 @@ export interface SeedCourseLesson {
   title: string;
   watched: boolean;
   meta: string;
+  icon?: string;
+  coverUrl?: string;
   blocks?: Block[];
   gap?: { timestamp: string; topic: string }[];
   lessonUrl?: string | null;

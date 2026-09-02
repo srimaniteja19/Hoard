@@ -78,7 +78,8 @@ import {
   HelpCircle,
   Wand2,
 } from "lucide-react";
-import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
+import { NotebookTheme, TypographyStyle, TYPOGRAPHY_FONTS, getThemeTokens } from "@/lib/notebooks/theme";
+import { PageCoverBanner } from "@/components/notebooks/PageCoverBanner";
 
 export default function NotebooksPage() {
   const [courses, setCourses] = useState<SeedCourse[]>([]);
@@ -87,6 +88,21 @@ export default function NotebooksPage() {
   const [currentModuleIdx, setCurrentModuleIdx] = useState(1);
   const [currentLessonIdx, setCurrentLessonIdx] = useState(0);
   const [paperTheme, setPaperTheme] = useState<NotebookTheme>("cream");
+  const [typography, setTypography] = useState<TypographyStyle>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("hoard_notebook_typography") as TypographyStyle;
+      if (saved && (saved === "sans" || saved === "serif" || saved === "mono")) return saved;
+    }
+    return "sans";
+  });
+
+  const handleToggleTypography = (font: TypographyStyle) => {
+    playSound.click();
+    setTypography(font);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("hoard_notebook_typography", font);
+    }
+  };
 
   // The two-column course workspace (fixed 300px sidebar + fluid content) has
   // no room to breathe below ~860px — a phone would show a squeezed sliver of
@@ -557,6 +573,22 @@ export default function NotebooksPage() {
       flushPendingSave();
     };
   }, [flushPendingSave]);
+
+  const handleUpdateCurrentLessonCover = (coverUrl: string | undefined) => {
+    if (!currentCourse || !currentModule || !currentLesson) return;
+    const next = [...courses];
+    next[currentCourseIdx].modules[currentModuleIdx].lessons[currentLessonIdx].coverUrl = coverUrl;
+    setCourses(next);
+    saveStoredCourses(next);
+  };
+
+  const handleUpdateCurrentLessonIcon = (icon: string | undefined) => {
+    if (!currentCourse || !currentModule || !currentLesson) return;
+    const next = [...courses];
+    next[currentCourseIdx].modules[currentModuleIdx].lessons[currentLessonIdx].icon = icon;
+    setCourses(next);
+    saveStoredCourses(next);
+  };
 
   const handleSelectCourseFromCard = (idx: number) => {
     playSound.click();
@@ -1432,6 +1464,54 @@ export default function NotebooksPage() {
               );
             })}
           </div>
+
+          {/* Typography Switcher */}
+          <div
+            style={{
+              display: "flex",
+              border: `2px solid ${tokens.borderPrimary}`,
+              background: tokens.isDark ? "#12151E" : "#E5E1D5",
+              boxShadow: tokens.isDark ? "2px 2px 0 rgba(0,0,0,0.6)" : "2px 2px 0 #0A0A0A",
+            }}
+          >
+            {(["sans", "serif", "mono"] as TypographyStyle[]).map((fId, fIdx) => {
+              const fontObj = TYPOGRAPHY_FONTS[fId];
+              const isActive = typography === fId;
+              return (
+                <button
+                  key={fId}
+                  type="button"
+                  onClick={() => handleToggleTypography(fId)}
+                  title={`Switch font to ${fontObj.label}`}
+                  style={{
+                    fontFamily: fontObj.fontStack,
+                    fontSize: "9px",
+                    fontWeight: 800,
+                    letterSpacing: "0.08em",
+                    border: "none",
+                    borderRight: fIdx < 2 ? `1.5px solid ${tokens.borderPrimary}` : "none",
+                    background: isActive ? (tokens.isDark ? "#242A38" : "#0A0A0A") : "transparent",
+                    color: isActive ? (tokens.isDark ? "#FCE94F" : "#F3F0E8") : tokens.textSecondary,
+                    padding: "4px 8px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    transition: "all 0.12s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) e.currentTarget.style.background = tokens.isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  <span style={{ fontSize: "10px", opacity: 0.7 }}>{fontObj.glyph}</span>
+                  <span>{fontObj.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -1484,15 +1564,15 @@ export default function NotebooksPage() {
                 fontSize: "10.5px",
                 fontWeight: 700,
                 letterSpacing: "0.13em",
-                border: "3px solid #0A0A0A",
-                background: "#FFFFFF",
-                color: "#0A0A0A",
+                border: `3px solid ${tokens.borderPrimary}`,
+                background: tokens.cardBg,
+                color: tokens.textPrimary,
                 padding: "11px 17px",
                 cursor: "pointer",
-                boxShadow: "4px 4px 0 #0A0A0A",
+                boxShadow: tokens.boxShadow,
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = tokens.cardBg)}
             >
               ＋ ADD A COURSE
             </button>
@@ -1505,13 +1585,13 @@ export default function NotebooksPage() {
                 display: "flex",
                 alignItems: "center",
                 gap: "12px",
-                border: "3px solid #0A0A0A",
-                background: "#FFFFFF",
-                boxShadow: "5px 5px 0 #0A0A0A",
+                border: `3px solid ${tokens.borderPrimary}`,
+                background: tokens.cardBg,
+                boxShadow: tokens.boxShadow,
                 padding: "12px 18px",
               }}
             >
-              <Search size={18} style={{ opacity: 0.5, flexShrink: 0, color: "#0A0A0A" }} />
+              <Search size={18} style={{ opacity: 0.5, flexShrink: 0, color: tokens.textPrimary }} />
               <input
                 type="text"
                 value={globalSearchQuery}
@@ -1524,7 +1604,7 @@ export default function NotebooksPage() {
                   fontFamily: "var(--body, 'Space Grotesk', sans-serif)",
                   fontSize: "15px",
                   fontWeight: 600,
-                  color: "#0A0A0A",
+                  color: tokens.textPrimary,
                   outline: "none",
                 }}
               />
@@ -1534,8 +1614,8 @@ export default function NotebooksPage() {
                   onClick={() => setGlobalSearchQuery("")}
                   style={{
                     border: "none",
-                    background: "#0A0A0A",
-                    color: "#F3F0E8",
+                    background: tokens.borderPrimary,
+                    color: tokens.canvasBg,
                     cursor: "pointer",
                     fontFamily: "var(--mono, monospace)",
                     fontSize: "9.5px",
@@ -1698,6 +1778,7 @@ export default function NotebooksPage() {
                 <CourseCard
                   key={course.id}
                   course={course}
+                  theme={paperTheme}
                   onClick={() => handleSelectCourseFromCard(idx)}
                   onEdit={() => handleStartEditCourse(course)}
                   onDelete={() => handleStartDeleteCourse(course)}
@@ -1708,7 +1789,7 @@ export default function NotebooksPage() {
               <div
                 onClick={handleAddCourse}
                 style={{
-                  border: "3px dashed rgba(10,10,10,0.3)",
+                  border: `3px dashed ${tokens.borderSubtle}`,
                   background: "transparent",
                   minHeight: "250px",
                   display: "grid",
@@ -1716,7 +1797,7 @@ export default function NotebooksPage() {
                   cursor: "pointer",
                   transition: "background 0.15s ease",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(252,233,79,0.2)")}
+                onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
                 <span
@@ -1725,7 +1806,7 @@ export default function NotebooksPage() {
                     fontSize: "11px",
                     fontWeight: 700,
                     letterSpacing: "0.16em",
-                    opacity: 0.5,
+                    color: tokens.textSecondary,
                   }}
                 >
                   ＋ ADD A COURSE
@@ -2037,7 +2118,22 @@ export default function NotebooksPage() {
               </div>
             )}
 
-            <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+            <div
+              style={{
+                maxWidth: "900px",
+                margin: "0 auto",
+                fontFamily: TYPOGRAPHY_FONTS[typography].fontStack,
+              }}
+            >
+              {/* Page Hero Cover Artwork & Custom Emoji Badge */}
+              <PageCoverBanner
+                coverUrl={currentLesson.coverUrl}
+                icon={currentLesson.icon}
+                theme={paperTheme}
+                onChangeCover={handleUpdateCurrentLessonCover}
+                onChangeIcon={handleUpdateCurrentLessonIcon}
+              />
+
               {/* Breadcrumb & Navigation */}
               <div
                 style={{

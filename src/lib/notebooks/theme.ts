@@ -1,5 +1,28 @@
 export type NotebookTheme = "cream" | "ink" | "matcha" | "midnight";
 
+export type TypographyStyle = "sans" | "serif" | "mono";
+
+export const TYPOGRAPHY_FONTS: Record<TypographyStyle, { id: TypographyStyle; label: string; fontStack: string; glyph: string }> = {
+  sans: {
+    id: "sans",
+    label: "Sans",
+    glyph: "Ag",
+    fontStack: "var(--body, 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif)",
+  },
+  serif: {
+    id: "serif",
+    label: "Serif",
+    glyph: "Ag",
+    fontStack: "'Newsreader', 'Merriweather', 'Georgia', 'Times New Roman', serif",
+  },
+  mono: {
+    id: "mono",
+    label: "Mono",
+    glyph: "</>",
+    fontStack: "var(--mono, 'JetBrains Mono', 'Fira Code', monospace)",
+  },
+};
+
 export interface ThemeTokens {
   id: NotebookTheme;
   label: string;

@@ -1269,10 +1269,11 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               }}
               style={{
                 fontFamily: "var(--mono, monospace)",
-                fontSize: "11px",
+                fontSize: "12px",
                 transform: toggleOpen ? "rotate(90deg)" : "rotate(0deg)",
-                transition: "transform 0.15s ease",
+                transition: "transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)",
                 display: "inline-block",
+                userSelect: "none",
               }}
             >
               ▸
@@ -1302,6 +1303,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 color: "inherit",
                 opacity: 0.65,
                 outline: "none",
+                animation: "fadeIn 0.15s ease",
               }}
             >
               {renderFormattedText(block.body)}
@@ -1352,11 +1354,13 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   display: "grid",
                   placeItems: "center",
                   background: item.done ? (isInk ? "#FCE94F" : "#0A0A0A") : (isInk ? "#181B24" : "#FFFFFF"),
-                  color: item.done ? "#0A0A0A" : "transparent",
+                  color: item.done ? (isInk ? "#0A0A0A" : "#FFFFFF") : "transparent",
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "11px",
                   fontWeight: 700,
                   padding: 0,
+                  transform: item.done ? "scale(1.08)" : "scale(1)",
+                  transition: "all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)",
                 }}
               >
                 ✓
@@ -1380,6 +1384,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   color: isInk ? "#F0EDE4" : "#0A0A0A",
                   outline: "none",
                   flex: 1,
+                  transition: "opacity 0.2s ease, text-decoration 0.2s ease",
                 }}
               >
                 {renderFormattedText(item.text)}

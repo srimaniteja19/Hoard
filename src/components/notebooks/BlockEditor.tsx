@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Block, generateBlockId } from "@/lib/notebooks/blocks";
 import { BlockRenderer } from "./blocks/BlockRenderer";
 import { InlineEditorHandle } from "./blocks/InlineTextEditor";
-import { FloatingFormatBubble } from "./FloatingFormatBubble";
+import { FloatingSelectionToolbar } from "./FloatingSelectionToolbar";
 import { playSound } from "@/lib/sound";
 import {
   Plus,
@@ -13,6 +13,10 @@ import {
   ArrowDown,
   RotateCcw,
   RotateCw,
+  GripVertical,
+  Copy,
+  RefreshCw,
+  X,
 } from "lucide-react";
 
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
@@ -64,6 +68,80 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [insertImageAfterIdx, setInsertImageAfterIdx] = useState<number | undefined>(undefined);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [blockActionMenu, setBlockActionMenu] = useState<{
+    blockIndex: number;
+    top: number;
+    left: number;
+  } | null>(null);
+
+  const blockActionMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (blockActionMenuRef.current && !blockActionMenuRef.current.contains(e.target as Node)) {
+        setBlockActionMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  const handleDuplicateBlock = (index: number) => {
+    playSound.pop();
+    const current = blocks[index];
+    if (!current) return;
+    const duplicated: Block = {
+      ...JSON.parse(JSON.stringify(current)),
+      id: generateBlockId(),
+    };
+    const next = [...blocks];
+    next.splice(index + 1, 0, duplicated);
+    commitBlocks(next);
+    setBlockActionMenu(null);
+  };
+
+  const handleFormatSelection = (prefix: string, suffix: string) => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+
+    const selectedStr = sel.toString();
+    if (!selectedStr) return;
+
+    const node = sel.anchorNode;
+    const blockEl = node instanceof Element ? node.closest("[data-block-index]") : node?.parentElement?.closest("[data-block-index]");
+    if (!blockEl) return;
+
+    const idxStr = blockEl.getAttribute("data-block-index");
+    if (idxStr === null) return;
+    const blockIdx = parseInt(idxStr, 10);
+    const targetBlock = blocks[blockIdx];
+    if (!targetBlock) return;
+
+    let targetText = "";
+    if ("text" in targetBlock && typeof targetBlock.text === "string") {
+      targetText = targetBlock.text;
+    } else if ("body" in targetBlock && typeof (targetBlock as any).body === "string") {
+      targetText = (targetBlock as any).body;
+    } else {
+      return;
+    }
+
+    if (targetText && targetText.includes(selectedStr)) {
+      const wrapped = `${prefix}${selectedStr}${suffix}`;
+      let nextText: string;
+      if (targetText.includes(wrapped)) {
+        nextText = targetText.replace(wrapped, selectedStr);
+      } else {
+        nextText = targetText.replace(selectedStr, wrapped);
+      }
+
+      if ("text" in targetBlock) {
+        handleUpdateBlock(blockIdx, { ...targetBlock, text: nextText });
+      } else if ("body" in targetBlock) {
+        handleUpdateBlock(blockIdx, { ...targetBlock, body: nextText } as any);
+      }
+    }
+  };
 
   // Maps block id -> its InlineTextEditor's focus handle, so we can move
   // focus between blocks (arrow keys, backspace-merge, split-on-enter) the
@@ -569,6 +647,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   return (
     <div
       ref={containerRef}
+      data-block-editor="true"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -582,7 +661,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       onDrop={handleDrop}
     >
       {/* Floating Selection Tooltip */}
-      <FloatingFormatBubble containerRef={containerRef} onExplain={onExplain} />
+      <FloatingSelectionToolbar theme={theme} onFormat={handleFormatSelection} onAiExplain={onExplain} />
 
       {/* Hidden Image File Input */}
       <input
@@ -632,101 +711,83 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                   alignItems: "center",
                   justifyContent: "flex-end",
                   gap: "2px",
-                  opacity: isHovered ? 1 : 0,
+                  opacity: isHovered || blockActionMenu?.blockIndex === idx ? 1 : 0,
                   transition: "opacity 0.12s ease",
                   userSelect: "none",
                 }}
               >
+                {/* + Quick Insert Below */}
                 <button
                   type="button"
                   title="Insert block below"
                   onClick={() => {
                     playSound.click();
-                    setSlashMenu({
-                      isOpen: true,
-                      blockIndex: idx,
-                      query: "",
-                      activeIndex: 0,
-                      position: null,
-                    });
+                    handleInsertBlock("paragraph", idx);
                   }}
                   style={{
-                    width: "14px",
-                    height: "18px",
+                    width: "18px",
+                    height: "20px",
                     border: "none",
                     background: "transparent",
                     cursor: "pointer",
-                    color: "inherit",
+                    color: tokens.textPrimary,
                     opacity: 0.5,
-                    fontSize: "13px",
-                    padding: 0,
-                    lineHeight: 1,
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
-                >
-                  ＋
-                </button>
-                <button
-                  type="button"
-                  disabled={idx === 0}
-                  title="Move up"
-                  onClick={() => handleMoveBlock(idx, "up")}
-                  style={{
-                    width: "12px",
-                    height: "18px",
-                    border: "none",
-                    background: "transparent",
-                    cursor: idx > 0 ? "pointer" : "default",
-                    color: "inherit",
-                    opacity: idx > 0 ? 0.45 : 0.15,
-                    padding: 0,
                     display: "grid",
                     placeItems: "center",
-                  }}
-                >
-                  <ArrowUp size={10} />
-                </button>
-                <button
-                  type="button"
-                  disabled={idx === blocks.length - 1}
-                  title="Move down"
-                  onClick={() => handleMoveBlock(idx, "down")}
-                  style={{
-                    width: "12px",
-                    height: "18px",
-                    border: "none",
-                    background: "transparent",
-                    cursor: idx < blocks.length - 1 ? "pointer" : "default",
-                    color: "inherit",
-                    opacity: idx < blocks.length - 1 ? 0.45 : 0.15,
                     padding: 0,
-                    display: "grid",
-                    placeItems: "center",
+                    borderRadius: "3px",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = "1";
+                    e.currentTarget.style.background = tokens.popoverHoverBg;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = "0.5";
+                    e.currentTarget.style.background = "transparent";
                   }}
                 >
-                  <ArrowDown size={10} />
+                  <Plus size={13} strokeWidth={2.5} />
                 </button>
+
+                {/* ⋮⋮ Block Handle / Action Popover Trigger */}
                 <button
                   type="button"
-                  title="Delete line"
-                  onClick={() => handleDeleteBlock(idx)}
+                  title="Block actions & transform (Click for menu)"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    playSound.click();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setBlockActionMenu(
+                      blockActionMenu?.blockIndex === idx
+                        ? null
+                        : { blockIndex: idx, top: rect.bottom + 4, left: rect.left }
+                    );
+                  }}
                   style={{
-                    width: "12px",
-                    height: "18px",
+                    width: "18px",
+                    height: "20px",
                     border: "none",
-                    background: "transparent",
+                    background: blockActionMenu?.blockIndex === idx ? tokens.popoverHoverBg : "transparent",
                     cursor: "pointer",
-                    color: "#DC2626",
-                    opacity: 0.45,
-                    padding: 0,
+                    color: tokens.textPrimary,
+                    opacity: blockActionMenu?.blockIndex === idx ? 1 : 0.5,
                     display: "grid",
                     placeItems: "center",
+                    padding: 0,
+                    borderRadius: "3px",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.45")}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = "1";
+                    e.currentTarget.style.background = tokens.popoverHoverBg;
+                  }}
+                  onMouseLeave={(e) => {
+                    if (blockActionMenu?.blockIndex !== idx) {
+                      e.currentTarget.style.opacity = "0.5";
+                      e.currentTarget.style.background = "transparent";
+                    }
+                  }}
                 >
-                  <Trash2 size={10} />
+                  <GripVertical size={13} strokeWidth={2.2} />
                 </button>
               </div>
 
@@ -877,6 +938,188 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           paddingLeft: "54px",
         }}
       />
+
+      {/* Block Action Popover Menu */}
+      {blockActionMenu && (
+        <div
+          ref={blockActionMenuRef}
+          style={{
+            position: "fixed",
+            top: `${blockActionMenu.top}px`,
+            left: `${blockActionMenu.left}px`,
+            zIndex: 99999,
+            background: tokens.popoverBg,
+            border: `2px solid ${tokens.borderPrimary}`,
+            boxShadow: tokens.popoverShadow,
+            minWidth: "220px",
+            padding: "6px 0",
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "10px",
+            fontWeight: 700,
+            animation: "fadeIn 0.08s ease",
+          }}
+        >
+          {/* Turn Into Header */}
+          <div style={{ padding: "4px 12px 6px", fontSize: "8.5px", letterSpacing: "0.12em", color: tokens.textMuted }}>
+            TURN INTO
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "2px", padding: "0 6px 6px" }}>
+            {[
+              { type: "paragraph", label: "Paragraph", glyph: "¶" },
+              { type: "bullet", label: "Bullet", glyph: "•" },
+              { type: "numbered", label: "Numbered", glyph: "1." },
+              { type: "h2", label: "Heading 1", glyph: "H1" },
+              { type: "h3", label: "Heading 2", glyph: "H2" },
+              { type: "code", label: "Code", glyph: "<>" },
+              { type: "quote", label: "Quote", glyph: '"' },
+              { type: "gotcha", label: "Gotcha", glyph: "!" },
+              { type: "todo", label: "To-Do", glyph: "☑" },
+              { type: "toggle", label: "Toggle", glyph: "▸" },
+            ].map((t) => (
+              <button
+                key={t.type}
+                type="button"
+                onClick={() => {
+                  playSound.pop();
+                  handleTransformBlock(blockActionMenu.blockIndex, { type: t.type as any });
+                  setBlockActionMenu(null);
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: tokens.textPrimary,
+                  padding: "5px 8px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "9.5px",
+                  borderRadius: "2px",
+                  textAlign: "left",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <span style={{ opacity: 0.6 }}>{t.glyph}</span>
+                <span>{t.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div style={{ height: "1px", background: tokens.borderSubtle, margin: "4px 0" }} />
+
+          {/* Duplicate Block */}
+          <button
+            type="button"
+            onClick={() => handleDuplicateBlock(blockActionMenu.blockIndex)}
+            style={{
+              width: "100%",
+              padding: "6px 12px",
+              background: "transparent",
+              border: "none",
+              color: tokens.textPrimary,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              textAlign: "left",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            <Copy size={11} />
+            <span>Duplicate Block</span>
+          </button>
+
+          {/* Move Up */}
+          <button
+            type="button"
+            disabled={blockActionMenu.blockIndex === 0}
+            onClick={() => {
+              handleMoveBlock(blockActionMenu.blockIndex, "up");
+              setBlockActionMenu(null);
+            }}
+            style={{
+              width: "100%",
+              padding: "6px 12px",
+              background: "transparent",
+              border: "none",
+              color: tokens.textPrimary,
+              opacity: blockActionMenu.blockIndex === 0 ? 0.4 : 1,
+              cursor: blockActionMenu.blockIndex === 0 ? "default" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              textAlign: "left",
+            }}
+            onMouseEnter={(e) => {
+              if (blockActionMenu.blockIndex > 0) e.currentTarget.style.background = tokens.popoverHoverBg;
+            }}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            <ArrowUp size={11} />
+            <span>Move Up</span>
+          </button>
+
+          {/* Move Down */}
+          <button
+            type="button"
+            disabled={blockActionMenu.blockIndex === blocks.length - 1}
+            onClick={() => {
+              handleMoveBlock(blockActionMenu.blockIndex, "down");
+              setBlockActionMenu(null);
+            }}
+            style={{
+              width: "100%",
+              padding: "6px 12px",
+              background: "transparent",
+              border: "none",
+              color: tokens.textPrimary,
+              opacity: blockActionMenu.blockIndex === blocks.length - 1 ? 0.4 : 1,
+              cursor: blockActionMenu.blockIndex === blocks.length - 1 ? "default" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              textAlign: "left",
+            }}
+            onMouseEnter={(e) => {
+              if (blockActionMenu.blockIndex < blocks.length - 1) e.currentTarget.style.background = tokens.popoverHoverBg;
+            }}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            <ArrowDown size={11} />
+            <span>Move Down</span>
+          </button>
+
+          <div style={{ height: "1px", background: tokens.borderSubtle, margin: "4px 0" }} />
+
+          {/* Delete Block */}
+          <button
+            type="button"
+            onClick={() => {
+              handleDeleteBlock(blockActionMenu.blockIndex);
+              setBlockActionMenu(null);
+            }}
+            style={{
+              width: "100%",
+              padding: "6px 12px",
+              background: "transparent",
+              border: "none",
+              color: "#EF4444",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              textAlign: "left",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = tokens.isDark ? "rgba(239, 68, 68, 0.15)" : "#FEE2E2")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            <Trash2 size={11} />
+            <span>Delete Block</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

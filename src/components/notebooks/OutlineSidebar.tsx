@@ -173,47 +173,11 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
         transition: "background 0.2s ease, color 0.2s ease",
       }}
     >
-      {/* Course Switcher Tabs */}
-      <div style={{ display: "flex", borderBottom: isInk ? "2px solid rgba(255,255,255,0.15)" : "3px solid #0A0A0A", flexShrink: 0 }}>
-        {courses.map((c, idx) => {
-          const isSelected = idx === currentCourseIndex;
-          return (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => {
-                playSound.click();
-                onSelectCourse(idx);
-              }}
-              style={{
-                flex: 1,
-                padding: "9px 6px",
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "10px",
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                border: "none",
-                borderRight: idx < courses.length - 1 ? (isInk ? "1.5px solid rgba(255,255,255,0.12)" : "2px solid #0A0A0A") : "none",
-                background: isSelected ? c.accent : "transparent",
-                color: isSelected ? c.accentFg : (isInk ? "rgba(240,237,228,0.7)" : "#0A0A0A"),
-                cursor: "pointer",
-                transition: "background 0.15s ease",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {c.init} · {c.title.split(" ")[0]}
-            </button>
-          );
-        })}
-      </div>
-
       {/* Course Card Header */}
       <div
         style={{
           padding: "16px 18px",
-          borderBottom: isInk ? "2px solid rgba(255,255,255,0.1)" : "2px solid rgba(10,10,10,0.14)",
+          borderBottom: `2px solid ${tokens.borderSubtle}`,
           flexShrink: 0,
         }}
       >
@@ -226,11 +190,22 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             fontSize: "9px",
             fontWeight: 700,
             letterSpacing: "0.14em",
-            color: isInk ? "rgba(240,237,228,0.6)" : "rgba(10,10,10,0.5)",
-            marginBottom: "4px",
+            color: tokens.textSecondary,
+            marginBottom: "6px",
           }}
         >
-          <span>{course.provider}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span
+              style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "2px",
+                background: course.accent || tokens.accentColor,
+                display: "inline-block",
+              }}
+            />
+            {course.provider || "COURSE"}
+          </span>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             {onEditCourse && (
               <button
