@@ -77,6 +77,20 @@ const statusListeners = new Set<(status: SyncStatus, lastSavedAt: Date | null) =
 let currentStatus: SyncStatus = "saved";
 let lastSavedTimestamp: Date | null = null;
 
+const seenEventTimestamps = new Set<string>();
+
+function shouldProcessEvent(event: RealtimeNotebookEvent): boolean {
+  if (!event || event.senderId === TAB_INSTANCE_ID) return false;
+  const key = `${event.senderId}_${event.timestamp}_${event.type}`;
+  if (seenEventTimestamps.has(key)) return false;
+  seenEventTimestamps.add(key);
+  if (seenEventTimestamps.size > 200) {
+    const first = seenEventTimestamps.values().next().value;
+    if (first) seenEventTimestamps.delete(first);
+  }
+  return true;
+}
+
 // Initialize BroadcastChannel if in browser
 function getBroadcastChannel(): BroadcastChannel | null {
   if (typeof window === "undefined") return null;
@@ -84,7 +98,7 @@ function getBroadcastChannel(): BroadcastChannel | null {
     try {
       broadcastChannel = new BroadcastChannel(CHANNEL_NAME);
       broadcastChannel.onmessage = (msg: MessageEvent<RealtimeNotebookEvent>) => {
-        if (msg.data && msg.data.senderId !== TAB_INSTANCE_ID) {
+        if (msg.data && shouldProcessEvent(msg.data)) {
           notifyEventListeners(msg.data);
         }
       };
@@ -194,7 +208,7 @@ export function subscribeToRealtimeEvents(
     if (e.key === "hoard_notebook_rt_event" && e.newValue) {
       try {
         const parsed = JSON.parse(e.newValue) as RealtimeNotebookEvent;
-        if (parsed && parsed.senderId !== TAB_INSTANCE_ID) {
+        if (parsed && shouldProcessEvent(parsed)) {
           callback(parsed);
         }
       } catch {

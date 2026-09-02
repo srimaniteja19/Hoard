@@ -224,6 +224,12 @@ export default function NotebooksPage() {
   const currentBlocks = currentLesson?.blocks || [];
   const wordCount = computeWordCount(currentBlocks);
 
+  const isSameId = (a: string, b: string) => {
+    if (a === b) return true;
+    if (a.endsWith("_" + b) || b.endsWith("_" + a)) return true;
+    return false;
+  };
+
   // ── Real-Time Cross-Tab Live Synchronization (BroadcastChannel) ──────────
   useEffect(() => {
     const unsubscribe = subscribeToRealtimeEvents((event) => {
@@ -234,7 +240,7 @@ export default function NotebooksPage() {
             modules: c.modules.map((m) => ({
               ...m,
               lessons: m.lessons.map((l) => {
-                if (l.id === event.lessonId) {
+                if (isSameId(l.id, event.lessonId)) {
                   const wc = event.wordCount;
                   const nextMeta = wc > 0 ? `${wc.toLocaleString()} WORDS · EDITED JUST NOW` : "NO NOTES YET";
                   return { ...l, blocks: event.blocks, meta: nextMeta };
@@ -252,7 +258,7 @@ export default function NotebooksPage() {
             ...c,
             modules: c.modules.map((m) => ({
               ...m,
-              lessons: m.lessons.map((l) => (l.id === event.lessonId ? { ...l, watched: event.watched } : l)),
+              lessons: m.lessons.map((l) => (isSameId(l.id, event.lessonId) ? { ...l, watched: event.watched } : l)),
             })),
           }));
           saveStoredCourses(updated);
@@ -263,8 +269,8 @@ export default function NotebooksPage() {
           const updated = prevCourses.map((c) => ({
             ...c,
             modules: c.modules.map((m) => {
-              if (m.id === event.moduleId) {
-                if (m.lessons.some((l) => l.id === event.lesson.id)) return m;
+              if (isSameId(m.id, event.moduleId)) {
+                if (m.lessons.some((l) => isSameId(l.id, event.lesson.id))) return m;
                 return { ...m, lessons: [...m.lessons, event.lesson] };
               }
               return m;
@@ -279,7 +285,7 @@ export default function NotebooksPage() {
             ...c,
             modules: c.modules.map((m) => ({
               ...m,
-              lessons: m.lessons.filter((l) => l.id !== event.lessonId),
+              lessons: m.lessons.filter((l) => !isSameId(l.id, event.lessonId)),
             })),
           }));
           saveStoredCourses(updated);
@@ -287,72 +293,32 @@ export default function NotebooksPage() {
         });
       } else if (event.type === "COURSE_UPDATED") {
         setCourses((prevCourses) => {
-          const exists = prevCourses.some((c) => c.id === event.courseId);
+          const exists = prevCourses.some((c) => isSameId(c.id, event.courseId));
           const updated = exists
-            ? prevCourses.map((c) => (c.id === event.courseId ? event.course : c))
+            ? prevCourses.map((c) => (isSameId(c.id, event.courseId) ? event.course : c))
             : [...prevCourses, event.course];
           saveStoredCourses(updated);
           return updated;
         });
       } else if (event.type === "COURSE_DELETED") {
         setCourses((prevCourses) => {
-          const updated = prevCourses.filter((c) => c.id !== event.courseId);
+          const updated = prevCourses.filter((c) => !isSameId(c.id, event.courseId));
           saveStoredCourses(updated);
           return updated;
         });
       } else if (event.type === "FULL_SYNC_REQUESTED") {
-        fetchNotebooksFromDbApi().then((dbData) => {
-          if (dbData?.courses && dbData.courses.length > 0) {
-            setCourses(dbData.courses);
-            saveStoredCourses(dbData.courses);
-          }
-        });
+        if (!pendingSaveRef.current) {
+          fetchNotebooksFromDbApi().then((dbData) => {
+            if (dbData?.courses && dbData.courses.length > 0) {
+              setCourses(dbData.courses);
+              saveStoredCourses(dbData.courses);
+            }
+          });
+        }
       }
     });
 
     return unsubscribe;
-  }, []);
-
-  // ── Auto-Revalidate on Tab Focus & Network Online/Offline ───────────────
-  useEffect(() => {
-    const handleRevalidate = () => {
-      if (document.visibilityState === "visible") {
-        flushOfflineQueueToDbApi();
-        fetchNotebooksFromDbApi().then((dbData) => {
-          if (dbData?.courses && dbData.courses.length > 0) {
-            setCourses(dbData.courses);
-            saveStoredCourses(dbData.courses);
-          }
-        });
-      }
-    };
-
-    const handleOnline = () => {
-      setSyncStatus("saving");
-      flushOfflineQueueToDbApi();
-      fetchNotebooksFromDbApi().then((dbData) => {
-        if (dbData?.courses && dbData.courses.length > 0) {
-          setCourses(dbData.courses);
-          saveStoredCourses(dbData.courses);
-        }
-      });
-    };
-
-    const handleOffline = () => {
-      setSyncStatus("offline");
-    };
-
-    window.addEventListener("focus", handleRevalidate);
-    document.addEventListener("visibilitychange", handleRevalidate);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("focus", handleRevalidate);
-      document.removeEventListener("visibilitychange", handleRevalidate);
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
   }, []);
 
   // Persisting to localStorage re-serializes every course/lesson/block (including
@@ -374,6 +340,48 @@ export default function NotebooksPage() {
       pendingSaveRef.current = null;
     }
   }, []);
+
+  // ── Auto-Revalidate on Tab Visibility & Network Online/Offline ───────────────
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        flushPendingSave();
+        if (!pendingSaveRef.current) {
+          fetchNotebooksFromDbApi().then((dbData) => {
+            if (dbData?.courses && dbData.courses.length > 0) {
+              setCourses(dbData.courses);
+              saveStoredCourses(dbData.courses);
+            }
+          });
+        }
+      }
+    };
+
+    const handleOnline = () => {
+      setSyncStatus("saving");
+      flushOfflineQueueToDbApi();
+      fetchNotebooksFromDbApi().then((dbData) => {
+        if (dbData?.courses && dbData.courses.length > 0) {
+          setCourses(dbData.courses);
+          saveStoredCourses(dbData.courses);
+        }
+      });
+    };
+
+    const handleOffline = () => {
+      setSyncStatus("offline");
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [flushPendingSave]);
 
   const handleUpdateBlocks = (newBlocks: Block[]) => {
     if (!currentCourse || !currentLesson) return;

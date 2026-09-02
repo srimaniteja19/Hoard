@@ -13,7 +13,7 @@ import {
   NotebookTranscriptRow,
   NotebookCollisionRow,
 } from "@/db/schema";
-import { eq, and, asc, desc, inArray } from "drizzle-orm";
+import { eq, and, or, like, asc, desc, inArray } from "drizzle-orm";
 import { Block, computeWordCount, generateBlockId } from "@/lib/notebooks/blocks";
 import {
   SEED_COURSES,
@@ -32,6 +32,30 @@ function toScopedId(userId: string, rawId: string | undefined): string {
   if (!rawId) return crypto.randomUUID();
   if (rawId.startsWith(userId + "_")) return rawId;
   return `${userId}_${rawId}`;
+}
+
+function lessonIdFilter(userId: string, lessonId: string) {
+  return or(
+    eq(notebookLessons.id, lessonId),
+    eq(notebookLessons.id, `${userId}_${lessonId}`),
+    like(notebookLessons.id, `%_${lessonId}`)
+  );
+}
+
+function moduleIdFilter(userId: string, moduleId: string) {
+  return or(
+    eq(notebookModules.id, moduleId),
+    eq(notebookModules.id, `${userId}_${moduleId}`),
+    like(notebookModules.id, `%_${moduleId}`)
+  );
+}
+
+function courseIdFilter(userId: string, courseId: string) {
+  return or(
+    eq(notebookCourses.id, courseId),
+    eq(notebookCourses.id, `${userId}_${courseId}`),
+    like(notebookCourses.id, `%_${courseId}`)
+  );
 }
 
 /**
@@ -390,7 +414,7 @@ export async function updateCourse(
     .set(updateData)
     .where(
       and(
-        inArray(notebookCourses.id, [courseId, toScopedId(userId, courseId)]),
+        courseIdFilter(userId, courseId),
         eq(notebookCourses.userId, userId)
       )
     )
@@ -407,7 +431,7 @@ export async function deleteCourse(userId: string, courseId: string): Promise<bo
     .delete(notebookCourses)
     .where(
       and(
-        inArray(notebookCourses.id, [courseId, toScopedId(userId, courseId)]),
+        courseIdFilter(userId, courseId),
         eq(notebookCourses.userId, userId)
       )
     )
@@ -432,7 +456,7 @@ export async function createLesson(
     .innerJoin(notebookCourses, eq(notebookModules.courseId, notebookCourses.id))
     .where(
       and(
-        inArray(notebookModules.id, [moduleId, toScopedId(userId, moduleId)]),
+        moduleIdFilter(userId, moduleId),
         eq(notebookCourses.userId, userId)
       )
     )
@@ -493,7 +517,7 @@ export async function saveLessonBlocks(
     .innerJoin(notebookCourses, eq(notebookModules.courseId, notebookCourses.id))
     .where(
       and(
-        inArray(notebookLessons.id, [lessonId, toScopedId(userId, lessonId)]),
+        lessonIdFilter(userId, lessonId),
         eq(notebookCourses.userId, userId)
       )
     )
@@ -547,7 +571,7 @@ export async function toggleLessonWatched(
     .innerJoin(notebookCourses, eq(notebookModules.courseId, notebookCourses.id))
     .where(
       and(
-        inArray(notebookLessons.id, [lessonId, toScopedId(userId, lessonId)]),
+        lessonIdFilter(userId, lessonId),
         eq(notebookCourses.userId, userId)
       )
     )
@@ -592,7 +616,7 @@ export async function updateLesson(
     .innerJoin(notebookCourses, eq(notebookModules.courseId, notebookCourses.id))
     .where(
       and(
-        inArray(notebookLessons.id, [lessonId, toScopedId(userId, lessonId)]),
+        lessonIdFilter(userId, lessonId),
         eq(notebookCourses.userId, userId)
       )
     )
@@ -625,7 +649,7 @@ export async function deleteLesson(userId: string, lessonId: string): Promise<bo
     .innerJoin(notebookCourses, eq(notebookModules.courseId, notebookCourses.id))
     .where(
       and(
-        inArray(notebookLessons.id, [lessonId, toScopedId(userId, lessonId)]),
+        lessonIdFilter(userId, lessonId),
         eq(notebookCourses.userId, userId)
       )
     )
