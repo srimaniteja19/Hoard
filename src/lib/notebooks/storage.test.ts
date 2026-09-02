@@ -14,7 +14,39 @@ import { Block } from "./blocks";
 
 describe("Notebooks Storage & In-Memory Logic", () => {
   it("updates lesson blocks in memory without mutating original unselected lessons", () => {
-    const courses: SeedCourse[] = JSON.parse(JSON.stringify(SEED_COURSES));
+    const courses: SeedCourse[] = [
+      {
+        id: "test-c1",
+        title: "Test Course",
+        provider: "TEST",
+        accent: "#000",
+        accentFg: "#FFF",
+        init: "T",
+        startedAt: "2026-01-01",
+        modules: [
+          {
+            id: "m1",
+            title: "Module 1",
+            lessons: [
+              {
+                id: "l1",
+                title: "Lesson 1",
+                watched: false,
+                meta: "NO NOTES YET",
+                blocks: [],
+              },
+              {
+                id: "l2",
+                title: "Lesson 2",
+                watched: false,
+                meta: "NO NOTES YET",
+                blocks: [],
+              },
+            ],
+          },
+        ],
+      },
+    ];
     const targetCourse = courses[0];
     const targetLesson = targetCourse.modules[0].lessons[0];
 

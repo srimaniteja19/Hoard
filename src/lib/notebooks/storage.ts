@@ -12,21 +12,18 @@ const COURSES_STORAGE_KEY = "hoard_notebook_courses_v2";
 const COLLISIONS_STORAGE_KEY = "hoard_notebook_collisions_v1";
 
 /**
- * Loads all courses from localStorage with fallback to SEED_COURSES
+ * Loads all courses from localStorage with fallback to empty array
  */
 export function getStoredCourses(): SeedCourse[] {
-  if (typeof window === "undefined") return SEED_COURSES;
+  if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(COURSES_STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify(SEED_COURSES));
-      return SEED_COURSES;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : SEED_COURSES;
+    return Array.isArray(parsed) ? parsed : [];
   } catch (err) {
     console.error("Failed to load notebook courses:", err);
-    return SEED_COURSES;
+    return [];
   }
 }
 
@@ -272,15 +269,15 @@ export function createNewCourse(
  * Returns all active collisions from local cache
  */
 export function getCollisions(): CourseCollision[] {
-  if (typeof window === "undefined") return SEED_COLLISIONS;
+  if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(COLLISIONS_STORAGE_KEY);
-    if (!raw) return SEED_COLLISIONS;
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : SEED_COLLISIONS;
+    return Array.isArray(parsed) ? parsed : [];
   } catch (err) {
     console.error("Failed to load notebook collisions:", err);
-    return SEED_COLLISIONS;
+    return [];
   }
 }
 

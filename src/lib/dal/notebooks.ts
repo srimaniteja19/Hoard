@@ -269,21 +269,14 @@ export async function syncLocalCoursesToDb(
 }
 
 /**
- * Returns user courses, seeding default courses if user has none yet.
+ * Returns user courses and collisions.
  */
 export async function getOrSeedUserNotebookCourses(userId: string): Promise<{
   courses: SeedCourse[];
   collisions: CourseCollision[];
 }> {
-  let courses = await getUserNotebookCourses(userId);
-  let collisions = await getNotebookCollisions(userId);
-
-  if (courses.length === 0) {
-    // Seed initial courses & collisions into PostgreSQL
-    courses = await syncLocalCoursesToDb(userId, SEED_COURSES, SEED_COLLISIONS);
-    collisions = SEED_COLLISIONS;
-  }
-
+  const courses = await getUserNotebookCourses(userId);
+  const collisions = await getNotebookCollisions(userId);
   return { courses, collisions };
 }
 
@@ -681,8 +674,6 @@ export async function getNotebookCollisions(userId: string): Promise<CourseColli
     .from(notebookCollisions)
     .where(eq(notebookCollisions.userId, userId))
     .orderBy(desc(notebookCollisions.createdAt));
-
-  if (rows.length === 0) return SEED_COLLISIONS;
 
   return rows.map((r) => ({
     id: r.id,
