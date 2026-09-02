@@ -19,11 +19,17 @@ export async function PATCH(
 
     // 1. Saving blocks (hot path for debounced note editor)
     if (body.blocks !== undefined) {
-      const result = await saveLessonBlocks(userId, id, body.blocks);
+      const result = await saveLessonBlocks(userId, id, body.blocks, body.expectedUpdatedAt);
+      if (result.conflict) {
+        return NextResponse.json(
+          { error: "conflict", wordCount: result.wordCount, updatedAt: result.updatedAt },
+          { status: 409 }
+        );
+      }
       if (!result.success) {
         return NextResponse.json({ error: "Lesson not found or unauthorized" }, { status: 404 });
       }
-      return NextResponse.json({ success: true, wordCount: result.wordCount });
+      return NextResponse.json({ success: true, wordCount: result.wordCount, updatedAt: result.updatedAt });
     }
 
     // 2. Clearing all blocks

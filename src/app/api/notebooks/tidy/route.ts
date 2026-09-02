@@ -3,6 +3,7 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { languageModel, gatewayProviderOptions, gatewayErrorMessage } from "@/lib/ai/models";
 import { BlocksSchema } from "@/lib/notebooks/blocks";
+import { requireUserId, AuthError } from "@/lib/session";
 
 export const runtime = "nodejs";
 const NOTEBOOK_MODEL = "google/gemini-3.5-flash-lite";
@@ -35,6 +36,7 @@ const OutputSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    await requireUserId(req);
     const { blocks, courseTitle, lessonTitle } = await req.json();
 
     if (!Array.isArray(blocks) || blocks.length === 0) {
@@ -65,6 +67,9 @@ ${JSON.stringify(blocks, null, 2)}`;
       summaryOfChanges: object.summaryOfChanges,
     });
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Notebook tidy failed:", err);
     return NextResponse.json(
       { error: gatewayErrorMessage(err) || "Failed to tidy notes." },

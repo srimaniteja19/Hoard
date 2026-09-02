@@ -8,6 +8,8 @@ export interface SeedCourseLesson {
   icon?: string;
   coverUrl?: string;
   blocks?: Block[];
+  /** ISO timestamp of the page row's last write; used as an optimistic-concurrency token for saves. */
+  blocksUpdatedAt?: string;
   gap?: { timestamp: string; topic: string }[];
   lessonUrl?: string | null;
   transcript?: {

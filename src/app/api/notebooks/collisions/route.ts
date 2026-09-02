@@ -54,13 +54,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    let userId: string | null = null;
-    try {
-      userId = await requireUserId(req);
-    } catch {
-      // Allow unauthenticated AI test calls if any
-    }
-
+    const userId = await requireUserId(req);
     const { courses } = await req.json();
 
     if (!Array.isArray(courses) || courses.length < 2) {
@@ -101,14 +95,15 @@ ${JSON.stringify(coursesDump, null, 2).slice(0, 16000)}`;
       ...c,
     }));
 
-    if (userId) {
-      await saveNotebookCollisions(userId, formattedCollisions);
-    }
+    await saveNotebookCollisions(userId, formattedCollisions);
 
     return NextResponse.json({
       collisions: formattedCollisions,
     });
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Notebook collisions failed:", err);
     return NextResponse.json(
       { error: gatewayErrorMessage(err) || "Failed to find cross-course collisions." },

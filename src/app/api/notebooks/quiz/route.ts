@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { languageModel, gatewayProviderOptions, gatewayErrorMessage } from "@/lib/ai/models";
+import { requireUserId, AuthError } from "@/lib/session";
 
 export const runtime = "nodejs";
 const NOTEBOOK_MODEL = "google/gemini-3.5-flash-lite";
@@ -37,6 +38,7 @@ RULES:
 
 export async function POST(req: NextRequest) {
   try {
+    await requireUserId(req);
     const { blocks, courseTitle, lessonTitle } = await req.json();
 
     if (!Array.isArray(blocks) || blocks.length === 0) {
@@ -68,6 +70,9 @@ ${JSON.stringify(blocks, null, 2)}`;
 
     return NextResponse.json(object);
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Notebook quiz failed:", err);
     return NextResponse.json(
       { error: gatewayErrorMessage(err) || "Failed to generate quiz." },

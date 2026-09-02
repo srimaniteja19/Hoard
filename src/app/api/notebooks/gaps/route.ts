@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { languageModel, gatewayProviderOptions, gatewayErrorMessage } from "@/lib/ai/models";
+import { requireUserId, AuthError } from "@/lib/session";
 
 export const runtime = "nodejs";
 const NOTEBOOK_MODEL = "google/gemini-3.5-flash-lite";
@@ -33,6 +34,7 @@ Rules:
 
 export async function POST(req: NextRequest) {
   try {
+    await requireUserId(req);
     const { transcript, blocks, courseTitle, lessonTitle } = await req.json();
 
     if (!transcript || typeof transcript !== "string" || transcript.trim().length < 20) {
@@ -70,6 +72,9 @@ ${notesSummary.slice(0, 10000)}`;
 
     return NextResponse.json(object);
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Notebook gap check failed:", err);
     return NextResponse.json(
       { error: gatewayErrorMessage(err) || "Failed to find gaps in transcript." },

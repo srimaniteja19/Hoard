@@ -1362,24 +1362,25 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             </span>
           </div>
           {toggleOpen && (
-            <div
-              contentEditable={!!onUpdateBlock}
-              suppressContentEditableWarning
-              onBlur={(e) => {
-                if (onUpdateBlock) onUpdateBlock({ ...block, body: e.currentTarget.innerText });
+            <InlineTextEditor
+              as="div"
+              blockType="toggle-body"
+              value={block.body}
+              onChange={(nextBody) => {
+                if (onUpdateBlock) onUpdateBlock({ ...block, body: nextBody });
               }}
+              readOnly={!onUpdateBlock}
+              renderFormatted={renderFormattedText}
               style={{
                 padding: "9px 0 3px",
                 fontSize: "16px",
                 lineHeight: "1.62",
                 color: "inherit",
                 opacity: 0.65,
-                outline: "none",
                 animation: "fadeIn 0.15s ease",
               }}
-            >
-              {renderFormattedText(block.body)}
-            </div>
+              placeholder="Toggle details…"
+            />
           )}
         </div>
       );
@@ -1437,30 +1438,29 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               >
                 ✓
               </button>
-              <span
-                contentEditable={!!onUpdateBlock}
-                suppressContentEditableWarning
-                onBlur={(e) => {
-                  const newText = e.currentTarget.innerText;
-                  if (newText !== item.text && onUpdateBlock) {
-                    const newItems = [...block.items];
-                    newItems[idx] = { ...newItems[idx], text: newText };
-                    onUpdateBlock({ ...block, items: newItems });
-                  }
+              <InlineTextEditor
+                as="div"
+                blockType="todo-item"
+                value={item.text}
+                onChange={(newText) => {
+                  if (!onUpdateBlock) return;
+                  const newItems = [...block.items];
+                  newItems[idx] = { ...newItems[idx], text: newText };
+                  onUpdateBlock({ ...block, items: newItems });
                 }}
+                readOnly={!onUpdateBlock}
+                renderFormatted={renderFormattedText}
                 style={{
                   fontSize: "16.5px",
                   lineHeight: "1.55",
                   textDecoration: item.done ? "line-through" : "none",
                   opacity: item.done ? 0.45 : 1,
                   color: isInk ? "#F0EDE4" : "#0A0A0A",
-                  outline: "none",
                   flex: 1,
                   transition: "opacity 0.2s ease, text-decoration 0.2s ease",
                 }}
-              >
-                {renderFormattedText(item.text)}
-              </span>
+                placeholder="Task…"
+              />
             </div>
           ))}
           {onUpdateBlock && (

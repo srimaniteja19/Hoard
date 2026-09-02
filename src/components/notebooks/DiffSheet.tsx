@@ -41,8 +41,36 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
 
   const handleConfirmSelected = () => {
     playSound.fileIt();
-    const accepted = proposedBlocks.filter((b) => selectedBlockIds.has(b.id));
-    onApplySelected(accepted);
+
+    // Unchecking a proposed block must not delete its content — it means
+    // "don't apply this specific change," not "throw this text away." The
+    // tidy prompt is instructed to preserve the id of any block it didn't
+    // change, so a rejected block's id usually still matches an original
+    // block; restore that original in its place instead of just omitting it.
+    const originalById = new Map(originalBlocks.map((b) => [b.id, b] as const));
+    const proposedIds = new Set(proposedBlocks.map((b) => b.id));
+
+    const merged: Block[] = [];
+    for (const b of proposedBlocks) {
+      if (selectedBlockIds.has(b.id)) {
+        merged.push(b);
+        continue;
+      }
+      const original = originalById.get(b.id);
+      if (original) merged.push(original);
+      // No matching original (a genuinely new block the AI introduced,
+      // e.g. a new heading from restructuring) — correctly just omitted.
+    }
+
+    // Safety net: any original block the proposal never referenced at all
+    // (the model failed to preserve its id while merging/dropping it) is
+    // still content the user never got to review — keep it rather than
+    // silently losing it.
+    for (const b of originalBlocks) {
+      if (!proposedIds.has(b.id)) merged.push(b);
+    }
+
+    onApplySelected(merged);
   };
 
   return (

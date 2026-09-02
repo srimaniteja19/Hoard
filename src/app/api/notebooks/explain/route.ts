@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { languageModel, gatewayProviderOptions, gatewayErrorMessage } from "@/lib/ai/models";
+import { requireUserId, AuthError } from "@/lib/session";
 
 export const runtime = "nodejs";
 const NOTEBOOK_MODEL = "google/gemini-3.5-flash-lite";
@@ -14,6 +15,7 @@ End with one sentence naming what this is commonly confused with.
 
 export async function POST(req: NextRequest) {
   try {
+    await requireUserId(req);
     const { selection, context, courseTitle, lessonTitle } = await req.json();
 
     if (!selection || typeof selection !== "string" || selection.trim().length === 0) {
@@ -46,6 +48,9 @@ ${context ? context.slice(0, 3000) : "None"}`;
       selection: selection.trim(),
     });
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Notebook explain failed:", err);
     return NextResponse.json(
       { error: gatewayErrorMessage(err) || "Failed to explain passage." },

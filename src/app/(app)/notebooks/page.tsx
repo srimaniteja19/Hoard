@@ -12,6 +12,8 @@ import {
   toggleLessonWatched,
   fetchNotebooksFromDbApi,
   saveLessonBlocksToDbApi,
+  primeLessonBlocksVersion,
+  getCollisions,
   createCourseInDbApi,
   updateCourseInDbApi,
   deleteCourseFromDbApi,
@@ -32,9 +34,10 @@ import {
   broadcastRealtimeEvent,
   setSyncStatus,
 } from "@/lib/notebooks/realtime";
-import { SeedCourse, SeedCourseLesson, SeedCourseModule } from "@/lib/notebooks/seedData";
+import { SeedCourse, SeedCourseLesson, SeedCourseModule, CourseCollision } from "@/lib/notebooks/seedData";
 import { Block, computeWordCount, generateBlockId, convertBlocksToMarkdown } from "@/lib/notebooks/blocks";
 import { CourseCard } from "@/components/notebooks/CourseCard";
+import { CollisionsPanel } from "@/components/notebooks/CollisionsPanel";
 import { OutlineSidebar } from "@/components/notebooks/OutlineSidebar";
 import { BlockEditor } from "@/components/notebooks/BlockEditor";
 import { SyncStatusPill } from "@/components/notebooks/SyncStatusPill";
@@ -83,6 +86,7 @@ import { PageCoverBanner } from "@/components/notebooks/PageCoverBanner";
 
 export default function NotebooksPage() {
   const [courses, setCourses] = useState<SeedCourse[]>([]);
+  const [collisions, setCollisions] = useState<CourseCollision[]>([]);
   const [view, setView] = useState<"index" | "course">("index");
   const [currentCourseIdx, setCurrentCourseIdx] = useState(0);
   const [currentModuleIdx, setCurrentModuleIdx] = useState(1);
@@ -227,6 +231,13 @@ export default function NotebooksPage() {
       if (pendingSaveRef.current || inFlightSaveRef.current) return false;
       setCourses(dbData.courses);
       saveStoredCourses(dbData.courses);
+      for (const course of dbData.courses) {
+        for (const mod of course.modules) {
+          for (const lesson of mod.lessons) {
+            primeLessonBlocksVersion(lesson.id, lesson.blocksUpdatedAt);
+          }
+        }
+      }
       return true;
     },
     []
@@ -237,11 +248,13 @@ export default function NotebooksPage() {
     // 1. Immediate local cache load
     const loaded = getStoredCourses();
     setCourses(loaded);
+    setCollisions(getCollisions());
 
     // 2. Asynchronously fetch from PostgreSQL database
     fetchNotebooksFromDbApi().then((dbData) => {
       if (applyFetchedCoursesIfSafe(dbData)) {
         saveCollisions(dbData!.collisions || []);
+        setCollisions(dbData!.collisions || []);
       }
     });
 
@@ -1814,6 +1827,8 @@ export default function NotebooksPage() {
               </div>
             </div>
           )}
+
+          {collisions.length > 0 && <CollisionsPanel collisions={collisions} />}
         </div>
       )}
 
@@ -2958,7 +2973,7 @@ export default function NotebooksPage() {
                       topic,
                       courses
                     );
-                    setCourses([...updated]);
+                    setCourses(updated);
                     const targetLes = updated
                       .find((c) => c.id === currentCourse.id)
                       ?.modules[currentModuleIdx]?.lessons.find((l) => l.id === currentLesson.id);

@@ -103,19 +103,18 @@ export function saveLessonBlocks(courseId: string, lessonId: string, blocks: Blo
  */
 export function toggleLessonWatched(courseId: string, lessonId: string): SeedCourse[] {
   const courses = getStoredCourses();
-  const course = courses.find((c) => c.id === courseId);
-  if (!course) return courses;
-
-  for (const mod of course.modules) {
-    const les = mod.lessons.find((l) => l.id === lessonId);
-    if (les) {
-      les.watched = !les.watched;
-      break;
-    }
-  }
-
-  saveStoredCourses(courses);
-  return courses;
+  const updated = courses.map((course) => {
+    if (course.id !== courseId) return course;
+    return {
+      ...course,
+      modules: course.modules.map((mod) => ({
+        ...mod,
+        lessons: mod.lessons.map((les) => (les.id === lessonId ? { ...les, watched: !les.watched } : les)),
+      })),
+    };
+  });
+  saveStoredCourses(updated);
+  return updated;
 }
 
 export function addLessonGapStub(
@@ -159,37 +158,48 @@ export function addLessonGapStub(
     topic = arg4;
   }
 
-  const course = courses.find((c) => c.id === courseId);
-  if (!course) return courses;
+  // Immutable update: `courses` may be the live React state array (the
+  // first call signature passes it in explicitly), so mutating lesson
+  // objects in place — as this used to — leaves the returned array
+  // reference-equal to the input, which can silently fail to trigger a
+  // re-render for callers that rely on reference-based change detection.
+  const updated = courses.map((course) => {
+    if (course.id !== courseId) return course;
+    return {
+      ...course,
+      modules: course.modules.map((mod) => ({
+        ...mod,
+        lessons: mod.lessons.map((les) => {
+          if (les.id !== lessonId) return les;
+          const currentBlocks = les.blocks || [];
+          const newHeading: Block = {
+            id: generateBlockId(),
+            type: "heading",
+            level: 3,
+            text: `[⏱ ${timestamp}] ${topic}`,
+          };
+          const newPara: Block = {
+            id: generateBlockId(),
+            type: "paragraph",
+            text: "",
+          };
+          const nextBlocks = [...currentBlocks, newHeading, newPara];
+          // remove gap item from list if present
+          const nextGap = les.gap ? les.gap.filter((g) => g.timestamp !== timestamp || g.topic !== topic) : les.gap;
+          const wc = computeWordCount(nextBlocks);
+          return {
+            ...les,
+            blocks: nextBlocks,
+            gap: nextGap,
+            meta: `${wc.toLocaleString()} WORDS · STUB ADDED`,
+          };
+        }),
+      })),
+    };
+  });
 
-  for (const mod of course.modules) {
-    const les = mod.lessons.find((l) => l.id === lessonId);
-    if (les) {
-      const currentBlocks = les.blocks || [];
-      const newHeading: Block = {
-        id: generateBlockId(),
-        type: "heading",
-        level: 3,
-        text: `[⏱ ${timestamp}] ${topic}`,
-      };
-      const newPara: Block = {
-        id: generateBlockId(),
-        type: "paragraph",
-        text: "",
-      };
-      les.blocks = [...currentBlocks, newHeading, newPara];
-      // remove gap item from list if present
-      if (les.gap) {
-        les.gap = les.gap.filter((g) => g.timestamp !== timestamp || g.topic !== topic);
-      }
-      const wc = computeWordCount(les.blocks);
-      les.meta = `${wc.toLocaleString()} WORDS · STUB ADDED`;
-      break;
-    }
-  }
-
-  saveStoredCourses(courses);
-  return courses;
+  saveStoredCourses(updated);
+  return updated;
 }
 
 /**
@@ -197,19 +207,18 @@ export function addLessonGapStub(
  */
 export function deleteLesson(courseId: string, lessonId: string): SeedCourse[] {
   const courses = getStoredCourses();
-  const course = courses.find((c) => c.id === courseId);
-  if (!course) return courses;
-
-  for (const mod of course.modules) {
-    const idx = mod.lessons.findIndex((l) => l.id === lessonId);
-    if (idx !== -1) {
-      mod.lessons.splice(idx, 1);
-      break;
-    }
-  }
-
-  saveStoredCourses(courses);
-  return courses;
+  const updated = courses.map((course) => {
+    if (course.id !== courseId) return course;
+    return {
+      ...course,
+      modules: course.modules.map((mod) => ({
+        ...mod,
+        lessons: mod.lessons.filter((l) => l.id !== lessonId),
+      })),
+    };
+  });
+  saveStoredCourses(updated);
+  return updated;
 }
 
 /**
@@ -217,20 +226,20 @@ export function deleteLesson(courseId: string, lessonId: string): SeedCourse[] {
  */
 export function clearLessonNotes(courseId: string, lessonId: string): SeedCourse[] {
   const courses = getStoredCourses();
-  const course = courses.find((c) => c.id === courseId);
-  if (!course) return courses;
-
-  for (const mod of course.modules) {
-    const les = mod.lessons.find((l) => l.id === lessonId);
-    if (les) {
-      les.blocks = [];
-      les.meta = "NO NOTES YET";
-      break;
-    }
-  }
-
-  saveStoredCourses(courses);
-  return courses;
+  const updated = courses.map((course) => {
+    if (course.id !== courseId) return course;
+    return {
+      ...course,
+      modules: course.modules.map((mod) => ({
+        ...mod,
+        lessons: mod.lessons.map((les) =>
+          les.id === lessonId ? { ...les, blocks: [], meta: "NO NOTES YET" } : les
+        ),
+      })),
+    };
+  });
+  saveStoredCourses(updated);
+  return updated;
 }
 
 /**
@@ -374,30 +383,59 @@ export async function syncCoursesToDbApi(
   }
 }
 
+// Tracks each lesson's page `updatedAt` as an optimistic-concurrency token,
+// so out-of-order concurrent saves for the same lesson (slow request landing
+// after a faster later one) are detected instead of silently clobbering
+// newer content. Seeded from the initial fetch via primeLessonBlocksVersion.
+const lastKnownBlocksUpdatedAt = new Map<string, string>();
+
+/**
+ * Seeds the concurrency token for a lesson from freshly-fetched server data
+ * (e.g. after the initial notebooks load), so the very first save of a
+ * session already has a baseline to check against.
+ */
+export function primeLessonBlocksVersion(lessonId: string, updatedAt: string | undefined): void {
+  if (updatedAt) lastKnownBlocksUpdatedAt.set(lessonId, updatedAt);
+}
+
 /**
  * Saves note blocks for a lesson to PostgreSQL with live status updates and offline queuing
  */
 export async function saveLessonBlocksToDbApi(
   lessonId: string,
-  blocks: Block[]
+  blocks: Block[],
+  allowConflictRetry = true
 ): Promise<boolean> {
   try {
     setSyncStatus("saving");
+    const expectedUpdatedAt = lastKnownBlocksUpdatedAt.get(lessonId);
     const res = await fetch(`/api/notebooks/lessons/${encodeURIComponent(lessonId)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ blocks }),
+      body: JSON.stringify({ blocks, expectedUpdatedAt }),
     });
 
     if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data?.updatedAt) lastKnownBlocksUpdatedAt.set(lessonId, data.updatedAt);
       setSyncStatus("saved");
       clearOfflineItem(lessonId);
       return true;
-    } else {
-      queueOfflineSave(lessonId, blocks);
-      setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
-      return false;
     }
+
+    if (res.status === 409 && allowConflictRetry) {
+      // Another save for this lesson landed first. Our local `blocks` still
+      // reflect the user's true latest edit — only the version token was
+      // stale — so resync it from the conflict response and retry once
+      // instead of silently dropping the edit or surfacing a false error.
+      const data = await res.json().catch(() => null);
+      if (data?.updatedAt) lastKnownBlocksUpdatedAt.set(lessonId, data.updatedAt);
+      return saveLessonBlocksToDbApi(lessonId, blocks, false);
+    }
+
+    queueOfflineSave(lessonId, blocks);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
+    return false;
   } catch (err) {
     console.error("[saveLessonBlocksToDbApi] Failed:", err);
     queueOfflineSave(lessonId, blocks);
@@ -414,19 +452,11 @@ export async function flushOfflineQueueToDbApi(): Promise<void> {
   if (queue.length === 0) return;
   setSyncStatus("saving");
   for (const item of queue) {
-    try {
-      const res = await fetch(`/api/notebooks/lessons/${encodeURIComponent(item.lessonId)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blocks: item.blocks }),
-      });
-      if (res.ok) {
-        clearOfflineItem(item.lessonId);
-      }
-    } catch {
-      setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
-      return;
-    }
+    // Reuse the same optimistic-concurrency-aware save path as the live
+    // editor so a queued offline edit can't blindly clobber a newer save
+    // that already landed from another device/tab while this one was offline.
+    const ok = await saveLessonBlocksToDbApi(item.lessonId, item.blocks);
+    if (!ok) return;
   }
   setSyncStatus("saved");
 }

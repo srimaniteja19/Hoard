@@ -14,7 +14,7 @@ import {
   NotebookTranscriptRow,
   NotebookCollisionRow,
 } from "@/db/schema";
-import { eq, and, or, like, asc, desc, inArray } from "drizzle-orm";
+import { eq, and, or, like, asc, desc, inArray, ne } from "drizzle-orm";
 import { Block, computeWordCount, generateBlockId } from "@/lib/notebooks/blocks";
 import {
   SEED_COURSES,
@@ -148,6 +148,7 @@ export async function getUserNotebookCourses(userId: string): Promise<SeedCourse
       watched: Boolean(l.watchedAt),
       meta: formatLessonMeta(wordCount, Boolean(gap && gap.length > 0)),
       blocks,
+      blocksUpdatedAt: page?.updatedAt?.toISOString(),
       gap,
       transcript: transcript
         ? {
@@ -192,9 +193,28 @@ export async function getUserNotebookCourses(userId: string): Promise<SeedCourse
 export async function syncLocalCoursesToDb(
   userId: string,
   courses: SeedCourse[],
-  collisions?: CourseCollision[]
+  collisions?: CourseCollision[],
+  options: { allowShrink?: boolean } = {}
 ): Promise<SeedCourse[]> {
   if (!courses || courses.length === 0) return [];
+
+  // Safety net: this performs a full delete-and-reinsert of the user's
+  // entire course library from a client-supplied snapshot. A stale or
+  // partial snapshot (e.g. a tab whose local state hasn't fully loaded, or
+  // a bug in whatever calls this) would otherwise silently wipe courses
+  // that simply weren't present in the array. Refuse to shrink the library
+  // unless the caller explicitly opts in.
+  if (!options.allowShrink) {
+    const existing = await db
+      .select({ id: notebookCourses.id })
+      .from(notebookCourses)
+      .where(eq(notebookCourses.userId, userId));
+    if (existing.length > 0 && courses.length < existing.length) {
+      throw new Error(
+        `syncLocalCoursesToDb refused to replace ${existing.length} existing course(s) with only ${courses.length} — pass { allowShrink: true } if this is intentional.`
+      );
+    }
+  }
 
   // Delete existing courses & collisions for this user to perform a clean sync
   await db.delete(notebookCourses).where(eq(notebookCourses.userId, userId));
@@ -298,29 +318,7 @@ export async function createCourse(
   const courseId = crypto.randomUUID();
   const title = data.title.trim();
   const init = data.init || title.charAt(0).toUpperCase() || "C";
-
-  await db.insert(notebookCourses).values({
-    id: courseId,
-    userId,
-    title,
-    provider: (data.provider || "DEEPLEARNING.AI").trim().toUpperCase(),
-    accent: data.accent || "#7B5CF0",
-    accentFg: data.accentFg || "#FFFFFF",
-    init,
-    url: data.url || null,
-    startedAt: new Date(),
-  });
-
-  // Create Module 1
   const moduleId = crypto.randomUUID();
-  await db.insert(notebookModules).values({
-    id: moduleId,
-    courseId,
-    title: "MODULE 1 · GETTING STARTED",
-    position: 0,
-  });
-
-  // Create Lesson 1
   const lessonId = crypto.randomUUID();
   const initialBlocks: Block[] = [
     {
@@ -330,24 +328,46 @@ export async function createCourse(
     },
   ];
 
-  await db.insert(notebookLessons).values({
-    id: lessonId,
-    moduleId,
-    title: "Course Overview and Syllabus",
-    position: 0,
-    watchedAt: new Date(),
-    gap: [],
-  });
+  // These four inserts form one dependency chain (course -> module -> lesson
+  // -> page); a failure partway through would orphan a row with no working
+  // parent. db.batch() sends them as a single atomic request — Neon's HTTP
+  // driver supports batched transactions even though it doesn't support
+  // interactive db.transaction() over HTTP.
+  await db.batch([
+    db.insert(notebookCourses).values({
+      id: courseId,
+      userId,
+      title,
+      provider: (data.provider || "DEEPLEARNING.AI").trim().toUpperCase(),
+      accent: data.accent || "#7B5CF0",
+      accentFg: data.accentFg || "#FFFFFF",
+      init,
+      url: data.url || null,
+      startedAt: new Date(),
+    }),
+    db.insert(notebookModules).values({
+      id: moduleId,
+      courseId,
+      title: "MODULE 1 · GETTING STARTED",
+      position: 0,
+    }),
+    db.insert(notebookLessons).values({
+      id: lessonId,
+      moduleId,
+      title: "Course Overview and Syllabus",
+      position: 0,
+      watchedAt: new Date(),
+      gap: [],
+    }),
+    db.insert(notebookPages).values({
+      id: crypto.randomUUID(),
+      lessonId,
+      blocks: initialBlocks,
+      wordCount: computeWordCount(initialBlocks),
+      updatedAt: new Date(),
+    }),
+  ]);
 
-  await db.insert(notebookPages).values({
-    id: crypto.randomUUID(),
-    lessonId,
-    blocks: initialBlocks,
-    wordCount: computeWordCount(initialBlocks),
-    updatedAt: new Date(),
-  });
-
-  const [course] = await getUserNotebookCourses(userId);
   const matched = (await getUserNotebookCourses(userId)).find((c) => c.id === courseId);
   return (
     matched || {
@@ -552,24 +572,21 @@ export async function deleteModule(userId: string, moduleId: string): Promise<bo
 
   if (!mod) return false;
 
-  const res = await db
-    .delete(notebookModules)
-    .where(eq(notebookModules.id, mod.id))
-    .returning({ id: notebookModules.id });
-
   // Re-index remaining modules for clean sequence
   const remaining = await db
     .select({ id: notebookModules.id })
     .from(notebookModules)
-    .where(eq(notebookModules.courseId, mod.courseId))
+    .where(and(eq(notebookModules.courseId, mod.courseId), ne(notebookModules.id, mod.id)))
     .orderBy(asc(notebookModules.position), asc(notebookModules.createdAt));
 
-  for (let i = 0; i < remaining.length; i++) {
-    await db
-      .update(notebookModules)
-      .set({ position: i })
-      .where(eq(notebookModules.id, remaining[i].id));
-  }
+  // Delete + re-index as one atomic batch, so a failure partway through
+  // can't leave the remaining modules with gapped/inconsistent positions.
+  const [res] = await db.batch([
+    db.delete(notebookModules).where(eq(notebookModules.id, mod.id)).returning({ id: notebookModules.id }),
+    ...remaining.map((m, i) =>
+      db.update(notebookModules).set({ position: i }).where(eq(notebookModules.id, m.id))
+    ),
+  ]);
 
   return res.length > 0;
 }
@@ -655,8 +672,9 @@ export async function createLesson(
 export async function saveLessonBlocks(
   userId: string,
   lessonId: string,
-  blocks: Block[]
-): Promise<{ success: boolean; wordCount: number }> {
+  blocks: Block[],
+  expectedUpdatedAt?: string | null
+): Promise<{ success: boolean; wordCount: number; updatedAt?: string; conflict?: boolean }> {
   // Verify ownership
   const [les] = await db
     .select({ lessonId: notebookLessons.id })
@@ -677,31 +695,65 @@ export async function saveLessonBlocks(
 
   // Check if page row already exists
   const [existingPage] = await db
-    .select({ id: notebookPages.id })
+    .select({ id: notebookPages.id, updatedAt: notebookPages.updatedAt })
     .from(notebookPages)
     .where(eq(notebookPages.lessonId, les.lessonId))
     .limit(1);
 
   if (existingPage) {
-    await db
+    // Optimistic concurrency: two debounced saves for the same lesson can
+    // reach the server out of order (e.g. a slow request followed by a
+    // faster one). Without this check the older edit silently overwrites
+    // the newer one while the client still reports "saved". Only apply the
+    // write if the caller's view of the page is still current; the UPDATE's
+    // WHERE clause re-checks this atomically in case another write lands
+    // between our SELECT above and this UPDATE.
+    if (expectedUpdatedAt) {
+      const expected = new Date(expectedUpdatedAt).getTime();
+      if (Number.isNaN(expected) || expected !== existingPage.updatedAt.getTime()) {
+        return {
+          success: false,
+          conflict: true,
+          wordCount,
+          updatedAt: existingPage.updatedAt.toISOString(),
+        };
+      }
+    }
+
+    const nextUpdatedAt = new Date();
+    const updated = await db
       .update(notebookPages)
-      .set({
-        blocks,
-        wordCount,
-        updatedAt: new Date(),
-      })
-      .where(eq(notebookPages.lessonId, les.lessonId));
-  } else {
-    await db.insert(notebookPages).values({
-      id: crypto.randomUUID(),
-      lessonId: les.lessonId,
-      blocks,
-      wordCount,
-      updatedAt: new Date(),
-    });
+      .set({ blocks, wordCount, updatedAt: nextUpdatedAt })
+      .where(
+        expectedUpdatedAt
+          ? and(eq(notebookPages.lessonId, les.lessonId), eq(notebookPages.updatedAt, existingPage.updatedAt))
+          : eq(notebookPages.lessonId, les.lessonId)
+      )
+      .returning({ id: notebookPages.id });
+
+    if (updated.length === 0) {
+      // Lost the race between our SELECT and UPDATE above.
+      const [fresh] = await db
+        .select({ updatedAt: notebookPages.updatedAt })
+        .from(notebookPages)
+        .where(eq(notebookPages.lessonId, les.lessonId))
+        .limit(1);
+      return { success: false, conflict: true, wordCount, updatedAt: fresh?.updatedAt.toISOString() };
+    }
+
+    return { success: true, wordCount, updatedAt: nextUpdatedAt.toISOString() };
   }
 
-  return { success: true, wordCount };
+  const nextUpdatedAt = new Date();
+  await db.insert(notebookPages).values({
+    id: crypto.randomUUID(),
+    lessonId: les.lessonId,
+    blocks,
+    wordCount,
+    updatedAt: nextUpdatedAt,
+  });
+
+  return { success: true, wordCount, updatedAt: nextUpdatedAt.toISOString() };
 }
 
 /**
@@ -901,11 +953,18 @@ export async function reorderLessons(
 
   if (!srcMod || !tgtMod) return { success: false, courses: [] };
 
-  // 3. Resolve target lesson
+  // 3. Resolve target lesson. lessonIdFilter alone includes a `LIKE '%_' + id`
+  // clause that can match another user's scoped id sharing the same suffix —
+  // harmless downstream here (the resolved id only survives if it's also
+  // found in srcLessons, which IS ownership-scoped), but join through
+  // course ownership directly so this lookup is correct on its own, not just
+  // safe by accident of how its result happens to be used later.
   const [les] = await db
     .select({ id: notebookLessons.id })
     .from(notebookLessons)
-    .where(lessonIdFilter(userId, lessonId))
+    .innerJoin(notebookModules, eq(notebookLessons.moduleId, notebookModules.id))
+    .innerJoin(notebookCourses, eq(notebookModules.courseId, notebookCourses.id))
+    .where(and(lessonIdFilter(userId, lessonId), eq(notebookCourses.userId, userId)))
     .limit(1);
 
   if (!les) return { success: false, courses: [] };
@@ -925,12 +984,11 @@ export async function reorderLessons(
     if (!targetItem) return { success: false, courses: [] };
     list.splice(clampedIndex, 0, targetItem);
 
-    for (let i = 0; i < list.length; i++) {
-      await db
-        .update(notebookLessons)
-        .set({ position: i })
-        .where(eq(notebookLessons.id, list[i].id));
-    }
+    // targetItem is always spliced back in, so list.length >= 1 here.
+    const updates = list.map((l, i) =>
+      db.update(notebookLessons).set({ position: i }).where(eq(notebookLessons.id, l.id))
+    );
+    await db.batch([updates[0], ...updates.slice(1)]);
   } else {
     // Move across modules
     const tgtLessons = await db
@@ -946,21 +1004,19 @@ export async function reorderLessons(
     const clampedIndex = Math.max(0, Math.min(targetIndex, tgtLessons.length));
     tgtLessons.splice(clampedIndex, 0, targetItem);
 
-    // Update source module positions
-    for (let i = 0; i < updatedSrc.length; i++) {
-      await db
-        .update(notebookLessons)
-        .set({ position: i })
-        .where(eq(notebookLessons.id, updatedSrc[i].id));
-    }
-
-    // Update target module positions and parent moduleId
-    for (let i = 0; i < tgtLessons.length; i++) {
-      await db
-        .update(notebookLessons)
-        .set({ position: i, moduleId: tgtMod.id })
-        .where(eq(notebookLessons.id, tgtLessons[i].id));
-    }
+    // Re-index both modules' positions and move the lesson's parent in one
+    // atomic batch. Run as two separate sequential update loops (as before),
+    // a crash between them could leave the lesson's moduleId stale while
+    // sibling positions had already shifted.
+    const srcUpdates = updatedSrc.map((l, i) =>
+      db.update(notebookLessons).set({ position: i }).where(eq(notebookLessons.id, l.id))
+    );
+    // tgtLessons always contains at least targetItem, so length >= 1.
+    const tgtUpdates = tgtLessons.map((l, i) =>
+      db.update(notebookLessons).set({ position: i, moduleId: tgtMod.id }).where(eq(notebookLessons.id, l.id))
+    );
+    const allUpdates = [...srcUpdates, ...tgtUpdates];
+    await db.batch([allUpdates[0], ...allUpdates.slice(1)]);
   }
 
   const updatedCourses = await getUserNotebookCourses(userId);

@@ -3,6 +3,7 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { languageModel, gatewayProviderOptions, gatewayErrorMessage } from "@/lib/ai/models";
 import { Block, generateBlockId } from "@/lib/notebooks/blocks";
+import { requireUserId, AuthError } from "@/lib/session";
 
 export const runtime = "nodejs";
 const NOTEBOOK_MODEL = "google/gemini-3.5-flash-lite";
@@ -71,6 +72,7 @@ const AutonomousStudyNotesSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    await requireUserId(req);
     const { transcript, courseTitle, lessonTitle } = await req.json();
 
     if (!transcript || typeof transcript !== "string" || transcript.trim().length < 15) {
@@ -198,6 +200,9 @@ ${transcript.slice(0, 16000)}`;
       summary: object.summary || "Study notes generated from content.",
     });
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Transcript conversion failed:", err);
     return NextResponse.json(
       { error: gatewayErrorMessage(err) || "Failed to convert content into notes." },

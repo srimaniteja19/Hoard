@@ -324,23 +324,32 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       } else if ("body" in targetBlock) {
         handleUpdateBlock(blockIdx, { ...targetBlock, body: nextText } as any);
       }
-    } else if (targetText && (prefix || suffix)) {
+    } else if (targetText) {
       // The selection crosses an existing formatting boundary (e.g. it spans
       // across a **bold** run inside a ==highlighted== paragraph), so the
       // raw markdown no longer contains selectedStr as a literal substring.
       // Map the rendered plain-text selection back to its raw position and
-      // wrap that raw span instead, preserving whatever markup is inside it.
+      // operate on that raw span instead — applies to both wrapping in new
+      // formatting AND clearing existing formatting from a mixed selection.
       const { plain, rawIndexAt } = buildPlainTextMap(targetText);
       const startInPlain = plain.indexOf(selectedStr);
       if (startInPlain !== -1 && selectedStr.length > 0) {
         const endInPlain = startInPlain + selectedStr.length - 1;
         const initialRawStart = rawIndexAt[startInPlain];
         const initialRawEnd = rawIndexAt[endInPlain] + 1;
-        // Snap outward to whole-unit boundaries so we never insert a tag in
+        // Snap outward to whole-unit boundaries so we never insert/strip in
         // the middle of an existing delimiter pair (e.g. splitting **bold**).
         const [rawStart, rawEnd] = snapToUnitBoundaries(targetText, initialRawStart, initialRawEnd);
-        const nextText =
-          targetText.slice(0, rawStart) + prefix + targetText.slice(rawStart, rawEnd) + suffix + targetText.slice(rawEnd);
+
+        let nextText: string;
+        if (!prefix && !suffix) {
+          // Clear formatting: strip every delimiter found within the span.
+          const stripped = targetText.slice(rawStart, rawEnd).replace(FORMAT_DELIMITER_REGEX, "");
+          nextText = targetText.slice(0, rawStart) + stripped + targetText.slice(rawEnd);
+        } else {
+          nextText =
+            targetText.slice(0, rawStart) + prefix + targetText.slice(rawStart, rawEnd) + suffix + targetText.slice(rawEnd);
+        }
 
         if ("text" in targetBlock) {
           handleUpdateBlock(blockIdx, { ...targetBlock, text: nextText });
@@ -384,8 +393,28 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   const [history, setHistory] = useState<Block[][]>([blocks]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
+  // Tracks the last `blocks` value WE produced (via commit/undo/redo) so the
+  // effect below can tell "blocks changed because of our own edit echoing
+  // back through the parent" apart from "blocks changed for an external
+  // reason" (e.g. a slower DB fetch overwriting an initial stale localStorage
+  // snapshot, or a cross-tab/device realtime sync). Without this, `history[0]`
+  // stays pinned to whatever `blocks` happened to be at mount — if that was a
+  // stale/incomplete snapshot, Cmd+Z can walk back into it and silently
+  // discard real content, even though the editor has since rendered (and the
+  // user has since edited) the correct, fully-loaded notes.
+  const lastOwnBlocksRef = useRef<Block[]>(blocks);
+
+  useEffect(() => {
+    if (blocks !== lastOwnBlocksRef.current) {
+      setHistory([blocks]);
+      setHistoryIndex(0);
+      lastOwnBlocksRef.current = blocks;
+    }
+  }, [blocks]);
+
   const commitBlocks = useCallback(
     (nextBlocks: Block[]) => {
+      lastOwnBlocksRef.current = nextBlocks;
       onChange(nextBlocks);
       setHistory((prev) => {
         const sliced = prev.slice(0, historyIndex + 1);
@@ -400,6 +429,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     if (historyIndex > 0) {
       playSound.click();
       const prevBlocks = history[historyIndex - 1];
+      lastOwnBlocksRef.current = prevBlocks;
       setHistoryIndex((idx) => idx - 1);
       onChange(prevBlocks);
     }
@@ -409,6 +439,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     if (historyIndex < history.length - 1) {
       playSound.click();
       const nextBlocks = history[historyIndex + 1];
+      lastOwnBlocksRef.current = nextBlocks;
       setHistoryIndex((idx) => idx + 1);
       onChange(nextBlocks);
     }
