@@ -263,7 +263,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   const renderFormattedInline = (lineText: string): React.ReactNode => {
     if (!lineText) return null;
 
-    const tokenRegex = /(<strong>[\s\S]*?<\/strong>|<b>[\s\S]*?<\/b>|\*\*[^*\n]+?\*\*|==[^=\n]+?==|<code>[\s\S]*?<\/code>|`[^`\n]+`|<em>[\s\S]*?<\/em>|(?<=\s|^)\*(?!\s)[^*\n]+?\*(?=\s|$|<|[.,:;!?])|<mark[\s\S]*?<\/mark>)/g;
+    const tokenRegex = /(<mark[\s\S]*?<\/mark>|<span[\s\S]*?<\/span>|<strong>[\s\S]*?<\/strong>|<b>[\s\S]*?<\/b>|\*\*[^*\n]+?\*\*|==[^=\n]+?==|~~[^~\n]+?~~|<code>[\s\S]*?<\/code>|`[^`\n]+`|<em>[\s\S]*?<\/em>|(?<=\s|^)\*(?!\s)[^*\n]+?\*(?=\s|$|<|[.,:;!?]))/g;
     const parts = lineText.split(tokenRegex);
 
     return parts.map((part, idx) => {
@@ -283,7 +283,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               color: "inherit",
             }}
           >
-            {content}
+            {renderFormattedInline(content)}
           </strong>
         );
       }
@@ -299,7 +299,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               color: "inherit",
             }}
           >
-            {content}
+            {renderFormattedInline(content)}
           </strong>
         );
       }
@@ -320,8 +320,18 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               boxDecorationBreak: "clone",
             }}
           >
-            {content}
+            {renderFormattedInline(content)}
           </mark>
+        );
+      }
+
+      // Markdown ~~strikethrough~~
+      if (part.startsWith("~~") && part.endsWith("~~") && part.length >= 4) {
+        const content = part.slice(2, -2);
+        return (
+          <del key={idx} style={{ opacity: 0.75 }}>
+            {renderFormattedInline(content)}
+          </del>
         );
       }
 
@@ -429,13 +439,13 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
       // HTML <em>
       if (part.startsWith("<em>") && part.endsWith("</em>")) {
         const content = part.replace(/^<em>/, "").replace(/<\/em>$/, "");
-        return <em key={idx}>{content}</em>;
+        return <em key={idx}>{renderFormattedInline(content)}</em>;
       }
 
       // Markdown *italic*
       if (part.startsWith("*") && part.endsWith("*") && part.length >= 2) {
         const content = part.slice(1, -1);
-        return <em key={idx}>{content}</em>;
+        return <em key={idx}>{renderFormattedInline(content)}</em>;
       }
 
       return part;

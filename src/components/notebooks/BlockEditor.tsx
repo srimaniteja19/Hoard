@@ -100,18 +100,25 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     setBlockActionMenu(null);
   };
 
-  const handleFormatSelection = (prefix: string, suffix: string) => {
-    let selectedStr = "";
-    let blockIdx: number | null = null;
+  const handleFormatSelection = (
+    prefix: string,
+    suffix: string,
+    explicitText?: string,
+    explicitBlockIdx?: number | null
+  ) => {
+    let selectedStr = explicitText || "";
+    let blockIdx: number | null = (explicitBlockIdx !== undefined && explicitBlockIdx !== null) ? explicitBlockIdx : null;
 
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0 && !sel.isCollapsed && sel.toString()) {
-      selectedStr = sel.toString();
-      const node = sel.anchorNode;
-      const blockEl = node instanceof Element ? node.closest("[data-block-index]") : node?.parentElement?.closest("[data-block-index]");
-      if (blockEl) {
-        const idxStr = blockEl.getAttribute("data-block-index");
-        if (idxStr !== null) blockIdx = parseInt(idxStr, 10);
+    if (!selectedStr || blockIdx === null) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && !sel.isCollapsed && sel.toString()) {
+        selectedStr = sel.toString();
+        const node = sel.anchorNode;
+        const blockEl = node instanceof Element ? node.closest("[data-block-index]") : node?.parentElement?.closest("[data-block-index]");
+        if (blockEl) {
+          const idxStr = blockEl.getAttribute("data-block-index");
+          if (idxStr !== null) blockIdx = parseInt(idxStr, 10);
+        }
       }
     }
 

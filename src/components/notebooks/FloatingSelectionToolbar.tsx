@@ -59,7 +59,7 @@ export const NOTION_BG_COLORS: BgColorOption[] = [
 
 interface FloatingSelectionToolbarProps {
   theme?: NotebookTheme;
-  onFormat: (prefix: string, suffix: string) => void;
+  onFormat: (prefix: string, suffix: string, explicitText?: string, explicitBlockIdx?: number | null) => void;
   onAiExplain?: (selectedText: string) => void;
 }
 
@@ -74,11 +74,16 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
   const [showColorPicker, setShowColorPicker] = useState(false);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
+  const savedSelectionRef = useRef<{ text: string; blockIdx: number | null }>({
+    text: "",
+    blockIdx: null,
+  });
 
   useEffect(() => {
     const updateSelectionPosition = () => {
       let rect: DOMRect | null = null;
       let text = "";
+      let foundBlockIdx: number | null = null;
 
       // 1. Try DOM Selection
       const sel = window.getSelection();
@@ -99,6 +104,12 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
               if (r && (r.width > 0 || r.height > 0)) {
                 rect = r;
                 text = candidate;
+                const blockEl = containerNode.closest("[data-block-index]");
+                const bIdxStr = blockEl?.getAttribute("data-block-index");
+                if (bIdxStr !== null && bIdxStr !== undefined) {
+                  const parsed = parseInt(bIdxStr, 10);
+                  if (!isNaN(parsed)) foundBlockIdx = parsed;
+                }
               }
             }
           } catch {
@@ -120,6 +131,12 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
               if (candidate) {
                 text = candidate;
                 rect = active.getBoundingClientRect();
+                const blockEl = active.closest("[data-block-index]");
+                const bIdxStr = blockEl?.getAttribute("data-block-index");
+                if (bIdxStr !== null && bIdxStr !== undefined) {
+                  const parsed = parseInt(bIdxStr, 10);
+                  if (!isNaN(parsed)) foundBlockIdx = parsed;
+                }
               }
             }
           }
@@ -135,6 +152,10 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       }
 
       setSelectedText(text);
+      savedSelectionRef.current = {
+        text,
+        blockIdx: foundBlockIdx,
+      };
 
       // Clamp horizontal position so toolbar doesn't overflow screen
       const toolbarHalfWidth = 145;
@@ -191,23 +212,27 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
 
   const handleApplyTextColor = (c: ColorOption) => {
     playSound.pop();
+    const saved = savedSelectionRef.current;
     if (c.id === "default") {
-      onFormat("", "");
+      onFormat("", "", saved.text, saved.blockIdx);
     } else {
-      onFormat(`<span style="color: ${c.color}">`, `</span>`);
+      onFormat(`<span style="color: ${c.color}">`, `</span>`, saved.text, saved.blockIdx);
     }
     setShowColorPicker(false);
   };
 
   const handleApplyBgColor = (c: BgColorOption) => {
     playSound.pop();
+    const saved = savedSelectionRef.current;
     if (c.id === "default") {
-      onFormat("", "");
+      onFormat("", "", saved.text, saved.blockIdx);
     } else {
       const fg = tokens.isDark ? c.darkFg : c.lightFg;
       onFormat(
         `<mark style="background: ${c.bg}; color: ${fg}; border-bottom: 2px solid ${c.border}; border-radius: 3px; padding: 1px 5px">`,
-        `</mark>`
+        `</mark>`,
+        saved.text,
+        saved.blockIdx
       );
     }
     setShowColorPicker(false);
@@ -237,9 +262,10 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       {/* Bold */}
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => {
           playSound.pop();
-          onFormat("**", "**");
+          onFormat("**", "**", savedSelectionRef.current.text, savedSelectionRef.current.blockIdx);
         }}
         title="Bold (Cmd+B)"
         style={{
@@ -261,9 +287,10 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       {/* Italic */}
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => {
           playSound.pop();
-          onFormat("*", "*");
+          onFormat("*", "*", savedSelectionRef.current.text, savedSelectionRef.current.blockIdx);
         }}
         title="Italic (Cmd+I)"
         style={{
@@ -285,9 +312,10 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       {/* Strikethrough */}
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => {
           playSound.pop();
-          onFormat("~~", "~~");
+          onFormat("~~", "~~", savedSelectionRef.current.text, savedSelectionRef.current.blockIdx);
         }}
         title="Strikethrough"
         style={{
@@ -309,9 +337,10 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       {/* Inline Code */}
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => {
           playSound.pop();
-          onFormat("`", "`");
+          onFormat("`", "`", savedSelectionRef.current.text, savedSelectionRef.current.blockIdx);
         }}
         title="Inline Code"
         style={{
@@ -333,9 +362,10 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       {/* Quick Cyber Lavender Highlighter */}
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => {
           playSound.pop();
-          onFormat("==", "==");
+          onFormat("==", "==", savedSelectionRef.current.text, savedSelectionRef.current.blockIdx);
         }}
         title="Quick Highlight (Cyber Lavender)"
         style={{
@@ -357,6 +387,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       {/* Color & Highlight Palette Trigger (Notion Style 'A' Color Picker) */}
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={(e) => {
           e.stopPropagation();
           playSound.click();
@@ -421,7 +452,10 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       {showColorPicker && (
         <div
           ref={colorPickerRef}
-          onMouseDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           style={{
             position: "absolute",
             top: "38px",
@@ -457,6 +491,10 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
               <button
                 key={tc.id}
                 type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
                 onClick={() => handleApplyTextColor(tc)}
                 style={{
                   width: "100%",
@@ -524,6 +562,10 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
               <button
                 key={bg.id}
                 type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
                 onClick={() => handleApplyBgColor(bg)}
                 style={{
                   width: "100%",
