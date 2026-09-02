@@ -24,6 +24,7 @@ interface OutlineSidebarProps {
   currentCourseIndex: number;
   currentModuleIndex: number;
   currentLessonIndex: number;
+  theme?: "cream" | "ink";
   onSelectCourse: (index: number) => void;
   onSelectLesson: (moduleIndex: number, lessonIndex: number) => void;
   onDeleteLesson?: (moduleIndex: number, lessonIndex: number) => void;
@@ -52,6 +53,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   currentCourseIndex,
   currentModuleIndex,
   currentLessonIndex,
+  theme = "cream",
   onSelectCourse,
   onSelectLesson,
   onDeleteLesson,
@@ -69,6 +71,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   onBackToIndex,
   onNewPage,
 }) => {
+  const isInk = theme === "ink";
   const [searchQuery, setSearchQuery] = useState("");
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
 
@@ -152,8 +155,9 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   return (
     <aside
       style={{
-        borderRight: "3px solid #0A0A0A",
-        background: "#EBE7DC",
+        borderRight: isInk ? "3px solid rgba(255,255,255,0.15)" : "3px solid #0A0A0A",
+        background: isInk ? "#12141A" : "#EBE7DC",
+        color: isInk ? "#F0EDE4" : "#0A0A0A",
         padding: "0 0 60px",
         height: "100%",
         minHeight: 0,
@@ -163,10 +167,11 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
         flexDirection: "column",
         flex: 1,
         position: "relative",
+        transition: "background 0.2s ease, color 0.2s ease",
       }}
     >
       {/* Course Switcher Tabs */}
-      <div style={{ display: "flex", borderBottom: "3px solid #0A0A0A", flexShrink: 0 }}>
+      <div style={{ display: "flex", borderBottom: isInk ? "2px solid rgba(255,255,255,0.15)" : "3px solid #0A0A0A", flexShrink: 0 }}>
         {courses.map((c, idx) => {
           const isSelected = idx === currentCourseIndex;
           return (
@@ -185,9 +190,9 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 fontWeight: 700,
                 letterSpacing: "0.1em",
                 border: "none",
-                borderRight: idx < courses.length - 1 ? "2px solid #0A0A0A" : "none",
+                borderRight: idx < courses.length - 1 ? (isInk ? "1.5px solid rgba(255,255,255,0.12)" : "2px solid #0A0A0A") : "none",
                 background: isSelected ? c.accent : "transparent",
-                color: isSelected ? c.accentFg : "#0A0A0A",
+                color: isSelected ? c.accentFg : (isInk ? "rgba(240,237,228,0.7)" : "#0A0A0A"),
                 cursor: "pointer",
                 transition: "background 0.15s ease",
                 whiteSpace: "nowrap",
@@ -205,7 +210,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
       <div
         style={{
           padding: "16px 18px",
-          borderBottom: "2px solid rgba(10,10,10,0.14)",
+          borderBottom: isInk ? "2px solid rgba(255,255,255,0.1)" : "2px solid rgba(10,10,10,0.14)",
           flexShrink: 0,
         }}
       >
@@ -218,7 +223,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             fontSize: "9px",
             fontWeight: 700,
             letterSpacing: "0.14em",
-            opacity: 0.5,
+            color: isInk ? "rgba(240,237,228,0.6)" : "rgba(10,10,10,0.5)",
             marginBottom: "4px",
           }}
         >
@@ -239,6 +244,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                   cursor: "pointer",
                   padding: "2px",
                   opacity: 0.6,
+                  color: isInk ? "#F0EDE4" : "#0A0A0A",
                   display: "grid",
                   placeItems: "center",
                 }}
@@ -263,7 +269,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                   cursor: "pointer",
                   padding: "2px",
                   opacity: 0.6,
-                  color: "#991B1B",
+                  color: "#EF4444",
                   display: "grid",
                   placeItems: "center",
                 }}
@@ -285,6 +291,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             fontSize: "19px",
             lineHeight: 1.05,
             letterSpacing: "-0.03em",
+            color: isInk ? "#F0EDE4" : "#0A0A0A",
           }}
         >
           {course.title}
@@ -294,8 +301,8 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
         <div
           style={{
             height: "8px",
-            border: "1.5px solid #0A0A0A",
-            background: "#FFFFFF",
+            border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid #0A0A0A",
+            background: isInk ? "#1E222D" : "#FFFFFF",
             display: "flex",
             overflow: "hidden",
           }}
@@ -310,7 +317,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
           <span
             style={{
               width: `${unwrittenPct}%`,
-              background: "repeating-linear-gradient(45deg, #FCE94F 0 5px, rgba(0,0,0,0.2) 5px 10px)",
+              background: "repeating-linear-gradient(45deg, #FCE94F 0 5px, rgba(0,0,0,0.3) 5px 10px)",
               display: "block",
             }}
           />
@@ -325,7 +332,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             fontSize: "9px",
             fontWeight: 700,
             letterSpacing: "0.1em",
-            opacity: 0.55,
+            color: isInk ? "rgba(240,237,228,0.6)" : "rgba(10,10,10,0.55)",
             marginTop: "8px",
           }}
         >
@@ -347,9 +354,9 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
               fontFamily: "var(--mono, monospace)",
               fontSize: "11px",
               fontWeight: 600,
-              border: "1.5px solid #0A0A0A",
-              background: "#FFFFFF",
-              color: "#0A0A0A",
+              border: isInk ? "1.5px solid rgba(255,255,255,0.2)" : "1.5px solid #0A0A0A",
+              background: isInk ? "#1E222D" : "#FFFFFF",
+              color: isInk ? "#F0EDE4" : "#0A0A0A",
               outline: "none",
             }}
           />
@@ -383,7 +390,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
               onMouseLeave={() => setHoveredModuleId(null)}
               style={{
                 padding: "14px 18px 0",
-                background: isModuleDragOver ? "rgba(252, 233, 79, 0.2)" : "transparent",
+                background: isModuleDragOver ? (isInk ? "rgba(252, 233, 79, 0.12)" : "rgba(252, 233, 79, 0.2)") : "transparent",
                 transition: "background 0.15s ease",
               }}
               onDragOver={(e) => {
@@ -424,8 +431,9 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                       fontSize: "10px",
                       fontWeight: 800,
                       letterSpacing: "0.1em",
-                      border: "2px solid #0A0A0A",
-                      background: "#FFFFFF",
+                      border: isInk ? "2px solid rgba(255,255,255,0.3)" : "2px solid #0A0A0A",
+                      background: isInk ? "#1E222D" : "#FFFFFF",
+                      color: isInk ? "#F0EDE4" : "#0A0A0A",
                       padding: "4px 8px",
                       outline: "none",
                     }}
@@ -441,9 +449,9 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                     fontSize: "9.5px",
                     fontWeight: 700,
                     letterSpacing: "0.14em",
-                    opacity: 0.8,
+                    opacity: 0.9,
                     marginBottom: isCollapsed ? "4px" : "8px",
-                    color: "#0A0A0A",
+                    color: isInk ? "#F0EDE4" : "#0A0A0A",
                     userSelect: "none",
                   }}
                 >
@@ -459,7 +467,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                   >
                     {mod.title}
                   </span>
-                  <span style={{ flex: 1, height: "2px", background: "rgba(10,10,10,0.14)" }} />
+                  <span style={{ flex: 1, height: "2px", background: isInk ? "rgba(255,255,255,0.15)" : "rgba(10,10,10,0.14)" }} />
                   <span style={{ fontSize: "8.5px", opacity: 0.7 }}>
                     {modWritten}/{mod.lessons.length}
                   </span>
@@ -489,13 +497,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                           border: "none",
                           background: "transparent",
                           cursor: "pointer",
-                          opacity: 0.6,
+                          opacity: 0.7,
+                          color: isInk ? "#F0EDE4" : "#0A0A0A",
                           padding: "2px",
                           display: "grid",
                           placeItems: "center",
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
                       >
                         <Plus size={11} />
                       </button>
@@ -514,13 +523,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                           border: "none",
                           background: "transparent",
                           cursor: "pointer",
-                          opacity: 0.6,
+                          opacity: 0.7,
+                          color: isInk ? "#F0EDE4" : "#0A0A0A",
                           padding: "2px",
                           display: "grid",
                           placeItems: "center",
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
                       >
                         <Pencil size={10} />
                       </button>
@@ -538,14 +548,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                           border: "none",
                           background: "transparent",
                           cursor: "pointer",
-                          opacity: 0.6,
-                          color: "#991B1B",
+                          opacity: 0.7,
+                          color: "#EF4444",
                           padding: "2px",
                           display: "grid",
                           placeItems: "center",
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
                       >
                         <Trash2 size={10} />
                       </button>
@@ -561,7 +571,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                     <div
                       style={{
                         padding: "12px",
-                        border: "2px dashed rgba(10,10,10,0.2)",
+                        border: isInk ? "2px dashed rgba(255,255,255,0.2)" : "2px dashed rgba(10,10,10,0.2)",
                         textAlign: "center",
                         fontFamily: "var(--mono, monospace)",
                         fontSize: "9.5px",
@@ -641,7 +651,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                               right: "-9px",
                               height: "4px",
                               background: "#FCE94F",
-                              border: "1.5px solid #0A0A0A",
+                              border: isInk ? "1.5px solid #FFFFFF" : "1.5px solid #0A0A0A",
                               zIndex: 10,
                             }}
                           />
@@ -681,17 +691,17 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                             padding: "7px 9px",
                             cursor: "pointer",
                             border: "2px solid",
-                            borderColor: isSelected ? "#0A0A0A" : "transparent",
-                            background: isSelected ? "#0A0A0A" : "transparent",
-                            color: isSelected ? "#F3F0E8" : "#0A0A0A",
+                            borderColor: isSelected ? (isInk ? "#FCE94F" : "#0A0A0A") : "transparent",
+                            background: isSelected ? (isInk ? "#242A38" : "#0A0A0A") : "transparent",
+                            color: isSelected ? "#F3F0E8" : (isInk ? "#F0EDE4" : "#0A0A0A"),
                             margin: "0 -9px",
                             opacity: isDraggingThis ? 0.35 : 1,
                             transition: "background 0.1s ease, border-color 0.1s ease",
                           }}
                           onMouseEnter={(e) => {
                             if (!isSelected && !isDraggingThis) {
-                              e.currentTarget.style.background = "#FFFFFF";
-                              e.currentTarget.style.borderColor = "#0A0A0A";
+                              e.currentTarget.style.background = isInk ? "#1E232F" : "#FFFFFF";
+                              e.currentTarget.style.borderColor = isInk ? "rgba(255,255,255,0.2)" : "#0A0A0A";
                             }
                           }}
                           onMouseLeave={(e) => {
@@ -706,7 +716,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                             style={{
                               width: "11px",
                               height: "11px",
-                              border: isSelected ? "2px solid #F3F0E8" : "2px solid #0A0A0A",
+                              border: isSelected ? "2px solid #F3F0E8" : (isInk ? "2px solid rgba(255,255,255,0.4)" : "2px solid #0A0A0A"),
                               flex: "none",
                               marginTop: "5px",
                               background:
@@ -728,7 +738,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                                 fontSize: "8.5px",
                                 fontWeight: 700,
                                 letterSpacing: "0.1em",
-                                opacity: isSelected ? 0.7 : 0.45,
+                                opacity: isSelected ? 0.7 : 0.55,
                                 marginTop: "3px",
                               }}
                             >
@@ -754,7 +764,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                             style={{
                               border: "none",
                               background: "transparent",
-                              color: isSelected ? "#F3F0E8" : "#0A0A0A",
+                              color: isSelected ? "#F3F0E8" : (isInk ? "#F0EDE4" : "#0A0A0A"),
                               opacity: isRowHovered || (actionMenu?.modIdx === modIdx && actionMenu?.lesIdx === lesIdx) ? 0.85 : 0,
                               cursor: "pointer",
                               padding: "2px 4px",
@@ -780,7 +790,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                               right: "-9px",
                               height: "4px",
                               background: "#FCE94F",
-                              border: "1.5px solid #0A0A0A",
+                              border: isInk ? "1.5px solid #FFFFFF" : "1.5px solid #0A0A0A",
                               zIndex: 10,
                             }}
                           />
@@ -804,9 +814,10 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             top: `${actionMenu.top}px`,
             left: `${actionMenu.left}px`,
             zIndex: 99999,
-            background: "#FFFFFF",
-            border: "2px solid #0A0A0A",
-            boxShadow: "4px 4px 0 #0A0A0A",
+            background: isInk ? "#1E232F" : "#FFFFFF",
+            border: isInk ? "2px solid rgba(255,255,255,0.25)" : "2px solid #0A0A0A",
+            boxShadow: isInk ? "4px 4px 0 rgba(0,0,0,0.6)" : "4px 4px 0 #0A0A0A",
+            color: isInk ? "#F0EDE4" : "#0A0A0A",
             minWidth: "160px",
             padding: "4px 0",
             fontFamily: "var(--mono, monospace)",
@@ -830,14 +841,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 padding: "6px 12px",
                 border: "none",
                 background: "transparent",
-                color: "#0A0A0A",
+                color: isInk ? "#F0EDE4" : "#0A0A0A",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
                 textAlign: "left",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#2C3446" : "#FCE94F")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               <ArrowUp size={11} />
@@ -860,14 +871,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 padding: "6px 12px",
                 border: "none",
                 background: "transparent",
-                color: "#0A0A0A",
+                color: isInk ? "#F0EDE4" : "#0A0A0A",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
                 textAlign: "left",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#2C3446" : "#FCE94F")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               <ArrowDown size={11} />
@@ -890,14 +901,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 padding: "6px 12px",
                 border: "none",
                 background: "transparent",
-                color: "#0A0A0A",
+                color: isInk ? "#F0EDE4" : "#0A0A0A",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
                 textAlign: "left",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#2C3446" : "#FCE94F")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               <Copy size={11} />
@@ -920,14 +931,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 padding: "6px 12px",
                 border: "none",
                 background: "transparent",
-                color: "#0A0A0A",
+                color: isInk ? "#F0EDE4" : "#0A0A0A",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
                 textAlign: "left",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#2C3446" : "#FCE94F")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               {course.modules[actionMenu.modIdx]?.lessons[actionMenu.lesIdx]?.watched ? (
@@ -944,7 +955,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             </button>
           )}
 
-          <div style={{ height: "1px", background: "rgba(10,10,10,0.12)", margin: "3px 0" }} />
+          <div style={{ height: "1px", background: isInk ? "rgba(255,255,255,0.12)" : "rgba(10,10,10,0.12)", margin: "3px 0" }} />
 
           {onDeleteLesson && (
             <button
@@ -961,14 +972,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 padding: "6px 12px",
                 border: "none",
                 background: "transparent",
-                color: "#DC2626",
+                color: "#EF4444",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
                 textAlign: "left",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#FEE2E2")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(239, 68, 68, 0.15)" : "#FEE2E2")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               <Trash2 size={11} />
@@ -979,7 +990,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
       )}
 
       {/* Sidebar Footer Action Buttons */}
-      <div style={{ padding: "16px 18px 0", marginTop: "12px", borderTop: "2px solid rgba(10,10,10,0.14)", flexShrink: 0 }}>
+      <div style={{ padding: "16px 18px 0", marginTop: "12px", borderTop: isInk ? "2px solid rgba(255,255,255,0.12)" : "2px solid rgba(10,10,10,0.14)", flexShrink: 0 }}>
         {/* Add Page Button */}
         <button
           type="button"
@@ -990,16 +1001,16 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             fontSize: "10px",
             fontWeight: 700,
             letterSpacing: "0.13em",
-            border: "2px solid #0A0A0A",
-            background: "#FFFFFF",
-            color: "#0A0A0A",
+            border: isInk ? "2px solid rgba(255,255,255,0.25)" : "2px solid #0A0A0A",
+            background: isInk ? "#1E232F" : "#FFFFFF",
+            color: isInk ? "#F0EDE4" : "#0A0A0A",
             padding: "9px",
             cursor: "pointer",
-            boxShadow: "3px 3px 0 #0A0A0A",
+            boxShadow: isInk ? "3px 3px 0 rgba(0,0,0,0.6)" : "3px 3px 0 #0A0A0A",
             marginBottom: "8px",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#2C3446" : "#FCE94F")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = isInk ? "#1E232F" : "#FFFFFF")}
         >
           ＋ ADD A PAGE
         </button>
@@ -1015,12 +1026,12 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
               fontSize: "10px",
               fontWeight: 700,
               letterSpacing: "0.13em",
-              border: "2px solid #0A0A0A",
+              border: isInk ? "2px solid rgba(255,255,255,0.3)" : "2px solid #0A0A0A",
               background: "#B8F04A",
               color: "#0A0A0A",
               padding: "9px",
               cursor: "pointer",
-              boxShadow: "3px 3px 0 #0A0A0A",
+              boxShadow: isInk ? "3px 3px 0 rgba(0,0,0,0.6)" : "3px 3px 0 #0A0A0A",
               marginBottom: "8px",
               display: "flex",
               alignItems: "center",
@@ -1044,13 +1055,13 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             fontSize: "9px",
             fontWeight: 700,
             letterSpacing: "0.13em",
-            border: "2px solid #0A0A0A",
+            border: isInk ? "2px solid rgba(255,255,255,0.2)" : "2px solid #0A0A0A",
             background: "transparent",
-            color: "#0A0A0A",
+            color: isInk ? "#F0EDE4" : "#0A0A0A",
             padding: "8px",
             cursor: "pointer",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.06)")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
         >
           ← ALL NOTEBOOKS

@@ -35,6 +35,7 @@ interface BlockRendererProps {
   registerEditorHandle?: (handle: InlineEditorHandle | null) => void;
   readOnly?: boolean;
   accentColor?: string;
+  theme?: "cream" | "ink";
 }
 
 export const BlockRenderer: React.FC<BlockRendererProps> = ({
@@ -51,7 +52,9 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   registerEditorHandle,
   readOnly = false,
   accentColor = "#7B5CF0",
+  theme = "cream",
 }) => {
+  const isInk = theme === "ink";
   const [toggleOpen, setToggleOpen] = useState(false);
   const [imageSize, setImageSize] = useState<"compact" | "standard" | "full">("standard");
 
@@ -832,10 +835,10 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
       return (
         <div
           style={{
-            border: "3px solid #0A0A0A",
-            background: "#FFFFFF",
-            color: "#0A0A0A",
-            boxShadow: "5px 5px 0 #0A0A0A",
+            border: isInk ? "2px solid rgba(255,255,255,0.25)" : "3px solid #0A0A0A",
+            background: isInk ? "#181B24" : "#FFFFFF",
+            color: isInk ? "#F0EDE4" : "#0A0A0A",
+            boxShadow: isInk ? "5px 5px 0 rgba(0,0,0,0.6)" : "5px 5px 0 #0A0A0A",
             margin: "28px 0 16px",
             overflow: "hidden",
           }}
@@ -851,8 +854,9 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               fontWeight: 700,
               letterSpacing: "0.17em",
               padding: "9px 14px",
-              background: "#EBE7DC",
-              borderBottom: "3px solid #0A0A0A",
+              background: isInk ? "#252A36" : "#EBE7DC",
+              borderBottom: isInk ? "2px solid rgba(255,255,255,0.15)" : "3px solid #0A0A0A",
+              color: isInk ? "#F0EDE4" : "#0A0A0A",
             }}
           >
             <span>{block.title || "THE LECTURE, INDEXED"}</span>
@@ -868,11 +872,11 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   gap: "13px",
                   alignItems: "center",
                   padding: "9px 14px",
-                  borderBottom: idx === block.items.length - 1 ? "none" : "2px solid rgba(10,10,10,0.14)",
+                  borderBottom: idx === block.items.length - 1 ? "none" : (isInk ? "1.5px solid rgba(255,255,255,0.12)" : "2px solid rgba(10,10,10,0.14)"),
                   cursor: "pointer",
                   transition: "background 0.1s ease",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+                onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
                 <span
@@ -880,7 +884,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                     fontFamily: "var(--mono, monospace)",
                     fontSize: "10.5px",
                     fontWeight: 700,
-                    background: "#0A0A0A",
+                    background: isInk ? "#252A36" : "#0A0A0A",
                     color: "#FCE94F",
                     padding: "3px 6px",
                     textAlign: "center",
@@ -888,7 +892,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 >
                   {row.timestamp}
                 </span>
-                <span style={{ fontSize: "15.5px", lineHeight: "1.35" }}>{row.label}</span>
+                <span style={{ fontSize: "15.5px", lineHeight: "1.35", color: isInk ? "#F0EDE4" : "#0A0A0A" }}>{row.label}</span>
                 <span
                   style={{
                     fontFamily: "var(--mono, monospace)",
@@ -917,23 +921,23 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             display: "flex",
             alignItems: "center",
             gap: "13px",
-            border: "3px solid #0A0A0A",
-            background: "#FFFFFF",
-            color: "#0A0A0A",
-            boxShadow: "4px 4px 0 #0A0A0A",
+            border: isInk ? "2px solid rgba(255,255,255,0.25)" : "3px solid #0A0A0A",
+            background: isInk ? "#181B24" : "#FFFFFF",
+            color: isInk ? "#F0EDE4" : "#0A0A0A",
+            boxShadow: isInk ? "4px 4px 0 rgba(0,0,0,0.6)" : "4px 4px 0 #0A0A0A",
             padding: "12px 15px",
             margin: "20px 0",
             cursor: "pointer",
             transition: "background 0.15s ease",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = isInk ? "#181B24" : "#FFFFFF")}
         >
           <div
             style={{
               width: "32px",
               height: "32px",
-              border: "2px solid #0A0A0A",
+              border: isInk ? "2px solid rgba(255,255,255,0.3)" : "2px solid #0A0A0A",
               background: accentColor,
               color: "#FFFFFF",
               display: "grid",
@@ -954,7 +958,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 fontSize: "9px",
                 fontWeight: 700,
                 letterSpacing: "0.1em",
-                opacity: 0.45,
+                opacity: 0.55,
               }}
             >
               {block.meta}
@@ -978,9 +982,9 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
       return (
         <div
           style={{
-            border: "3px solid #0A0A0A",
-            background: "#FFFFFF",
-            boxShadow: `5px 5px 0 ${config.bg}`,
+            border: isInk ? "2px solid rgba(255,255,255,0.25)" : "3px solid #0A0A0A",
+            background: isInk ? "#181B24" : "#FFFFFF",
+            boxShadow: isInk ? `4px 4px 0 rgba(0,0,0,0.6)` : `5px 5px 0 ${config.bg}`,
             overflow: "hidden",
             margin: "12px 0",
           }}
@@ -994,7 +998,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               background: config.bg,
               color: config.fg,
               padding: "6px 13px",
-              borderBottom: "3px solid #0A0A0A",
+              borderBottom: isInk ? "2px solid rgba(255,255,255,0.15)" : "3px solid #0A0A0A",
             }}
           >
             {config.title}
@@ -1017,7 +1021,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               registerEditorHandle={registerEditorHandle}
               readOnly={readOnly}
               renderFormatted={renderFormattedText}
-              style={{ fontSize: "16px", lineHeight: "1.6", color: "#0A0A0A" }}
+              style={{ fontSize: "16px", lineHeight: "1.6", color: isInk ? "#F0EDE4" : "#0A0A0A" }}
               placeholder="Callout text…"
             />
           </div>
@@ -1039,7 +1043,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
       return (
         <div
           style={{
-            borderLeft: "3px solid #0A0A0A",
+            borderLeft: isInk ? "3px solid #FCE94F" : "3px solid #0A0A0A",
             paddingLeft: "14px",
             margin: "10px 0",
           }}
@@ -1052,6 +1056,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               cursor: "pointer",
               fontWeight: 700,
               fontSize: "16.5px",
+              color: isInk ? "#F0EDE4" : "#0A0A0A",
             }}
           >
             <span
@@ -1137,14 +1142,14 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 style={{
                   width: "19px",
                   height: "19px",
-                  border: "2px solid #0A0A0A",
+                  border: isInk ? "2px solid rgba(255,255,255,0.4)" : "2px solid #0A0A0A",
                   flex: "none",
                   marginTop: "2px",
                   cursor: "pointer",
                   display: "grid",
                   placeItems: "center",
-                  background: item.done ? "#0A0A0A" : "#FFFFFF",
-                  color: item.done ? "#B8F04A" : "transparent",
+                  background: item.done ? (isInk ? "#FCE94F" : "#0A0A0A") : (isInk ? "#181B24" : "#FFFFFF"),
+                  color: item.done ? "#0A0A0A" : "transparent",
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "11px",
                   fontWeight: 700,
@@ -1169,6 +1174,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   lineHeight: "1.55",
                   textDecoration: item.done ? "line-through" : "none",
                   opacity: item.done ? 0.45 : 1,
+                  color: isInk ? "#F0EDE4" : "#0A0A0A",
                   outline: "none",
                   flex: 1,
                 }}

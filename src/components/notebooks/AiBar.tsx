@@ -6,6 +6,7 @@ import { playSound } from "@/lib/sound";
 interface AiBarProps {
   accentColor?: string;
   accentFg?: string;
+  theme?: "cream" | "ink";
   onTidy: () => void;
   onQuiz: () => void;
   onExplain: () => void;
@@ -19,6 +20,7 @@ interface AiBarProps {
 export const AiBar: React.FC<AiBarProps> = ({
   accentColor = "#7B5CF0",
   accentFg = "#FFFFFF",
+  theme = "cream",
   onTidy,
   onQuiz,
   onExplain,
@@ -28,15 +30,19 @@ export const AiBar: React.FC<AiBarProps> = ({
   isExplaining = false,
   isAnalyzingGaps = false,
 }) => {
+  const isInk = theme === "ink";
+
   return (
     <div
       style={{
         display: "flex",
         flexWrap: "wrap",
-        border: "3px solid #0A0A0A",
-        boxShadow: `5px 5px 0 ${accentColor}`,
+        border: isInk ? "2px solid rgba(255,255,255,0.2)" : "3px solid #0A0A0A",
+        boxShadow: isInk ? "4px 4px 0 rgba(0,0,0,0.6)" : `5px 5px 0 ${accentColor}`,
         margin: "20px 0 30px",
         overflow: "hidden",
+        background: isInk ? "#181B24" : "#FFFFFF",
+        transition: "background 0.2s ease, border-color 0.2s ease",
       }}
     >
       <div
@@ -51,7 +57,7 @@ export const AiBar: React.FC<AiBarProps> = ({
           fontSize: "9.5px",
           fontWeight: 700,
           letterSpacing: "0.15em",
-          borderRight: "2px solid #0A0A0A",
+          borderRight: isInk ? "1.5px solid rgba(255,255,255,0.15)" : "2px solid #0A0A0A",
         }}
       >
         ✦ AI
@@ -70,21 +76,27 @@ export const AiBar: React.FC<AiBarProps> = ({
           fontSize: "9.5px",
           fontWeight: 700,
           letterSpacing: "0.11em",
-          background: isTidying ? "#FCE94F" : "#FFFFFF",
-          color: "#0A0A0A",
+          background: isTidying ? "#FCE94F" : isInk ? "#1A1D26" : "#FFFFFF",
+          color: isTidying ? "#0A0A0A" : isInk ? "#F0EDE4" : "#0A0A0A",
           border: "none",
-          borderRight: "2px solid #0A0A0A",
+          borderRight: isInk ? "1.5px solid rgba(255,255,255,0.12)" : "2px solid #0A0A0A",
           padding: "11px 8px",
           cursor: isTidying ? "wait" : "pointer",
           minWidth: "120px",
           whiteSpace: "nowrap",
-          transition: "background 0.12s ease",
+          transition: "background 0.12s ease, color 0.12s ease",
         }}
         onMouseEnter={(e) => {
-          if (!isTidying) e.currentTarget.style.background = "#FCE94F";
+          if (!isTidying) {
+            e.currentTarget.style.background = isInk ? "#2A303F" : "#FCE94F";
+            e.currentTarget.style.color = isInk ? "#FFFFFF" : "#0A0A0A";
+          }
         }}
         onMouseLeave={(e) => {
-          if (!isTidying) e.currentTarget.style.background = "#FFFFFF";
+          if (!isTidying) {
+            e.currentTarget.style.background = isInk ? "#1A1D26" : "#FFFFFF";
+            e.currentTarget.style.color = isInk ? "#F0EDE4" : "#0A0A0A";
+          }
         }}
       >
         {isTidying ? "TIDYING NOTES…" : "TIDY MY NOTES"}
@@ -103,21 +115,27 @@ export const AiBar: React.FC<AiBarProps> = ({
           fontSize: "9.5px",
           fontWeight: 700,
           letterSpacing: "0.11em",
-          background: isQuizzing ? "#FCE94F" : "#FFFFFF",
-          color: "#0A0A0A",
+          background: isQuizzing ? "#FCE94F" : isInk ? "#1A1D26" : "#FFFFFF",
+          color: isQuizzing ? "#0A0A0A" : isInk ? "#F0EDE4" : "#0A0A0A",
           border: "none",
-          borderRight: "2px solid #0A0A0A",
+          borderRight: isInk ? "1.5px solid rgba(255,255,255,0.12)" : "2px solid #0A0A0A",
           padding: "11px 8px",
           cursor: isQuizzing ? "wait" : "pointer",
           minWidth: "100px",
           whiteSpace: "nowrap",
-          transition: "background 0.12s ease",
+          transition: "background 0.12s ease, color 0.12s ease",
         }}
         onMouseEnter={(e) => {
-          if (!isQuizzing) e.currentTarget.style.background = "#FCE94F";
+          if (!isQuizzing) {
+            e.currentTarget.style.background = isInk ? "#2A303F" : "#FCE94F";
+            e.currentTarget.style.color = isInk ? "#FFFFFF" : "#0A0A0A";
+          }
         }}
         onMouseLeave={(e) => {
-          if (!isQuizzing) e.currentTarget.style.background = "#FFFFFF";
+          if (!isQuizzing) {
+            e.currentTarget.style.background = isInk ? "#1A1D26" : "#FFFFFF";
+            e.currentTarget.style.color = isInk ? "#F0EDE4" : "#0A0A0A";
+          }
         }}
       >
         {isQuizzing ? "GENERATING QUIZ…" : "QUIZ ME"}
@@ -136,21 +154,27 @@ export const AiBar: React.FC<AiBarProps> = ({
           fontSize: "9.5px",
           fontWeight: 700,
           letterSpacing: "0.11em",
-          background: isExplaining ? "#FCE94F" : "#FFFFFF",
-          color: "#0A0A0A",
+          background: isExplaining ? "#FCE94F" : isInk ? "#1A1D26" : "#FFFFFF",
+          color: isExplaining ? "#0A0A0A" : isInk ? "#F0EDE4" : "#0A0A0A",
           border: "none",
-          borderRight: "2px solid #0A0A0A",
+          borderRight: isInk ? "1.5px solid rgba(255,255,255,0.12)" : "2px solid #0A0A0A",
           padding: "11px 8px",
           cursor: isExplaining ? "wait" : "pointer",
           minWidth: "120px",
           whiteSpace: "nowrap",
-          transition: "background 0.12s ease",
+          transition: "background 0.12s ease, color 0.12s ease",
         }}
         onMouseEnter={(e) => {
-          if (!isExplaining) e.currentTarget.style.background = "#FCE94F";
+          if (!isExplaining) {
+            e.currentTarget.style.background = isInk ? "#2A303F" : "#FCE94F";
+            e.currentTarget.style.color = isInk ? "#FFFFFF" : "#0A0A0A";
+          }
         }}
         onMouseLeave={(e) => {
-          if (!isExplaining) e.currentTarget.style.background = "#FFFFFF";
+          if (!isExplaining) {
+            e.currentTarget.style.background = isInk ? "#1A1D26" : "#FFFFFF";
+            e.currentTarget.style.color = isInk ? "#F0EDE4" : "#0A0A0A";
+          }
         }}
       >
         {isExplaining ? "EXPLAINING…" : "EXPLAIN AGAIN"}
@@ -169,20 +193,26 @@ export const AiBar: React.FC<AiBarProps> = ({
           fontSize: "9.5px",
           fontWeight: 700,
           letterSpacing: "0.11em",
-          background: isAnalyzingGaps ? "#FCE94F" : "#FFFFFF",
-          color: "#0A0A0A",
+          background: isAnalyzingGaps ? "#FCE94F" : isInk ? "#1A1D26" : "#FFFFFF",
+          color: isAnalyzingGaps ? "#0A0A0A" : isInk ? "#F0EDE4" : "#0A0A0A",
           border: "none",
           padding: "11px 8px",
           cursor: isAnalyzingGaps ? "wait" : "pointer",
           minWidth: "130px",
           whiteSpace: "nowrap",
-          transition: "background 0.12s ease",
+          transition: "background 0.12s ease, color 0.12s ease",
         }}
         onMouseEnter={(e) => {
-          if (!isAnalyzingGaps) e.currentTarget.style.background = "#FCE94F";
+          if (!isAnalyzingGaps) {
+            e.currentTarget.style.background = isInk ? "#2A303F" : "#FCE94F";
+            e.currentTarget.style.color = isInk ? "#FFFFFF" : "#0A0A0A";
+          }
         }}
         onMouseLeave={(e) => {
-          if (!isAnalyzingGaps) e.currentTarget.style.background = "#FFFFFF";
+          if (!isAnalyzingGaps) {
+            e.currentTarget.style.background = isInk ? "#1A1D26" : "#FFFFFF";
+            e.currentTarget.style.color = isInk ? "#F0EDE4" : "#0A0A0A";
+          }
         }}
       >
         {isAnalyzingGaps ? "CHECKING…" : "WHAT DID I MISS?"}

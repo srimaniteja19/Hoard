@@ -1786,6 +1786,7 @@ export default function NotebooksPage() {
                 currentCourseIndex={currentCourseIdx}
                 currentModuleIndex={currentModuleIdx}
                 currentLessonIndex={currentLessonIdx}
+                theme={paperTheme}
                 onSelectCourse={(idx) => {
                   setCurrentCourseIdx(idx);
                   setCurrentModuleIdx(0);
@@ -2205,9 +2206,9 @@ export default function NotebooksPage() {
                     }}
                     title="Toggle Zen Focus Mode (ESC to exit)"
                     style={{
-                      border: "1.5px solid rgba(10,10,10,0.3)",
-                      background: isFocusMode ? "#0A0A0A" : "transparent",
-                      color: isFocusMode ? "#F3F0E8" : "inherit",
+                      border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
+                      background: isFocusMode ? (isInk ? "#FCE94F" : "#0A0A0A") : "transparent",
+                      color: isFocusMode ? "#0A0A0A" : "inherit",
                       fontFamily: "var(--mono, monospace)",
                       fontSize: "9px",
                       fontWeight: 700,
@@ -2218,7 +2219,7 @@ export default function NotebooksPage() {
                       gap: "4px",
                     }}
                     onMouseEnter={(e) => {
-                      if (!isFocusMode) e.currentTarget.style.background = "#FCE94F";
+                      if (!isFocusMode) e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#FCE94F";
                     }}
                     onMouseLeave={(e) => {
                       if (!isFocusMode) e.currentTarget.style.background = "transparent";
@@ -2237,7 +2238,7 @@ export default function NotebooksPage() {
                     }}
                     title="Study note with active recall flashcards"
                     style={{
-                      border: "1.5px solid rgba(10,10,10,0.3)",
+                      border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
                       background: "transparent",
                       color: "inherit",
                       fontFamily: "var(--mono, monospace)",
@@ -2249,7 +2250,7 @@ export default function NotebooksPage() {
                       alignItems: "center",
                       gap: "4px",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#FCE94F")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
                     <Layers size={11} />
@@ -2265,7 +2266,7 @@ export default function NotebooksPage() {
                     }}
                     title="Print or save page as PDF"
                     style={{
-                      border: "1.5px solid rgba(10,10,10,0.3)",
+                      border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
                       background: "transparent",
                       color: "inherit",
                       fontFamily: "var(--mono, monospace)",
@@ -2277,7 +2278,7 @@ export default function NotebooksPage() {
                       alignItems: "center",
                       gap: "4px",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#B8F04A")}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#B8F04A")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
                     <Printer size={11} />
@@ -2291,8 +2292,8 @@ export default function NotebooksPage() {
                       onClick={() => setShowToc(!showToc)}
                       title="Toggle Table of Contents"
                       style={{
-                        border: "1.5px solid rgba(10,10,10,0.3)",
-                        background: showToc ? "#0A0A0A" : "transparent",
+                        border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
+                        background: showToc ? (isInk ? "#252A36" : "#0A0A0A") : "transparent",
                         color: showToc ? "#F3F0E8" : "inherit",
                         fontFamily: "var(--mono, monospace)",
                         fontSize: "9px",
@@ -2315,7 +2316,7 @@ export default function NotebooksPage() {
                     onClick={handleCopyAsMarkdown}
                     title="Copy full page as formatted Markdown"
                     style={{
-                      border: "1.5px solid rgba(10,10,10,0.3)",
+                      border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
                       background: "transparent",
                       color: "inherit",
                       fontFamily: "var(--mono, monospace)",
@@ -2327,7 +2328,7 @@ export default function NotebooksPage() {
                       alignItems: "center",
                       gap: "4px",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#FCE94F")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
                     <Copy size={11} />
@@ -2340,7 +2341,7 @@ export default function NotebooksPage() {
                     onClick={() => handleDuplicateLesson(currentModuleIdx, currentLessonIdx)}
                     title="Duplicate Page"
                     style={{
-                      border: "1.5px solid rgba(10,10,10,0.3)",
+                      border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
                       background: "transparent",
                       color: "inherit",
                       fontFamily: "var(--mono, monospace)",
@@ -2352,7 +2353,7 @@ export default function NotebooksPage() {
                       alignItems: "center",
                       gap: "4px",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#B8F04A")}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#B8F04A")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
                     <FileText size={11} />
@@ -2365,7 +2366,7 @@ export default function NotebooksPage() {
                     onClick={() => handleCreateLessonAbove(currentModuleIdx, currentLessonIdx)}
                     title="Create a new page above this one"
                     style={{
-                      border: "1.5px solid rgba(10,10,10,0.3)",
+                      border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
                       background: "transparent",
                       color: "inherit",
                       fontFamily: "var(--mono, monospace)",
@@ -2377,7 +2378,7 @@ export default function NotebooksPage() {
                       alignItems: "center",
                       gap: "4px",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#B8F04A")}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#B8F04A")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
                     <ArrowUp size={11} />
@@ -2389,7 +2390,7 @@ export default function NotebooksPage() {
                     onClick={() => handleCreateLessonBelow(currentModuleIdx, currentLessonIdx)}
                     title="Create a new page below this one"
                     style={{
-                      border: "1.5px solid rgba(10,10,10,0.3)",
+                      border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
                       background: "transparent",
                       color: "inherit",
                       fontFamily: "var(--mono, monospace)",
@@ -2401,7 +2402,7 @@ export default function NotebooksPage() {
                       alignItems: "center",
                       gap: "4px",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#B8F04A")}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#B8F04A")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
                     <ArrowDown size={11} />
@@ -2413,7 +2414,7 @@ export default function NotebooksPage() {
                       type="button"
                       onClick={handleClearCurrentNotes}
                       style={{
-                        border: "1.5px solid rgba(10,10,10,0.25)",
+                        border: isInk ? "1.5px solid rgba(255,255,255,0.2)" : "1.5px solid rgba(10,10,10,0.25)",
                         background: "transparent",
                         fontFamily: "var(--mono, monospace)",
                         fontSize: "9px",
@@ -2423,7 +2424,7 @@ export default function NotebooksPage() {
                         color: "inherit",
                         opacity: 0.65,
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#FCE94F")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
                       CLEAR
@@ -2461,11 +2462,11 @@ export default function NotebooksPage() {
               {showToc && (
                 <div
                   style={{
-                    background: "rgba(0,0,0,0.03)",
-                    border: "2px solid #0A0A0A",
+                    background: isInk ? "#181B24" : "rgba(0,0,0,0.03)",
+                    border: isInk ? "2px solid rgba(255,255,255,0.2)" : "2px solid #0A0A0A",
                     padding: "12px 16px",
                     marginBottom: "18px",
-                    boxShadow: "3px 3px 0 #0A0A0A",
+                    boxShadow: isInk ? "3px 3px 0 rgba(0,0,0,0.6)" : "3px 3px 0 #0A0A0A",
                   }}
                 >
                   <div
@@ -2514,7 +2515,7 @@ export default function NotebooksPage() {
                                 fontFamily: "var(--mono, monospace)",
                                 fontSize: "8.5px",
                                 opacity: 0.5,
-                                background: "rgba(0,0,0,0.06)",
+                                background: isInk ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
                                 padding: "1px 4px",
                               }}
                             >
@@ -2531,6 +2532,7 @@ export default function NotebooksPage() {
               <AiBar
                 accentColor={currentCourse.accent}
                 accentFg={currentCourse.accentFg}
+                theme={paperTheme}
                 onTidy={handleTidyNotes}
                 onQuiz={handleQuizMe}
                 onExplain={handleExplain}
@@ -2565,6 +2567,7 @@ export default function NotebooksPage() {
                   onChange={handleUpdateBlocks}
                   onExplain={handleExplainWithSelection}
                   accentColor={currentCourse.accent}
+                  theme={paperTheme}
                 />
               )}
 

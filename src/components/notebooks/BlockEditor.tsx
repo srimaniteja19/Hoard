@@ -20,6 +20,7 @@ interface BlockEditorProps {
   onChange: (updatedBlocks: Block[]) => void;
   onExplain?: (text: string) => void;
   accentColor?: string;
+  theme?: "cream" | "ink";
 }
 
 const SLASH_MENU_ITEMS: { type: string; glyph: string; label: string; shortcut: string }[] = [
@@ -42,7 +43,9 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   onChange,
   onExplain,
   accentColor = "#7B5CF0",
+  theme = "cream",
 }) => {
+  const isInk = theme === "ink";
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
   const [slashMenu, setSlashMenu] = useState<{
@@ -834,6 +837,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                 }}
                 onSlashKeyDown={handleSlashKeyDown}
                 accentColor={accentColor}
+                theme={theme}
               />
 
               {/* In-Line Notion-Style Slash Palette Popover */}
@@ -845,9 +849,9 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                     top: "100%",
                     zIndex: 9999,
                     width: "300px",
-                    border: "3px solid #0A0A0A",
-                    background: "#FFFFFF",
-                    boxShadow: "7px 7px 0 #0A0A0A",
+                    border: isInk ? "2px solid rgba(255,255,255,0.25)" : "3px solid #0A0A0A",
+                    background: isInk ? "#1A1D26" : "#FFFFFF",
+                    boxShadow: isInk ? "5px 5px 0 rgba(0,0,0,0.6)" : "7px 7px 0 #0A0A0A",
                     overflow: "hidden",
                     animation: "fadeIn 0.1s ease",
                   }}
@@ -859,9 +863,9 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                       fontWeight: 700,
                       letterSpacing: "0.16em",
                       padding: "7px 12px",
-                      background: "#EBE7DC",
-                      borderBottom: "2px solid #0A0A0A",
-                      color: "#0A0A0A",
+                      background: isInk ? "#252A36" : "#EBE7DC",
+                      borderBottom: isInk ? "2px solid rgba(255,255,255,0.15)" : "2px solid #0A0A0A",
+                      color: isInk ? "#F0EDE4" : "#0A0A0A",
                       display: "flex",
                       justifyContent: "space-between",
                     }}
@@ -885,13 +889,13 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                             width: "100%",
                             alignItems: "center",
                             gap: "10px",
-                            background: isActive ? "#FCE94F" : "transparent",
+                            background: isActive ? (isInk ? "#2A303F" : "#FCE94F") : "transparent",
                             border: "none",
-                            borderBottom: "1.5px solid rgba(10,10,10,0.1)",
+                            borderBottom: isInk ? "1px solid rgba(255,255,255,0.08)" : "1.5px solid rgba(10,10,10,0.1)",
                             padding: "8px 12px",
                             cursor: "pointer",
                             textAlign: "left",
-                            color: "#0A0A0A",
+                            color: isInk ? (isActive ? "#FFFFFF" : "#F0EDE4") : "#0A0A0A",
                             transition: "background 0.08s ease",
                           }}
                           onMouseEnter={() =>
@@ -902,14 +906,15 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                             style={{
                               width: "22px",
                               height: "22px",
-                              border: "2px solid #0A0A0A",
+                              border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "2px solid #0A0A0A",
                               display: "grid",
                               placeItems: "center",
                               fontFamily: "var(--mono, monospace)",
                               fontSize: "10px",
                               fontWeight: 700,
                               flex: "none",
-                              background: "#FFFFFF",
+                              background: isInk ? "#252A36" : "#FFFFFF",
+                              color: isInk ? "#F0EDE4" : "#0A0A0A",
                             }}
                           >
                             {item.glyph}
