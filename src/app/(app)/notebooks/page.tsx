@@ -107,6 +107,13 @@ export default function NotebooksPage() {
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [isAnalyzingGaps, setIsAnalyzingGaps] = useState(false);
 
+  // Tracks a write (PATCH) that has already been dispatched to the server but
+  // hasn't resolved yet. A refetch-and-overwrite (visibilitychange, online,
+  // FULL_SYNC_REQUESTED, or the initial mount fetch) that lands while this is
+  // set would read data from before the write committed and silently revert
+  // the in-flight edit — so every auto-refetch must wait on this first.
+  const inFlightSaveRef = useRef<Promise<unknown> | null>(null);
+
   // Load courses & restore active location on mount
   useEffect(() => {
     // 1. Immediate local cache load
@@ -115,7 +122,9 @@ export default function NotebooksPage() {
 
     // 2. Asynchronously fetch from PostgreSQL database
     fetchNotebooksFromDbApi().then((dbData) => {
-      if (dbData && Array.isArray(dbData.courses)) {
+      // Skip if a local edit was saved (or is still saving) after this fetch
+      // was kicked off — applying this snapshot now would revert it.
+      if (dbData && Array.isArray(dbData.courses) && !pendingSaveRef.current && !inFlightSaveRef.current) {
         setCourses(dbData.courses);
         saveStoredCourses(dbData.courses);
         saveCollisions(dbData.collisions || []);
@@ -305,14 +314,15 @@ export default function NotebooksPage() {
           return updated;
         });
       } else if (event.type === "FULL_SYNC_REQUESTED") {
-        if (!pendingSaveRef.current) {
+        Promise.resolve(inFlightSaveRef.current).then(() => {
+          if (pendingSaveRef.current || inFlightSaveRef.current) return;
           fetchNotebooksFromDbApi().then((dbData) => {
-            if (dbData && Array.isArray(dbData.courses)) {
+            if (dbData && Array.isArray(dbData.courses) && !pendingSaveRef.current && !inFlightSaveRef.current) {
               setCourses(dbData.courses);
               saveStoredCourses(dbData.courses);
             }
           });
-        }
+        });
       }
     });
 
@@ -334,35 +344,41 @@ export default function NotebooksPage() {
     if (pendingSaveRef.current) {
       clearTimeout(pendingSaveRef.current.timer);
       saveStoredCourses(pendingSaveRef.current.courses);
-      saveLessonBlocksToDbApi(pendingSaveRef.current.lessonId, pendingSaveRef.current.blocks);
+      const { lessonId, blocks } = pendingSaveRef.current;
+      const savePromise = saveLessonBlocksToDbApi(lessonId, blocks);
+      inFlightSaveRef.current = savePromise.finally(() => {
+        if (inFlightSaveRef.current === savePromise) inFlightSaveRef.current = null;
+      });
       pendingSaveRef.current = null;
     }
+    return inFlightSaveRef.current;
   }, []);
 
   // ── Auto-Revalidate on Tab Visibility & Network Online/Offline ───────────────
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        flushPendingSave();
-        if (!pendingSaveRef.current) {
+        Promise.resolve(flushPendingSave()).then(() => {
+          if (pendingSaveRef.current || inFlightSaveRef.current) return;
           fetchNotebooksFromDbApi().then((dbData) => {
-            if (dbData && Array.isArray(dbData.courses)) {
+            if (dbData && Array.isArray(dbData.courses) && !pendingSaveRef.current && !inFlightSaveRef.current) {
               setCourses(dbData.courses);
               saveStoredCourses(dbData.courses);
             }
           });
-        }
+        });
       }
     };
 
     const handleOnline = () => {
       setSyncStatus("saving");
-      flushOfflineQueueToDbApi();
-      fetchNotebooksFromDbApi().then((dbData) => {
-        if (dbData && Array.isArray(dbData.courses)) {
-          setCourses(dbData.courses);
-          saveStoredCourses(dbData.courses);
-        }
+      Promise.resolve(flushOfflineQueueToDbApi()).then(() => {
+        fetchNotebooksFromDbApi().then((dbData) => {
+          if (dbData && Array.isArray(dbData.courses) && !pendingSaveRef.current && !inFlightSaveRef.current) {
+            setCourses(dbData.courses);
+            saveStoredCourses(dbData.courses);
+          }
+        });
       });
     };
 
@@ -403,7 +419,10 @@ export default function NotebooksPage() {
       blocks: newBlocks,
       timer: setTimeout(() => {
         saveStoredCourses(updated);
-        saveLessonBlocksToDbApi(currentLesson.id, newBlocks);
+        const savePromise = saveLessonBlocksToDbApi(currentLesson.id, newBlocks);
+        inFlightSaveRef.current = savePromise.finally(() => {
+          if (inFlightSaveRef.current === savePromise) inFlightSaveRef.current = null;
+        });
         pendingSaveRef.current = null;
       }, 400),
     };
@@ -411,13 +430,18 @@ export default function NotebooksPage() {
 
   // Flush any pending debounced save before switching pages, and on unload.
   useEffect(() => {
-    return () => flushPendingSave();
+    return () => {
+      flushPendingSave();
+    };
   }, [currentCourseIdx, currentModuleIdx, currentLessonIdx, flushPendingSave]);
 
   useEffect(() => {
-    window.addEventListener("beforeunload", flushPendingSave);
+    const handleBeforeUnload = () => {
+      flushPendingSave();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
     return () => {
-      window.removeEventListener("beforeunload", flushPendingSave);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       flushPendingSave();
     };
   }, [flushPendingSave]);

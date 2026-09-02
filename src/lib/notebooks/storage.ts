@@ -27,15 +27,11 @@ export function getStoredCourses(): SeedCourse[] {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     
-    // Filter out any lingering mock seed items
-    const cleaned = parsed.filter(
-      (c) =>
-        c &&
-        c.id !== "agentic" &&
-        c.id !== "python" &&
-        !c.id.endsWith("_agentic") &&
-        !c.id.endsWith("_python")
-    );
+    // Filter out lingering mock seed items from old, pre-scoping caches. Only
+    // the exact legacy unscoped ids are stripped — a suffix match would also
+    // catch real per-user scoped ids like `${userId}_agentic` for a genuine
+    // course whose slug happens to be "agentic", silently deleting it.
+    const cleaned = parsed.filter((c) => c && c.id !== "agentic" && c.id !== "python");
     if (cleaned.length !== parsed.length) {
       localStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify(cleaned));
     }

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   computeLessonBlocksUpdate,
   addLessonGapStub,
@@ -11,6 +11,32 @@ import {
 } from "./storage";
 import { SEED_COURSES, SeedCourse } from "./seedData";
 import { Block } from "./blocks";
+
+function makeMinimalCourse(id: string, title: string): SeedCourse {
+  return {
+    id,
+    title,
+    provider: "TEST",
+    accent: "#000",
+    accentFg: "#FFF",
+    init: title.charAt(0).toUpperCase(),
+    startedAt: "2026-01-01",
+    modules: [],
+  };
+}
+
+function createMockLocalStorage() {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => (store.has(key) ? store.get(key)! : null),
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  };
+}
 
 describe("Notebooks Storage & In-Memory Logic", () => {
   it("updates lesson blocks in memory without mutating original unselected lessons", () => {
@@ -111,5 +137,44 @@ describe("Notebooks Storage & In-Memory Logic", () => {
     expect(course.init).toBe("D");
     expect(course.modules).toHaveLength(1);
     expect(course.modules[0].lessons).toHaveLength(1);
+  });
+
+  describe("getStoredCourses legacy-mock cleanup", () => {
+    let mockStorage: ReturnType<typeof createMockLocalStorage>;
+
+    beforeEach(() => {
+      mockStorage = createMockLocalStorage();
+      vi.stubGlobal("window", {});
+      vi.stubGlobal("localStorage", mockStorage);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("strips exact legacy unscoped mock ids left over from old caches", () => {
+      mockStorage.setItem(
+        "hoard_notebook_courses_v3",
+        JSON.stringify([makeMinimalCourse("agentic", "Agentic AI Demo"), makeMinimalCourse("real-course-1", "My Course")])
+      );
+
+      const result = getStoredCourses();
+
+      expect(result.map((c) => c.id)).toEqual(["real-course-1"]);
+    });
+
+    it("keeps a real user course whose scoped id happens to end in the legacy mock suffix", () => {
+      // A real course's raw slug can legitimately be "agentic" (e.g. user-created
+      // or adopted-from-seed course later renamed). Once scoped per-user as
+      // `${userId}_agentic`, it must not be treated as leftover mock seed data.
+      mockStorage.setItem(
+        "hoard_notebook_courses_v3",
+        JSON.stringify([makeMinimalCourse("user123_agentic", "Agentic AI")])
+      );
+
+      const result = getStoredCourses();
+
+      expect(result.map((c) => c.id)).toEqual(["user123_agentic"]);
+    });
   });
 });
