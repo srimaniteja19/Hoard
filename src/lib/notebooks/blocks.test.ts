@@ -149,4 +149,27 @@ describe("Notebooks Block Contract & Logic", () => {
     expect(chunks[0].blockId).toBe("1");
     expect(chunks[1].blockId).toBe("3");
   });
+
+  it("extracts active recall flashcards from gotchas, facts, toggles, and headings", async () => {
+    const { extractFlashcards } = await import("@/components/notebooks/FlashcardModal");
+
+    const sampleBlocks: Block[] = [
+      { id: "g1", type: "callout", kind: "gotcha", text: "Watch out for race conditions on blur events" },
+      { id: "f1", type: "callout", kind: "fact", text: "PostgreSQL transactions ensure serializability" },
+      { id: "t1", type: "toggle", summary: "What is an Agent?", body: "An LLM that can use tools iteratively" },
+      { id: "h1", type: "heading", level: 2, text: "Vector Distance" },
+      { id: "p1", type: "paragraph", text: "Cosine similarity measures the angle between two embedding vectors in multidimensional space." },
+    ];
+
+    const cards = extractFlashcards("Distributed Agents", sampleBlocks);
+    expect(cards.length).toBe(4);
+    expect(cards[0].category).toBe("gotcha");
+    expect(cards[0].back).toContain("Watch out for race conditions");
+    expect(cards[1].category).toBe("fact");
+    expect(cards[1].back).toContain("PostgreSQL transactions");
+    expect(cards[2].category).toBe("toggle");
+    expect(cards[2].front).toBe("What is an Agent?");
+    expect(cards[3].category).toBe("concept");
+    expect(cards[3].front).toContain("Vector Distance");
+  });
 });

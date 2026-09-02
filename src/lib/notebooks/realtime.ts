@@ -67,6 +67,26 @@ export type RealtimeNotebookEvent =
       timestamp: number;
     }
   | {
+      type: "MODULE_CREATED";
+      courseId: string;
+      module: { id: string; title: string; lessons: any[] };
+      senderId: string;
+      timestamp: number;
+    }
+  | {
+      type: "MODULE_UPDATED";
+      moduleId: string;
+      title?: string;
+      senderId: string;
+      timestamp: number;
+    }
+  | {
+      type: "MODULE_DELETED";
+      moduleId: string;
+      senderId: string;
+      timestamp: number;
+    }
+  | {
       type: "FULL_SYNC_REQUESTED";
       senderId: string;
       timestamp: number;

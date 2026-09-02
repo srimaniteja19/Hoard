@@ -12,6 +12,10 @@ import {
   Copy,
   ChevronDown,
   ChevronRight,
+  Plus,
+  ArrowUp,
+  ArrowDown,
+  FolderPlus,
 } from "lucide-react";
 
 interface OutlineSidebarProps {
@@ -24,12 +28,18 @@ interface OutlineSidebarProps {
   onDeleteLesson?: (moduleIndex: number, lessonIndex: number) => void;
   onToggleWatched?: (moduleIndex: number, lessonIndex: number) => void;
   onDuplicateLesson?: (moduleIndex: number, lessonIndex: number) => void;
+  onCreateLessonAbove?: (moduleIndex: number, lessonIndex: number) => void;
+  onCreateLessonBelow?: (moduleIndex: number, lessonIndex: number) => void;
   onReorderLesson?: (
     sourceModuleIndex: number,
     targetModuleIndex: number,
     sourceLessonIndex: number,
     targetLessonIndex: number
   ) => void;
+  onCreateModule?: () => void;
+  onRenameModule?: (moduleIndex: number, newTitle: string) => void;
+  onDeleteModule?: (moduleIndex: number) => void;
+  onNewPageInModule?: (moduleIndex: number) => void;
   onEditCourse?: () => void;
   onDeleteCourse?: () => void;
   onBackToIndex: () => void;
@@ -46,7 +56,13 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   onDeleteLesson,
   onToggleWatched,
   onDuplicateLesson,
+  onCreateLessonAbove,
+  onCreateLessonBelow,
   onReorderLesson,
+  onCreateModule,
+  onRenameModule,
+  onDeleteModule,
+  onNewPageInModule,
   onEditCourse,
   onDeleteCourse,
   onBackToIndex,
@@ -54,6 +70,13 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
+
+  // Inline module renaming state
+  const [editingModuleId, setEditingModuleId] = useState<string | null>(null);
+  const [moduleTitleDraft, setModuleTitleDraft] = useState("");
+
+  // Hover insert line state between lessons
+  const [hoverInsertIndex, setHoverInsertIndex] = useState<{ modIdx: number; lesIdx: number } | null>(null);
 
   // Drag and drop state
   const [draggingInfo, setDraggingInfo] = useState<{
@@ -91,6 +114,13 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
     setCollapsedModules((prev) => ({ ...prev, [modId]: !prev[modId] }));
   };
 
+  const handleCommitModuleRename = (modIdx: number) => {
+    if (editingModuleId && moduleTitleDraft.trim() && onRenameModule) {
+      onRenameModule(modIdx, moduleTitleDraft.trim());
+    }
+    setEditingModuleId(null);
+  };
+
   return (
     <aside
       style={{
@@ -120,133 +150,135 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
               }}
               style={{
                 flex: 1,
+                padding: "9px 6px",
                 fontFamily: "var(--mono, monospace)",
-                fontSize: "9.5px",
+                fontSize: "10px",
                 fontWeight: 700,
                 letterSpacing: "0.1em",
-                background: isSelected ? c.accent : "transparent",
-                color: isSelected ? c.accentFg : "#0A0A0A",
                 border: "none",
                 borderRight: idx < courses.length - 1 ? "2px solid #0A0A0A" : "none",
-                padding: "11px 6px",
+                background: isSelected ? c.accent : "transparent",
+                color: isSelected ? c.accentFg : "#0A0A0A",
                 cursor: "pointer",
+                transition: "background 0.15s ease",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                transition: "background 0.1s ease",
               }}
             >
-              {c.title}
+              {c.init} · {c.title.split(" ")[0]}
             </button>
           );
         })}
       </div>
 
-      {/* Course Header Banner */}
-      <div style={{ padding: "18px", borderBottom: "2px solid rgba(10,10,10,0.14)", color: "#0A0A0A", flexShrink: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "11px" }}>
-          <span
-            style={{
-              display: "inline-block",
-              fontFamily: "var(--mono, monospace)",
-              fontSize: "8.5px",
-              fontWeight: 700,
-              letterSpacing: "0.15em",
-              background: course.accent,
-              color: course.accentFg,
-              border: "2px solid #0A0A0A",
-              padding: "3px 8px",
-            }}
-          >
-            COURSE · IN PROGRESS
-          </span>
-          <div style={{ display: "flex", gap: "4px" }}>
+      {/* Course Card Header */}
+      <div
+        style={{
+          padding: "16px 18px",
+          borderBottom: "2px solid rgba(10,10,10,0.14)",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "9px",
+            fontWeight: 700,
+            letterSpacing: "0.14em",
+            opacity: 0.5,
+            marginBottom: "4px",
+          }}
+        >
+          <span>{course.provider}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             {onEditCourse && (
               <button
                 type="button"
-                onClick={onEditCourse}
-                title="Edit Course"
-                style={{
-                  background: "transparent",
-                  border: "1.5px solid #0A0A0A",
-                  color: "#0A0A0A",
-                  padding: "2px 6px",
-                  cursor: "pointer",
-                  fontFamily: "var(--mono, monospace)",
-                  fontSize: "8.5px",
-                  fontWeight: 700,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "3px",
+                onClick={(e) => {
+                  e.stopPropagation();
+                  playSound.click();
+                  onEditCourse();
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                title="Edit course metadata"
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  padding: "2px",
+                  opacity: 0.6,
+                  display: "grid",
+                  placeItems: "center",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
               >
-                <Pencil size={10} />
-                EDIT
+                <Pencil size={11} />
               </button>
             )}
             {onDeleteCourse && (
               <button
                 type="button"
-                onClick={onDeleteCourse}
-                title="Delete Course"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  playSound.click();
+                  onDeleteCourse();
+                }}
+                title="Delete course"
                 style={{
+                  border: "none",
                   background: "transparent",
-                  border: "1.5px solid #0A0A0A",
-                  color: "#DC2626",
-                  padding: "2px 6px",
                   cursor: "pointer",
-                  fontFamily: "var(--mono, monospace)",
-                  fontSize: "8.5px",
-                  fontWeight: 700,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "3px",
+                  padding: "2px",
+                  opacity: 0.6,
+                  color: "#991B1B",
+                  display: "grid",
+                  placeItems: "center",
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#DC2626";
-                  e.currentTarget.style.color = "#FFFFFF";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "#DC2626";
-                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
               >
-                <Trash2 size={10} />
+                <Trash2 size={11} />
               </button>
             )}
+            <span>{course.startedAt ? new Date(course.startedAt).toLocaleDateString([], { month: "short", year: "numeric" }).toUpperCase() : "COURSE"}</span>
           </div>
         </div>
-        <h2
+
+        <h3
           style={{
-            margin: "0 0 4px",
+            margin: "0 0 10px",
             fontFamily: "var(--display, sans-serif)",
             fontWeight: 800,
-            fontSize: "23px",
-            lineHeight: 1.02,
-            letterSpacing: "-0.04em",
+            fontSize: "19px",
+            lineHeight: 1.05,
+            letterSpacing: "-0.03em",
           }}
         >
           {course.title}
-        </h2>
-        <div style={{ fontFamily: "var(--quote, Georgia, serif)", fontStyle: "italic", fontSize: "15px", opacity: 0.6 }}>
-          {course.provider}
-        </div>
+        </h3>
 
-        {/* Mini Two-segment Progress */}
+        {/* Progress Bar */}
         <div
           style={{
             height: "8px",
-            border: "2px solid #0A0A0A",
+            border: "1.5px solid #0A0A0A",
             background: "#FFFFFF",
-            marginTop: "13px",
             display: "flex",
             overflow: "hidden",
           }}
         >
-          <i style={{ width: `${writtenPct}%`, background: "#B8F04A", display: "block" }} />
-          <em
+          <span
+            style={{
+              width: `${writtenPct}%`,
+              background: "#B8F04A",
+              display: "block",
+            }}
+          />
+          <span
             style={{
               width: `${unwrittenPct}%`,
               background: "repeating-linear-gradient(45deg, #FCE94F 0 5px, rgba(0,0,0,0.2) 5px 10px)",
@@ -312,6 +344,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
           ).length;
 
           const isModuleDragOver = dragOverModuleIdx === modIdx && mod.lessons.length === 0;
+          const isEditingThisModule = editingModuleId === mod.id;
 
           return (
             <div
@@ -340,33 +373,144 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 }
               }}
             >
-              {/* Module Header with Collapse Toggle */}
-              <div
-                onClick={() => toggleModuleCollapse(mod.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "7px",
-                  fontFamily: "var(--mono, monospace)",
-                  fontSize: "9.5px",
-                  fontWeight: 700,
-                  letterSpacing: "0.14em",
-                  opacity: 0.65,
-                  marginBottom: isCollapsed ? "4px" : "8px",
-                  color: "#0A0A0A",
-                  cursor: "pointer",
-                  userSelect: "none",
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center" }}>
-                  {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-                </span>
-                <span>{mod.title}</span>
-                <span style={{ flex: 1, height: "2px", background: "rgba(10,10,10,0.14)" }} />
-                <span>
-                  {modWritten}/{mod.lessons.length}
-                </span>
-              </div>
+              {/* Module Header with Actions & Inline Rename */}
+              {isEditingThisModule ? (
+                <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "8px" }}>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={moduleTitleDraft}
+                    onChange={(e) => setModuleTitleDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleCommitModuleRename(modIdx);
+                      if (e.key === "Escape") setEditingModuleId(null);
+                    }}
+                    onBlur={() => handleCommitModuleRename(modIdx)}
+                    style={{
+                      flex: 1,
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      letterSpacing: "0.1em",
+                      border: "2px solid #0A0A0A",
+                      background: "#FFFFFF",
+                      padding: "4px 8px",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "9.5px",
+                    fontWeight: 700,
+                    letterSpacing: "0.14em",
+                    opacity: 0.8,
+                    marginBottom: isCollapsed ? "4px" : "8px",
+                    color: "#0A0A0A",
+                    userSelect: "none",
+                  }}
+                >
+                  <span
+                    onClick={() => toggleModuleCollapse(mod.id)}
+                    style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                  >
+                    {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                  </span>
+                  <span
+                    onClick={() => toggleModuleCollapse(mod.id)}
+                    style={{ cursor: "pointer", flex: "none" }}
+                  >
+                    {mod.title}
+                  </span>
+                  <span style={{ flex: 1, height: "2px", background: "rgba(10,10,10,0.14)" }} />
+                  <span style={{ fontSize: "8.5px", opacity: 0.7 }}>
+                    {modWritten}/{mod.lessons.length}
+                  </span>
+
+                  {/* Module Action Icons */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "2px", marginLeft: "4px" }}>
+                    {onNewPageInModule && (
+                      <button
+                        type="button"
+                        title="Add page in this module"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playSound.click();
+                          onNewPageInModule(modIdx);
+                        }}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          cursor: "pointer",
+                          opacity: 0.45,
+                          padding: "2px",
+                          display: "grid",
+                          placeItems: "center",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.45")}
+                      >
+                        <Plus size={11} />
+                      </button>
+                    )}
+                    {onRenameModule && (
+                      <button
+                        type="button"
+                        title="Rename module"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playSound.click();
+                          setModuleTitleDraft(mod.title);
+                          setEditingModuleId(mod.id);
+                        }}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          cursor: "pointer",
+                          opacity: 0.45,
+                          padding: "2px",
+                          display: "grid",
+                          placeItems: "center",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.45")}
+                      >
+                        <Pencil size={10} />
+                      </button>
+                    )}
+                    {onDeleteModule && (
+                      <button
+                        type="button"
+                        title="Delete module"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playSound.click();
+                          onDeleteModule(modIdx);
+                        }}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          cursor: "pointer",
+                          opacity: 0.45,
+                          color: "#991B1B",
+                          padding: "2px",
+                          display: "grid",
+                          placeItems: "center",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.45")}
+                      >
+                        <Trash2 size={10} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Lesson Items */}
               {!isCollapsed && (
@@ -433,7 +577,6 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                             if (dropTarget?.position === "after") {
                               targetLesIdx = lesIdx + 1;
                             }
-                            // Adjust index if moving within same module down the list
                             if (sourceModIdx === modIdx && sourceLesIdx < targetLesIdx) {
                               targetLesIdx = Math.max(0, targetLesIdx - 1);
                             }
@@ -537,85 +680,147 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                             </em>
                           </div>
 
-                          {/* Quick Duplicate Page Button */}
-                          {onDuplicateLesson && (
-                            <button
-                              type="button"
-                              title="Duplicate Page"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                playSound.click();
-                                onDuplicateLesson(modIdx, lesIdx);
-                              }}
-                              style={{
-                                border: "none",
-                                background: "transparent",
-                                color: isSelected ? "#F3F0E8" : "#0A0A0A",
-                                opacity: 0.35,
-                                cursor: "pointer",
-                                padding: "2px 4px",
-                                marginTop: "2px",
-                                display: "grid",
-                                placeItems: "center",
-                              }}
-                              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
-                            >
-                              <Copy size={11} />
-                            </button>
-                          )}
+                          {/* Quick Row Action Buttons */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "2px", marginTop: "2px" }}>
+                            {/* Add Page Above Button */}
+                            {onCreateLessonAbove && (
+                              <button
+                                type="button"
+                                title="Add page above"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  playSound.click();
+                                  onCreateLessonAbove(modIdx, lesIdx);
+                                }}
+                                style={{
+                                  border: "none",
+                                  background: "transparent",
+                                  color: isSelected ? "#F3F0E8" : "#0A0A0A",
+                                  opacity: 0.35,
+                                  cursor: "pointer",
+                                  padding: "2px 3px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "1px",
+                                  fontSize: "8px",
+                                  fontFamily: "var(--mono, monospace)",
+                                  fontWeight: 800,
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
+                              >
+                                <ArrowUp size={10} />
+                              </button>
+                            )}
 
-                          {onToggleWatched && (
-                            <button
-                              type="button"
-                              title={les.watched ? "Mark as not watched" : "Mark as watched"}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                playSound.click();
-                                onToggleWatched(modIdx, lesIdx);
-                              }}
-                              style={{
-                                border: "none",
-                                background: "transparent",
-                                color: isSelected ? "#F3F0E8" : "#0A0A0A",
-                                opacity: les.watched ? 0.6 : 0.3,
-                                cursor: "pointer",
-                                padding: "2px 4px",
-                                marginTop: "2px",
-                                display: "grid",
-                                placeItems: "center",
-                              }}
-                              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                              onMouseLeave={(e) => (e.currentTarget.style.opacity = les.watched ? "0.6" : "0.3")}
-                            >
-                              {les.watched ? <Eye size={12} /> : <EyeOff size={12} />}
-                            </button>
-                          )}
+                            {/* Add Page Below Button */}
+                            {onCreateLessonBelow && (
+                              <button
+                                type="button"
+                                title="Add page below"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  playSound.click();
+                                  onCreateLessonBelow(modIdx, lesIdx);
+                                }}
+                                style={{
+                                  border: "none",
+                                  background: "transparent",
+                                  color: isSelected ? "#F3F0E8" : "#0A0A0A",
+                                  opacity: 0.35,
+                                  cursor: "pointer",
+                                  padding: "2px 3px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "1px",
+                                  fontSize: "8px",
+                                  fontFamily: "var(--mono, monospace)",
+                                  fontWeight: 800,
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
+                              >
+                                <ArrowDown size={10} />
+                              </button>
+                            )}
 
-                          {onDeleteLesson && (
-                            <button
-                              type="button"
-                              title={`Delete ${les.title}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteLesson(modIdx, lesIdx);
-                              }}
-                              style={{
-                                border: "none",
-                                background: "transparent",
-                                color: isSelected ? "#F3F0E8" : "#991B1B",
-                                opacity: 0.35,
-                                cursor: "pointer",
-                                fontSize: "11px",
-                                padding: "2px 4px",
-                                marginTop: "2px",
-                              }}
-                              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
-                            >
-                              ✕
-                            </button>
-                          )}
+                            {/* Duplicate Page Button */}
+                            {onDuplicateLesson && (
+                              <button
+                                type="button"
+                                title="Duplicate Page"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  playSound.click();
+                                  onDuplicateLesson(modIdx, lesIdx);
+                                }}
+                                style={{
+                                  border: "none",
+                                  background: "transparent",
+                                  color: isSelected ? "#F3F0E8" : "#0A0A0A",
+                                  opacity: 0.35,
+                                  cursor: "pointer",
+                                  padding: "2px 3px",
+                                  display: "grid",
+                                  placeItems: "center",
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
+                              >
+                                <Copy size={11} />
+                              </button>
+                            )}
+
+                            {onToggleWatched && (
+                              <button
+                                type="button"
+                                title={les.watched ? "Mark as not watched" : "Mark as watched"}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  playSound.click();
+                                  onToggleWatched(modIdx, lesIdx);
+                                }}
+                                style={{
+                                  border: "none",
+                                  background: "transparent",
+                                  color: isSelected ? "#F3F0E8" : "#0A0A0A",
+                                  opacity: les.watched ? 0.6 : 0.3,
+                                  cursor: "pointer",
+                                  padding: "2px 3px",
+                                  display: "grid",
+                                  placeItems: "center",
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                                onMouseLeave={(e) => (e.currentTarget.style.opacity = les.watched ? "0.6" : "0.3")}
+                              >
+                                {les.watched ? <Eye size={12} /> : <EyeOff size={12} />}
+                              </button>
+                            )}
+
+                            {onDeleteLesson && (
+                              <button
+                                type="button"
+                                title={`Delete ${les.title}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteLesson(modIdx, lesIdx);
+                                }}
+                                style={{
+                                  border: "none",
+                                  background: "transparent",
+                                  color: isSelected ? "#F3F0E8" : "#991B1B",
+                                  opacity: 0.35,
+                                  cursor: "pointer",
+                                  fontSize: "11px",
+                                  padding: "2px 3px",
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Drop Target Indicator Line (After) */}
@@ -645,6 +850,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
 
       {/* Sidebar Footer Action Buttons */}
       <div style={{ padding: "16px 18px 0", marginTop: "12px", borderTop: "2px solid rgba(10,10,10,0.14)", flexShrink: 0 }}>
+        {/* Add Page Button */}
         <button
           type="button"
           onClick={onNewPage}
@@ -660,13 +866,44 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             padding: "9px",
             cursor: "pointer",
             boxShadow: "3px 3px 0 #0A0A0A",
-            marginBottom: "10px",
+            marginBottom: "8px",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
         >
           ＋ ADD A PAGE
         </button>
+
+        {/* Add Module Button */}
+        {onCreateModule && (
+          <button
+            type="button"
+            onClick={onCreateModule}
+            style={{
+              width: "100%",
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "10px",
+              fontWeight: 700,
+              letterSpacing: "0.13em",
+              border: "2px solid #0A0A0A",
+              background: "#B8F04A",
+              color: "#0A0A0A",
+              padding: "9px",
+              cursor: "pointer",
+              boxShadow: "3px 3px 0 #0A0A0A",
+              marginBottom: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "5px",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#A3E635")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#B8F04A")}
+          >
+            <FolderPlus size={12} />
+            <span>＋ ADD A MODULE</span>
+          </button>
+        )}
 
         <button
           type="button"

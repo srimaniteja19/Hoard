@@ -8,6 +8,7 @@ import {
   notebookCollisions,
   NotebookCourseRow,
   NotebookModuleRow,
+  NewNotebookModuleRow,
   NotebookLessonRow,
   NotebookPageRow,
   NotebookTranscriptRow,
@@ -419,6 +420,9 @@ export async function updateCourse(
 /**
  * Deletes a course (cascades all modules, lessons, pages).
  */
+/**
+ * Deletes a course (cascades all modules, lessons, pages).
+ */
 export async function deleteCourse(userId: string, courseId: string): Promise<boolean> {
   const res = await db
     .delete(notebookCourses)
@@ -434,13 +438,151 @@ export async function deleteCourse(userId: string, courseId: string): Promise<bo
 }
 
 /**
+ * Creates a new module inside a course.
+ */
+export async function createModule(
+  userId: string,
+  courseId: string,
+  title: string,
+  targetPosition?: number
+): Promise<SeedCourseModule | null> {
+  const [course] = await db
+    .select({ id: notebookCourses.id })
+    .from(notebookCourses)
+    .where(
+      and(
+        courseIdFilter(userId, courseId),
+        eq(notebookCourses.userId, userId)
+      )
+    )
+    .limit(1);
+
+  if (!course) return null;
+
+  const existingModules = await db
+    .select({ id: notebookModules.id, position: notebookModules.position })
+    .from(notebookModules)
+    .where(eq(notebookModules.courseId, course.id))
+    .orderBy(asc(notebookModules.position));
+
+  let position = existingModules.length;
+  if (typeof targetPosition === "number" && targetPosition >= 0 && targetPosition <= existingModules.length) {
+    position = targetPosition;
+    for (const m of existingModules) {
+      if (m.position >= position) {
+        await db
+          .update(notebookModules)
+          .set({ position: m.position + 1 })
+          .where(eq(notebookModules.id, m.id));
+      }
+    }
+  }
+
+  const moduleId = crypto.randomUUID();
+  await db.insert(notebookModules).values({
+    id: moduleId,
+    courseId: course.id,
+    title: title.trim(),
+    position,
+  });
+
+  return {
+    id: moduleId,
+    title: title.trim(),
+    lessons: [],
+  };
+}
+
+/**
+ * Updates a module (rename / reorder).
+ */
+export async function updateModule(
+  userId: string,
+  moduleId: string,
+  updates: { title?: string; position?: number }
+): Promise<boolean> {
+  const [mod] = await db
+    .select({ id: notebookModules.id })
+    .from(notebookModules)
+    .innerJoin(notebookCourses, eq(notebookModules.courseId, notebookCourses.id))
+    .where(
+      and(
+        moduleIdFilter(userId, moduleId),
+        eq(notebookCourses.userId, userId)
+      )
+    )
+    .limit(1);
+
+  if (!mod) return false;
+
+  const patch: Partial<NewNotebookModuleRow> = {};
+  if (typeof updates.title === "string" && updates.title.trim()) {
+    patch.title = updates.title.trim();
+  }
+  if (typeof updates.position === "number") {
+    patch.position = updates.position;
+  }
+
+  if (Object.keys(patch).length === 0) return true;
+
+  const res = await db
+    .update(notebookModules)
+    .set(patch)
+    .where(eq(notebookModules.id, mod.id))
+    .returning({ id: notebookModules.id });
+
+  return res.length > 0;
+}
+
+/**
+ * Deletes a module and cascades all its lessons and pages.
+ */
+export async function deleteModule(userId: string, moduleId: string): Promise<boolean> {
+  const [mod] = await db
+    .select({ id: notebookModules.id, courseId: notebookModules.courseId })
+    .from(notebookModules)
+    .innerJoin(notebookCourses, eq(notebookModules.courseId, notebookCourses.id))
+    .where(
+      and(
+        moduleIdFilter(userId, moduleId),
+        eq(notebookCourses.userId, userId)
+      )
+    )
+    .limit(1);
+
+  if (!mod) return false;
+
+  const res = await db
+    .delete(notebookModules)
+    .where(eq(notebookModules.id, mod.id))
+    .returning({ id: notebookModules.id });
+
+  // Re-index remaining modules for clean sequence
+  const remaining = await db
+    .select({ id: notebookModules.id })
+    .from(notebookModules)
+    .where(eq(notebookModules.courseId, mod.courseId))
+    .orderBy(asc(notebookModules.position), asc(notebookModules.createdAt));
+
+  for (let i = 0; i < remaining.length; i++) {
+    await db
+      .update(notebookModules)
+      .set({ position: i })
+      .where(eq(notebookModules.id, remaining[i].id));
+  }
+
+  return res.length > 0;
+}
+
+/**
  * Creates a new lesson / page inside a module.
  */
 export async function createLesson(
   userId: string,
   moduleId: string,
   title: string,
-  blocks?: Block[]
+  blocks?: Block[],
+  targetPosition?: number
 ): Promise<SeedCourseLesson | null> {
   // Verify user owns the parent course of this module
   const [mod] = await db
@@ -459,11 +601,24 @@ export async function createLesson(
 
   // Count existing lessons to determine position
   const existing = await db
-    .select({ id: notebookLessons.id })
+    .select({ id: notebookLessons.id, position: notebookLessons.position })
     .from(notebookLessons)
-    .where(eq(notebookLessons.moduleId, mod.moduleId));
+    .where(eq(notebookLessons.moduleId, mod.moduleId))
+    .orderBy(asc(notebookLessons.position));
 
-  const position = existing.length;
+  let position = existing.length;
+  if (typeof targetPosition === "number" && targetPosition >= 0 && targetPosition <= existing.length) {
+    position = targetPosition;
+    for (const l of existing) {
+      if (l.position >= position) {
+        await db
+          .update(notebookLessons)
+          .set({ position: l.position + 1 })
+          .where(eq(notebookLessons.id, l.id));
+      }
+    }
+  }
+
   const lessonId = crypto.randomUUID();
   const initialBlocks = blocks || [{ id: generateBlockId(), type: "paragraph", text: "" }];
   const wordCount = computeWordCount(initialBlocks);

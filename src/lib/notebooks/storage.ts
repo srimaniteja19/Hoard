@@ -529,19 +529,114 @@ export async function deleteCourseFromDbApi(courseId: string): Promise<boolean> 
 }
 
 /**
+ * Creates a new module in a course in PostgreSQL
+ */
+export async function createModuleInDbApi(
+  courseId: string,
+  title: string,
+  targetPosition?: number
+): Promise<any | null> {
+  try {
+    setSyncStatus("saving");
+    const res = await fetch("/api/notebooks/modules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseId, title, targetPosition }),
+    });
+    if (!res.ok) {
+      setSyncStatus("error");
+      return null;
+    }
+    const json = await res.json();
+    setSyncStatus("saved");
+    if (json.module) {
+      broadcastRealtimeEvent({
+        type: "MODULE_CREATED",
+        courseId,
+        module: json.module,
+      });
+    }
+    return json.module || null;
+  } catch (err) {
+    console.error("[createModuleInDbApi] Failed:", err);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
+    return null;
+  }
+}
+
+/**
+ * Updates a module in PostgreSQL
+ */
+export async function updateModuleInDbApi(
+  moduleId: string,
+  updates: { title?: string; position?: number }
+): Promise<boolean> {
+  try {
+    setSyncStatus("saving");
+    const res = await fetch(`/api/notebooks/modules/${encodeURIComponent(moduleId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    if (res.ok) {
+      setSyncStatus("saved");
+      broadcastRealtimeEvent({
+        type: "MODULE_UPDATED",
+        moduleId,
+        title: updates.title,
+      });
+      return true;
+    }
+    setSyncStatus("error");
+    return false;
+  } catch (err) {
+    console.error("[updateModuleInDbApi] Failed:", err);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
+    return false;
+  }
+}
+
+/**
+ * Deletes a module and all its lessons in PostgreSQL
+ */
+export async function deleteModuleInDbApi(moduleId: string): Promise<boolean> {
+  try {
+    setSyncStatus("saving");
+    const res = await fetch(`/api/notebooks/modules/${encodeURIComponent(moduleId)}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      setSyncStatus("saved");
+      broadcastRealtimeEvent({
+        type: "MODULE_DELETED",
+        moduleId,
+      });
+      return true;
+    }
+    setSyncStatus("error");
+    return false;
+  } catch (err) {
+    console.error("[deleteModuleInDbApi] Failed:", err);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
+    return false;
+  }
+}
+
+/**
  * Creates a new lesson/page in PostgreSQL
  */
 export async function createLessonInDbApi(
   moduleId: string,
   title: string,
-  blocks?: Block[]
+  blocks?: Block[],
+  targetPosition?: number
 ): Promise<any | null> {
   try {
     setSyncStatus("saving");
     const res = await fetch("/api/notebooks/lessons", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ moduleId, title, blocks }),
+      body: JSON.stringify({ moduleId, title, blocks, targetPosition }),
     });
     if (!res.ok) {
       setSyncStatus("error");

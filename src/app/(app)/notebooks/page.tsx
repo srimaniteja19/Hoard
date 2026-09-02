@@ -23,13 +23,16 @@ import {
   reorderLessonsInMemory,
   reorderLessonsInDbApi,
   duplicateLessonInDbApi,
+  createModuleInDbApi,
+  updateModuleInDbApi,
+  deleteModuleInDbApi,
 } from "@/lib/notebooks/storage";
 import {
   subscribeToRealtimeEvents,
   broadcastRealtimeEvent,
   setSyncStatus,
 } from "@/lib/notebooks/realtime";
-import { SeedCourse, SeedCourseLesson } from "@/lib/notebooks/seedData";
+import { SeedCourse, SeedCourseLesson, SeedCourseModule } from "@/lib/notebooks/seedData";
 import { Block, computeWordCount, generateBlockId, convertBlocksToMarkdown } from "@/lib/notebooks/blocks";
 import { CourseCard } from "@/components/notebooks/CourseCard";
 import { OutlineSidebar } from "@/components/notebooks/OutlineSidebar";
@@ -44,8 +47,11 @@ import { ExplainModal } from "@/components/notebooks/ExplainModal";
 import { TranscriptModal } from "@/components/notebooks/TranscriptModal";
 import { AddCourseModal } from "@/components/notebooks/AddCourseModal";
 import { EditCourseModal } from "@/components/notebooks/EditCourseModal";
+import { AddModuleModal } from "@/components/notebooks/AddModuleModal";
 import { AddPageModal } from "@/components/notebooks/AddPageModal";
 import { ConfirmModal } from "@/components/notebooks/ConfirmModal";
+import { QuickSwitcherModal } from "@/components/notebooks/QuickSwitcherModal";
+import { FlashcardModal } from "@/components/notebooks/FlashcardModal";
 import { playSound } from "@/lib/sound";
 import {
   Plus,
@@ -58,6 +64,14 @@ import {
   FileText,
   Sparkles,
   Link as LinkIcon,
+  Maximize2,
+  Minimize2,
+  Printer,
+  Layers,
+  Search,
+  ArrowUp,
+  ArrowDown,
+  FolderPlus,
 } from "lucide-react";
 
 export default function NotebooksPage() {
@@ -86,7 +100,9 @@ export default function NotebooksPage() {
   const [showAddCourseModal, setShowAddCourseModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<SeedCourse | null>(null);
   const [showEditCourseModal, setShowEditCourseModal] = useState(false);
+  const [showAddModuleModal, setShowAddModuleModal] = useState(false);
   const [showAddPageModal, setShowAddPageModal] = useState(false);
+  const [addPageContext, setAddPageContext] = useState<{ modIdx: number; targetPosition?: number } | null>(null);
   const [confirmModalState, setConfirmModalState] = useState<{
     isOpen: boolean;
     title: string;
@@ -128,6 +144,26 @@ export default function NotebooksPage() {
   const [urlDraft, setUrlDraft] = useState("");
   const [copiedMarkdownToast, setCopiedMarkdownToast] = useState(false);
   const [showToc, setShowToc] = useState(false);
+
+  // Focus Mode, Quick Switcher, Flashcard, & Deep Search States
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [showQuickSwitcher, setShowQuickSwitcher] = useState(false);
+  const [showFlashcardModal, setShowFlashcardModal] = useState(false);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState("");
+
+  // Global Keyboard Shortcuts (Cmd+K / Ctrl+K for Quick Switcher, Escape for Focus mode)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setShowQuickSwitcher((prev) => !prev);
+      } else if (e.key === "Escape" && isFocusMode) {
+        setIsFocusMode(false);
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [isFocusMode]);
 
   // Tracks a write (PATCH) that has already been dispatched to the server but
   // hasn't resolved yet. A refetch-and-overwrite (visibilitychange, online,
@@ -822,14 +858,110 @@ export default function NotebooksPage() {
     });
   };
 
+  // Module Management Handlers
+  const handleCreateModule = async (title: string) => {
+    if (!currentCourse) return;
+    const createdMod = await createModuleInDbApi(currentCourse.id, title);
+    const newModule: SeedCourseModule = createdMod || {
+      id: "mod-" + Date.now().toString(36),
+      title: title.trim(),
+      lessons: [],
+    };
+
+    const updated = courses.map((c) => {
+      if (c.id === currentCourse.id) {
+        return {
+          ...c,
+          modules: [...c.modules, newModule],
+        };
+      }
+      return c;
+    });
+
+    saveStoredCourses(updated);
+    setCourses(updated);
+    setCurrentModuleIdx(currentCourse.modules.length);
+    setCurrentLessonIdx(0);
+    setShowAddModuleModal(false);
+    playSound.fileIt();
+  };
+
+  const handleRenameModule = (modIdx: number, newTitle: string) => {
+    if (!currentCourse) return;
+    const targetMod = currentCourse.modules[modIdx];
+    if (!targetMod || !newTitle.trim()) return;
+    const title = newTitle.trim();
+
+    const updated = courses.map((c) => {
+      if (c.id === currentCourse.id) {
+        return {
+          ...c,
+          modules: c.modules.map((m, mIdx) => (mIdx === modIdx ? { ...m, title } : m)),
+        };
+      }
+      return c;
+    });
+
+    saveStoredCourses(updated);
+    setCourses(updated);
+    updateModuleInDbApi(targetMod.id, { title });
+    playSound.click();
+  };
+
+  const handleDeleteModule = (modIdx: number) => {
+    if (!currentCourse) return;
+    const targetMod = currentCourse.modules[modIdx];
+    if (!targetMod) return;
+
+    playSound.pop();
+    setConfirmModalState({
+      isOpen: true,
+      title: `DELETE "${targetMod.title.toUpperCase()}"?`,
+      description: `This will permanently delete this module and all ${targetMod.lessons.length} pages inside it. This action cannot be undone.`,
+      confirmLabel: "DELETE MODULE",
+      confirmVariant: "danger",
+      onConfirm: () => {
+        const updated = courses.map((c) => {
+          if (c.id === currentCourse.id) {
+            return {
+              ...c,
+              modules: c.modules.filter((_, mIdx) => mIdx !== modIdx),
+            };
+          }
+          return c;
+        });
+
+        saveStoredCourses(updated);
+        setCourses(updated);
+        deleteModuleInDbApi(targetMod.id);
+        setCurrentModuleIdx(Math.max(0, modIdx - 1));
+        setCurrentLessonIdx(0);
+        setConfirmModalState((prev) => ({ ...prev, isOpen: false }));
+        playSound.fileIt();
+      },
+    });
+  };
+
+  // Create Lesson Above / Below Handlers
+  const handleCreateLessonAbove = (modIdx: number, lesIdx: number) => {
+    setAddPageContext({ modIdx, targetPosition: lesIdx });
+    setShowAddPageModal(true);
+  };
+
+  const handleCreateLessonBelow = (modIdx: number, lesIdx: number) => {
+    setAddPageContext({ modIdx, targetPosition: lesIdx + 1 });
+    setShowAddPageModal(true);
+  };
+
   const handleCreatePage = async (newTitle: string) => {
     if (!currentCourse) return;
-    const targetModIdx = currentModule ? currentModuleIdx : 0;
+    const targetModIdx = addPageContext ? addPageContext.modIdx : currentModule ? currentModuleIdx : 0;
     const targetMod = currentCourse.modules[targetModIdx];
     if (!targetMod) return;
 
-    const createdLesson = await createLessonInDbApi(targetMod.id, newTitle);
-    const newLesson = createdLesson || {
+    const targetPos = addPageContext?.targetPosition ?? targetMod.lessons.length;
+    const createdLesson = await createLessonInDbApi(targetMod.id, newTitle, undefined, targetPos);
+    const newLesson: SeedCourseLesson = createdLesson || {
       id: "les-" + Date.now().toString(36),
       title: newTitle,
       watched: false,
@@ -837,11 +969,28 @@ export default function NotebooksPage() {
       blocks: [{ id: generateBlockId(), type: "paragraph" as const, text: "" }],
     };
 
-    targetMod.lessons.push(newLesson);
-    saveStoredCourses(courses);
-    setCourses([...courses]);
+    const updated = courses.map((c) => {
+      if (c.id === currentCourse.id) {
+        return {
+          ...c,
+          modules: c.modules.map((m, mIdx) => {
+            if (mIdx === targetModIdx) {
+              const nextLessons = [...m.lessons];
+              nextLessons.splice(targetPos, 0, newLesson);
+              return { ...m, lessons: nextLessons };
+            }
+            return m;
+          }),
+        };
+      }
+      return c;
+    });
+
+    saveStoredCourses(updated);
+    setCourses(updated);
     setCurrentModuleIdx(targetModIdx);
-    setCurrentLessonIdx(targetMod.lessons.length - 1);
+    setCurrentLessonIdx(targetPos);
+    setAddPageContext(null);
     setShowAddPageModal(false);
   };
 
@@ -988,6 +1137,85 @@ export default function NotebooksPage() {
     playSound.click();
   };
 
+  // Deep Full-Text Search across all courses, modules, lessons, and block text
+  const globalSearchResults = React.useMemo(() => {
+    if (!globalSearchQuery.trim()) return [];
+    const q = globalSearchQuery.toLowerCase();
+    const results: {
+      courseIdx: number;
+      courseTitle: string;
+      courseAccent: string;
+      courseAccentFg: string;
+      moduleIdx: number;
+      moduleTitle: string;
+      lessonIdx: number;
+      lessonTitle: string;
+      matchSnippet: string;
+      matchType: string;
+      wordCount: number;
+    }[] = [];
+
+    courses.forEach((c, cIdx) => {
+      c.modules.forEach((m, mIdx) => {
+        m.lessons.forEach((l, lIdx) => {
+          const wc = computeWordCount(l.blocks || []);
+
+          // Check lesson title
+          if (l.title.toLowerCase().includes(q)) {
+            results.push({
+              courseIdx: cIdx,
+              courseTitle: c.title,
+              courseAccent: c.accent,
+              courseAccentFg: c.accentFg,
+              moduleIdx: mIdx,
+              moduleTitle: m.title.split(" · ")[0] || m.title,
+              lessonIdx: lIdx,
+              lessonTitle: l.title,
+              matchSnippet: `Page title match: "${l.title}"`,
+              matchType: "PAGE TITLE",
+              wordCount: wc,
+            });
+            return;
+          }
+
+          // Check blocks content
+          if (l.blocks) {
+            for (const b of l.blocks) {
+              let text = "";
+              if ("text" in b && typeof (b as any).text === "string") text = (b as any).text;
+              else if (b.type === "code" && b.code) text = b.code;
+              else if (b.type === "toggle") text = `${b.summary} ${b.body}`;
+
+              if (text && text.toLowerCase().includes(q)) {
+                const idx = text.toLowerCase().indexOf(q);
+                const start = Math.max(0, idx - 35);
+                const end = Math.min(text.length, idx + q.length + 55);
+                const snippet = (start > 0 ? "…" : "") + text.slice(start, end) + (end < text.length ? "…" : "");
+
+                results.push({
+                  courseIdx: cIdx,
+                  courseTitle: c.title,
+                  courseAccent: c.accent,
+                  courseAccentFg: c.accentFg,
+                  moduleIdx: mIdx,
+                  moduleTitle: m.title.split(" · ")[0] || m.title,
+                  lessonIdx: lIdx,
+                  lessonTitle: l.title,
+                  matchSnippet: snippet,
+                  matchType: b.type.toUpperCase(),
+                  wordCount: wc,
+                });
+                break;
+              }
+            }
+          }
+        });
+      });
+    });
+
+    return results;
+  }, [courses, globalSearchQuery]);
+
   const isInk = paperTheme === "ink";
 
   return (
@@ -1004,106 +1232,155 @@ export default function NotebooksPage() {
         transition: "background 0.2s ease, color 0.2s ease",
       }}
     >
-      {/* Top Paper Mode Switcher Bar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          fontFamily: "var(--mono, monospace)",
-          fontSize: "10.5px",
-          fontWeight: 700,
-          letterSpacing: "0.15em",
-          padding: "12px clamp(16px, 3vw, 28px)",
-          borderBottom: "3px solid #0A0A0A",
-          background: isInk ? "#0D0F13" : "#F3F0E8",
-          flexShrink: 0,
-          zIndex: 40,
-        }}
-      >
-        {view === "course" && isMobile && (
-          <button
-            type="button"
-            onClick={() => setMobileSidebarOpen(true)}
-            aria-label="Open lesson outline"
-            style={{
-              background: "transparent",
-              border: "2px solid #0A0A0A",
-              color: "inherit",
-              cursor: "pointer",
-              padding: "4px 8px",
-              fontSize: "13px",
-              lineHeight: 1,
-            }}
-          >
-            ☰
-          </button>
-        )}
-        <span
-          onClick={() => setView("index")}
-          style={{ cursor: "pointer", opacity: view === "index" ? 1 : 0.4 }}
-        >
-          NOTEBOOKS
-        </span>
-        {view === "course" && (
-          <>
-            <span style={{ opacity: 0.3 }}>/</span>
-            <span style={{ color: currentCourse?.accent || "inherit" }}>
-              {currentCourse?.title.toUpperCase()}
-            </span>
-          </>
-        )}
-        <span style={{ flex: 1 }} />
-        <SyncStatusPill
-          theme={paperTheme}
-          onRetry={() => {
-            flushOfflineQueueToDbApi();
-            fetchNotebooksFromDbApi().then((dbData) => {
-              if (dbData?.courses && dbData.courses.length > 0) {
-                setCourses(dbData.courses);
-                saveStoredCourses(dbData.courses);
-              }
-            });
+      {/* Print-Only Custom Styles */}
+      <style>{`
+        @media print {
+          aside, nav, header, button, .no-print, [data-no-print] {
+            display: none !important;
+          }
+          body, html, main {
+            background: #FFFFFF !important;
+            color: #000000 !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          main {
+            padding: 0 20px !important;
+          }
+        }
+      `}</style>
+
+      {/* Top Paper Mode & Global Actions Bar (Hidden in Focus Mode) */}
+      {!isFocusMode && (
+        <div
+          className="no-print"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "10.5px",
+            fontWeight: 700,
+            letterSpacing: "0.15em",
+            padding: "12px clamp(16px, 3vw, 28px)",
+            borderBottom: "3px solid #0A0A0A",
+            background: isInk ? "#0D0F13" : "#F3F0E8",
+            flexShrink: 0,
+            zIndex: 40,
           }}
-        />
-        <div style={{ display: "flex", border: "2px solid #0A0A0A" }}>
+        >
+          {view === "course" && isMobile && (
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(true)}
+              aria-label="Open lesson outline"
+              style={{
+                background: "transparent",
+                border: "2px solid #0A0A0A",
+                color: "inherit",
+                cursor: "pointer",
+                padding: "4px 8px",
+                fontSize: "13px",
+                lineHeight: 1,
+              }}
+            >
+              ☰
+            </button>
+          )}
+          <span
+            onClick={() => setView("index")}
+            style={{ cursor: "pointer", opacity: view === "index" ? 1 : 0.4 }}
+          >
+            NOTEBOOKS
+          </span>
+          {view === "course" && (
+            <>
+              <span style={{ opacity: 0.3 }}>/</span>
+              <span style={{ color: currentCourse?.accent || "inherit" }}>
+                {currentCourse?.title.toUpperCase()}
+              </span>
+            </>
+          )}
+          <span style={{ flex: 1 }} />
+
+          {/* Quick Jump / Switcher Button (Cmd + K) */}
           <button
             type="button"
-            onClick={() => handleToggleTheme("cream")}
+            onClick={() => setShowQuickSwitcher(true)}
+            title="Quick Jump across all notes (Cmd+K)"
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
               fontFamily: "var(--mono, monospace)",
               fontSize: "9px",
               fontWeight: 700,
-              letterSpacing: "0.12em",
-              border: "none",
-              borderRight: "2px solid #0A0A0A",
-              background: !isInk ? "#0A0A0A" : "transparent",
-              color: !isInk ? "#F3F0E8" : "#F0EDE4",
+              letterSpacing: "0.1em",
+              border: "2px solid #0A0A0A",
+              background: "#FFFFFF",
+              color: "#0A0A0A",
               padding: "4px 9px",
               cursor: "pointer",
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
           >
-            CREAM
+            <Search size={11} />
+            <span>QUICK JUMP</span>
+            <span style={{ opacity: 0.5, fontSize: "8.5px" }}>⌘K</span>
           </button>
-          <button
-            type="button"
-            onClick={() => handleToggleTheme("ink")}
-            style={{
-              fontFamily: "var(--mono, monospace)",
-              fontSize: "9px",
-              fontWeight: 700,
-              letterSpacing: "0.12em",
-              border: "none",
-              background: isInk ? "#0A0A0A" : "transparent",
-              color: isInk ? "#B8F04A" : "#0A0A0A",
-              padding: "4px 9px",
-              cursor: "pointer",
+
+          <SyncStatusPill
+            theme={paperTheme}
+            onRetry={() => {
+              flushOfflineQueueToDbApi();
+              fetchNotebooksFromDbApi().then((dbData) => {
+                if (dbData?.courses && dbData.courses.length > 0) {
+                  setCourses(dbData.courses);
+                  saveStoredCourses(dbData.courses);
+                }
+              });
             }}
-          >
-            INK
-          </button>
+          />
+          <div style={{ display: "flex", border: "2px solid #0A0A0A" }}>
+            <button
+              type="button"
+              onClick={() => handleToggleTheme("cream")}
+              style={{
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "9px",
+                fontWeight: 700,
+                letterSpacing: "0.12em",
+                border: "none",
+                borderRight: "2px solid #0A0A0A",
+                background: !isInk ? "#0A0A0A" : "transparent",
+                color: !isInk ? "#F3F0E8" : "#F0EDE4",
+                padding: "4px 9px",
+                cursor: "pointer",
+              }}
+            >
+              CREAM
+            </button>
+            <button
+              type="button"
+              onClick={() => handleToggleTheme("ink")}
+              style={{
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "9px",
+                fontWeight: 700,
+                letterSpacing: "0.12em",
+                border: "none",
+                background: isInk ? "#0A0A0A" : "transparent",
+                color: isInk ? "#B8F04A" : "#0A0A0A",
+                padding: "4px 9px",
+                cursor: "pointer",
+              }}
+            >
+              INK
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ══════════ 1. INDEX VIEW ══════════ */}
       {view === "index" && (
@@ -1115,7 +1392,7 @@ export default function NotebooksPage() {
               justifyContent: "space-between",
               gap: "22px",
               flexWrap: "wrap",
-              marginBottom: "30px",
+              marginBottom: "26px",
             }}
           >
             <div>
@@ -1168,53 +1445,241 @@ export default function NotebooksPage() {
             </button>
           </div>
 
-          {/* Courses Grid */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-              gap: "24px",
-              marginBottom: "40px",
-            }}
-          >
-            {courses.map((course, idx) => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                onClick={() => handleSelectCourseFromCard(idx)}
-                onEdit={() => handleStartEditCourse(course)}
-                onDelete={() => handleStartDeleteCourse(course)}
-              />
-            ))}
-
-            {/* Add Course Dashed Card */}
+          {/* Deep Global Full-Text Search Bar */}
+          <div style={{ marginBottom: "28px" }}>
             <div
-              onClick={handleAddCourse}
               style={{
-                border: "3px dashed rgba(10,10,10,0.3)",
-                background: "transparent",
-                minHeight: "250px",
-                display: "grid",
-                placeItems: "center",
-                cursor: "pointer",
-                transition: "background 0.15s ease",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                border: "3px solid #0A0A0A",
+                background: "#FFFFFF",
+                boxShadow: "5px 5px 0 #0A0A0A",
+                padding: "12px 18px",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(252,233,79,0.2)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
-              <span
+              <Search size={18} style={{ opacity: 0.5, flexShrink: 0, color: "#0A0A0A" }} />
+              <input
+                type="text"
+                value={globalSearchQuery}
+                onChange={(e) => setGlobalSearchQuery(e.target.value)}
+                placeholder="Deep search across all notes, blocks, code snippets, and callouts…"
                 style={{
-                  fontFamily: "var(--mono, monospace)",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  letterSpacing: "0.16em",
-                  opacity: 0.5,
+                  width: "100%",
+                  border: "none",
+                  background: "transparent",
+                  fontFamily: "var(--body, 'Space Grotesk', sans-serif)",
+                  fontSize: "15px",
+                  fontWeight: 600,
+                  color: "#0A0A0A",
+                  outline: "none",
                 }}
-              >
-                ＋ ADD A COURSE
-              </span>
+              />
+              {globalSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setGlobalSearchQuery("")}
+                  style={{
+                    border: "none",
+                    background: "#0A0A0A",
+                    color: "#F3F0E8",
+                    cursor: "pointer",
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "9.5px",
+                    fontWeight: 700,
+                    padding: "4px 8px",
+                  }}
+                >
+                  CLEAR
+                </button>
+              )}
             </div>
           </div>
+
+          {/* Deep Search Results View (If Search Active) */}
+          {globalSearchQuery.trim() ? (
+            <div style={{ marginBottom: "40px" }}>
+              <div
+                style={{
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "10px",
+                  fontWeight: 800,
+                  letterSpacing: "0.15em",
+                  opacity: 0.6,
+                  marginBottom: "14px",
+                }}
+              >
+                MATCHING SEARCH RESULTS ({globalSearchResults.length})
+              </div>
+
+              {globalSearchResults.length === 0 ? (
+                <div
+                  style={{
+                    padding: "40px 20px",
+                    border: "2px dashed rgba(10,10,10,0.25)",
+                    textAlign: "center",
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "11px",
+                    opacity: 0.5,
+                  }}
+                >
+                  NO NOTES FOUND MATCHING &quot;{globalSearchQuery}&quot;
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "16px" }}>
+                  {globalSearchResults.map((res, rIdx) => (
+                    <div
+                      key={rIdx}
+                      onClick={() => {
+                        playSound.click();
+                        setCurrentCourseIdx(res.courseIdx);
+                        setCurrentModuleIdx(res.moduleIdx);
+                        setCurrentLessonIdx(res.lessonIdx);
+                        setView("course");
+                      }}
+                      style={{
+                        border: "3px solid #0A0A0A",
+                        background: "#FFFFFF",
+                        boxShadow: "4px 4px 0 #0A0A0A",
+                        padding: "16px",
+                        cursor: "pointer",
+                        color: "#0A0A0A",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                        transition: "transform 0.1s ease, box-shadow 0.1s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "translate(-2px, -2px)";
+                        e.currentTarget.style.boxShadow = "6px 6px 0 #0A0A0A";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "none";
+                        e.currentTarget.style.boxShadow = "4px 4px 0 #0A0A0A";
+                      }}
+                    >
+                      <div>
+                        {/* Course & Match Type Badges */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                          <span
+                            style={{
+                              fontFamily: "var(--mono, monospace)",
+                              fontSize: "8.5px",
+                              fontWeight: 700,
+                              background: res.courseAccent,
+                              color: res.courseAccentFg,
+                              padding: "2px 6px",
+                              border: "1px solid #0A0A0A",
+                            }}
+                          >
+                            {res.courseTitle.toUpperCase()}
+                          </span>
+                          <span
+                            style={{
+                              fontFamily: "var(--mono, monospace)",
+                              fontSize: "8.5px",
+                              fontWeight: 700,
+                              background: "#EBE7DC",
+                              padding: "2px 5px",
+                            }}
+                          >
+                            {res.matchType}
+                          </span>
+                        </div>
+
+                        {/* Title & Module */}
+                        <h4 style={{ margin: "0 0 4px", fontSize: "16px", fontWeight: 700 }}>
+                          {res.lessonTitle}
+                        </h4>
+                        <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "9px", opacity: 0.5, marginBottom: "10px" }}>
+                          {res.moduleTitle}
+                        </div>
+
+                        {/* Snippet */}
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            lineHeight: 1.4,
+                            background: "#F7F5EE",
+                            border: "1px solid rgba(10,10,10,0.15)",
+                            padding: "8px 10px",
+                            fontFamily: "var(--body, sans-serif)",
+                            fontStyle: "italic",
+                          }}
+                        >
+                          &quot;{res.matchSnippet}&quot;
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: "12px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "8.5px",
+                          fontWeight: 700,
+                          opacity: 0.6,
+                        }}
+                      >
+                        <span>{res.wordCount} WORDS</span>
+                        <span style={{ color: "#0A0A0A", fontWeight: 800 }}>OPEN NOTE →</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Courses Grid */
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+                gap: "24px",
+                marginBottom: "40px",
+              }}
+            >
+              {courses.map((course, idx) => (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  onClick={() => handleSelectCourseFromCard(idx)}
+                  onEdit={() => handleStartEditCourse(course)}
+                  onDelete={() => handleStartDeleteCourse(course)}
+                />
+              ))}
+
+              {/* Add Course Dashed Card */}
+              <div
+                onClick={handleAddCourse}
+                style={{
+                  border: "3px dashed rgba(10,10,10,0.3)",
+                  background: "transparent",
+                  minHeight: "250px",
+                  display: "grid",
+                  placeItems: "center",
+                  cursor: "pointer",
+                  transition: "background 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(252,233,79,0.2)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <span
+                  style={{
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    letterSpacing: "0.16em",
+                    opacity: 0.5,
+                  }}
+                >
+                  ＋ ADD A COURSE
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1223,7 +1688,7 @@ export default function NotebooksPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "300px minmax(0, 1fr)",
+            gridTemplateColumns: isFocusMode ? "1fr" : isMobile ? "1fr" : "300px minmax(0, 1fr)",
             flex: 1,
             minHeight: 0,
             height: "100%",
@@ -1231,10 +1696,52 @@ export default function NotebooksPage() {
             position: "relative",
           }}
         >
+          {/* Floating Exit Focus Mode Button */}
+          {isFocusMode && (
+            <button
+              type="button"
+              onClick={() => setIsFocusMode(false)}
+              title="Exit Focus Mode (ESC)"
+              className="no-print"
+              style={{
+                position: "fixed",
+                top: "18px",
+                right: "24px",
+                zIndex: 99999,
+                background: "#0A0A0A",
+                color: "#F3F0E8",
+                border: "2px solid #0A0A0A",
+                boxShadow: "3px 3px 0 rgba(0,0,0,0.2)",
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "9.5px",
+                fontWeight: 800,
+                letterSpacing: "0.12em",
+                padding: "7px 14px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                animation: "fadeIn 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#FCE94F";
+                e.currentTarget.style.color = "#0A0A0A";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#0A0A0A";
+                e.currentTarget.style.color = "#F3F0E8";
+              }}
+            >
+              <Minimize2 size={12} />
+              <span>EXIT FOCUS</span>
+              <span style={{ opacity: 0.5, fontSize: "8.5px" }}>ESC</span>
+            </button>
+          )}
+
           {/* On mobile the sidebar becomes an off-canvas drawer instead of a
               permanent 300px column — there's no room for both next to any
               usable amount of note content below ~860px. */}
-          {isMobile && mobileSidebarOpen && (
+          {!isFocusMode && isMobile && mobileSidebarOpen && (
             <div
               onClick={() => setMobileSidebarOpen(false)}
               style={{
@@ -1249,62 +1756,81 @@ export default function NotebooksPage() {
           {/* Outline Sidebar — a normal grid column on desktop, a sliding
               off-canvas drawer on mobile (closes itself after a selection,
               same as any mobile nav drawer). */}
-          <div
-            style={
-              isMobile
-                ? {
-                    position: "fixed",
-                    top: 0,
-                    bottom: 0,
-                    left: 0,
-                    width: "min(300px, 85vw)",
-                    zIndex: 71,
-                    transform: mobileSidebarOpen ? "translateX(0)" : "translateX(-100%)",
-                    transition: "transform 0.22s ease",
-                    boxShadow: mobileSidebarOpen ? "8px 0 24px rgba(0,0,0,0.35)" : "none",
-                  }
-                : {
-                    height: "100%",
-                    minHeight: 0,
-                    overflow: "hidden",
-                    display: "flex",
-                    flexDirection: "column",
-                  }
-            }
-          >
-            <OutlineSidebar
-              courses={courses}
-              currentCourseIndex={currentCourseIdx}
-              currentModuleIndex={currentModuleIdx}
-              currentLessonIndex={currentLessonIdx}
-              onSelectCourse={(idx) => {
-                setCurrentCourseIdx(idx);
-                setCurrentModuleIdx(0);
-                setCurrentLessonIdx(0);
-                if (isMobile) setMobileSidebarOpen(false);
-              }}
-              onSelectLesson={(modIdx, lesIdx) => {
-                setCurrentModuleIdx(modIdx);
-                setCurrentLessonIdx(lesIdx);
-                if (isMobile) setMobileSidebarOpen(false);
-              }}
-              onReorderLesson={handleReorderLesson}
-              onDuplicateLesson={handleDuplicateLesson}
-              onDeleteLesson={handleDeleteLesson}
-              onToggleWatched={handleToggleWatched}
-              onEditCourse={() => handleStartEditCourse(currentCourse)}
-              onDeleteCourse={() => handleStartDeleteCourse(currentCourse)}
-              onBackToIndex={() => {
-                setView("index");
-                if (isMobile) setMobileSidebarOpen(false);
-              }}
-              onNewPage={() => {
-                playSound.click();
-                setShowAddPageModal(true);
-                if (isMobile) setMobileSidebarOpen(false);
-              }}
-            />
-          </div>
+          {!isFocusMode && (
+            <div
+              className="no-print"
+              style={
+                isMobile
+                  ? {
+                      position: "fixed",
+                      top: 0,
+                      bottom: 0,
+                      left: 0,
+                      width: "min(300px, 85vw)",
+                      zIndex: 71,
+                      transform: mobileSidebarOpen ? "translateX(0)" : "translateX(-100%)",
+                      transition: "transform 0.22s ease",
+                      boxShadow: mobileSidebarOpen ? "8px 0 24px rgba(0,0,0,0.35)" : "none",
+                    }
+                  : {
+                      height: "100%",
+                      minHeight: 0,
+                      overflow: "hidden",
+                      display: "flex",
+                      flexDirection: "column",
+                    }
+              }
+            >
+              <OutlineSidebar
+                courses={courses}
+                currentCourseIndex={currentCourseIdx}
+                currentModuleIndex={currentModuleIdx}
+                currentLessonIndex={currentLessonIdx}
+                onSelectCourse={(idx) => {
+                  setCurrentCourseIdx(idx);
+                  setCurrentModuleIdx(0);
+                  setCurrentLessonIdx(0);
+                  if (isMobile) setMobileSidebarOpen(false);
+                }}
+                onSelectLesson={(modIdx, lesIdx) => {
+                  setCurrentModuleIdx(modIdx);
+                  setCurrentLessonIdx(lesIdx);
+                  if (isMobile) setMobileSidebarOpen(false);
+                }}
+                onReorderLesson={handleReorderLesson}
+                onDuplicateLesson={handleDuplicateLesson}
+                onCreateLessonAbove={handleCreateLessonAbove}
+                onCreateLessonBelow={handleCreateLessonBelow}
+                onDeleteLesson={handleDeleteLesson}
+                onToggleWatched={handleToggleWatched}
+                onCreateModule={() => {
+                  playSound.click();
+                  setShowAddModuleModal(true);
+                  if (isMobile) setMobileSidebarOpen(false);
+                }}
+                onRenameModule={handleRenameModule}
+                onDeleteModule={handleDeleteModule}
+                onNewPageInModule={(modIdx) => {
+                  playSound.click();
+                  setAddPageContext({ modIdx });
+                  setShowAddPageModal(true);
+                  if (isMobile) setMobileSidebarOpen(false);
+                }}
+                onEditCourse={() => handleStartEditCourse(currentCourse)}
+                onDeleteCourse={() => handleStartDeleteCourse(currentCourse)}
+                onBackToIndex={() => {
+                  setView("index");
+                  if (isMobile) setMobileSidebarOpen(false);
+                }}
+                onNewPage={() => {
+                  playSound.click();
+                  setAddPageContext({ modIdx: currentModuleIdx });
+                  setShowAddPageModal(true);
+                  if (isMobile) setMobileSidebarOpen(false);
+                }}
+              />
+            </div>
+          )}
 
           {/* Main Notebook Page Area */}
           <main
@@ -1609,7 +2135,95 @@ export default function NotebooksPage() {
                 </div>
 
                 {/* Page Action Bar */}
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                <div className="no-print" style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                  {/* Focus / Zen Mode Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound.click();
+                      setIsFocusMode(!isFocusMode);
+                    }}
+                    title="Toggle Zen Focus Mode (ESC to exit)"
+                    style={{
+                      border: "1.5px solid rgba(10,10,10,0.3)",
+                      background: isFocusMode ? "#0A0A0A" : "transparent",
+                      color: isFocusMode ? "#F3F0E8" : "inherit",
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      padding: "4px 8px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isFocusMode) e.currentTarget.style.background = "#FCE94F";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isFocusMode) e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    <Maximize2 size={11} />
+                    FOCUS
+                  </button>
+
+                  {/* Active Recall Flashcards Deck Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound.click();
+                      setShowFlashcardModal(true);
+                    }}
+                    title="Study note with active recall flashcards"
+                    style={{
+                      border: "1.5px solid rgba(10,10,10,0.3)",
+                      background: "transparent",
+                      color: "inherit",
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      padding: "4px 8px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <Layers size={11} />
+                    FLASHCARDS
+                  </button>
+
+                  {/* Print / Export to PDF Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound.click();
+                      window.print();
+                    }}
+                    title="Print or save page as PDF"
+                    style={{
+                      border: "1.5px solid rgba(10,10,10,0.3)",
+                      background: "transparent",
+                      color: "inherit",
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      padding: "4px 8px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#B8F04A")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <Printer size={11} />
+                    PRINT / PDF
+                  </button>
+
                   {/* Table of Contents Outline Toggle */}
                   {currentBlocks.some((b) => b.type === "heading") && (
                     <button
@@ -1683,6 +2297,55 @@ export default function NotebooksPage() {
                   >
                     <FileText size={11} />
                     DUPLICATE
+                  </button>
+
+                  {/* Add Page Above / Below Quick Buttons */}
+                  <button
+                    type="button"
+                    onClick={() => handleCreateLessonAbove(currentModuleIdx, currentLessonIdx)}
+                    title="Create a new page above this one"
+                    style={{
+                      border: "1.5px solid rgba(10,10,10,0.3)",
+                      background: "transparent",
+                      color: "inherit",
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      padding: "4px 8px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#B8F04A")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <ArrowUp size={11} />
+                    ＋ ABOVE
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleCreateLessonBelow(currentModuleIdx, currentLessonIdx)}
+                    title="Create a new page below this one"
+                    style={{
+                      border: "1.5px solid rgba(10,10,10,0.3)",
+                      background: "transparent",
+                      color: "inherit",
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      padding: "4px 8px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#B8F04A")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <ArrowDown size={11} />
+                    ＋ BELOW
                   </button>
 
                   {currentBlocks.length > 0 && (
@@ -1954,9 +2617,21 @@ export default function NotebooksPage() {
       {/* 6. Add Page / Lesson Modal Popup */}
       <AddPageModal
         isOpen={showAddPageModal}
-        onClose={() => setShowAddPageModal(false)}
+        onClose={() => {
+          setShowAddPageModal(false);
+          setAddPageContext(null);
+        }}
         onSubmit={handleCreatePage}
         courseTitle={currentCourse?.title}
+      />
+
+      {/* 6b. Add Module Modal Popup */}
+      <AddModuleModal
+        isOpen={showAddModuleModal}
+        onClose={() => setShowAddModuleModal(false)}
+        onSubmit={handleCreateModule}
+        courseTitle={currentCourse?.title}
+        defaultIndex={currentCourse ? currentCourse.modules.length + 1 : 1}
       />
 
       {/* 7. Confirmation Modal Popup */}
@@ -2079,6 +2754,30 @@ export default function NotebooksPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 9. Global Quick Switcher Modal (Cmd+K) */}
+      <QuickSwitcherModal
+        isOpen={showQuickSwitcher}
+        onClose={() => setShowQuickSwitcher(false)}
+        courses={courses}
+        onSelectPage={(cIdx, mIdx, lIdx) => {
+          setCurrentCourseIdx(cIdx);
+          setCurrentModuleIdx(mIdx);
+          setCurrentLessonIdx(lIdx);
+          setView("course");
+        }}
+      />
+
+      {/* 10. Active Recall Flashcards Deck Modal */}
+      {showFlashcardModal && currentLesson && (
+        <FlashcardModal
+          isOpen={showFlashcardModal}
+          onClose={() => setShowFlashcardModal(false)}
+          lessonTitle={currentLesson.title}
+          blocks={currentBlocks}
+          accentColor={currentCourse?.accent}
+        />
       )}
     </div>
   );

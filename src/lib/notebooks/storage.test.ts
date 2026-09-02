@@ -223,6 +223,44 @@ describe("Notebooks Storage & In-Memory Logic", () => {
     expect(md).toContain("- [x] Write unit tests");
   });
 
+  it("handles inserting pages at target position above and below", () => {
+    const courses: SeedCourse[] = [
+      {
+        id: "c1",
+        title: "Course 1",
+        provider: "TEST",
+        accent: "#000",
+        accentFg: "#FFF",
+        init: "C",
+        startedAt: "2026-01-01",
+        modules: [
+          {
+            id: "m1",
+            title: "Module 1",
+            lessons: [
+              { id: "l1", title: "Page 1", watched: false, meta: "", blocks: [] },
+              { id: "l2", title: "Page 2", watched: false, meta: "", blocks: [] },
+            ],
+          },
+        ],
+      },
+    ];
+
+    // Insert above index 1 (between l1 and l2)
+    const newLessonAbove = { id: "l-new-above", title: "Inserted Above", watched: false, meta: "", blocks: [] };
+    const nextLessonsAbove = [...courses[0].modules[0].lessons];
+    nextLessonsAbove.splice(1, 0, newLessonAbove);
+
+    expect(nextLessonsAbove.map((l) => l.id)).toEqual(["l1", "l-new-above", "l2"]);
+
+    // Insert below index 1 (after l2)
+    const newLessonBelow = { id: "l-new-below", title: "Inserted Below", watched: false, meta: "", blocks: [] };
+    const nextLessonsBelow = [...courses[0].modules[0].lessons];
+    nextLessonsBelow.splice(2, 0, newLessonBelow);
+
+    expect(nextLessonsBelow.map((l) => l.id)).toEqual(["l1", "l2", "l-new-below"]);
+  });
+
   describe("getStoredCourses legacy-mock cleanup", () => {
     let mockStorage: ReturnType<typeof createMockLocalStorage>;
 

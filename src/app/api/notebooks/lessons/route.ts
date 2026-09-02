@@ -9,12 +9,13 @@ export async function POST(req: NextRequest) {
 
     const moduleId = body.moduleId;
     const title = (body.title || "").trim();
+    const targetPosition = typeof body.targetPosition === "number" ? body.targetPosition : undefined;
 
     if (!moduleId || !title) {
       return NextResponse.json({ error: "moduleId and title are required" }, { status: 400 });
     }
 
-    const lesson = await createLesson(userId, moduleId, title, body.blocks);
+    const lesson = await createLesson(userId, moduleId, title, body.blocks, targetPosition);
     if (!lesson) {
       return NextResponse.json({ error: "Module not found or unauthorized" }, { status: 404 });
     }
