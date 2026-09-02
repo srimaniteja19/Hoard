@@ -8,8 +8,8 @@ import {
   getOfflineQueue,
 } from "./realtime";
 
-const COURSES_STORAGE_KEY = "hoard_notebook_courses_v2";
-const COLLISIONS_STORAGE_KEY = "hoard_notebook_collisions_v1";
+const COURSES_STORAGE_KEY = "hoard_notebook_courses_v3";
+const COLLISIONS_STORAGE_KEY = "hoard_notebook_collisions_v2";
 
 /**
  * Loads all courses from localStorage with fallback to empty array
@@ -17,10 +17,29 @@ const COLLISIONS_STORAGE_KEY = "hoard_notebook_collisions_v1";
 export function getStoredCourses(): SeedCourse[] {
   if (typeof window === "undefined") return [];
   try {
+    // Clean up legacy keys containing old seed/mock data
+    localStorage.removeItem("hoard_notebook_courses_v1");
+    localStorage.removeItem("hoard_notebook_courses_v2");
+    localStorage.removeItem("hoard_notebook_courses");
+
     const raw = localStorage.getItem(COURSES_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    
+    // Filter out any lingering mock seed items
+    const cleaned = parsed.filter(
+      (c) =>
+        c &&
+        c.id !== "agentic" &&
+        c.id !== "python" &&
+        !c.id.endsWith("_agentic") &&
+        !c.id.endsWith("_python")
+    );
+    if (cleaned.length !== parsed.length) {
+      localStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify(cleaned));
+    }
+    return cleaned;
   } catch (err) {
     console.error("Failed to load notebook courses:", err);
     return [];
@@ -271,6 +290,7 @@ export function createNewCourse(
 export function getCollisions(): CourseCollision[] {
   if (typeof window === "undefined") return [];
   try {
+    localStorage.removeItem("hoard_notebook_collisions_v1");
     const raw = localStorage.getItem(COLLISIONS_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);

@@ -115,12 +115,10 @@ export default function NotebooksPage() {
 
     // 2. Asynchronously fetch from PostgreSQL database
     fetchNotebooksFromDbApi().then((dbData) => {
-      if (dbData && dbData.courses && dbData.courses.length > 0) {
+      if (dbData && Array.isArray(dbData.courses)) {
         setCourses(dbData.courses);
         saveStoredCourses(dbData.courses);
-        if (dbData.collisions && dbData.collisions.length > 0) {
-          saveCollisions(dbData.collisions);
-        }
+        saveCollisions(dbData.collisions || []);
       }
     });
 
@@ -309,7 +307,7 @@ export default function NotebooksPage() {
       } else if (event.type === "FULL_SYNC_REQUESTED") {
         if (!pendingSaveRef.current) {
           fetchNotebooksFromDbApi().then((dbData) => {
-            if (dbData?.courses && dbData.courses.length > 0) {
+            if (dbData && Array.isArray(dbData.courses)) {
               setCourses(dbData.courses);
               saveStoredCourses(dbData.courses);
             }
@@ -348,7 +346,7 @@ export default function NotebooksPage() {
         flushPendingSave();
         if (!pendingSaveRef.current) {
           fetchNotebooksFromDbApi().then((dbData) => {
-            if (dbData?.courses && dbData.courses.length > 0) {
+            if (dbData && Array.isArray(dbData.courses)) {
               setCourses(dbData.courses);
               saveStoredCourses(dbData.courses);
             }
@@ -361,7 +359,7 @@ export default function NotebooksPage() {
       setSyncStatus("saving");
       flushOfflineQueueToDbApi();
       fetchNotebooksFromDbApi().then((dbData) => {
-        if (dbData?.courses && dbData.courses.length > 0) {
+        if (dbData && Array.isArray(dbData.courses)) {
           setCourses(dbData.courses);
           saveStoredCourses(dbData.courses);
         }
