@@ -13,6 +13,7 @@ import {
   Palette,
   ChevronDown,
   X,
+  Link2,
 } from "lucide-react";
 
 export interface ColorOption {
@@ -72,12 +73,25 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectedText, setSelectedText] = useState("");
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
   const toolbarRef = useRef<HTMLDivElement>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
+  const linkInputRef = useRef<HTMLInputElement>(null);
   const savedSelectionRef = useRef<{ text: string; blockIdx: number | null }>({
     text: "",
     blockIdx: null,
   });
+
+  const handleApplyLink = () => {
+    if (!linkUrl.trim()) return;
+    const targetUrl = linkUrl.trim().startsWith("http") ? linkUrl.trim() : `https://${linkUrl.trim()}`;
+    playSound.pop();
+    const saved = savedSelectionRef.current;
+    onFormat("[", `](${targetUrl})`, saved.text, saved.blockIdx);
+    setShowLinkInput(false);
+    setLinkUrl("");
+  };
 
   useEffect(() => {
     const updateSelectionPosition = () => {
@@ -144,7 +158,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       }
 
       if (!text || !rect || (rect.width === 0 && rect.height === 0)) {
-        if (!showColorPicker) {
+        if (!showColorPicker && !showLinkInput) {
           setPosition(null);
           setSelectedText("");
         }
@@ -190,7 +204,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       document.removeEventListener("keyup", handleDelayedCheck);
       window.removeEventListener("scroll", updateSelectionPosition, true);
     };
-  }, [showColorPicker]);
+  }, [showColorPicker, showLinkInput]);
 
   // Close color picker when clicking outside
   useEffect(() => {
@@ -202,6 +216,9 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
         !toolbarRef.current.contains(e.target as Node)
       ) {
         setShowColorPicker(false);
+      }
+      if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
+        setShowLinkInput(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -250,7 +267,8 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
         transform: "translateX(-50%)",
         zIndex: 99999,
         display: "flex",
-        alignItems: "center",
+        flexDirection: "column",
+        alignItems: "stretch",
         background: tokens.popoverBg,
         border: `2px solid ${tokens.borderPrimary}`,
         boxShadow: tokens.popoverShadow,
@@ -259,6 +277,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
         animation: "fadeIn 0.1s ease",
       }}
     >
+      <div style={{ display: "flex", alignItems: "center" }}>
       {/* Bold */}
       <button
         type="button"
@@ -384,6 +403,35 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
         <Highlighter size={12} strokeWidth={2.5} color="#A78BFA" />
       </button>
 
+      {/* Link */}
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => {
+          playSound.pop();
+          setShowColorPicker(false);
+          setShowLinkInput(!showLinkInput);
+          setTimeout(() => linkInputRef.current?.focus(), 50);
+        }}
+        title="Link (Cmd+K)"
+        style={{
+          background: showLinkInput ? tokens.popoverHoverBg : "transparent",
+          border: "none",
+          borderRight: `1px solid ${tokens.borderSubtle}`,
+          color: showLinkInput ? tokens.accentColor : tokens.textPrimary,
+          padding: "6px 9px",
+          cursor: "pointer",
+          display: "grid",
+          placeItems: "center",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
+        onMouseLeave={(e) => {
+          if (!showLinkInput) e.currentTarget.style.background = "transparent";
+        }}
+      >
+        <Link2 size={12} strokeWidth={2.5} />
+      </button>
+
       {/* Color & Highlight Palette Trigger (Notion Style 'A' Color Picker) */}
       <button
         type="button"
@@ -446,6 +494,62 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
           <Sparkles size={11} color="#7B5CF0" />
           <span>✦ ASK AI</span>
         </button>
+      )}
+      </div>
+
+      {/* ── Inline Link URL Input Row ── */}
+      {showLinkInput && (
+        <div
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            padding: "5px 8px",
+            borderTop: `1.5px solid ${tokens.borderSubtle}`,
+            background: tokens.isDark ? "#1A1D26" : "#F5F3EB",
+          }}
+        >
+          <Link2 size={11} style={{ opacity: 0.6, flex: "none" }} />
+          <input
+            ref={linkInputRef}
+            type="url"
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleApplyLink();
+              if (e.key === "Escape") setShowLinkInput(false);
+            }}
+            placeholder="Paste or type URL (https://...)"
+            autoFocus
+            style={{
+              width: "190px",
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "11px",
+              padding: "3px 6px",
+              background: tokens.isDark ? "#12141B" : "#FFFFFF",
+              color: tokens.textPrimary,
+              border: `1px solid ${tokens.borderPrimary}`,
+              outline: "none",
+            }}
+          />
+          <button
+            type="button"
+            onClick={handleApplyLink}
+            style={{
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "9px",
+              fontWeight: 800,
+              background: tokens.accentColor,
+              color: "#FFFFFF",
+              border: "none",
+              padding: "4px 8px",
+              cursor: "pointer",
+            }}
+          >
+            LINK
+          </button>
+        </div>
       )}
 
       {/* ── Notion-Style Color & Background Dropdown Popover ── */}

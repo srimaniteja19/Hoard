@@ -334,7 +334,10 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
             },
         onClick: readOnly
           ? undefined
-          : () => {
+          : (e: React.MouseEvent) => {
+              if (e.target instanceof Element && e.target.closest("a")) {
+                return;
+              }
               const sel = window.getSelection();
               if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) {
                 return;

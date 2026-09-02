@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { CodeBlock } from "./CodeBlock";
 import { InlineTextEditor, InlineEditorHandle } from "./InlineTextEditor";
+import { LinkCardBlock } from "./LinkCardBlock";
+import { EmbedBlock } from "./EmbedBlock";
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 
 interface BlockRendererProps {
@@ -267,11 +269,118 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
     // outright) so it can contain a single "=" — e.g. from a nested
     // <span style="color: ...">'s attribute syntax — while still terminating
     // at the real closing "==".
-    const tokenRegex = /(<mark[\s\S]*?<\/mark>|<span[\s\S]*?<\/span>|<strong>[\s\S]*?<\/strong>|<b>[\s\S]*?<\/b>|\*\*[^*\n]+?\*\*|==(?:(?!==)[^\n])+?==|~~[^~\n]+?~~|<code>[\s\S]*?<\/code>|`[^`\n]+`|<em>[\s\S]*?<\/em>|(?<=\s|^)\*(?!\s)[^*\n]+?\*(?=\s|$|<|[.,:;!?]))/g;
+    const tokenRegex =
+      /(<mark[\s\S]*?<\/mark>|<span[\s\S]*?<\/span>|<strong>[\s\S]*?<\/strong>|<b>[\s\S]*?<\/b>|\[[^\]]+?\]\(https?:\/\/[^\s\)]+?\)|https?:\/\/[^\s<>"'`\(\)]+|\*\*[^*\n]+?\*\*|==(?:(?!==)[^\n])+?==|~~[^~\n]+?~~|<code>[\s\S]*?<\/code>|`[^`\n]+`|<em>[\s\S]*?<\/em>|(?<=\s|^)\*(?!\s)[^*\n]+?\*(?=\s|$|<|[.,:;!?]))/g;
     const parts = lineText.split(tokenRegex);
 
     return parts.map((part, idx) => {
       if (!part) return null;
+
+      // Markdown link [Label](url)
+      const mdLinkMatch = part.match(/^\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)$/);
+      if (mdLinkMatch) {
+        const label = mdLinkMatch[1];
+        const href = mdLinkMatch[2];
+        return (
+          <a
+            key={idx}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Open ${href} ↗`}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+            }}
+            style={{
+              color: tokens.accentColor || accentColor,
+              textDecoration: "underline",
+              textDecorationThickness: "1.5px",
+              textUnderlineOffset: "3px",
+              fontWeight: 600,
+              display: "inline-flex",
+              alignItems: "baseline",
+              gap: "2px",
+              cursor: "pointer",
+              borderRadius: "2px",
+              padding: "0 2px",
+              transition: "background 0.1s ease, color 0.1s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = tokens.isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <span>{renderFormattedInline(label)}</span>
+            <ExternalLink size={10} style={{ opacity: 0.7, transform: "translateY(1px)" }} />
+          </a>
+        );
+      }
+
+      // Raw URL autolink: https://...
+      if (/^https?:\/\/[^\s<>"'`\(\)]+$/i.test(part)) {
+        let cleanHref = part;
+        let trailingPunct = "";
+        const punctMatch = part.match(/[.,:;!?]+$/);
+        if (punctMatch) {
+          trailingPunct = punctMatch[0];
+          cleanHref = part.slice(0, part.length - trailingPunct.length);
+        }
+
+        let displayHost = cleanHref;
+        try {
+          const u = new URL(cleanHref);
+          displayHost = u.hostname.replace(/^www\./, "") + (u.pathname.length > 1 ? u.pathname : "");
+          if (displayHost.length > 32) {
+            displayHost = displayHost.slice(0, 30) + "…";
+          }
+        } catch {}
+
+        return (
+          <React.Fragment key={idx}>
+            <a
+              href={cleanHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`Open ${cleanHref} ↗`}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+              }}
+              style={{
+                color: tokens.accentColor || accentColor,
+                textDecoration: "underline",
+                textDecorationThickness: "1.5px",
+                textUnderlineOffset: "3px",
+                fontWeight: 600,
+                display: "inline-flex",
+                alignItems: "baseline",
+                gap: "2px",
+                cursor: "pointer",
+                borderRadius: "2px",
+                padding: "0 2px",
+                transition: "background 0.1s ease, color 0.1s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = tokens.isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <span>{displayHost}</span>
+              <ExternalLink size={10} style={{ opacity: 0.7, transform: "translateY(1px)" }} />
+            </a>
+            {trailingPunct}
+          </React.Fragment>
+        );
+      }
 
       // HTML <strong> or <b>
       if (
@@ -1548,72 +1657,85 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
       return renderImageContent(block.url, block.caption);
 
     case "link": {
-      return (
-        <a
-          href={block.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "13px",
-            border: "3px solid #0A0A0A",
-            background: "#FFFFFF",
-            boxShadow: "4px 4px 0 #0A0A0A",
-            padding: "11px 14px",
-            cursor: "pointer",
-            textDecoration: "none",
-            color: "#0A0A0A",
-            margin: "12px 0",
-            transition: "background 0.15s ease",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
-        >
-          <span
-            style={{
-              width: "32px",
-              height: "32px",
-              border: "2px solid #0A0A0A",
-              background: accentColor,
-              color: "#FFFFFF",
-              display: "grid",
-              placeItems: "center",
-              fontFamily: "var(--display, sans-serif)",
-              fontWeight: 800,
-              fontSize: "14px",
-              flex: "none",
+      if (block.displayMode === "embed") {
+        return (
+          <EmbedBlock
+            block={{
+              id: block.id,
+              type: "embed",
+              url: block.url,
+              title: block.title,
             }}
-          >
-            {block.title ? block.title.charAt(0).toUpperCase() : "L"}
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <b
-              style={{
-                display: "block",
-                fontSize: "15px",
-                fontWeight: 700,
-                lineHeight: "1.25",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {block.title || block.url}
-            </b>
-            <span
-              style={{
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "9px",
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                opacity: 0.5,
-              }}
-            >
-              {block.site || block.url}
-            </span>
-          </div>
-        </a>
+            onUpdateBlock={(updated) => {
+              if (onUpdateBlock) {
+                if (updated.type === "embed") {
+                  onUpdateBlock({
+                    ...block,
+                    url: updated.url,
+                    title: updated.title,
+                  });
+                } else {
+                  onUpdateBlock(updated);
+                }
+              }
+            }}
+            onDeleteBlock={onDeleteBlock}
+            onConvertToBookmark={() => {
+              if (onUpdateBlock) {
+                onUpdateBlock({
+                  ...block,
+                  displayMode: "card",
+                });
+              }
+            }}
+            readOnly={readOnly}
+            accentColor={accentColor}
+            theme={theme}
+          />
+        );
+      }
+
+      return (
+        <LinkCardBlock
+          block={block}
+          onUpdateBlock={onUpdateBlock}
+          onDeleteBlock={onDeleteBlock}
+          onConvertToEmbed={() => {
+            if (onUpdateBlock) {
+              onUpdateBlock({
+                ...block,
+                displayMode: "embed",
+              });
+            }
+          }}
+          readOnly={readOnly}
+          accentColor={accentColor}
+          theme={theme}
+        />
+      );
+    }
+
+    case "embed": {
+      return (
+        <EmbedBlock
+          block={block}
+          onUpdateBlock={onUpdateBlock}
+          onDeleteBlock={onDeleteBlock}
+          onConvertToBookmark={() => {
+            if (onUpdateBlock) {
+              onUpdateBlock({
+                id: block.id,
+                type: "link",
+                url: block.url,
+                title: block.title,
+                displayMode: "card",
+              });
+            }
+          }}
+          readOnly={readOnly}
+          accentColor={accentColor}
+          theme={theme}
+        />
       );
     }
 

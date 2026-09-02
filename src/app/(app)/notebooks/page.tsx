@@ -83,6 +83,7 @@ import {
 } from "lucide-react";
 import { NotebookTheme, TypographyStyle, TYPOGRAPHY_FONTS, getThemeTokens } from "@/lib/notebooks/theme";
 import { PageCoverBanner } from "@/components/notebooks/PageCoverBanner";
+import { PageEmbeddedMedia } from "@/components/notebooks/PageEmbeddedMedia";
 
 export default function NotebooksPage() {
   const [courses, setCourses] = useState<SeedCourse[]>([]);
@@ -2160,6 +2161,29 @@ export default function NotebooksPage() {
                 onChangeCover={handleUpdateCurrentLessonCover}
                 onChangeIcon={handleUpdateCurrentLessonIcon}
               />
+
+              {/* Docked Interactive Media Player & Resource Banner */}
+              {currentLesson.lessonUrl && (
+                <PageEmbeddedMedia
+                  lessonUrl={currentLesson.lessonUrl}
+                  onEditUrl={() => {
+                    setUrlDraft(currentLesson.lessonUrl || "");
+                    setShowUrlModal(true);
+                  }}
+                  onRemoveUrl={() => handleSaveLessonUrl("")}
+                  onInsertIntoNotes={(url, title) => {
+                    const embedBlock: Block = {
+                      id: generateBlockId(),
+                      type: "embed",
+                      url,
+                      title,
+                    };
+                    handleUpdateBlocks([...currentBlocks, embedBlock]);
+                  }}
+                  theme={paperTheme}
+                  accentColor={currentCourse.accent}
+                />
+              )}
 
               {/* Breadcrumb & Navigation */}
               <div

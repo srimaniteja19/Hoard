@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
+import { detectEmbedType, getEmbedInfo } from "@/lib/notebooks/embeds";
 
 // Matches the markdown/HTML formatting delimiters BlockRenderer strips when
 // rendering (see renderFormattedInline's tokenRegex) — used to map a plain,
@@ -165,6 +166,11 @@ const SLASH_MENU_ITEMS: { type: string; glyph: string; label: string; shortcut: 
   { type: "connects", glyph: "↗", label: "Connects To (Cyan)", shortcut: "/connects" },
   { type: "image", glyph: "📷", label: "Image / Screenshot", shortcut: "/image" },
   { type: "toggle", glyph: "▸", label: "Collapsible Toggle", shortcut: "/toggle" },
+  { type: "embed", glyph: "▶", label: "Interactive Embed (Video/Audio/Web)", shortcut: "/embed" },
+  { type: "youtube", glyph: "▶", label: "YouTube Video", shortcut: "/youtube" },
+  { type: "link", glyph: "🔗", label: "Web Bookmark Card", shortcut: "/link" },
+  { type: "pdf", glyph: "📄", label: "PDF Document Viewer", shortcut: "/pdf" },
+  { type: "audio", glyph: "🎵", label: "Audio / Spotify Player", shortcut: "/audio" },
 ];
 
 export const BlockEditor: React.FC<BlockEditorProps> = ({
@@ -558,6 +564,32 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       case "toggle":
         transformed = { id: baseId, type: "toggle", summary: props.summary || "Toggle Title", body: "" };
         break;
+      case "embed":
+      case "youtube":
+      case "pdf":
+      case "audio": {
+        const defaultUrl = props.url || (props.type === "youtube" ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : "https://example.com");
+        transformed = {
+          id: baseId,
+          type: "embed",
+          url: defaultUrl,
+          embedType: props.type === "youtube" ? "youtube" : props.type === "pdf" ? "pdf" : props.type === "audio" ? "spotify" : "generic",
+          title: props.title || (props.type === "youtube" ? "YouTube Video" : "Embedded Content"),
+        };
+        break;
+      }
+      case "link":
+      case "bookmark": {
+        transformed = {
+          id: baseId,
+          type: "link",
+          url: props.url || "https://example.com",
+          title: props.title || "Web Link",
+          site: "WEBSITE",
+          displayMode: "card",
+        };
+        break;
+      }
       case "paragraph":
       default:
         transformed = { id: baseId, type: "paragraph", text: props.text || "" };
@@ -624,6 +656,31 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         break;
       case "quote":
         newBlock = { id: generateBlockId(), type: "quote", text: "", attribution: "" };
+        break;
+      case "embed":
+      case "youtube":
+      case "pdf":
+      case "audio": {
+        const defaultUrl = type === "youtube" ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : "https://example.com";
+        newBlock = {
+          id: generateBlockId(),
+          type: "embed",
+          url: defaultUrl,
+          embedType: type === "youtube" ? "youtube" : type === "pdf" ? "pdf" : type === "audio" ? "spotify" : "generic",
+          title: type === "youtube" ? "YouTube Video" : "Embedded Content",
+        };
+        break;
+      }
+      case "link":
+      case "bookmark":
+        newBlock = {
+          id: generateBlockId(),
+          type: "link",
+          url: "https://example.com",
+          title: "Web Link",
+          site: "WEBSITE",
+          displayMode: "card",
+        };
         break;
       case "paragraph":
       default:
@@ -839,14 +896,35 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       e.preventDefault();
       e.stopPropagation();
       try {
-        const urlObj = new URL(text.trim());
+        const url = text.trim();
+        const urlObj = new URL(url);
         const hostname = urlObj.hostname.toUpperCase();
+        const embedType = detectEmbedType(url);
+
+        // If it's a rich media provider (YouTube, Vimeo, Loom, Spotify, CodePen, Figma, PDF),
+        // insert as an interactive EmbedBlock!
+        if (embedType !== "generic") {
+          const embedInfo = getEmbedInfo(url);
+          const embedBlock: Block = {
+            id: generateBlockId(),
+            type: "embed",
+            url,
+            embedType,
+            title: embedInfo.title,
+          };
+          insertBlockAtTarget(embedBlock, targetIdx);
+          playSound.fileIt();
+          return;
+        }
+
+        // Otherwise insert as a rich Bookmark LinkCardBlock!
         const linkBlock: Block = {
           id: generateBlockId(),
           type: "link",
-          url: text.trim(),
-          title: text.trim().slice(0, 60),
+          url,
+          title: url.slice(0, 60),
           site: `${hostname} · PASTED LINK`,
+          displayMode: "card",
         };
         insertBlockAtTarget(linkBlock, targetIdx);
         playSound.fileIt();
@@ -1214,6 +1292,8 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
               { type: "gotcha", label: "Gotcha", glyph: "!" },
               { type: "todo", label: "To-Do", glyph: "☑" },
               { type: "toggle", label: "Toggle", glyph: "▸" },
+              { type: "embed", label: "Embed", glyph: "▶" },
+              { type: "link", label: "Bookmark", glyph: "🔗" },
             ].map((t) => (
               <button
                 key={t.type}

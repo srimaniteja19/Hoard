@@ -60,6 +60,22 @@ describe("Notebooks Block Contract & Logic", () => {
         meta: "ANNOUNCED",
       },
       { id: "15", type: "divider" },
+      {
+        id: "16",
+        type: "embed",
+        url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        embedType: "youtube",
+        title: "Never Gonna Give You Up",
+        aspectRatio: "16/9",
+      },
+      {
+        id: "17",
+        type: "link",
+        url: "https://github.com/torvalds/linux",
+        title: "Linux Kernel",
+        description: "Linux kernel source tree",
+        displayMode: "card",
+      },
     ];
 
     for (const b of testBlocks) {
@@ -173,5 +189,45 @@ describe("Notebooks Block Contract & Logic", () => {
     expect(cards[2].front).toBe("What is an Agent?");
     expect(cards[3].category).toBe("concept");
     expect(cards[3].front).toContain("Vector Distance");
+  });
+
+  it("correctly identifies and generates embed info for various media URLs", async () => {
+    const { detectEmbedType, getEmbedInfo, formatDomain } = await import("./embeds");
+
+    expect(detectEmbedType("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe("youtube");
+    expect(detectEmbedType("https://youtu.be/dQw4w9WgXcQ?t=45s")).toBe("youtube");
+    expect(detectEmbedType("https://vimeo.com/76979871")).toBe("vimeo");
+    expect(detectEmbedType("https://www.loom.com/share/abcdef123456")).toBe("loom");
+    expect(detectEmbedType("https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT")).toBe("spotify");
+    expect(detectEmbedType("https://codepen.io/geoffgraham/pen/BapmgwB")).toBe("codepen");
+    expect(detectEmbedType("https://www.figma.com/file/LKQ4FJ4bURFsip")).toBe("figma");
+    expect(detectEmbedType("https://arxiv.org/pdf/2005.11401.pdf")).toBe("pdf");
+    expect(detectEmbedType("https://news.ycombinator.com")).toBe("generic");
+
+    const ytEmbed = getEmbedInfo("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1m30s");
+    expect(ytEmbed.embedType).toBe("youtube");
+    expect(ytEmbed.embedUrl).toContain("youtube-nocookie.com/embed/dQw4w9WgXcQ");
+    expect(ytEmbed.embedUrl).toContain("start=90");
+
+    const spotifyEmbed = getEmbedInfo("https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT");
+    expect(spotifyEmbed.embedType).toBe("spotify");
+    expect(spotifyEmbed.embedUrl).toContain("open.spotify.com/embed/track/4cOdK2wGLETKBW3PvgPWqT");
+
+    expect(formatDomain("https://github.com/torvalds/linux")).toBe("GITHUB.COM");
+  });
+
+  it("exports embed and link blocks cleanly to markdown", async () => {
+    const { convertBlocksToMarkdown } = await import("./blocks");
+    const testBlocks: Block[] = [
+      { id: "1", type: "paragraph", text: "Check out this lecture:" },
+      { id: "2", type: "embed", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "Keynote" },
+      { id: "3", type: "link", url: "https://github.com/torvalds/linux", title: "Linux Repository" },
+    ];
+
+    const md = convertBlocksToMarkdown("My Page", testBlocks);
+    expect(md).toContain("# My Page");
+    expect(md).toContain("Check out this lecture:");
+    expect(md).toContain("[Embed: Keynote](https://www.youtube.com/watch?v=dQw4w9WgXcQ)");
+    expect(md).toContain("[Linux Repository](https://github.com/torvalds/linux)");
   });
 });

@@ -113,6 +113,19 @@ export const BlockSchema = z.discriminatedUnion("type", [
     title: z.string().optional(),
     site: z.string().optional(),
     favicon: z.string().optional(),
+    description: z.string().optional(),
+    image: z.string().optional(),
+    displayMode: z.enum(["card", "compact", "embed"]).optional(),
+  }),
+  z.object({
+    id: z.string(),
+    type: z.literal("embed"),
+    url: z.string(),
+    embedType: z.string().optional(),
+    title: z.string().optional(),
+    caption: z.string().optional(),
+    aspectRatio: z.string().optional(),
+    height: z.number().optional(),
   }),
   z.object({
     id: z.string(),
@@ -219,6 +232,11 @@ export function computeWordCount(blocks: Block[]): number {
         break;
       case "link":
         if (b.title) textAccum += " " + b.title;
+        if (b.description) textAccum += " " + b.description;
+        break;
+      case "embed":
+        if (b.title) textAccum += " " + b.title;
+        if (b.caption) textAccum += " " + b.caption;
         break;
     }
   }
@@ -316,6 +334,9 @@ export function convertBlocksToMarkdown(title: string, blocks: Block[]): string 
         break;
       case "link":
         lines.push(`[${b.title || b.url}](${b.url})\n`);
+        break;
+      case "embed":
+        lines.push(`[Embed: ${b.title || b.url}](${b.url})\n`);
         break;
       case "example":
         lines.push(`**Before:**\n> ${b.v1Text}\n\n**After:**\n> ${b.v2Text}\n`);
