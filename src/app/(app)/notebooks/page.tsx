@@ -1672,7 +1672,7 @@ export default function NotebooksPage() {
                   NO NOTES FOUND MATCHING &quot;{globalSearchQuery}&quot;
                 </div>
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "16px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
                   {globalSearchResults.map((res, rIdx) => (
                     <div
                       key={rIdx}
@@ -1782,7 +1782,11 @@ export default function NotebooksPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+                // 340px + the page's clamp(16px, 3vw, 30px) side padding
+                // overflows on common ~360px-wide phones (328px available <
+                // 340px column minimum). 260px stays comfortably under that
+                // even at the narrowest common viewports (~320px).
+                gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
                 gap: "24px",
                 marginBottom: "40px",
               }}
@@ -1897,7 +1901,11 @@ export default function NotebooksPage() {
                 position: "fixed",
                 inset: 0,
                 background: "rgba(10,10,10,0.5)",
-                zIndex: 70,
+                // Matches the app-wide mobile drawer backdrop convention
+                // (.sidebar-backdrop, z-index: 110) — the persistent
+                // .app-header sits at z-index: 100, so anything lower gets
+                // drawn over by the header instead of covering it.
+                zIndex: 110,
               }}
             />
           )}
@@ -1916,7 +1924,11 @@ export default function NotebooksPage() {
                       bottom: 0,
                       left: 0,
                       width: "min(300px, 85vw)",
-                      zIndex: 71,
+                      // Matches the app-wide mobile drawer convention (.side,
+                      // z-index: 120) so this drawer draws above the
+                      // persistent .app-header (z-index: 100) instead of
+                      // having its own top content hidden behind it.
+                      zIndex: 120,
                       transform: mobileSidebarOpen ? "translateX(0)" : "translateX(-100%)",
                       transition: "transform 0.22s ease",
                       boxShadow: mobileSidebarOpen ? "8px 0 24px rgba(0,0,0,0.35)" : "none",
