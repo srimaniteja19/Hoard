@@ -8,9 +8,10 @@ import {
   toggleLessonWatched,
   getStoredCourses,
   saveStoredCourses,
+  reorderLessonsInMemory,
 } from "./storage";
 import { SEED_COURSES, SeedCourse } from "./seedData";
-import { Block } from "./blocks";
+import { Block, convertBlocksToMarkdown } from "./blocks";
 
 function makeMinimalCourse(id: string, title: string): SeedCourse {
   return {
@@ -137,6 +138,89 @@ describe("Notebooks Storage & In-Memory Logic", () => {
     expect(course.init).toBe("D");
     expect(course.modules).toHaveLength(1);
     expect(course.modules[0].lessons).toHaveLength(1);
+  });
+
+  it("reorders lessons within the same module correctly", () => {
+    const courses: SeedCourse[] = [
+      {
+        id: "c1",
+        title: "Course 1",
+        provider: "TEST",
+        accent: "#000",
+        accentFg: "#FFF",
+        init: "C",
+        startedAt: "2026-01-01",
+        modules: [
+          {
+            id: "m1",
+            title: "Module 1",
+            lessons: [
+              { id: "l1", title: "Page 1", watched: false, meta: "", blocks: [] },
+              { id: "l2", title: "Page 2", watched: false, meta: "", blocks: [] },
+              { id: "l3", title: "Page 3", watched: false, meta: "", blocks: [] },
+            ],
+          },
+        ],
+      },
+    ];
+
+    // Move l3 to index 0 (top)
+    const updated = reorderLessonsInMemory(courses, "c1", "m1", "m1", "l3", 0);
+    expect(updated[0].modules[0].lessons.map((l) => l.id)).toEqual(["l3", "l1", "l2"]);
+  });
+
+  it("moves lessons across different modules correctly", () => {
+    const courses: SeedCourse[] = [
+      {
+        id: "c1",
+        title: "Course 1",
+        provider: "TEST",
+        accent: "#000",
+        accentFg: "#FFF",
+        init: "C",
+        startedAt: "2026-01-01",
+        modules: [
+          {
+            id: "m1",
+            title: "Module 1",
+            lessons: [
+              { id: "l1", title: "Page 1", watched: false, meta: "", blocks: [] },
+              { id: "l2", title: "Page 2", watched: false, meta: "", blocks: [] },
+            ],
+          },
+          {
+            id: "m2",
+            title: "Module 2",
+            lessons: [
+              { id: "l3", title: "Page 3", watched: false, meta: "", blocks: [] },
+            ],
+          },
+        ],
+      },
+    ];
+
+    // Move l1 from m1 into m2 at index 0
+    const updated = reorderLessonsInMemory(courses, "c1", "m1", "m2", "l1", 0);
+    expect(updated[0].modules[0].lessons.map((l) => l.id)).toEqual(["l2"]);
+    expect(updated[0].modules[1].lessons.map((l) => l.id)).toEqual(["l1", "l3"]);
+  });
+
+  it("converts blocks to formatted markdown accurately", () => {
+    const blocks: Block[] = [
+      { id: "b1", type: "heading", level: 2, text: "Introduction" },
+      { id: "b2", type: "paragraph", text: "This is a key note paragraph." },
+      { id: "b3", type: "code", lang: "PYTHON", code: "print('hello')" },
+      { id: "b4", type: "callout", kind: "gotcha", text: "Watch out for race conditions" },
+      { id: "b5", type: "todo", items: [{ text: "Write unit tests", done: true }] },
+    ];
+
+    const md = convertBlocksToMarkdown("My Page Title", blocks);
+    expect(md).toContain("# My Page Title");
+    expect(md).toContain("## Introduction");
+    expect(md).toContain("This is a key note paragraph.");
+    expect(md).toContain("```python\nprint('hello')\n```");
+    expect(md).toContain("> [!GOTCHA]\n> Watch out for race conditions");
+    expect(md).toContain("- [x] Write unit tests");
   });
 
   describe("getStoredCourses legacy-mock cleanup", () => {

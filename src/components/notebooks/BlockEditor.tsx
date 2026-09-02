@@ -588,6 +588,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           return (
             <div
               key={block.id}
+              id={block.id}
               onMouseEnter={() => setHoveredBlockId(block.id)}
               onMouseLeave={() => setHoveredBlockId(null)}
               style={{

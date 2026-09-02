@@ -20,14 +20,17 @@ import {
   deleteLessonFromDbApi,
   flushOfflineQueueToDbApi,
   saveCollisions,
+  reorderLessonsInMemory,
+  reorderLessonsInDbApi,
+  duplicateLessonInDbApi,
 } from "@/lib/notebooks/storage";
 import {
   subscribeToRealtimeEvents,
   broadcastRealtimeEvent,
   setSyncStatus,
 } from "@/lib/notebooks/realtime";
-import { SeedCourse } from "@/lib/notebooks/seedData";
-import { Block, computeWordCount, generateBlockId } from "@/lib/notebooks/blocks";
+import { SeedCourse, SeedCourseLesson } from "@/lib/notebooks/seedData";
+import { Block, computeWordCount, generateBlockId, convertBlocksToMarkdown } from "@/lib/notebooks/blocks";
 import { CourseCard } from "@/components/notebooks/CourseCard";
 import { OutlineSidebar } from "@/components/notebooks/OutlineSidebar";
 import { BlockEditor } from "@/components/notebooks/BlockEditor";
@@ -44,7 +47,18 @@ import { EditCourseModal } from "@/components/notebooks/EditCourseModal";
 import { AddPageModal } from "@/components/notebooks/AddPageModal";
 import { ConfirmModal } from "@/components/notebooks/ConfirmModal";
 import { playSound } from "@/lib/sound";
-import { Plus } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Copy,
+  Check,
+  ExternalLink,
+  List,
+  Clock,
+  FileText,
+  Sparkles,
+  Link as LinkIcon,
+} from "lucide-react";
 
 export default function NotebooksPage() {
   const [courses, setCourses] = useState<SeedCourse[]>([]);
@@ -106,6 +120,14 @@ export default function NotebooksPage() {
 
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [isAnalyzingGaps, setIsAnalyzingGaps] = useState(false);
+
+  // Page Productivity & Outline States
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [showUrlModal, setShowUrlModal] = useState(false);
+  const [urlDraft, setUrlDraft] = useState("");
+  const [copiedMarkdownToast, setCopiedMarkdownToast] = useState(false);
+  const [showToc, setShowToc] = useState(false);
 
   // Tracks a write (PATCH) that has already been dispatched to the server but
   // hasn't resolved yet. A refetch-and-overwrite (visibilitychange, online,
@@ -322,6 +344,18 @@ export default function NotebooksPage() {
         setCourses((prevCourses) => {
           const updated = prevCourses.filter((c) => !isSameId(c.id, event.courseId));
           saveStoredCourses(updated);
+          return updated;
+        });
+      } else if (event.type === "LESSONS_REORDERED") {
+        setCourses((prevCourses) => {
+          const updated = reorderLessonsInMemory(
+            prevCourses,
+            event.courseId,
+            event.sourceModuleId,
+            event.targetModuleId,
+            event.lessonId,
+            event.targetIndex
+          );
           return updated;
         });
       } else if (event.type === "FULL_SYNC_REQUESTED") {
@@ -811,6 +845,149 @@ export default function NotebooksPage() {
     setShowAddPageModal(false);
   };
 
+  // Drag-and-Drop Reorder Handler
+  const handleReorderLesson = (
+    sourceModIdx: number,
+    targetModIdx: number,
+    sourceLesIdx: number,
+    targetLesIdx: number
+  ) => {
+    if (!currentCourse) return;
+    const srcMod = currentCourse.modules[sourceModIdx];
+    const tgtMod = currentCourse.modules[targetModIdx];
+    if (!srcMod || !tgtMod) return;
+    const lesson = srcMod.lessons[sourceLesIdx];
+    if (!lesson) return;
+
+    const updated = reorderLessonsInMemory(
+      courses,
+      currentCourse.id,
+      srcMod.id,
+      tgtMod.id,
+      lesson.id,
+      targetLesIdx
+    );
+    setCourses(updated);
+    playSound.click();
+
+    reorderLessonsInDbApi(currentCourse.id, srcMod.id, tgtMod.id, lesson.id, targetLesIdx);
+
+    // If current selected lesson was moved, track its new location
+    if (sourceModIdx === currentModuleIdx && sourceLesIdx === currentLessonIdx) {
+      setCurrentModuleIdx(targetModIdx);
+      setCurrentLessonIdx(targetLesIdx);
+    }
+  };
+
+  // 1-Click Page Duplication
+  const handleDuplicateLesson = async (modIdx: number, lesIdx: number) => {
+    if (!currentCourse) return;
+    const targetMod = currentCourse.modules[modIdx];
+    const targetLes = targetMod?.lessons[lesIdx];
+    if (!targetMod || !targetLes) return;
+
+    const duplicated = await duplicateLessonInDbApi(targetLes.id);
+    const newLesson: SeedCourseLesson = duplicated || {
+      id: "les-" + Date.now().toString(36),
+      title: `${targetLes.title} (Copy)`,
+      watched: false,
+      meta: targetLes.meta,
+      blocks: targetLes.blocks ? JSON.parse(JSON.stringify(targetLes.blocks)) : [],
+      gap: targetLes.gap,
+      lessonUrl: targetLes.lessonUrl,
+    };
+
+    const updated = courses.map((c) => {
+      if (c.id === currentCourse.id) {
+        return {
+          ...c,
+          modules: c.modules.map((m, mIdx) => {
+            if (mIdx === modIdx) {
+              return { ...m, lessons: [...m.lessons, newLesson] };
+            }
+            return m;
+          }),
+        };
+      }
+      return c;
+    });
+
+    saveStoredCourses(updated);
+    setCourses(updated);
+    setCurrentModuleIdx(modIdx);
+    setCurrentLessonIdx(targetMod.lessons.length);
+    playSound.fileIt();
+  };
+
+  // Inline Page Title Renaming
+  const handleRenameLesson = (newTitle: string) => {
+    if (!currentCourse || !currentLesson || !newTitle.trim()) {
+      setIsEditingTitle(false);
+      return;
+    }
+    const title = newTitle.trim();
+    const updated = courses.map((c) => {
+      if (c.id === currentCourse.id) {
+        return {
+          ...c,
+          modules: c.modules.map((m, mIdx) => {
+            if (mIdx === currentModuleIdx) {
+              return {
+                ...m,
+                lessons: m.lessons.map((l, lIdx) => (lIdx === currentLessonIdx ? { ...l, title } : l)),
+              };
+            }
+            return m;
+          }),
+        };
+      }
+      return c;
+    });
+    saveStoredCourses(updated);
+    setCourses(updated);
+    setIsEditingTitle(false);
+    updateLessonInDbApi(currentLesson.id, { title });
+    playSound.click();
+  };
+
+  // Copy Full Page as Markdown
+  const handleCopyAsMarkdown = () => {
+    if (!currentLesson) return;
+    const md = convertBlocksToMarkdown(currentLesson.title, currentBlocks);
+    navigator.clipboard.writeText(md);
+    setCopiedMarkdownToast(true);
+    playSound.click();
+    setTimeout(() => setCopiedMarkdownToast(false), 2200);
+  };
+
+  // Attach / Update Lesson URL
+  const handleSaveLessonUrl = (url: string) => {
+    if (!currentCourse || !currentLesson) return;
+    const trimmed = url.trim();
+    const updated = courses.map((c) => {
+      if (c.id === currentCourse.id) {
+        return {
+          ...c,
+          modules: c.modules.map((m, mIdx) => {
+            if (mIdx === currentModuleIdx) {
+              return {
+                ...m,
+                lessons: m.lessons.map((l, lIdx) => (lIdx === currentLessonIdx ? { ...l, lessonUrl: trimmed } : l)),
+              };
+            }
+            return m;
+          }),
+        };
+      }
+      return c;
+    });
+    saveStoredCourses(updated);
+    setCourses(updated);
+    setShowUrlModal(false);
+    updateLessonInDbApi(currentLesson.id, { lessonUrl: trimmed });
+    playSound.click();
+  };
+
   const isInk = paperTheme === "ink";
 
   return (
@@ -1111,6 +1288,8 @@ export default function NotebooksPage() {
                 setCurrentLessonIdx(lesIdx);
                 if (isMobile) setMobileSidebarOpen(false);
               }}
+              onReorderLesson={handleReorderLesson}
+              onDuplicateLesson={handleDuplicateLesson}
               onDeleteLesson={handleDeleteLesson}
               onToggleWatched={handleToggleWatched}
               onEditCourse={() => handleStartEditCourse(currentCourse)}
@@ -1188,59 +1367,324 @@ export default function NotebooksPage() {
               overflowY: "auto",
               height: "100%",
               WebkitOverflowScrolling: "touch",
+              position: "relative",
             }}
           >
-            <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-              {/* Breadcrumb */}
+            {/* Copied to Clipboard Notification Toast */}
+            {copiedMarkdownToast && (
               <div
                 style={{
+                  position: "fixed",
+                  bottom: "32px",
+                  right: "32px",
+                  zIndex: 9999,
+                  background: "#B8F04A",
+                  color: "#0A0A0A",
+                  border: "3px solid #0A0A0A",
+                  boxShadow: "5px 5px 0 #0A0A0A",
+                  padding: "10px 18px",
                   fontFamily: "var(--mono, monospace)",
-                  fontSize: "9.5px",
-                  fontWeight: 700,
-                  letterSpacing: "0.14em",
-                  opacity: 0.45,
-                  marginBottom: "16px",
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  letterSpacing: "0.12em",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
                 }}
               >
-                {currentCourse.title.toUpperCase()} · {currentModule.title.split(" · ")[0]} · LESSON{" "}
-                {currentLessonIdx + 1}
+                <Check size={14} />
+                COPIED PAGE AS MARKDOWN
+              </div>
+            )}
+
+            <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+              {/* Breadcrumb & Navigation */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  marginBottom: "14px",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "9.5px",
+                    fontWeight: 700,
+                    letterSpacing: "0.14em",
+                    opacity: 0.45,
+                  }}
+                >
+                  {currentCourse.title.toUpperCase()} · {currentModule.title.split(" · ")[0]} · PAGE{" "}
+                  {currentLessonIdx + 1}
+                </div>
+
+                {/* Source Lecture Link Badge */}
+                {currentLesson.lessonUrl ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <a
+                      href={currentLesson.lessonUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open source video / lecture"
+                      style={{
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        letterSpacing: "0.1em",
+                        color: "inherit",
+                        textDecoration: "none",
+                        border: "1.5px solid rgba(10,10,10,0.3)",
+                        padding: "2px 7px",
+                        background: "rgba(184, 240, 74, 0.25)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <ExternalLink size={10} />
+                      SOURCE LECTURE
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUrlDraft(currentLesson.lessonUrl || "");
+                        setShowUrlModal(true);
+                      }}
+                      title="Edit source URL"
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        cursor: "pointer",
+                        opacity: 0.4,
+                        padding: "2px",
+                      }}
+                    >
+                      <Pencil size={10} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUrlDraft("");
+                      setShowUrlModal(true);
+                    }}
+                    style={{
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "8.5px",
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      border: "1px dashed rgba(10,10,10,0.3)",
+                      background: "transparent",
+                      color: "inherit",
+                      opacity: 0.45,
+                      padding: "2px 6px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "3px",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.45")}
+                  >
+                    <LinkIcon size={9} />
+                    ＋ LINK SOURCE URL
+                  </button>
+                )}
               </div>
 
-              {/* Lesson Title */}
-              <h1
-                style={{
-                  margin: "0 0 6px",
-                  fontFamily: "var(--display, sans-serif)",
-                  fontWeight: 800,
-                  fontSize: "clamp(28px, 4.8vw, 48px)",
-                  lineHeight: 0.97,
-                  letterSpacing: "-0.05em",
-                }}
-              >
-                {currentLesson.title}
-              </h1>
+              {/* Editable Page Title Header */}
+              {isEditingTitle ? (
+                <div style={{ marginBottom: "12px", display: "flex", gap: "8px", alignItems: "center" }}>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={titleDraft}
+                    onChange={(e) => setTitleDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleRenameLesson(titleDraft);
+                      if (e.key === "Escape") setIsEditingTitle(false);
+                    }}
+                    onBlur={() => handleRenameLesson(titleDraft)}
+                    style={{
+                      flex: 1,
+                      fontFamily: "var(--display, sans-serif)",
+                      fontWeight: 800,
+                      fontSize: "clamp(26px, 4.5vw, 44px)",
+                      lineHeight: 1,
+                      letterSpacing: "-0.05em",
+                      border: "3px solid #0A0A0A",
+                      background: "#FFFFFF",
+                      color: "#0A0A0A",
+                      padding: "6px 12px",
+                      outline: "none",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRenameLesson(titleDraft)}
+                    style={{
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      border: "2px solid #0A0A0A",
+                      background: "#B8F04A",
+                      color: "#0A0A0A",
+                      padding: "10px 14px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    SAVE
+                  </button>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginBottom: "6px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    setTitleDraft(currentLesson.title);
+                    setIsEditingTitle(true);
+                  }}
+                  title="Click to rename page"
+                >
+                  <h1
+                    style={{
+                      margin: 0,
+                      fontFamily: "var(--display, sans-serif)",
+                      fontWeight: 800,
+                      fontSize: "clamp(28px, 4.8vw, 48px)",
+                      lineHeight: 0.97,
+                      letterSpacing: "-0.05em",
+                    }}
+                  >
+                    {currentLesson.title}
+                  </h1>
+                  <span
+                    style={{
+                      opacity: 0.25,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      transition: "opacity 0.15s ease",
+                    }}
+                  >
+                    <Pencil size={16} />
+                  </span>
+                </div>
+              )}
 
-              {/* Meta Row & Page Action Buttons */}
+              {/* Meta Row & Productivity Action Buttons */}
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  gap: "14px",
+                  gap: "12px",
                   flexWrap: "wrap",
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "9.5px",
                   fontWeight: 700,
                   letterSpacing: "0.12em",
-                  opacity: 0.85,
-                  marginBottom: "8px",
+                  opacity: 0.9,
+                  marginBottom: "12px",
+                  paddingBottom: "8px",
+                  borderBottom: "1.5px solid rgba(10,10,10,0.1)",
                 }}
               >
-                <div style={{ display: "flex", gap: "14px", opacity: 0.6 }}>
-                  <span>{currentLesson.meta}</span>
+                {/* Stats indicators */}
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", opacity: 0.65 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    <Clock size={11} />
+                    ~{Math.max(1, Math.ceil(wordCount / 200))} MIN READ
+                  </span>
                   <span>{wordCount.toLocaleString()} WORDS</span>
+                  <span>{currentBlocks.length} BLOCKS</span>
                 </div>
-                <div style={{ display: "flex", gap: "8px" }}>
+
+                {/* Page Action Bar */}
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                  {/* Table of Contents Outline Toggle */}
+                  {currentBlocks.some((b) => b.type === "heading") && (
+                    <button
+                      type="button"
+                      onClick={() => setShowToc(!showToc)}
+                      title="Toggle Table of Contents"
+                      style={{
+                        border: "1.5px solid rgba(10,10,10,0.3)",
+                        background: showToc ? "#0A0A0A" : "transparent",
+                        color: showToc ? "#F3F0E8" : "inherit",
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        padding: "4px 8px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <List size={11} />
+                      OUTLINE
+                    </button>
+                  )}
+
+                  {/* Copy as Markdown Button */}
+                  <button
+                    type="button"
+                    onClick={handleCopyAsMarkdown}
+                    title="Copy full page as formatted Markdown"
+                    style={{
+                      border: "1.5px solid rgba(10,10,10,0.3)",
+                      background: "transparent",
+                      color: "inherit",
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      padding: "4px 8px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <Copy size={11} />
+                    COPY MD
+                  </button>
+
+                  {/* Duplicate Page Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleDuplicateLesson(currentModuleIdx, currentLessonIdx)}
+                    title="Duplicate Page"
+                    style={{
+                      border: "1.5px solid rgba(10,10,10,0.3)",
+                      background: "transparent",
+                      color: "inherit",
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      padding: "4px 8px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#B8F04A")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <FileText size={11} />
+                    DUPLICATE
+                  </button>
+
                   {currentBlocks.length > 0 && (
                     <button
                       type="button"
@@ -1251,7 +1695,7 @@ export default function NotebooksPage() {
                         fontFamily: "var(--mono, monospace)",
                         fontSize: "9px",
                         fontWeight: 700,
-                        padding: "3px 8px",
+                        padding: "4px 8px",
                         cursor: "pointer",
                         color: "inherit",
                         opacity: 0.65,
@@ -1259,9 +1703,10 @@ export default function NotebooksPage() {
                       onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
-                      CLEAR NOTES
+                      CLEAR
                     </button>
                   )}
+
                   <button
                     type="button"
                     onClick={() => handleDeleteLesson(currentModuleIdx, currentLessonIdx)}
@@ -1272,7 +1717,7 @@ export default function NotebooksPage() {
                       fontFamily: "var(--mono, monospace)",
                       fontSize: "9px",
                       fontWeight: 700,
-                      padding: "3px 8px",
+                      padding: "4px 8px",
                       cursor: "pointer",
                     }}
                     onMouseEnter={(e) => {
@@ -1284,10 +1729,80 @@ export default function NotebooksPage() {
                       e.currentTarget.style.color = "#DC2626";
                     }}
                   >
-                    ✕ DELETE PAGE
+                    DELETE PAGE
                   </button>
                 </div>
               </div>
+
+              {/* Table of Contents (TOC) Outline Box */}
+              {showToc && (
+                <div
+                  style={{
+                    background: "rgba(0,0,0,0.03)",
+                    border: "2px solid #0A0A0A",
+                    padding: "12px 16px",
+                    marginBottom: "18px",
+                    boxShadow: "3px 3px 0 #0A0A0A",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "9px",
+                      fontWeight: 800,
+                      letterSpacing: "0.15em",
+                      opacity: 0.5,
+                      marginBottom: "8px",
+                    }}
+                  >
+                    ON THIS PAGE
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {currentBlocks
+                      .filter((b): b is Extract<Block, { type: "heading" }> => b.type === "heading")
+                      .map((h, hIdx) => (
+                        <div
+                          key={h.id || hIdx}
+                          onClick={() => {
+                            const el = document.getElementById(h.id);
+                            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }}
+                          style={{
+                            fontFamily: "var(--body, sans-serif)",
+                            fontSize: h.level === 3 ? "12px" : "13.5px",
+                            fontWeight: h.level === 3 ? 500 : 700,
+                            paddingLeft: h.level === 3 ? "14px" : "0",
+                            cursor: "pointer",
+                            opacity: 0.85,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = currentCourse.accent)}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = "inherit")}
+                        >
+                          <span style={{ opacity: 0.4, fontFamily: "var(--mono, monospace)", fontSize: "9px" }}>
+                            {h.level === 3 ? "››" : "›"}
+                          </span>
+                          <span>{h.text || "(Untitled Heading)"}</span>
+                          {h.ts && (
+                            <span
+                              style={{
+                                fontFamily: "var(--mono, monospace)",
+                                fontSize: "8.5px",
+                                opacity: 0.5,
+                                background: "rgba(0,0,0,0.06)",
+                                padding: "1px 4px",
+                              }}
+                            >
+                              {h.ts}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
 
               {/* AI Action Triggers */}
               <AiBar
@@ -1454,6 +1969,117 @@ export default function NotebooksPage() {
         confirmLabel={confirmModalState.confirmLabel}
         confirmVariant={confirmModalState.confirmVariant}
       />
+
+      {/* 8. Source URL Modal Popup */}
+      {showUrlModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(10,10,10,0.6)",
+            backdropFilter: "blur(2px)",
+            display: "grid",
+            placeItems: "center",
+            zIndex: 9999,
+            padding: "20px",
+          }}
+          onClick={() => setShowUrlModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: "480px",
+              background: "#FFFFFF",
+              border: "3px solid #0A0A0A",
+              boxShadow: "7px 7px 0 #0A0A0A",
+              padding: "24px",
+              color: "#0A0A0A",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "10px",
+                fontWeight: 800,
+                letterSpacing: "0.16em",
+                opacity: 0.5,
+                marginBottom: "6px",
+              }}
+            >
+              LECTURE / VIDEO / RESOURCE LINK
+            </div>
+            <h3
+              style={{
+                margin: "0 0 16px",
+                fontFamily: "var(--display, sans-serif)",
+                fontSize: "20px",
+                fontWeight: 800,
+                letterSpacing: "-0.03em",
+              }}
+            >
+              Attach Source URL
+            </h3>
+            <input
+              type="url"
+              autoFocus
+              value={urlDraft}
+              onChange={(e) => setUrlDraft(e.target.value)}
+              placeholder="https://youtube.com/watch?v=... or https://coursera.org/..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSaveLessonUrl(urlDraft);
+                if (e.key === "Escape") setShowUrlModal(false);
+              }}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "12px",
+                border: "2px solid #0A0A0A",
+                background: "#F3F0E8",
+                color: "#0A0A0A",
+                outline: "none",
+                marginBottom: "18px",
+              }}
+            />
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setShowUrlModal(false)}
+                style={{
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  border: "2px solid #0A0A0A",
+                  background: "transparent",
+                  color: "#0A0A0A",
+                  padding: "8px 14px",
+                  cursor: "pointer",
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSaveLessonUrl(urlDraft)}
+                style={{
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  border: "2px solid #0A0A0A",
+                  background: "#B8F04A",
+                  color: "#0A0A0A",
+                  padding: "8px 16px",
+                  cursor: "pointer",
+                  boxShadow: "2px 2px 0 #0A0A0A",
+                }}
+              >
+                SAVE URL
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

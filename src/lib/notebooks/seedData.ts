@@ -7,6 +7,7 @@ export interface SeedCourseLesson {
   meta: string;
   blocks?: Block[];
   gap?: { timestamp: string; topic: string }[];
+  lessonUrl?: string | null;
   transcript?: {
     text: string;
     cues: { t: string; text: string }[];

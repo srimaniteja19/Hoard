@@ -4,7 +4,16 @@ import React, { useState } from "react";
 import { SeedCourse } from "@/lib/notebooks/seedData";
 import { lessonState, computeWordCount } from "@/lib/notebooks/blocks";
 import { playSound } from "@/lib/sound";
-import { Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Pencil,
+  Trash2,
+  GripVertical,
+  Copy,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 
 interface OutlineSidebarProps {
   courses: SeedCourse[];
@@ -15,6 +24,13 @@ interface OutlineSidebarProps {
   onSelectLesson: (moduleIndex: number, lessonIndex: number) => void;
   onDeleteLesson?: (moduleIndex: number, lessonIndex: number) => void;
   onToggleWatched?: (moduleIndex: number, lessonIndex: number) => void;
+  onDuplicateLesson?: (moduleIndex: number, lessonIndex: number) => void;
+  onReorderLesson?: (
+    sourceModuleIndex: number,
+    targetModuleIndex: number,
+    sourceLessonIndex: number,
+    targetLessonIndex: number
+  ) => void;
   onEditCourse?: () => void;
   onDeleteCourse?: () => void;
   onBackToIndex: () => void;
@@ -30,13 +46,34 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   onSelectLesson,
   onDeleteLesson,
   onToggleWatched,
+  onDuplicateLesson,
+  onReorderLesson,
   onEditCourse,
   onDeleteCourse,
   onBackToIndex,
   onNewPage,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
+
+  // Drag and drop state
+  const [draggingInfo, setDraggingInfo] = useState<{
+    modIdx: number;
+    lesIdx: number;
+    lessonId: string;
+  } | null>(null);
+
+  const [dropTarget, setDropTarget] = useState<{
+    modIdx: number;
+    lesIdx: number;
+    position: "before" | "after";
+  } | null>(null);
+
+  const [dragOverModuleIdx, setDragOverModuleIdx] = useState<number | null>(null);
+
   const course = courses[currentCourseIndex] || courses[0];
+  if (!course) return null;
+
   const allLessons = course.modules.flatMap((m) => m.lessons);
   const totalLessons = allLessons.length;
 
@@ -49,6 +86,11 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
 
   const writtenPct = totalLessons > 0 ? (writtenCount / totalLessons) * 100 : 0;
   const unwrittenPct = totalLessons > 0 ? (unwrittenCount / totalLessons) * 100 : 0;
+
+  const toggleModuleCollapse = (modId: string) => {
+    playSound.click();
+    setCollapsedModules((prev) => ({ ...prev, [modId]: !prev[modId] }));
+  };
 
   return (
     <aside
@@ -257,34 +299,69 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
       {/* Module & Lessons Outline */}
       <div style={{ flex: 1 }}>
         {course.modules.map((mod, modIdx) => {
+          const isCollapsed = Boolean(collapsedModules[mod.id]);
           const matchingLessons = mod.lessons.filter((l) =>
             !searchQuery.trim() ||
             l.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             l.meta.toLowerCase().includes(searchQuery.toLowerCase())
           );
 
-          if (matchingLessons.length === 0) return null;
+          if (matchingLessons.length === 0 && searchQuery.trim()) return null;
 
           const modWritten = mod.lessons.filter(
             (l) => lessonState({ wordCount: computeWordCount(l.blocks || []) }) === "written"
           ).length;
 
+          const isModuleDragOver = dragOverModuleIdx === modIdx && mod.lessons.length === 0;
+
           return (
-            <div key={mod.id} style={{ padding: "14px 18px 0" }}>
+            <div
+              key={mod.id}
+              style={{
+                padding: "14px 18px 0",
+                background: isModuleDragOver ? "rgba(252, 233, 79, 0.2)" : "transparent",
+                transition: "background 0.15s ease",
+              }}
+              onDragOver={(e) => {
+                if (draggingInfo) {
+                  e.preventDefault();
+                  setDragOverModuleIdx(modIdx);
+                }
+              }}
+              onDragLeave={() => {
+                if (dragOverModuleIdx === modIdx) setDragOverModuleIdx(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverModuleIdx(null);
+                if (draggingInfo && onReorderLesson && mod.lessons.length === 0) {
+                  onReorderLesson(draggingInfo.modIdx, modIdx, draggingInfo.lesIdx, 0);
+                  setDraggingInfo(null);
+                  setDropTarget(null);
+                }
+              }}
+            >
+              {/* Module Header with Collapse Toggle */}
               <div
+                onClick={() => toggleModuleCollapse(mod.id)}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "9px",
+                  gap: "7px",
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "9.5px",
                   fontWeight: 700,
-                  letterSpacing: "0.16em",
-                  opacity: 0.45,
-                  marginBottom: "8px",
+                  letterSpacing: "0.14em",
+                  opacity: 0.65,
+                  marginBottom: isCollapsed ? "4px" : "8px",
                   color: "#0A0A0A",
+                  cursor: "pointer",
+                  userSelect: "none",
                 }}
               >
+                <span style={{ display: "flex", alignItems: "center" }}>
+                  {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                </span>
                 <span>{mod.title}</span>
                 <span style={{ flex: 1, height: "2px", background: "rgba(10,10,10,0.14)" }} />
                 <span>
@@ -293,130 +370,288 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
               </div>
 
               {/* Lesson Items */}
-              {matchingLessons.map((les) => {
-                const lesIdx = mod.lessons.findIndex((l) => l.id === les.id);
-                const isSelected = modIdx === currentModuleIndex && lesIdx === currentLessonIndex;
-                const state = lessonState({ wordCount: computeWordCount(les.blocks || []) });
-
-                return (
-                  <div
-                    key={les.id}
-                    onClick={() => {
-                      playSound.click();
-                      onSelectLesson(modIdx, lesIdx);
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: "10px",
-                      padding: "7px 9px",
-                      cursor: "pointer",
-                      border: "2px solid",
-                      borderColor: isSelected ? "#0A0A0A" : "transparent",
-                      background: isSelected ? "#0A0A0A" : "transparent",
-                      color: isSelected ? "#F3F0E8" : "#0A0A0A",
-                      margin: "0 -9px",
-                      transition: "background 0.1s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) {
-                        e.currentTarget.style.background = "#FFFFFF";
-                        e.currentTarget.style.borderColor = "#0A0A0A";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) {
-                        e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.borderColor = "transparent";
-                      }
-                    }}
-                  >
-                    {/* State Status Square */}
-                    <span
+              {!isCollapsed && (
+                <div>
+                  {mod.lessons.length === 0 && (
+                    <div
                       style={{
-                        width: "11px",
-                        height: "11px",
-                        border: isSelected ? "2px solid #F3F0E8" : "2px solid #0A0A0A",
-                        flex: "none",
-                        marginTop: "5px",
-                        background:
-                          state === "written"
-                            ? "#B8F04A"
-                            : state === "stub"
-                            ? "repeating-linear-gradient(45deg, #FCE94F 0 3px, transparent 3px 6px)"
-                            : "transparent",
+                        padding: "12px",
+                        border: "2px dashed rgba(10,10,10,0.2)",
+                        textAlign: "center",
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "9.5px",
+                        letterSpacing: "0.1em",
+                        opacity: 0.45,
+                        margin: "4px 0 8px",
                       }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0, fontSize: "14.5px", lineHeight: "1.32", fontWeight: 500 }}>
-                      {les.title}
-                      <em
-                        style={{
-                          display: "block",
-                          fontStyle: "normal",
-                          fontFamily: "var(--mono, monospace)",
-                          fontSize: "8.5px",
-                          fontWeight: 700,
-                          letterSpacing: "0.1em",
-                          opacity: isSelected ? 0.7 : 0.45,
-                          marginTop: "3px",
-                        }}
-                      >
-                        {les.meta}
-                      </em>
+                    >
+                      DROP PAGES HERE
                     </div>
-                    {onToggleWatched && (
-                      <button
-                        type="button"
-                        title={les.watched ? "Mark as not watched" : "Mark as watched"}
-                        onClick={(e) => {
+                  )}
+
+                  {matchingLessons.map((les) => {
+                    const lesIdx = mod.lessons.findIndex((l) => l.id === les.id);
+                    const isSelected = modIdx === currentModuleIndex && lesIdx === currentLessonIndex;
+                    const state = lessonState({ wordCount: computeWordCount(les.blocks || []) });
+                    const isDraggingThis =
+                      draggingInfo?.modIdx === modIdx && draggingInfo?.lesIdx === lesIdx;
+
+                    const isDropBefore =
+                      dropTarget?.modIdx === modIdx &&
+                      dropTarget?.lesIdx === lesIdx &&
+                      dropTarget?.position === "before";
+                    const isDropAfter =
+                      dropTarget?.modIdx === modIdx &&
+                      dropTarget?.lesIdx === lesIdx &&
+                      dropTarget?.position === "after";
+
+                    return (
+                      <div
+                        key={les.id}
+                        style={{ position: "relative" }}
+                        onDragOver={(e) => {
+                          if (draggingInfo) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const midY = rect.top + rect.height / 2;
+                            const pos = e.clientY < midY ? "before" : "after";
+                            setDropTarget({ modIdx, lesIdx, position: pos });
+                          }
+                        }}
+                        onDragLeave={() => {
+                          if (dropTarget?.modIdx === modIdx && dropTarget?.lesIdx === lesIdx) {
+                            setDropTarget(null);
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
-                          playSound.click();
-                          onToggleWatched(modIdx, lesIdx);
+                          if (draggingInfo && onReorderLesson) {
+                            const sourceModIdx = draggingInfo.modIdx;
+                            const sourceLesIdx = draggingInfo.lesIdx;
+                            let targetLesIdx = lesIdx;
+                            if (dropTarget?.position === "after") {
+                              targetLesIdx = lesIdx + 1;
+                            }
+                            // Adjust index if moving within same module down the list
+                            if (sourceModIdx === modIdx && sourceLesIdx < targetLesIdx) {
+                              targetLesIdx = Math.max(0, targetLesIdx - 1);
+                            }
+                            onReorderLesson(sourceModIdx, modIdx, sourceLesIdx, targetLesIdx);
+                          }
+                          setDraggingInfo(null);
+                          setDropTarget(null);
                         }}
-                        style={{
-                          border: "none",
-                          background: "transparent",
-                          color: isSelected ? "#F3F0E8" : "#0A0A0A",
-                          opacity: les.watched ? 0.55 : 0.3,
-                          cursor: "pointer",
-                          padding: "2px 4px",
-                          marginTop: "2px",
-                          display: "grid",
-                          placeItems: "center",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = les.watched ? "0.55" : "0.3")}
                       >
-                        {les.watched ? <Eye size={12} /> : <EyeOff size={12} />}
-                      </button>
-                    )}
-                    {onDeleteLesson && (
-                      <button
-                        type="button"
-                        title={`Delete ${les.title}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteLesson(modIdx, lesIdx);
-                        }}
-                        style={{
-                          border: "none",
-                          background: "transparent",
-                          color: isSelected ? "#F3F0E8" : "#991B1B",
-                          opacity: 0.35,
-                          cursor: "pointer",
-                          fontSize: "11px",
-                          padding: "2px 4px",
-                          marginTop: "2px",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+                        {/* Drop Target Indicator Line (Before) */}
+                        {isDropBefore && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "-3px",
+                              left: "-9px",
+                              right: "-9px",
+                              height: "4px",
+                              background: "#FCE94F",
+                              border: "1.5px solid #0A0A0A",
+                              zIndex: 10,
+                            }}
+                          />
+                        )}
+
+                        <div
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", les.id);
+                            e.dataTransfer.effectAllowed = "move";
+                            setDraggingInfo({ modIdx, lesIdx, lessonId: les.id });
+                            playSound.click();
+                          }}
+                          onDragEnd={() => {
+                            setDraggingInfo(null);
+                            setDropTarget(null);
+                          }}
+                          onClick={() => {
+                            playSound.click();
+                            onSelectLesson(modIdx, lesIdx);
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: "8px",
+                            padding: "7px 9px",
+                            cursor: "grab",
+                            border: "2px solid",
+                            borderColor: isSelected ? "#0A0A0A" : "transparent",
+                            background: isSelected ? "#0A0A0A" : "transparent",
+                            color: isSelected ? "#F3F0E8" : "#0A0A0A",
+                            margin: "0 -9px",
+                            opacity: isDraggingThis ? 0.35 : 1,
+                            transition: "background 0.1s ease, border-color 0.1s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected && !isDraggingThis) {
+                              e.currentTarget.style.background = "#FFFFFF";
+                              e.currentTarget.style.borderColor = "#0A0A0A";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected && !isDraggingThis) {
+                              e.currentTarget.style.background = "transparent";
+                              e.currentTarget.style.borderColor = "transparent";
+                            }
+                          }}
+                        >
+                          {/* Drag Handle Icon */}
+                          <span
+                            title="Drag to reorder"
+                            style={{
+                              opacity: isSelected ? 0.6 : 0.3,
+                              marginTop: "3px",
+                              cursor: "grab",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <GripVertical size={13} />
+                          </span>
+
+                          {/* State Status Square */}
+                          <span
+                            style={{
+                              width: "11px",
+                              height: "11px",
+                              border: isSelected ? "2px solid #F3F0E8" : "2px solid #0A0A0A",
+                              flex: "none",
+                              marginTop: "5px",
+                              background:
+                                state === "written"
+                                  ? "#B8F04A"
+                                  : state === "stub"
+                                  ? "repeating-linear-gradient(45deg, #FCE94F 0 3px, transparent 3px 6px)"
+                                  : "transparent",
+                            }}
+                          />
+
+                          <div style={{ flex: 1, minWidth: 0, fontSize: "14.5px", lineHeight: "1.32", fontWeight: 500 }}>
+                            {les.title}
+                            <em
+                              style={{
+                                display: "block",
+                                fontStyle: "normal",
+                                fontFamily: "var(--mono, monospace)",
+                                fontSize: "8.5px",
+                                fontWeight: 700,
+                                letterSpacing: "0.1em",
+                                opacity: isSelected ? 0.7 : 0.45,
+                                marginTop: "3px",
+                              }}
+                            >
+                              {les.meta}
+                            </em>
+                          </div>
+
+                          {/* Quick Duplicate Page Button */}
+                          {onDuplicateLesson && (
+                            <button
+                              type="button"
+                              title="Duplicate Page"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playSound.click();
+                                onDuplicateLesson(modIdx, lesIdx);
+                              }}
+                              style={{
+                                border: "none",
+                                background: "transparent",
+                                color: isSelected ? "#F3F0E8" : "#0A0A0A",
+                                opacity: 0.35,
+                                cursor: "pointer",
+                                padding: "2px 4px",
+                                marginTop: "2px",
+                                display: "grid",
+                                placeItems: "center",
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
+                            >
+                              <Copy size={11} />
+                            </button>
+                          )}
+
+                          {onToggleWatched && (
+                            <button
+                              type="button"
+                              title={les.watched ? "Mark as not watched" : "Mark as watched"}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playSound.click();
+                                onToggleWatched(modIdx, lesIdx);
+                              }}
+                              style={{
+                                border: "none",
+                                background: "transparent",
+                                color: isSelected ? "#F3F0E8" : "#0A0A0A",
+                                opacity: les.watched ? 0.6 : 0.3,
+                                cursor: "pointer",
+                                padding: "2px 4px",
+                                marginTop: "2px",
+                                display: "grid",
+                                placeItems: "center",
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                              onMouseLeave={(e) => (e.currentTarget.style.opacity = les.watched ? "0.6" : "0.3")}
+                            >
+                              {les.watched ? <Eye size={12} /> : <EyeOff size={12} />}
+                            </button>
+                          )}
+
+                          {onDeleteLesson && (
+                            <button
+                              type="button"
+                              title={`Delete ${les.title}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteLesson(modIdx, lesIdx);
+                              }}
+                              style={{
+                                border: "none",
+                                background: "transparent",
+                                color: isSelected ? "#F3F0E8" : "#991B1B",
+                                opacity: 0.35,
+                                cursor: "pointer",
+                                fontSize: "11px",
+                                padding: "2px 4px",
+                                marginTop: "2px",
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Drop Target Indicator Line (After) */}
+                        {isDropAfter && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              bottom: "-3px",
+                              left: "-9px",
+                              right: "-9px",
+                              height: "4px",
+                              background: "#FCE94F",
+                              border: "1.5px solid #0A0A0A",
+                              zIndex: 10,
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
@@ -438,30 +673,32 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             color: "#0A0A0A",
             padding: "9px",
             cursor: "pointer",
-            marginBottom: "8px",
+            boxShadow: "3px 3px 0 #0A0A0A",
+            marginBottom: "10px",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
         >
-          ＋ NEW PAGE
+          ＋ ADD A PAGE
         </button>
+
         <button
           type="button"
           onClick={onBackToIndex}
           style={{
             width: "100%",
             fontFamily: "var(--mono, monospace)",
-            fontSize: "10px",
+            fontSize: "9px",
             fontWeight: 700,
             letterSpacing: "0.13em",
             border: "2px solid #0A0A0A",
-            background: "#FFFFFF",
+            background: "transparent",
             color: "#0A0A0A",
-            padding: "9px",
+            padding: "8px",
             cursor: "pointer",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.06)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
         >
           ← ALL NOTEBOOKS
         </button>

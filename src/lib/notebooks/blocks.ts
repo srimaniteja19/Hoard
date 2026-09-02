@@ -246,3 +246,56 @@ export function blocksToChunks(blocks: Block[]): { blockId: string; text: string
 export function generateBlockId(): string {
   return "blk_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 }
+
+/**
+ * Converts note blocks into clean GitHub-Flavored Markdown
+ */
+export function convertBlocksToMarkdown(title: string, blocks: Block[]): string {
+  const lines: string[] = [`# ${title}\n`];
+
+  for (const b of blocks) {
+    switch (b.type) {
+      case "paragraph":
+        lines.push(`${b.text}\n`);
+        break;
+      case "heading": {
+        const prefix = b.level === 3 ? "###" : "##";
+        const ts = b.ts ? ` \`[⏱ ${b.ts}]\`` : "";
+        lines.push(`${prefix} ${b.text}${ts}\n`);
+        break;
+      }
+      case "callout":
+        lines.push(`> [!${b.kind.toUpperCase()}]\n> ${b.text}\n`);
+        break;
+      case "quote":
+        lines.push(`> "${b.text}"\n${b.attribution ? `> — *${b.attribution}*\n` : ""}`);
+        break;
+      case "code":
+        lines.push(`\`\`\`${(b.lang || "").toLowerCase()}\n${b.code}\n\`\`\`\n`);
+        break;
+      case "todo":
+        for (const item of b.items) {
+          lines.push(`- [${item.done ? "x" : " "}] ${item.text}`);
+        }
+        lines.push("");
+        break;
+      case "toggle":
+        lines.push(`<details>\n<summary>${b.summary}</summary>\n\n${b.body}\n</details>\n`);
+        break;
+      case "image":
+        lines.push(`![${b.caption || "Image"}](${b.url})\n`);
+        break;
+      case "divider":
+        lines.push(`---\n`);
+        break;
+      case "link":
+        lines.push(`[${b.title || b.url}](${b.url})\n`);
+        break;
+      case "example":
+        lines.push(`**Before:**\n> ${b.v1Text}\n\n**After:**\n> ${b.v2Text}\n`);
+        break;
+    }
+  }
+
+  return lines.join("\n");
+}

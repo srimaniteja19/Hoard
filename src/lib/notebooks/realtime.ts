@@ -57,6 +57,16 @@ export type RealtimeNotebookEvent =
       timestamp: number;
     }
   | {
+      type: "LESSONS_REORDERED";
+      courseId: string;
+      sourceModuleId: string;
+      targetModuleId: string;
+      lessonId: string;
+      targetIndex: number;
+      senderId: string;
+      timestamp: number;
+    }
+  | {
       type: "FULL_SYNC_REQUESTED";
       senderId: string;
       timestamp: number;

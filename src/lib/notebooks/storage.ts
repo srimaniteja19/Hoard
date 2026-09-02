@@ -1,5 +1,5 @@
 import { Block, computeWordCount, generateBlockId } from "./blocks";
-import { SEED_COURSES, SEED_COLLISIONS, SeedCourse, CourseCollision } from "./seedData";
+import { SEED_COURSES, SEED_COLLISIONS, SeedCourse, SeedCourseLesson, CourseCollision } from "./seedData";
 import {
   setSyncStatus,
   broadcastRealtimeEvent,
@@ -632,5 +632,125 @@ export async function deleteLessonFromDbApi(lessonId: string): Promise<boolean> 
     console.error("[deleteLessonFromDbApi] Failed:", err);
     setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
     return false;
+  }
+}
+
+/**
+ * Reorders lessons in memory across modules and updates localStorage
+ */
+export function reorderLessonsInMemory(
+  courses: SeedCourse[],
+  courseId: string,
+  sourceModuleId: string,
+  targetModuleId: string,
+  lessonId: string,
+  targetIndex: number
+): SeedCourse[] {
+  const isSame = (a: string, b: string) => a === b || a.endsWith("_" + b) || b.endsWith("_" + a);
+  const updated = courses.map((c) => {
+    if (!isSame(c.id, courseId)) return c;
+
+    const sourceMod = c.modules.find((m) => isSame(m.id, sourceModuleId));
+    const targetMod = c.modules.find((m) => isSame(m.id, targetModuleId));
+    if (!sourceMod || !targetMod) return c;
+
+    const targetLesson = sourceMod.lessons.find((l) => isSame(l.id, lessonId));
+    if (!targetLesson) return c;
+
+    if (isSame(sourceMod.id, targetMod.id)) {
+      const filtered = sourceMod.lessons.filter((l) => !isSame(l.id, lessonId));
+      const clamped = Math.max(0, Math.min(targetIndex, filtered.length));
+      filtered.splice(clamped, 0, targetLesson);
+      return {
+        ...c,
+        modules: c.modules.map((m) => (isSame(m.id, sourceMod.id) ? { ...m, lessons: filtered } : m)),
+      };
+    } else {
+      const updatedSrcLessons = sourceMod.lessons.filter((l) => !isSame(l.id, lessonId));
+      const updatedTgtLessons = [...targetMod.lessons];
+      const clamped = Math.max(0, Math.min(targetIndex, updatedTgtLessons.length));
+      updatedTgtLessons.splice(clamped, 0, targetLesson);
+
+      return {
+        ...c,
+        modules: c.modules.map((m) => {
+          if (isSame(m.id, sourceMod.id)) return { ...m, lessons: updatedSrcLessons };
+          if (isSame(m.id, targetMod.id)) return { ...m, lessons: updatedTgtLessons };
+          return m;
+        }),
+      };
+    }
+  });
+
+  saveStoredCourses(updated);
+  return updated;
+}
+
+/**
+ * Persists lesson reordering to PostgreSQL and broadcasts to other tabs
+ */
+export async function reorderLessonsInDbApi(
+  courseId: string,
+  sourceModuleId: string,
+  targetModuleId: string,
+  lessonId: string,
+  newIndex: number
+): Promise<boolean> {
+  try {
+    setSyncStatus("saving");
+    const res = await fetch("/api/notebooks/lessons/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        courseId,
+        sourceModuleId,
+        targetModuleId,
+        lessonId,
+        newIndex,
+      }),
+    });
+    if (res.ok) {
+      setSyncStatus("saved");
+      broadcastRealtimeEvent({
+        type: "LESSONS_REORDERED",
+        courseId,
+        sourceModuleId,
+        targetModuleId,
+        lessonId,
+        targetIndex: newIndex,
+      });
+      return true;
+    }
+    setSyncStatus("error");
+    return false;
+  } catch (err) {
+    console.error("[reorderLessonsInDbApi] Failed:", err);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
+    return false;
+  }
+}
+
+/**
+ * Duplicates a lesson and its blocks in PostgreSQL
+ */
+export async function duplicateLessonInDbApi(
+  lessonId: string
+): Promise<SeedCourseLesson | null> {
+  try {
+    setSyncStatus("saving");
+    const res = await fetch(`/api/notebooks/lessons/${encodeURIComponent(lessonId)}/duplicate`, {
+      method: "POST",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setSyncStatus("saved");
+      return data.lesson || null;
+    }
+    setSyncStatus("error");
+    return null;
+  } catch (err) {
+    console.error("[duplicateLessonInDbApi] Failed:", err);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
+    return null;
   }
 }

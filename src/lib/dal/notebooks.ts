@@ -710,3 +710,172 @@ export async function saveNotebookCollisions(
 
   return true;
 }
+
+/**
+ * Reorders lessons within a module or moves lessons across modules
+ */
+export async function reorderLessons(
+  userId: string,
+  courseId: string,
+  sourceModuleId: string,
+  targetModuleId: string,
+  lessonId: string,
+  targetIndex: number
+): Promise<{ success: boolean; courses: SeedCourse[] }> {
+  // 1. Verify user owns course
+  const [course] = await db
+    .select({ id: notebookCourses.id })
+    .from(notebookCourses)
+    .where(and(courseIdFilter(userId, courseId), eq(notebookCourses.userId, userId)))
+    .limit(1);
+
+  if (!course) return { success: false, courses: [] };
+
+  // 2. Resolve module records
+  const [srcMod] = await db
+    .select({ id: notebookModules.id })
+    .from(notebookModules)
+    .where(and(moduleIdFilter(userId, sourceModuleId), eq(notebookModules.courseId, course.id)))
+    .limit(1);
+
+  const [tgtMod] = await db
+    .select({ id: notebookModules.id })
+    .from(notebookModules)
+    .where(and(moduleIdFilter(userId, targetModuleId), eq(notebookModules.courseId, course.id)))
+    .limit(1);
+
+  if (!srcMod || !tgtMod) return { success: false, courses: [] };
+
+  // 3. Resolve target lesson
+  const [les] = await db
+    .select({ id: notebookLessons.id })
+    .from(notebookLessons)
+    .where(lessonIdFilter(userId, lessonId))
+    .limit(1);
+
+  if (!les) return { success: false, courses: [] };
+
+  // 4. Fetch lessons from source and target modules
+  const srcLessons = await db
+    .select()
+    .from(notebookLessons)
+    .where(eq(notebookLessons.moduleId, srcMod.id))
+    .orderBy(asc(notebookLessons.position));
+
+  if (srcMod.id === tgtMod.id) {
+    // Reorder within the same module
+    const list = srcLessons.filter((l) => l.id !== les.id);
+    const clampedIndex = Math.max(0, Math.min(targetIndex, list.length));
+    const targetItem = srcLessons.find((l) => l.id === les.id);
+    if (!targetItem) return { success: false, courses: [] };
+    list.splice(clampedIndex, 0, targetItem);
+
+    for (let i = 0; i < list.length; i++) {
+      await db
+        .update(notebookLessons)
+        .set({ position: i })
+        .where(eq(notebookLessons.id, list[i].id));
+    }
+  } else {
+    // Move across modules
+    const tgtLessons = await db
+      .select()
+      .from(notebookLessons)
+      .where(eq(notebookLessons.moduleId, tgtMod.id))
+      .orderBy(asc(notebookLessons.position));
+
+    const updatedSrc = srcLessons.filter((l) => l.id !== les.id);
+    const targetItem = srcLessons.find((l) => l.id === les.id);
+    if (!targetItem) return { success: false, courses: [] };
+
+    const clampedIndex = Math.max(0, Math.min(targetIndex, tgtLessons.length));
+    tgtLessons.splice(clampedIndex, 0, targetItem);
+
+    // Update source module positions
+    for (let i = 0; i < updatedSrc.length; i++) {
+      await db
+        .update(notebookLessons)
+        .set({ position: i })
+        .where(eq(notebookLessons.id, updatedSrc[i].id));
+    }
+
+    // Update target module positions and parent moduleId
+    for (let i = 0; i < tgtLessons.length; i++) {
+      await db
+        .update(notebookLessons)
+        .set({ position: i, moduleId: tgtMod.id })
+        .where(eq(notebookLessons.id, tgtLessons[i].id));
+    }
+  }
+
+  const updatedCourses = await getUserNotebookCourses(userId);
+  return { success: true, courses: updatedCourses };
+}
+
+/**
+ * Duplicates a lesson and its blocks into the same module
+ */
+export async function duplicateLesson(
+  userId: string,
+  lessonId: string
+): Promise<SeedCourseLesson | null> {
+  const [les] = await db
+    .select({
+      id: notebookLessons.id,
+      moduleId: notebookLessons.moduleId,
+      title: notebookLessons.title,
+      gap: notebookLessons.gap,
+      lessonUrl: notebookLessons.lessonUrl,
+    })
+    .from(notebookLessons)
+    .innerJoin(notebookModules, eq(notebookLessons.moduleId, notebookModules.id))
+    .innerJoin(notebookCourses, eq(notebookModules.courseId, notebookCourses.id))
+    .where(and(lessonIdFilter(userId, lessonId), eq(notebookCourses.userId, userId)))
+    .limit(1);
+
+  if (!les) return null;
+
+  // Fetch source page blocks
+  const [page] = await db
+    .select({ blocks: notebookPages.blocks, wordCount: notebookPages.wordCount })
+    .from(notebookPages)
+    .where(eq(notebookPages.lessonId, les.id))
+    .limit(1);
+
+  const existing = await db
+    .select({ id: notebookLessons.id })
+    .from(notebookLessons)
+    .where(eq(notebookLessons.moduleId, les.moduleId));
+
+  const newLessonId = crypto.randomUUID();
+  const title = `${les.title} (Copy)`;
+  const blocks = (page?.blocks as Block[]) || [{ id: generateBlockId(), type: "paragraph", text: "" }];
+  const wordCount = page?.wordCount || computeWordCount(blocks);
+
+  await db.insert(notebookLessons).values({
+    id: newLessonId,
+    moduleId: les.moduleId,
+    title,
+    position: existing.length,
+    watchedAt: null,
+    gap: les.gap || [],
+    lessonUrl: les.lessonUrl || null,
+  });
+
+  await db.insert(notebookPages).values({
+    id: crypto.randomUUID(),
+    lessonId: newLessonId,
+    blocks,
+    wordCount,
+    updatedAt: new Date(),
+  });
+
+  return {
+    id: newLessonId,
+    title,
+    watched: false,
+    meta: formatLessonMeta(wordCount, false),
+    blocks,
+    gap: (les.gap as any) || [],
+  };
+}
