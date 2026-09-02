@@ -72,7 +72,13 @@ import {
   ArrowUp,
   ArrowDown,
   FolderPlus,
+  MoreHorizontal,
+  ChevronDown,
+  Trash2,
+  HelpCircle,
+  Wand2,
 } from "lucide-react";
+import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 
 export default function NotebooksPage() {
   const [courses, setCourses] = useState<SeedCourse[]>([]);
@@ -80,7 +86,7 @@ export default function NotebooksPage() {
   const [currentCourseIdx, setCurrentCourseIdx] = useState(0);
   const [currentModuleIdx, setCurrentModuleIdx] = useState(1);
   const [currentLessonIdx, setCurrentLessonIdx] = useState(0);
-  const [paperTheme, setPaperTheme] = useState<"cream" | "ink">("cream");
+  const [paperTheme, setPaperTheme] = useState<NotebookTheme>("cream");
 
   // The two-column course workspace (fixed 300px sidebar + fluid content) has
   // no room to breathe below ~860px — a phone would show a squeezed sliver of
@@ -151,6 +157,29 @@ export default function NotebooksPage() {
   const [showFlashcardModal, setShowFlashcardModal] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
 
+  // Clean Header Dropdown States
+  const [showAiMenu, setShowAiMenu] = useState(false);
+  const [showPageMoreMenu, setShowPageMoreMenu] = useState(false);
+  const aiMenuRef = useRef<HTMLDivElement>(null);
+  const pageMoreMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (aiMenuRef.current && !aiMenuRef.current.contains(e.target as Node)) {
+        setShowAiMenu(false);
+      }
+      if (pageMoreMenuRef.current && !pageMoreMenuRef.current.contains(e.target as Node)) {
+        setShowPageMoreMenu(false);
+      }
+    };
+    if (showAiMenu || showPageMoreMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showAiMenu, showPageMoreMenu]);
+
   // Global Keyboard Shortcuts (Cmd+K / Ctrl+K for Quick Switcher, Escape for Focus mode)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -201,8 +230,8 @@ export default function NotebooksPage() {
     });
 
     // Restore paper theme
-    const savedTheme = localStorage.getItem("hoard_notebook_theme") as "cream" | "ink" | null;
-    if (savedTheme === "cream" || savedTheme === "ink") {
+    const savedTheme = localStorage.getItem("hoard_notebook_theme") as NotebookTheme | null;
+    if (savedTheme === "cream" || savedTheme === "ink" || savedTheme === "matcha" || savedTheme === "midnight") {
       setPaperTheme(savedTheme);
     }
 
@@ -288,7 +317,8 @@ export default function NotebooksPage() {
   }, [view, currentCourseIdx, currentModuleIdx, currentLessonIdx, courses]);
 
   // Synchronize paper theme
-  const handleToggleTheme = (theme: "cream" | "ink") => {
+  const handleToggleTheme = (theme: NotebookTheme) => {
+    playSound.click();
     setPaperTheme(theme);
     localStorage.setItem("hoard_notebook_theme", theme);
   };
@@ -1216,14 +1246,15 @@ export default function NotebooksPage() {
     return results;
   }, [courses, globalSearchQuery]);
 
-  const isInk = paperTheme === "ink";
+  const tokens = getThemeTokens(paperTheme);
+  const isInk = tokens.isDark;
 
   return (
     <div
       className="page-scroll"
       style={{
-        background: isInk ? "#0D0F13" : "#F3F0E8",
-        color: isInk ? "#F0EDE4" : "#0A0A0A",
+        background: tokens.canvasBg,
+        color: tokens.textPrimary,
         height: "100%",
         display: "flex",
         flexDirection: "column",
@@ -1263,8 +1294,8 @@ export default function NotebooksPage() {
             fontWeight: 700,
             letterSpacing: "0.15em",
             padding: "12px clamp(16px, 3vw, 28px)",
-            borderBottom: "3px solid #0A0A0A",
-            background: isInk ? "#0D0F13" : "#F3F0E8",
+            borderBottom: `3px solid ${tokens.borderPrimary}`,
+            background: tokens.canvasBg,
             flexShrink: 0,
             zIndex: 40,
           }}
@@ -1276,7 +1307,7 @@ export default function NotebooksPage() {
               aria-label="Open lesson outline"
               style={{
                 background: "transparent",
-                border: "2px solid #0A0A0A",
+                border: `2px solid ${tokens.borderPrimary}`,
                 color: "inherit",
                 cursor: "pointer",
                 padding: "4px 8px",
@@ -1316,14 +1347,15 @@ export default function NotebooksPage() {
               fontSize: "9px",
               fontWeight: 700,
               letterSpacing: "0.1em",
-              border: "2px solid #0A0A0A",
-              background: "#FFFFFF",
-              color: "#0A0A0A",
+              border: `2px solid ${tokens.borderPrimary}`,
+              background: tokens.cardBg,
+              color: tokens.textPrimary,
               padding: "4px 9px",
               cursor: "pointer",
+              boxShadow: tokens.isDark ? "2px 2px 0 rgba(0,0,0,0.6)" : "2px 2px 0 #0A0A0A",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
+            onMouseEnter={(e) => (e.currentTarget.style.background = tokens.isDark ? "rgba(255,255,255,0.15)" : "#FCE94F")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = tokens.cardBg)}
           >
             <Search size={11} />
             <span>QUICK JUMP</span>
@@ -1342,42 +1374,63 @@ export default function NotebooksPage() {
               });
             }}
           />
-          <div style={{ display: "flex", border: "2px solid #0A0A0A" }}>
-            <button
-              type="button"
-              onClick={() => handleToggleTheme("cream")}
-              style={{
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "9px",
-                fontWeight: 700,
-                letterSpacing: "0.12em",
-                border: "none",
-                borderRight: "2px solid #0A0A0A",
-                background: !isInk ? "#0A0A0A" : "transparent",
-                color: !isInk ? "#F3F0E8" : "#F0EDE4",
-                padding: "4px 9px",
-                cursor: "pointer",
-              }}
-            >
-              CREAM
-            </button>
-            <button
-              type="button"
-              onClick={() => handleToggleTheme("ink")}
-              style={{
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "9px",
-                fontWeight: 700,
-                letterSpacing: "0.12em",
-                border: "none",
-                background: isInk ? "#0A0A0A" : "transparent",
-                color: isInk ? "#B8F04A" : "#0A0A0A",
-                padding: "4px 9px",
-                cursor: "pointer",
-              }}
-            >
-              INK
-            </button>
+
+          {/* 4-Theme Segmented Switcher */}
+          <div
+            style={{
+              display: "flex",
+              border: `2px solid ${tokens.borderPrimary}`,
+              background: tokens.isDark ? "#12151E" : "#E5E1D5",
+              boxShadow: tokens.isDark ? "2px 2px 0 rgba(0,0,0,0.6)" : "2px 2px 0 #0A0A0A",
+            }}
+          >
+            {[
+              { id: "cream" as NotebookTheme, label: "CREAM", emoji: "📜" },
+              { id: "matcha" as NotebookTheme, label: "MATCHA", emoji: "🍵" },
+              { id: "ink" as NotebookTheme, label: "INK", emoji: "🖋️" },
+              { id: "midnight" as NotebookTheme, label: "MIDNIGHT", emoji: "🌌" },
+            ].map((th, thIdx) => {
+              const isActive = paperTheme === th.id;
+              return (
+                <button
+                  key={th.id}
+                  type="button"
+                  onClick={() => handleToggleTheme(th.id)}
+                  title={`Switch to ${th.label} theme`}
+                  style={{
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "8.5px",
+                    fontWeight: 800,
+                    letterSpacing: "0.1em",
+                    border: "none",
+                    borderRight: thIdx < 3 ? `1.5px solid ${tokens.borderPrimary}` : "none",
+                    background: isActive
+                      ? (tokens.isDark
+                          ? (th.id === "midnight" ? "#8B5CF6" : "#242A38")
+                          : (th.id === "matcha" ? "#2E6B47" : "#0A0A0A"))
+                      : "transparent",
+                    color: isActive
+                      ? (th.id === "matcha" ? "#F5FDF7" : (th.id === "midnight" ? "#FFFFFF" : (tokens.isDark ? "#FCE94F" : "#F3F0E8")))
+                      : (tokens.isDark ? "rgba(240,237,228,0.6)" : "rgba(10,10,10,0.65)"),
+                    padding: "4px 8px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    transition: "all 0.12s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) e.currentTarget.style.background = tokens.isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  <span style={{ fontSize: "10px" }}>{th.emoji}</span>
+                  <span>{th.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -2179,25 +2232,192 @@ export default function NotebooksPage() {
                   fontSize: "9.5px",
                   fontWeight: 700,
                   letterSpacing: "0.12em",
-                  opacity: 0.9,
-                  marginBottom: "12px",
-                  paddingBottom: "8px",
-                  borderBottom: "1.5px solid rgba(10,10,10,0.1)",
+                  marginBottom: "16px",
+                  paddingBottom: "10px",
+                  borderBottom: isInk ? "1.5px solid rgba(255,255,255,0.12)" : "1.5px solid rgba(10,10,10,0.1)",
                 }}
               >
                 {/* Stats indicators */}
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", opacity: 0.65 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", opacity: 0.65 }}>
                   <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                     <Clock size={11} />
                     ~{Math.max(1, Math.ceil(wordCount / 200))} MIN READ
                   </span>
+                  <span>·</span>
                   <span>{wordCount.toLocaleString()} WORDS</span>
+                  <span>·</span>
                   <span>{currentBlocks.length} BLOCKS</span>
                 </div>
 
-                {/* Page Action Bar */}
-                <div className="no-print" style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                  {/* Focus / Zen Mode Button */}
+                {/* Clean Unified Action Controls */}
+                <div className="no-print" style={{ display: "flex", alignItems: "center", gap: "8px", position: "relative" }}>
+                  {/* AI Actions Dropdown Pill */}
+                  <div ref={aiMenuRef} style={{ position: "relative" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound.click();
+                        setShowAiMenu(!showAiMenu);
+                        setShowPageMoreMenu(false);
+                      }}
+                      style={{
+                        border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid #0A0A0A",
+                        background: isInk ? "#242A38" : "#7B5CF0",
+                        color: isInk ? "#FCE94F" : "#FFFFFF",
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "9px",
+                        fontWeight: 800,
+                        letterSpacing: "0.1em",
+                        padding: "5px 10px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        boxShadow: isInk ? "2px 2px 0 rgba(0,0,0,0.5)" : "2px 2px 0 #0A0A0A",
+                        transition: "all 0.1s ease",
+                      }}
+                    >
+                      <Sparkles size={11} />
+                      <span>✦ AI</span>
+                      <ChevronDown size={10} style={{ transform: showAiMenu ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+                    </button>
+
+                    {showAiMenu && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "calc(100% + 6px)",
+                          right: 0,
+                          zIndex: 100,
+                          background: isInk ? "#1A1D26" : "#FFFFFF",
+                          border: isInk ? "2px solid rgba(255,255,255,0.2)" : "2px solid #0A0A0A",
+                          boxShadow: isInk ? "4px 4px 0 rgba(0,0,0,0.8)" : "4px 4px 0 #0A0A0A",
+                          minWidth: "200px",
+                          padding: "6px 0",
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAiMenu(false);
+                            handleTidyNotes();
+                          }}
+                          disabled={isTidying}
+                          style={{
+                            padding: "8px 14px",
+                            background: "transparent",
+                            border: "none",
+                            textAlign: "left",
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9.5px",
+                            fontWeight: 700,
+                            color: "inherit",
+                            cursor: isTidying ? "wait" : "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <Wand2 size={12} color="#7B5CF0" />
+                          <span>{isTidying ? "TIDYING NOTES…" : "TIDY MY NOTES"}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAiMenu(false);
+                            handleQuizMe();
+                          }}
+                          disabled={isQuizzing}
+                          style={{
+                            padding: "8px 14px",
+                            background: "transparent",
+                            border: "none",
+                            textAlign: "left",
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9.5px",
+                            fontWeight: 700,
+                            color: "inherit",
+                            cursor: isQuizzing ? "wait" : "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <HelpCircle size={12} color="#FF9900" />
+                          <span>{isQuizzing ? "GENERATING QUIZ…" : "QUIZ ME"}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAiMenu(false);
+                            handleExplain();
+                          }}
+                          disabled={isExplaining}
+                          style={{
+                            padding: "8px 14px",
+                            background: "transparent",
+                            border: "none",
+                            textAlign: "left",
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9.5px",
+                            fontWeight: 700,
+                            color: "inherit",
+                            cursor: isExplaining ? "wait" : "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <FileText size={12} color="#00D4FF" />
+                          <span>{isExplaining ? "EXPLAINING…" : "EXPLAIN CONCEPTS"}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAiMenu(false);
+                            if (currentLesson.transcript) {
+                              handleAnalyzeTranscript(currentLesson.transcript.text);
+                            } else {
+                              setShowTranscriptModal(true);
+                            }
+                          }}
+                          disabled={isAnalyzingGaps}
+                          style={{
+                            padding: "8px 14px",
+                            background: "transparent",
+                            border: "none",
+                            textAlign: "left",
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9.5px",
+                            fontWeight: 700,
+                            color: "inherit",
+                            cursor: isAnalyzingGaps ? "wait" : "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <Search size={12} color="#B8F04A" />
+                          <span>{isAnalyzingGaps ? "ANALYZING GAPS…" : "WHAT DID I MISS?"}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Zen Focus Mode Button */}
                   <button
                     type="button"
                     onClick={() => {
@@ -2212,11 +2432,11 @@ export default function NotebooksPage() {
                       fontFamily: "var(--mono, monospace)",
                       fontSize: "9px",
                       fontWeight: 700,
-                      padding: "4px 8px",
+                      padding: "5px 9px",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
-                      gap: "4px",
+                      gap: "5px",
                     }}
                     onMouseEnter={(e) => {
                       if (!isFocusMode) e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#FCE94F";
@@ -2229,7 +2449,7 @@ export default function NotebooksPage() {
                     FOCUS
                   </button>
 
-                  {/* Active Recall Flashcards Deck Button */}
+                  {/* Flashcards Button */}
                   <button
                     type="button"
                     onClick={() => {
@@ -2244,217 +2464,297 @@ export default function NotebooksPage() {
                       fontFamily: "var(--mono, monospace)",
                       fontSize: "9px",
                       fontWeight: 700,
-                      padding: "4px 8px",
+                      padding: "5px 9px",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
-                      gap: "4px",
+                      gap: "5px",
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#FCE94F")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
                     <Layers size={11} />
-                    FLASHCARDS
+                    CARDS
                   </button>
 
-                  {/* Print / Export to PDF Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound.click();
-                      window.print();
-                    }}
-                    title="Print or save page as PDF"
-                    style={{
-                      border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
-                      background: "transparent",
-                      color: "inherit",
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "9px",
-                      fontWeight: 700,
-                      padding: "4px 8px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#B8F04A")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                  >
-                    <Printer size={11} />
-                    PRINT / PDF
-                  </button>
-
-                  {/* Table of Contents Outline Toggle */}
-                  {currentBlocks.some((b) => b.type === "heading") && (
+                  {/* More Actions Popover (⋯) */}
+                  <div ref={pageMoreMenuRef} style={{ position: "relative" }}>
                     <button
                       type="button"
-                      onClick={() => setShowToc(!showToc)}
-                      title="Toggle Table of Contents"
+                      onClick={() => {
+                        playSound.click();
+                        setShowPageMoreMenu(!showPageMoreMenu);
+                        setShowAiMenu(false);
+                      }}
+                      title="More page actions"
                       style={{
                         border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
-                        background: showToc ? (isInk ? "#252A36" : "#0A0A0A") : "transparent",
-                        color: showToc ? "#F3F0E8" : "inherit",
+                        background: showPageMoreMenu ? (isInk ? "rgba(255,255,255,0.15)" : "#FCE94F") : "transparent",
+                        color: "inherit",
                         fontFamily: "var(--mono, monospace)",
                         fontSize: "9px",
                         fontWeight: 700,
-                        padding: "4px 8px",
+                        padding: "5px 8px",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
-                        gap: "4px",
-                      }}
-                    >
-                      <List size={11} />
-                      OUTLINE
-                    </button>
-                  )}
-
-                  {/* Copy as Markdown Button */}
-                  <button
-                    type="button"
-                    onClick={handleCopyAsMarkdown}
-                    title="Copy full page as formatted Markdown"
-                    style={{
-                      border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
-                      background: "transparent",
-                      color: "inherit",
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "9px",
-                      fontWeight: 700,
-                      padding: "4px 8px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#FCE94F")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                  >
-                    <Copy size={11} />
-                    COPY MD
-                  </button>
-
-                  {/* Duplicate Page Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleDuplicateLesson(currentModuleIdx, currentLessonIdx)}
-                    title="Duplicate Page"
-                    style={{
-                      border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
-                      background: "transparent",
-                      color: "inherit",
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "9px",
-                      fontWeight: 700,
-                      padding: "4px 8px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#B8F04A")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                  >
-                    <FileText size={11} />
-                    DUPLICATE
-                  </button>
-
-                  {/* Add Page Above / Below Quick Buttons */}
-                  <button
-                    type="button"
-                    onClick={() => handleCreateLessonAbove(currentModuleIdx, currentLessonIdx)}
-                    title="Create a new page above this one"
-                    style={{
-                      border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
-                      background: "transparent",
-                      color: "inherit",
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "9px",
-                      fontWeight: 700,
-                      padding: "4px 8px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#B8F04A")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                  >
-                    <ArrowUp size={11} />
-                    ＋ ABOVE
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleCreateLessonBelow(currentModuleIdx, currentLessonIdx)}
-                    title="Create a new page below this one"
-                    style={{
-                      border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
-                      background: "transparent",
-                      color: "inherit",
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "9px",
-                      fontWeight: 700,
-                      padding: "4px 8px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#B8F04A")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                  >
-                    <ArrowDown size={11} />
-                    ＋ BELOW
-                  </button>
-
-                  {currentBlocks.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={handleClearCurrentNotes}
-                      style={{
-                        border: isInk ? "1.5px solid rgba(255,255,255,0.2)" : "1.5px solid rgba(10,10,10,0.25)",
-                        background: "transparent",
-                        fontFamily: "var(--mono, monospace)",
-                        fontSize: "9px",
-                        fontWeight: 700,
-                        padding: "4px 8px",
-                        cursor: "pointer",
-                        color: "inherit",
-                        opacity: 0.65,
+                        justifyContent: "center",
                       }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#FCE94F")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      onMouseLeave={(e) => {
+                        if (!showPageMoreMenu) e.currentTarget.style.background = "transparent";
+                      }}
                     >
-                      CLEAR
+                      <MoreHorizontal size={13} />
                     </button>
-                  )}
 
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteLesson(currentModuleIdx, currentLessonIdx)}
-                    style={{
-                      border: "1.5px solid #DC2626",
-                      background: "transparent",
-                      color: "#DC2626",
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "9px",
-                      fontWeight: 700,
-                      padding: "4px 8px",
-                      cursor: "pointer",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#DC2626";
-                      e.currentTarget.style.color = "#FFFFFF";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
-                      e.currentTarget.style.color = "#DC2626";
-                    }}
-                  >
-                    DELETE PAGE
-                  </button>
+                    {showPageMoreMenu && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "calc(100% + 6px)",
+                          right: 0,
+                          zIndex: 100,
+                          background: isInk ? "#1A1D26" : "#FFFFFF",
+                          border: isInk ? "2px solid rgba(255,255,255,0.2)" : "2px solid #0A0A0A",
+                          boxShadow: isInk ? "4px 4px 0 rgba(0,0,0,0.8)" : "4px 4px 0 #0A0A0A",
+                          minWidth: "190px",
+                          padding: "6px 0",
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPageMoreMenu(false);
+                            playSound.click();
+                            window.print();
+                          }}
+                          style={{
+                            padding: "7px 12px",
+                            background: "transparent",
+                            border: "none",
+                            textAlign: "left",
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9.5px",
+                            fontWeight: 700,
+                            color: "inherit",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <Printer size={12} />
+                          <span>EXPORT / PRINT PDF</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPageMoreMenu(false);
+                            handleCopyAsMarkdown();
+                          }}
+                          style={{
+                            padding: "7px 12px",
+                            background: "transparent",
+                            border: "none",
+                            textAlign: "left",
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9.5px",
+                            fontWeight: 700,
+                            color: "inherit",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <Copy size={12} />
+                          <span>COPY AS MARKDOWN</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPageMoreMenu(false);
+                            handleDuplicateLesson(currentModuleIdx, currentLessonIdx);
+                          }}
+                          style={{
+                            padding: "7px 12px",
+                            background: "transparent",
+                            border: "none",
+                            textAlign: "left",
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9.5px",
+                            fontWeight: 700,
+                            color: "inherit",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <FileText size={12} />
+                          <span>DUPLICATE PAGE</span>
+                        </button>
+
+                        {currentBlocks.some((b) => b.type === "heading") && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowPageMoreMenu(false);
+                              setShowToc(!showToc);
+                            }}
+                            style={{
+                              padding: "7px 12px",
+                              background: "transparent",
+                              border: "none",
+                              textAlign: "left",
+                              fontFamily: "var(--mono, monospace)",
+                              fontSize: "9.5px",
+                              fontWeight: 700,
+                              color: "inherit",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                          >
+                            <List size={12} />
+                            <span>{showToc ? "HIDE OUTLINE" : "SHOW OUTLINE (TOC)"}</span>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPageMoreMenu(false);
+                            handleCreateLessonAbove(currentModuleIdx, currentLessonIdx);
+                          }}
+                          style={{
+                            padding: "7px 12px",
+                            background: "transparent",
+                            border: "none",
+                            textAlign: "left",
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9.5px",
+                            fontWeight: 700,
+                            color: "inherit",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <ArrowUp size={12} />
+                          <span>INSERT PAGE ABOVE</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPageMoreMenu(false);
+                            handleCreateLessonBelow(currentModuleIdx, currentLessonIdx);
+                          }}
+                          style={{
+                            padding: "7px 12px",
+                            background: "transparent",
+                            border: "none",
+                            textAlign: "left",
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9.5px",
+                            fontWeight: 700,
+                            color: "inherit",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <ArrowDown size={12} />
+                          <span>INSERT PAGE BELOW</span>
+                        </button>
+
+                        <div style={{ height: "1px", background: isInk ? "rgba(255,255,255,0.12)" : "rgba(10,10,10,0.1)", margin: "4px 0" }} />
+
+                        {currentBlocks.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowPageMoreMenu(false);
+                              handleClearCurrentNotes();
+                            }}
+                            style={{
+                              padding: "7px 12px",
+                              background: "transparent",
+                              border: "none",
+                              textAlign: "left",
+                              fontFamily: "var(--mono, monospace)",
+                              fontSize: "9.5px",
+                              fontWeight: 700,
+                              color: "inherit",
+                              opacity: 0.7,
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                          >
+                            <span>🧹 CLEAR PAGE CONTENT</span>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPageMoreMenu(false);
+                            handleDeleteLesson(currentModuleIdx, currentLessonIdx);
+                          }}
+                          style={{
+                            padding: "7px 12px",
+                            background: "transparent",
+                            border: "none",
+                            textAlign: "left",
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9.5px",
+                            fontWeight: 700,
+                            color: "#DC2626",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "#DC2626";
+                            e.currentTarget.style.color = "#FFFFFF";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "transparent";
+                            e.currentTarget.style.color = "#DC2626";
+                          }}
+                        >
+                          <Trash2 size={12} />
+                          <span>DELETE PAGE</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -2527,27 +2827,6 @@ export default function NotebooksPage() {
                   </div>
                 </div>
               )}
-
-              {/* AI Action Triggers */}
-              <AiBar
-                accentColor={currentCourse.accent}
-                accentFg={currentCourse.accentFg}
-                theme={paperTheme}
-                onTidy={handleTidyNotes}
-                onQuiz={handleQuizMe}
-                onExplain={handleExplain}
-                onGaps={() => {
-                  if (currentLesson.transcript) {
-                    handleAnalyzeTranscript(currentLesson.transcript.text);
-                  } else {
-                    setShowTranscriptModal(true);
-                  }
-                }}
-                isTidying={isTidying}
-                isQuizzing={isQuizzing}
-                isExplaining={isExplaining}
-                isAnalyzingGaps={isAnalyzingGaps}
-              />
 
               {/* Content: Empty Page vs Block Editor */}
               {currentBlocks.length === 0 ? (

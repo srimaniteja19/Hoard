@@ -3,10 +3,12 @@
 import React from "react";
 import { playSound } from "@/lib/sound";
 
+import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
+
 interface AiBarProps {
   accentColor?: string;
   accentFg?: string;
-  theme?: "cream" | "ink";
+  theme?: NotebookTheme;
   onTidy: () => void;
   onQuiz: () => void;
   onExplain: () => void;
@@ -30,7 +32,8 @@ export const AiBar: React.FC<AiBarProps> = ({
   isExplaining = false,
   isAnalyzingGaps = false,
 }) => {
-  const isInk = theme === "ink";
+  const tokens = getThemeTokens(theme);
+  const isInk = tokens.isDark;
 
   return (
     <div

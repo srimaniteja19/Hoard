@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { CodeBlock } from "./CodeBlock";
 import { InlineTextEditor, InlineEditorHandle } from "./InlineTextEditor";
+import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 
 interface BlockRendererProps {
   block: Block;
@@ -35,7 +36,7 @@ interface BlockRendererProps {
   registerEditorHandle?: (handle: InlineEditorHandle | null) => void;
   readOnly?: boolean;
   accentColor?: string;
-  theme?: "cream" | "ink";
+  theme?: NotebookTheme;
 }
 
 export const BlockRenderer: React.FC<BlockRendererProps> = ({
@@ -54,7 +55,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   accentColor = "#7B5CF0",
   theme = "cream",
 }) => {
-  const isInk = theme === "ink";
+  const tokens = getThemeTokens(theme);
+  const isInk = tokens.isDark;
   const [toggleOpen, setToggleOpen] = useState(false);
   const [imageSize, setImageSize] = useState<"compact" | "standard" | "full">("standard");
 

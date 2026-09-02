@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { SeedCourse } from "@/lib/notebooks/seedData";
 import { lessonState, computeWordCount } from "@/lib/notebooks/blocks";
 import { playSound } from "@/lib/sound";
+import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 import {
   Eye,
   EyeOff,
@@ -24,7 +25,7 @@ interface OutlineSidebarProps {
   currentCourseIndex: number;
   currentModuleIndex: number;
   currentLessonIndex: number;
-  theme?: "cream" | "ink";
+  theme?: NotebookTheme;
   onSelectCourse: (index: number) => void;
   onSelectLesson: (moduleIndex: number, lessonIndex: number) => void;
   onDeleteLesson?: (moduleIndex: number, lessonIndex: number) => void;
@@ -71,7 +72,9 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   onBackToIndex,
   onNewPage,
 }) => {
-  const isInk = theme === "ink";
+  const tokens = getThemeTokens(theme);
+  const isDark = tokens.isDark;
+  const isInk = tokens.isDark;
   const [searchQuery, setSearchQuery] = useState("");
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
 
@@ -155,9 +158,9 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   return (
     <aside
       style={{
-        borderRight: isInk ? "3px solid rgba(255,255,255,0.15)" : "3px solid #0A0A0A",
-        background: isInk ? "#12141A" : "#EBE7DC",
-        color: isInk ? "#F0EDE4" : "#0A0A0A",
+        borderRight: `3px solid ${tokens.borderPrimary}`,
+        background: tokens.sidebarBg,
+        color: tokens.textPrimary,
         padding: "0 0 60px",
         height: "100%",
         minHeight: 0,

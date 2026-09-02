@@ -4,8 +4,10 @@ import React, { useState, useEffect } from "react";
 import { SyncStatus, subscribeSyncStatus } from "@/lib/notebooks/realtime";
 import { Check, RefreshCw, CloudOff, AlertCircle } from "lucide-react";
 
+import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
+
 interface SyncStatusPillProps {
-  theme?: "cream" | "ink";
+  theme?: NotebookTheme;
   onRetry?: () => void;
 }
 
@@ -13,7 +15,8 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({ theme = "cream",
   const [status, setStatus] = useState<SyncStatus>("saved");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [timeAgo, setTimeAgo] = useState<string>("just now");
-  const isInk = theme === "ink";
+  const tokens = getThemeTokens(theme);
+  const isInk = tokens.isDark;
 
   useEffect(() => {
     const unsubscribe = subscribeSyncStatus((newStatus, savedAt) => {
