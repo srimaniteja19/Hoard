@@ -21,6 +21,40 @@ import {
 
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 
+// Matches the markdown/HTML formatting delimiters BlockRenderer strips when
+// rendering (see renderFormattedInline's tokenRegex) — used to map a plain,
+// rendered selection string back to its position in the raw markdown text.
+const FORMAT_DELIMITER_REGEX =
+  /<\/?span[^>]*>|<\/?mark[^>]*>|<\/?(?:strong|b|em|code)>|\*\*|==|~~|`|\*/g;
+
+/**
+ * A DOM selection's plain text has all formatting delimiters (**, ==, <span>,
+ * etc.) already stripped by the browser. To find where that plain text lives
+ * in the raw markdown block text — even when the selection crosses an
+ * existing formatting boundary (e.g. spans across a **bold** run inside a
+ * ==highlighted== paragraph) — build a plain-text version of the raw text
+ * alongside a map from each plain-text index back to its raw-text index.
+ */
+function buildPlainTextMap(raw: string): { plain: string; rawIndexAt: number[] } {
+  let plain = "";
+  const rawIndexAt: number[] = [];
+  let rawIdx = 0;
+
+  while (rawIdx < raw.length) {
+    FORMAT_DELIMITER_REGEX.lastIndex = rawIdx;
+    const match = FORMAT_DELIMITER_REGEX.exec(raw);
+    if (match && match.index === rawIdx) {
+      rawIdx += match[0].length;
+      continue;
+    }
+    plain += raw[rawIdx];
+    rawIndexAt.push(rawIdx);
+    rawIdx++;
+  }
+
+  return { plain, rawIndexAt };
+}
+
 interface BlockEditorProps {
   blocks: Block[];
   onChange: (updatedBlocks: Block[]) => void;
@@ -202,6 +236,27 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         handleUpdateBlock(blockIdx, { ...targetBlock, text: nextText });
       } else if ("body" in targetBlock) {
         handleUpdateBlock(blockIdx, { ...targetBlock, body: nextText } as any);
+      }
+    } else if (targetText && (prefix || suffix)) {
+      // The selection crosses an existing formatting boundary (e.g. it spans
+      // across a **bold** run inside a ==highlighted== paragraph), so the
+      // raw markdown no longer contains selectedStr as a literal substring.
+      // Map the rendered plain-text selection back to its raw position and
+      // wrap that raw span instead, preserving whatever markup is inside it.
+      const { plain, rawIndexAt } = buildPlainTextMap(targetText);
+      const startInPlain = plain.indexOf(selectedStr);
+      if (startInPlain !== -1 && selectedStr.length > 0) {
+        const endInPlain = startInPlain + selectedStr.length - 1;
+        const rawStart = rawIndexAt[startInPlain];
+        const rawEnd = rawIndexAt[endInPlain] + 1;
+        const nextText =
+          targetText.slice(0, rawStart) + prefix + targetText.slice(rawStart, rawEnd) + suffix + targetText.slice(rawEnd);
+
+        if ("text" in targetBlock) {
+          handleUpdateBlock(blockIdx, { ...targetBlock, text: nextText });
+        } else if ("body" in targetBlock) {
+          handleUpdateBlock(blockIdx, { ...targetBlock, body: nextText } as any);
+        }
       }
     }
   };

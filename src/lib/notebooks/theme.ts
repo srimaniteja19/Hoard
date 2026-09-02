@@ -79,7 +79,7 @@ export const THEME_TOKENS: Record<NotebookTheme, ThemeTokens> = {
     sidebarBg: "#EBE7DC",
     cardBg: "#FFFFFF",
     popoverBg: "#FFFFFF",
-    popoverHoverBg: "#FCE94F",
+    popoverHoverBg: "#EFEADB",
     textPrimary: "#0A0A0A",
     textSecondary: "rgba(10, 10, 10, 0.7)",
     textMuted: "rgba(10, 10, 10, 0.45)",
