@@ -65,6 +65,16 @@ async function main() {
   const watched = await toggleLessonWatched(user.id, newLesson.id, true);
   console.log(`✓ Toggled watched: ${watched}`);
 
+  // 6b. Test updateLesson with lessonUrl, coverUrl, icon
+  console.log("5b. Testing updateLesson with lessonUrl, coverUrl, icon...");
+  const { updateLesson } = await import("../src/lib/dal/notebooks");
+  const updateOk = await updateLesson(user.id, newLesson.id, {
+    lessonUrl: "https://youtu.be/bf28LFPpjFsI?si=Puw5vyXP-UfEDaAB",
+    coverUrl: "linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%)",
+    icon: "☕",
+  });
+  console.log(`✓ Updated lesson metadata: ${updateOk}`);
+
   // 7. Verify all saved data in DB
   console.log("6. Verifying retrieved course tree from DB...");
   const courses = await getUserNotebookCourses(user.id);
@@ -72,6 +82,19 @@ async function main() {
   if (!found) throw new Error("Created course not found in database!");
   const foundLesson = found.modules[0].lessons.find((l) => l.id === newLesson.id);
   if (!foundLesson) throw new Error("Created lesson not found in database!");
+  if (foundLesson.lessonUrl !== "https://youtu.be/bf28LFPpjFsI?si=Puw5vyXP-UfEDaAB") {
+    throw new Error(`lessonUrl mismatch! Expected "https://youtu.be/bf28LFPpjFsI?si=Puw5vyXP-UfEDaAB", got "${foundLesson.lessonUrl}"`);
+  }
+  if (foundLesson.coverUrl !== "linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%)") {
+    throw new Error(`coverUrl mismatch! Expected gradient, got "${foundLesson.coverUrl}"`);
+  }
+  if (foundLesson.icon !== "☕") {
+    throw new Error(`icon mismatch! Expected "☕", got "${foundLesson.icon}"`);
+  }
+  console.log(`✓ Verified lessonUrl persisted: "${foundLesson.lessonUrl}"`);
+  console.log(`✓ Verified coverUrl persisted: "${foundLesson.coverUrl}"`);
+  console.log(`✓ Verified icon persisted: "${foundLesson.icon}"`);
+
   const firstBlock = foundLesson.blocks?.[0];
   const previewText = firstBlock && "text" in firstBlock ? firstBlock.text : "";
   console.log(`✓ Verified retrieved lesson blocks length: ${(foundLesson.blocks || []).length}`);

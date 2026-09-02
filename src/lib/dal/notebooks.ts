@@ -146,6 +146,9 @@ export async function getUserNotebookCourses(userId: string): Promise<SeedCourse
       id: l.id,
       title: l.title,
       watched: Boolean(l.watchedAt),
+      lessonUrl: l.lessonUrl || undefined,
+      coverUrl: l.coverUrl || undefined,
+      icon: l.icon || undefined,
       meta: formatLessonMeta(wordCount, Boolean(gap && gap.length > 0)),
       blocks,
       blocksUpdatedAt: page?.updatedAt?.toISOString(),
@@ -258,6 +261,9 @@ export async function syncLocalCoursesToDb(
           title: l.title,
           position: lIdx,
           watchedAt: l.watched ? new Date() : null,
+          lessonUrl: l.lessonUrl || null,
+          coverUrl: l.coverUrl || null,
+          icon: l.icon || null,
           gap: l.gap || [],
         });
 
@@ -805,7 +811,9 @@ export async function updateLesson(
   data: {
     title?: string;
     gap?: { timestamp: string; topic: string }[];
-    lessonUrl?: string;
+    lessonUrl?: string | null;
+    coverUrl?: string | null;
+    icon?: string | null;
     watched?: boolean;
   }
 ): Promise<boolean> {
@@ -827,7 +835,9 @@ export async function updateLesson(
   const updateFields: any = {};
   if (data.title !== undefined) updateFields.title = data.title.trim();
   if (data.gap !== undefined) updateFields.gap = data.gap;
-  if (data.lessonUrl !== undefined) updateFields.lessonUrl = data.lessonUrl;
+  if (data.lessonUrl !== undefined) updateFields.lessonUrl = data.lessonUrl || null;
+  if (data.coverUrl !== undefined) updateFields.coverUrl = data.coverUrl || null;
+  if (data.icon !== undefined) updateFields.icon = data.icon || null;
   if (data.watched !== undefined) updateFields.watchedAt = data.watched ? new Date() : null;
 
   await db
@@ -1037,6 +1047,8 @@ export async function duplicateLesson(
       title: notebookLessons.title,
       gap: notebookLessons.gap,
       lessonUrl: notebookLessons.lessonUrl,
+      coverUrl: notebookLessons.coverUrl,
+      icon: notebookLessons.icon,
     })
     .from(notebookLessons)
     .innerJoin(notebookModules, eq(notebookLessons.moduleId, notebookModules.id))
@@ -1071,6 +1083,8 @@ export async function duplicateLesson(
     watchedAt: null,
     gap: les.gap || [],
     lessonUrl: les.lessonUrl || null,
+    coverUrl: les.coverUrl || null,
+    icon: les.icon || null,
   });
 
   await db.insert(notebookPages).values({
@@ -1085,6 +1099,9 @@ export async function duplicateLesson(
     id: newLessonId,
     title,
     watched: false,
+    lessonUrl: les.lessonUrl || undefined,
+    coverUrl: les.coverUrl || undefined,
+    icon: les.icon || undefined,
     meta: formatLessonMeta(wordCount, false),
     blocks,
     gap: (les.gap as any) || [],

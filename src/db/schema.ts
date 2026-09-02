@@ -1241,6 +1241,8 @@ export const notebookLessons = pgTable(
     position: integer("position").notNull().default(0),
     watchedAt: timestamp("watched_at"),
     lessonUrl: text("lesson_url"),
+    coverUrl: text("cover_url"),
+    icon: text("icon"),
     gap: jsonb("gap").$type<{ timestamp: string; topic: string }[]>().default(sql`'[]'::jsonb`),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

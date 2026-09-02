@@ -39,7 +39,7 @@ export async function PATCH(
     }
 
     // 3. Toggling watched
-    if (body.toggleWatched === true || body.watched !== undefined) {
+    if (body.toggleWatched === true) {
       const success = await toggleLessonWatched(userId, id, body.watched);
       return NextResponse.json({ success, watched: success });
     }
@@ -49,6 +49,8 @@ export async function PATCH(
       title: body.title,
       gap: body.gap,
       lessonUrl: body.lessonUrl,
+      coverUrl: body.coverUrl,
+      icon: body.icon,
       watched: body.watched,
     });
 

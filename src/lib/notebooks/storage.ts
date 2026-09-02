@@ -697,7 +697,9 @@ export async function updateLessonInDbApi(
   data: {
     title?: string;
     gap?: { timestamp: string; topic: string }[];
-    lessonUrl?: string;
+    lessonUrl?: string | null;
+    coverUrl?: string | null;
+    icon?: string | null;
     watched?: boolean;
     toggleWatched?: boolean;
     clearNotes?: boolean;
