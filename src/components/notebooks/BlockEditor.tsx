@@ -171,6 +171,7 @@ const SLASH_MENU_ITEMS: { type: string; glyph: string; label: string; shortcut: 
   { type: "link", glyph: "🔗", label: "Web Bookmark Card", shortcut: "/link" },
   { type: "pdf", glyph: "📄", label: "PDF Document Viewer", shortcut: "/pdf" },
   { type: "audio", glyph: "🎵", label: "Audio / Spotify Player", shortcut: "/audio" },
+  { type: "diagram", glyph: "📐", label: "Architecture / Mermaid Diagram", shortcut: "/diagram" },
 ];
 
 export const BlockEditor: React.FC<BlockEditorProps> = ({
@@ -590,6 +591,17 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         };
         break;
       }
+      case "diagram":
+      case "mermaid": {
+        transformed = {
+          id: baseId,
+          type: "diagram",
+          diagramType: "mermaid",
+          code: props.code || "graph TD\n  A[Client Request] --> B[Load Balancer]\n  B --> C[Service Node A]\n  B --> D[Service Node B]\n  C --> E[(Database)]\n  D --> E",
+          title: props.title || "System Architecture Diagram",
+        };
+        break;
+      }
       case "paragraph":
       default:
         transformed = { id: baseId, type: "paragraph", text: props.text || "" };
@@ -680,6 +692,16 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           title: "Web Link",
           site: "WEBSITE",
           displayMode: "card",
+        };
+        break;
+      case "diagram":
+      case "mermaid":
+        newBlock = {
+          id: generateBlockId(),
+          type: "diagram",
+          diagramType: "mermaid",
+          code: "graph TD\n  A[Client Request] --> B[Load Balancer]\n  B --> C[Service Node A]\n  B --> D[Service Node B]\n  C --> E[(Database)]\n  D --> E",
+          title: "System Architecture Diagram",
         };
         break;
       case "paragraph":
@@ -1294,6 +1316,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
               { type: "toggle", label: "Toggle", glyph: "▸" },
               { type: "embed", label: "Embed", glyph: "▶" },
               { type: "link", label: "Bookmark", glyph: "🔗" },
+              { type: "diagram", label: "Diagram", glyph: "📐" },
             ].map((t) => (
               <button
                 key={t.type}

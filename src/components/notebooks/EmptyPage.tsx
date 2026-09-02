@@ -7,12 +7,14 @@ interface EmptyPageProps {
   onStartWriting: () => void;
   onPasteTranscript: () => void;
   onDraftFromSlides: () => void;
+  onDraftFromTopic?: () => void;
 }
 
 export const EmptyPage: React.FC<EmptyPageProps> = ({
   onStartWriting,
   onPasteTranscript,
   onDraftFromSlides,
+  onDraftFromTopic,
 }) => {
   return (
     <div
@@ -54,6 +56,42 @@ export const EmptyPage: React.FC<EmptyPageProps> = ({
       </p>
 
       <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+        {onDraftFromTopic && (
+          <button
+            type="button"
+            onClick={() => {
+              playSound.click();
+              onDraftFromTopic();
+            }}
+            style={{
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "10px",
+              fontWeight: 800,
+              letterSpacing: "0.12em",
+              border: "2px solid #0A0A0A",
+              background: "#B8F04A",
+              color: "#0A0A0A",
+              padding: "10px 18px",
+              cursor: "pointer",
+              boxShadow: "3px 3px 0 #0A0A0A",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              transition: "all 0.1s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translate(-1px, -1px)";
+              e.currentTarget.style.boxShadow = "4px 4px 0 #0A0A0A";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.boxShadow = "3px 3px 0 #0A0A0A";
+            }}
+          >
+            <span>✨ DRAFT FROM QUESTION / TOPIC (AI)</span>
+          </button>
+        )}
+
         <button
           type="button"
           onClick={() => {

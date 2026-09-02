@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { playSound } from "@/lib/sound";
-import { X, FileText, Plus } from "lucide-react";
+import { X, FileText, Plus, Sparkles } from "lucide-react";
 
 interface AddPageModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (title: string) => void;
+  onOpenAiDraft?: (initialTopic?: string) => void;
   courseTitle?: string;
 }
 
@@ -15,6 +16,7 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
+  onOpenAiDraft,
   courseTitle = "COURSE",
 }) => {
   const [title, setTitle] = useState("");
@@ -197,6 +199,35 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
             >
               CANCEL
             </button>
+
+            {onOpenAiDraft && (
+              <button
+                type="button"
+                onClick={() => {
+                  playSound.click();
+                  onClose();
+                  onOpenAiDraft(title.trim());
+                }}
+                style={{
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "10.5px",
+                  fontWeight: 800,
+                  letterSpacing: "0.1em",
+                  padding: "9px 14px",
+                  border: "2.5px solid #0A0A0A",
+                  background: "#FCE94F",
+                  color: "#0A0A0A",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  boxShadow: "3px 3px 0 #0A0A0A",
+                }}
+              >
+                <Sparkles size={13} />
+                <span>DRAFT WITH AI</span>
+              </button>
+            )}
 
             <button
               type="submit"

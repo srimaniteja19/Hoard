@@ -129,6 +129,14 @@ export const BlockSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     id: z.string(),
+    type: z.literal("diagram"),
+    diagramType: z.enum(["mermaid", "architecture", "flowchart", "sequence"]).optional(),
+    code: z.string(),
+    caption: z.string().optional(),
+    title: z.string().optional(),
+  }),
+  z.object({
+    id: z.string(),
     type: z.literal("mark"), // ⏱ during a lecture
     timestamp: z.string(),
     text: z.string().nullable().optional(),
@@ -238,6 +246,11 @@ export function computeWordCount(blocks: Block[]): number {
         if (b.title) textAccum += " " + b.title;
         if (b.caption) textAccum += " " + b.caption;
         break;
+      case "diagram":
+        if (b.title) textAccum += " " + b.title;
+        if (b.caption) textAccum += " " + b.caption;
+        textAccum += " " + b.code;
+        break;
     }
   }
 
@@ -337,6 +350,9 @@ export function convertBlocksToMarkdown(title: string, blocks: Block[]): string 
         break;
       case "embed":
         lines.push(`[Embed: ${b.title || b.url}](${b.url})\n`);
+        break;
+      case "diagram":
+        lines.push(`\`\`\`mermaid\n${b.code}\n\`\`\`\n${b.caption ? `*${b.caption}*\n` : ""}`);
         break;
       case "example":
         lines.push(`**Before:**\n> ${b.v1Text}\n\n**After:**\n> ${b.v2Text}\n`);

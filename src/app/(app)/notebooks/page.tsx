@@ -84,6 +84,7 @@ import {
 import { NotebookTheme, TypographyStyle, TYPOGRAPHY_FONTS, getThemeTokens } from "@/lib/notebooks/theme";
 import { PageCoverBanner } from "@/components/notebooks/PageCoverBanner";
 import { PageEmbeddedMedia } from "@/components/notebooks/PageEmbeddedMedia";
+import { GenerateTopicModal } from "@/components/notebooks/GenerateTopicModal";
 
 export default function NotebooksPage() {
   const [courses, setCourses] = useState<SeedCourse[]>([]);
@@ -163,6 +164,8 @@ export default function NotebooksPage() {
 
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [isAnalyzingGaps, setIsAnalyzingGaps] = useState(false);
+  const [showTopicModal, setShowTopicModal] = useState(false);
+  const [topicModalInitialQuery, setTopicModalInitialQuery] = useState("");
 
   // Page Productivity & Outline States
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -1231,6 +1234,101 @@ export default function NotebooksPage() {
     setCopiedMarkdownToast(true);
     playSound.click();
     setTimeout(() => setCopiedMarkdownToast(false), 2200);
+  };
+
+  // Handle autonomously generated notes from topic / question
+  const handleTopicGenerated = (result: {
+    title: string;
+    icon: string;
+    coverUrl: string;
+    blocks: Block[];
+    destination: "current" | "new";
+  }) => {
+    if (!currentCourse || !currentModule) return;
+
+    if (result.destination === "new") {
+      const targetMod = currentModule;
+      const newLessonId = generateBlockId();
+      const wc = computeWordCount(result.blocks);
+      const newLesson: SeedCourseLesson = {
+        id: newLessonId,
+        title: result.title,
+        icon: result.icon,
+        coverUrl: result.coverUrl,
+        blocks: result.blocks,
+        watched: false,
+        meta: `${wc.toLocaleString()} WORDS · AI DRAFT`,
+      };
+
+      const updated = courses.map((c) => {
+        if (c.id === currentCourse.id) {
+          return {
+            ...c,
+            modules: c.modules.map((m, mIdx) => {
+              if (mIdx === currentModuleIdx) {
+                return {
+                  ...m,
+                  lessons: [...m.lessons, newLesson],
+                };
+              }
+              return m;
+            }),
+          };
+        }
+        return c;
+      });
+
+      saveStoredCourses(updated);
+      setCourses(updated);
+      setCurrentLessonIdx(targetMod.lessons.length);
+
+      createLessonInDbApi(targetMod.id, result.title, result.blocks).then((dbLes) => {
+        if (dbLes) {
+          updateLessonInDbApi(dbLes.id, {
+            coverUrl: result.coverUrl,
+            icon: result.icon,
+          });
+        }
+      });
+    } else {
+      if (!currentLesson) return;
+      const updated = courses.map((c) => {
+        if (c.id === currentCourse.id) {
+          return {
+            ...c,
+            modules: c.modules.map((m, mIdx) => {
+              if (mIdx === currentModuleIdx) {
+                return {
+                  ...m,
+                  lessons: m.lessons.map((l, lIdx) =>
+                    lIdx === currentLessonIdx
+                      ? {
+                          ...l,
+                          title: result.title,
+                          icon: result.icon,
+                          coverUrl: result.coverUrl,
+                          blocks: result.blocks,
+                        }
+                      : l
+                  ),
+                };
+              }
+              return m;
+            }),
+          };
+        }
+        return c;
+      });
+
+      saveStoredCourses(updated);
+      setCourses(updated);
+      saveLessonBlocksToDbApi(currentLesson.id, result.blocks);
+      updateLessonInDbApi(currentLesson.id, {
+        title: result.title,
+        coverUrl: result.coverUrl,
+        icon: result.icon,
+      });
+    }
   };
 
   // Attach / Update Lesson URL
@@ -2497,6 +2595,35 @@ export default function NotebooksPage() {
                           type="button"
                           onClick={() => {
                             setShowAiMenu(false);
+                            setTopicModalInitialQuery(currentLesson?.title && currentLesson.title !== "Untitled Page" ? currentLesson.title : "");
+                            setShowTopicModal(true);
+                          }}
+                          style={{
+                            padding: "8px 14px",
+                            background: "transparent",
+                            border: "none",
+                            borderBottom: `1px solid ${tokens.borderSubtle}`,
+                            textAlign: "left",
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9.5px",
+                            fontWeight: 700,
+                            color: "inherit",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <Sparkles size={12} color="#10B981" />
+                          <span>DRAFT FROM QUESTION / TOPIC</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAiMenu(false);
                             handleTidyNotes();
                           }}
                           disabled={isTidying}
@@ -3033,6 +3160,10 @@ export default function NotebooksPage() {
                   }}
                   onPasteTranscript={() => setShowTranscriptModal(true)}
                   onDraftFromSlides={() => setShowTranscriptModal(true)}
+                  onDraftFromTopic={() => {
+                    setTopicModalInitialQuery(currentLesson?.title && currentLesson.title !== "Untitled Page" ? currentLesson.title : "");
+                    setShowTopicModal(true);
+                  }}
                 />
               ) : (
                 <BlockEditor
@@ -3159,6 +3290,11 @@ export default function NotebooksPage() {
           setAddPageContext(null);
         }}
         onSubmit={handleCreatePage}
+        onOpenAiDraft={(initialTopic) => {
+          setShowAddPageModal(false);
+          setTopicModalInitialQuery(initialTopic || "");
+          setShowTopicModal(true);
+        }}
         courseTitle={currentCourse?.title}
       />
 
@@ -3316,6 +3452,15 @@ export default function NotebooksPage() {
           accentColor={currentCourse?.accent}
         />
       )}
+
+      {/* 11. Autonomous Topic / Question Note Synthesizer Modal */}
+      <GenerateTopicModal
+        isOpen={showTopicModal}
+        onClose={() => setShowTopicModal(false)}
+        onGenerated={handleTopicGenerated}
+        currentLessonTitle={topicModalInitialQuery || currentLesson?.title}
+        courseTitle={currentCourse?.title}
+      />
     </div>
   );
 }

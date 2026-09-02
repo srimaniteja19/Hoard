@@ -22,6 +22,7 @@ import { CodeBlock } from "./CodeBlock";
 import { InlineTextEditor, InlineEditorHandle } from "./InlineTextEditor";
 import { LinkCardBlock } from "./LinkCardBlock";
 import { EmbedBlock } from "./EmbedBlock";
+import { DiagramBlock } from "./DiagramBlock";
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 
 interface BlockRendererProps {
@@ -1414,11 +1415,38 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
     }
 
     case "code": {
+      if (block.lang?.toUpperCase() === "MERMAID") {
+        return (
+          <DiagramBlock
+            block={{ id: block.id, type: "diagram", code: block.code, title: block.note || "System Diagram" }}
+            onUpdateBlock={(upd) => {
+              if (onUpdateBlock && upd.type === "diagram") {
+                onUpdateBlock({ ...block, code: upd.code });
+              }
+            }}
+            onDeleteBlock={onDeleteBlock}
+            accentColor={accentColor}
+            theme={theme}
+          />
+        );
+      }
       return (
         <CodeBlock
           block={block}
           onUpdateBlock={onUpdateBlock}
           accentColor={accentColor}
+        />
+      );
+    }
+
+    case "diagram": {
+      return (
+        <DiagramBlock
+          block={block}
+          onUpdateBlock={onUpdateBlock}
+          onDeleteBlock={onDeleteBlock}
+          accentColor={accentColor}
+          theme={theme}
         />
       );
     }

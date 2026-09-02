@@ -76,6 +76,14 @@ describe("Notebooks Block Contract & Logic", () => {
         description: "Linux kernel source tree",
         displayMode: "card",
       },
+      {
+        id: "18",
+        type: "diagram",
+        diagramType: "mermaid",
+        title: "JVM Architecture",
+        code: "graph TD\n  A[Classloader] --> B[Memory Areas]\n  B --> C[Execution Engine]",
+        caption: "High level JVM topology",
+      },
     ];
 
     for (const b of testBlocks) {
@@ -222,6 +230,7 @@ describe("Notebooks Block Contract & Logic", () => {
       { id: "1", type: "paragraph", text: "Check out this lecture:" },
       { id: "2", type: "embed", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "Keynote" },
       { id: "3", type: "link", url: "https://github.com/torvalds/linux", title: "Linux Repository" },
+      { id: "4", type: "diagram", code: "graph TD\n  A --> B", title: "Flowchart", caption: "Data Pipeline" },
     ];
 
     const md = convertBlocksToMarkdown("My Page", testBlocks);
@@ -229,5 +238,7 @@ describe("Notebooks Block Contract & Logic", () => {
     expect(md).toContain("Check out this lecture:");
     expect(md).toContain("[Embed: Keynote](https://www.youtube.com/watch?v=dQw4w9WgXcQ)");
     expect(md).toContain("[Linux Repository](https://github.com/torvalds/linux)");
+    expect(md).toContain("```mermaid\ngraph TD\n  A --> B\n```");
+    expect(md).toContain("*Data Pipeline*");
   });
 });
