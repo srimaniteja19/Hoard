@@ -11079,6 +11079,47 @@ input[type=range].wall-zoom-slider {
   text-decoration: none;
   border-bottom: 2px solid var(--c);
 }
+
+/* ═══ CLAMPED TEXT — long-entry read more/less ═══ */
+.clamped-text {
+  position: relative;
+}
+.clamped-text__fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2.8em;
+  background: linear-gradient(to bottom, transparent, var(--card, #FFFDF7));
+  pointer-events: none;
+}
+.clamped-text__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 5px 11px;
+  border: 1.5px solid var(--ink);
+  background: var(--card, #FFFDF7);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.1s cubic-bezier(0.2, 0, 0, 1);
+}
+.clamped-text__toggle:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+  background: var(--yellow, #FFE94A);
+}
+.clamped-text__toggle:active {
+  transform: translate(0, 0);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
 .e__f {
   display: flex;
   border-top: 2px solid rgba(10, 10, 10, 0.2);

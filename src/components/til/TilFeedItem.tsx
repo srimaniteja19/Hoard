@@ -15,6 +15,7 @@ import {
 import { Edit2, Trash2, X, Check, ExternalLink, StickyNote, Sparkles } from "lucide-react";
 import { tilTypeColorVar } from "@/lib/til/typeColorTokens";
 import { TilMediaPreview } from "@/components/til/TilMediaPreview";
+import { ClampedText } from "@/components/til/ClampedText";
 import { useYouTubeDigest } from "@/components/youtube/YouTubeDigestProvider";
 import { extractYouTubeVideoId } from "@/lib/cleanTitle";
 import { DigestJsonViewer } from "@/components/youtube/DigestJsonViewer";
@@ -201,11 +202,11 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
           <div className="gt">
             <div className="gt__row">
               <div className="gt__l">I THOUGHT</div>
-              <div className="gt__v wrong">{gotcha.thought}</div>
+              <ClampedText text={gotcha.thought} className="gt__v wrong" as="div" lines={4} />
             </div>
             <div className="gt__row">
               <div className="gt__l">ACTUALLY</div>
-              <div className="gt__v right">{gotcha.actually}</div>
+              <ClampedText text={gotcha.actually} className="gt__v right" as="div" lines={4} />
             </div>
             {gotcha.cost && (
               <div className="gt__cost">
@@ -220,7 +221,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         const lines = (item.code || "").split("\n");
         return (
           <>
-            <div className="snip__why">{item.body || "Key code snippet"}</div>
+            <ClampedText text={item.body || "Key code snippet"} className="snip__why" as="div" lines={4} />
             <pre className="code">
               {lines.map((line, idx) => (
                 <div key={idx} className={idx === lines.length - 1 && lines.length > 2 ? "h" : ""}>
@@ -237,7 +238,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         const pattern = parsePattern(item.body, item.loggedFor || "TODAY");
         return (
           <>
-            <p className="pat__n">{pattern.name || item.body}</p>
+            <ClampedText text={pattern.name || item.body || ""} className="pat__n" as="p" lines={5} />
             <div className="pat__seen">
               {pattern.instances.length > 0 ? (
                 pattern.instances.map((inst, idx) => (
@@ -261,7 +262,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         const parsed = parseQuote(item.body);
         return (
           <>
-            <blockquote className="qt">{parsed.quote}</blockquote>
+            <ClampedText text={parsed.quote} className="qt" as="blockquote" lines={6} />
             {parsed.author && (
               <div className="qt__by">
                 {parsed.author.toUpperCase()} <span>· QUOTE</span>
@@ -275,7 +276,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         const opinion = parseOpinion(item.body, item.createdAt);
         return (
           <>
-            <p className="op">{opinion.take}</p>
+            <ClampedText text={opinion.take} className="op" as="p" lines={5} />
             <div className="conv">
               <span className="conv__l">CONVICTION WHEN FILED</span>
               <span className="conv__d">
@@ -298,7 +299,15 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         return (
           <div style={{ display: "flex", gap: "18px", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
             <div style={{ flex: "1 1 260px", minWidth: 0 }}>
-              {item.body && <div className="lk__why" style={{ margin: "0 0 12px", border: "none", padding: 0 }}>{item.body}</div>}
+              {item.body && (
+                <ClampedText
+                  text={item.body}
+                  className="lk__why"
+                  as="div"
+                  lines={4}
+                  style={{ margin: "0 0 12px", border: "none", padding: 0 }}
+                />
+              )}
               {targetUrl && (
                 <div className="src" style={{ marginTop: "8px", paddingTop: "8px" }}>
                   SOURCE ▸{" "}
@@ -321,7 +330,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         return (
           <div style={{ display: "flex", gap: "18px", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
             <div style={{ flex: "1 1 260px", minWidth: 0 }}>
-              <p className="claim">{item.body}</p>
+              <ClampedText text={item.body || ""} className="claim" as="p" lines={6} />
               {item.linkUrl && (
                 <div className="src" style={{ marginTop: "12px", paddingTop: "8px" }}>
                   FROM ▸{" "}
