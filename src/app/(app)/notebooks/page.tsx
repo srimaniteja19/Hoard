@@ -1842,6 +1842,22 @@ export default function NotebooksPage() {
                     const file = items[i].getAsFile();
                     if (file) {
                       e.preventDefault();
+                      let targetIdx = -1;
+                      if (e.target instanceof HTMLElement) {
+                        const targetEl = e.target.closest<HTMLElement>("[data-block-id]");
+                        if (targetEl) {
+                          const targetId = targetEl.getAttribute("data-block-id");
+                          targetIdx = targetId ? currentBlocks.findIndex((b) => b.id === targetId) : -1;
+                        }
+                      }
+                      if (targetIdx === -1 && typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+                        const targetEl = document.activeElement.closest<HTMLElement>("[data-block-id]");
+                        if (targetEl) {
+                          const targetId = targetEl.getAttribute("data-block-id");
+                          targetIdx = targetId ? currentBlocks.findIndex((b) => b.id === targetId) : -1;
+                        }
+                      }
+
                       const reader = new FileReader();
                       reader.onload = (uploadEvent) => {
                         const dataUrl = uploadEvent.target?.result as string;
@@ -1852,7 +1868,21 @@ export default function NotebooksPage() {
                             url: dataUrl,
                             caption: `PASTED IMAGE · ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
                           };
-                          handleUpdateBlocks([...currentBlocks, imageBlock]);
+                          if (targetIdx >= 0 && targetIdx < currentBlocks.length) {
+                            const targetBlock = currentBlocks[targetIdx];
+                            const isEmptyParagraph =
+                              targetBlock.type === "paragraph" &&
+                              (!("text" in targetBlock) || !targetBlock.text || !targetBlock.text.trim());
+                            const next = [...currentBlocks];
+                            if (isEmptyParagraph) {
+                              next[targetIdx] = imageBlock;
+                            } else {
+                              next.splice(targetIdx + 1, 0, imageBlock);
+                            }
+                            handleUpdateBlocks(next);
+                          } else {
+                            handleUpdateBlocks([...currentBlocks, imageBlock]);
+                          }
                           playSound.fileIt();
                         }
                       };
@@ -1865,11 +1895,27 @@ export default function NotebooksPage() {
             }}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
-              e.preventDefault();
               const files = e.dataTransfer?.files;
               if (files && files.length > 0) {
                 const file = files[0];
                 if (file.type.startsWith("image/")) {
+                  e.preventDefault();
+                  let targetIdx = -1;
+                  if (e.target instanceof HTMLElement) {
+                    const targetEl = e.target.closest<HTMLElement>("[data-block-id]");
+                    if (targetEl) {
+                      const targetId = targetEl.getAttribute("data-block-id");
+                      targetIdx = targetId ? currentBlocks.findIndex((b) => b.id === targetId) : -1;
+                    }
+                  }
+                  if (targetIdx === -1 && typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+                    const targetEl = document.activeElement.closest<HTMLElement>("[data-block-id]");
+                    if (targetEl) {
+                      const targetId = targetEl.getAttribute("data-block-id");
+                      targetIdx = targetId ? currentBlocks.findIndex((b) => b.id === targetId) : -1;
+                    }
+                  }
+
                   const reader = new FileReader();
                   reader.onload = (uploadEvent) => {
                     const dataUrl = uploadEvent.target?.result as string;
@@ -1880,7 +1926,21 @@ export default function NotebooksPage() {
                         url: dataUrl,
                         caption: file.name || "DROPPED IMAGE",
                       };
-                      handleUpdateBlocks([...currentBlocks, imageBlock]);
+                      if (targetIdx >= 0 && targetIdx < currentBlocks.length) {
+                        const targetBlock = currentBlocks[targetIdx];
+                        const isEmptyParagraph =
+                          targetBlock.type === "paragraph" &&
+                          (!("text" in targetBlock) || !targetBlock.text || !targetBlock.text.trim());
+                        const next = [...currentBlocks];
+                        if (isEmptyParagraph) {
+                          next[targetIdx] = imageBlock;
+                        } else {
+                          next.splice(targetIdx + 1, 0, imageBlock);
+                        }
+                        handleUpdateBlocks(next);
+                      } else {
+                        handleUpdateBlocks([...currentBlocks, imageBlock]);
+                      }
                       playSound.fileIt();
                     }
                   };

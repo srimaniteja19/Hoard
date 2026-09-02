@@ -55,6 +55,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [insertImageAfterIdx, setInsertImageAfterIdx] = useState<number | undefined>(undefined);
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
 
   // Maps block id -> its InlineTextEditor's focus handle, so we can move
   // focus between blocks (arrow keys, backspace-merge, split-on-enter) the
@@ -282,9 +283,76 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     setSlashMenu(null);
   };
 
+  // Helper to insert a block at the current cursor / focused / target location
+  const insertBlockAtTarget = useCallback(
+    (newBlock: Block, targetIndex: number) => {
+      if (targetIndex >= 0 && targetIndex < blocks.length) {
+        const targetBlock = blocks[targetIndex];
+        const isEmptyParagraph =
+          targetBlock.type === "paragraph" &&
+          (!("text" in targetBlock) || !targetBlock.text || !targetBlock.text.trim());
+
+        const next = [...blocks];
+        if (isEmptyParagraph) {
+          // Replace empty line placeholder with the new block
+          next[targetIndex] = newBlock;
+        } else {
+          // Insert right after the active block
+          next.splice(targetIndex + 1, 0, newBlock);
+        }
+        commitBlocks(next);
+      } else {
+        commitBlocks([...blocks, newBlock]);
+      }
+    },
+    [blocks, commitBlocks]
+  );
+
+  const getTargetBlockIndex = useCallback(
+    (target?: EventTarget | null): number => {
+      // 1. Check the event target element
+      if (target && target instanceof HTMLElement) {
+        const blockEl = target.closest<HTMLElement>("[data-block-id]");
+        if (blockEl) {
+          const id = blockEl.getAttribute("data-block-id");
+          const idx = blocks.findIndex((b) => b.id === id);
+          if (idx !== -1) return idx;
+        }
+      }
+
+      // 2. Check document.activeElement
+      if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+        const blockEl = document.activeElement.closest<HTMLElement>("[data-block-id]");
+        if (blockEl) {
+          const id = blockEl.getAttribute("data-block-id");
+          const idx = blocks.findIndex((b) => b.id === id);
+          if (idx !== -1) return idx;
+        }
+      }
+
+      // 3. Check activeBlockId state
+      if (activeBlockId) {
+        const idx = blocks.findIndex((b) => b.id === activeBlockId);
+        if (idx !== -1) return idx;
+      }
+
+      // 4. Check hoveredBlockId state
+      if (hoveredBlockId) {
+        const idx = blocks.findIndex((b) => b.id === hoveredBlockId);
+        if (idx !== -1) return idx;
+      }
+
+      return -1;
+    },
+    [blocks, activeBlockId, hoveredBlockId]
+  );
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const targetIdx = typeof insertImageAfterIdx === "number" ? insertImageAfterIdx : getTargetBlockIndex();
+    setInsertImageAfterIdx(undefined);
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -296,10 +364,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           url: dataUrl,
           caption: file.name || "IMAGE ATTACHMENT",
         };
-        const next = [...blocks];
-        const insertIdx = typeof insertImageAfterIdx === "number" ? insertImageAfterIdx + 1 : next.length;
-        next.splice(insertIdx, 0, imageBlock);
-        commitBlocks(next);
+        insertBlockAtTarget(imageBlock, targetIdx);
         playSound.fileIt();
       }
     };
@@ -365,8 +430,10 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     return false;
   };
 
-  // Handle clipboard paste (images & links)
+  // Handle clipboard paste (images & links) at current cursor / active block
   const handlePaste = (e: React.ClipboardEvent) => {
+    const targetIdx = getTargetBlockIndex(e.target);
+
     const items = e.clipboardData?.items;
     if (items) {
       for (let i = 0; i < items.length; i++) {
@@ -374,6 +441,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           const file = items[i].getAsFile();
           if (file) {
             e.preventDefault();
+            e.stopPropagation();
             const reader = new FileReader();
             reader.onload = (uploadEvent) => {
               const dataUrl = uploadEvent.target?.result as string;
@@ -384,7 +452,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                   url: dataUrl,
                   caption: `PASTED IMAGE · ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
                 };
-                commitBlocks([...blocks, imageBlock]);
+                insertBlockAtTarget(imageBlock, targetIdx);
                 playSound.fileIt();
               }
             };
@@ -399,19 +467,21 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
 
     if (text && (/\.(png|jpg|jpeg|gif|webp|svg)(\?.*)?$/i.test(text.trim()) || text.trim().startsWith("data:image/"))) {
       e.preventDefault();
+      e.stopPropagation();
       const imageBlock: Block = {
         id: generateBlockId(),
         type: "image",
         url: text.trim(),
         caption: "PASTED IMAGE",
       };
-      commitBlocks([...blocks, imageBlock]);
+      insertBlockAtTarget(imageBlock, targetIdx);
       playSound.fileIt();
       return;
     }
 
     if (text && /^https?:\/\//i.test(text.trim())) {
       e.preventDefault();
+      e.stopPropagation();
       try {
         const urlObj = new URL(text.trim());
         const hostname = urlObj.hostname.toUpperCase();
@@ -422,10 +492,37 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           title: text.trim().slice(0, 60),
           site: `${hostname} · PASTED LINK`,
         };
-        commitBlocks([...blocks, linkBlock]);
+        insertBlockAtTarget(linkBlock, targetIdx);
         playSound.fileIt();
       } catch {
         // regular paste
+      }
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith("image/")) {
+        e.preventDefault();
+        e.stopPropagation();
+        const targetIdx = getTargetBlockIndex(e.target);
+        const reader = new FileReader();
+        reader.onload = (uploadEvent) => {
+          const dataUrl = uploadEvent.target?.result as string;
+          if (dataUrl) {
+            const imageBlock: Block = {
+              id: generateBlockId(),
+              type: "image",
+              url: dataUrl,
+              caption: file.name || "DROPPED IMAGE",
+            };
+            insertBlockAtTarget(imageBlock, targetIdx);
+            playSound.fileIt();
+          }
+        };
+        reader.readAsDataURL(file);
       }
     }
   };
@@ -443,6 +540,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       }}
       onPaste={handlePaste}
       onDragOver={(e) => e.preventDefault()}
+      onDrop={handleDrop}
     >
       {/* Floating Selection Tooltip */}
       <FloatingFormatBubble containerRef={containerRef} onExplain={onExplain} />
@@ -589,6 +687,10 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
             <div
               key={block.id}
               id={block.id}
+              data-block-id={block.id}
+              data-block-index={idx}
+              onFocus={() => setActiveBlockId(block.id)}
+              onClick={() => setActiveBlockId(block.id)}
               onMouseEnter={() => setHoveredBlockId(block.id)}
               onMouseLeave={() => setHoveredBlockId(null)}
               style={{
