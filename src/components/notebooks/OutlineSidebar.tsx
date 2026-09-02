@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { SeedCourse } from "@/lib/notebooks/seedData";
 import { lessonState, computeWordCount } from "@/lib/notebooks/blocks";
 import { playSound } from "@/lib/sound";
@@ -16,6 +16,7 @@ import {
   ArrowUp,
   ArrowDown,
   FolderPlus,
+  MoreHorizontal,
 } from "lucide-react";
 
 interface OutlineSidebarProps {
@@ -75,8 +76,35 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   const [editingModuleId, setEditingModuleId] = useState<string | null>(null);
   const [moduleTitleDraft, setModuleTitleDraft] = useState("");
 
-  // Hover insert line state between lessons
-  const [hoverInsertIndex, setHoverInsertIndex] = useState<{ modIdx: number; lesIdx: number } | null>(null);
+  // Hover state for modules
+  const [hoveredModuleId, setHoveredModuleId] = useState<string | null>(null);
+  // Hover state for lessons
+  const [hoveredLessonId, setHoveredLessonId] = useState<string | null>(null);
+
+  // Lesson action menu popover
+  const [actionMenu, setActionMenu] = useState<{
+    modIdx: number;
+    lesIdx: number;
+    top: number;
+    left: number;
+  } | null>(null);
+
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown menu on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setActionMenu(null);
+      }
+    };
+    if (actionMenu) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [actionMenu]);
 
   // Drag and drop state
   const [draggingInfo, setDraggingInfo] = useState<{
@@ -134,6 +162,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
         display: "flex",
         flexDirection: "column",
         flex: 1,
+        position: "relative",
       }}
     >
       {/* Course Switcher Tabs */}
@@ -345,10 +374,13 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
 
           const isModuleDragOver = dragOverModuleIdx === modIdx && mod.lessons.length === 0;
           const isEditingThisModule = editingModuleId === mod.id;
+          const isModHovered = hoveredModuleId === mod.id;
 
           return (
             <div
               key={mod.id}
+              onMouseEnter={() => setHoveredModuleId(mod.id)}
+              onMouseLeave={() => setHoveredModuleId(null)}
               style={{
                 padding: "14px 18px 0",
                 background: isModuleDragOver ? "rgba(252, 233, 79, 0.2)" : "transparent",
@@ -373,7 +405,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 }
               }}
             >
-              {/* Module Header with Actions & Inline Rename */}
+              {/* Module Header with Clean Minimal Actions */}
               {isEditingThisModule ? (
                 <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "8px" }}>
                   <input
@@ -432,8 +464,18 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                     {modWritten}/{mod.lessons.length}
                   </span>
 
-                  {/* Module Action Icons */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "2px", marginLeft: "4px" }}>
+                  {/* Module Action Icons (Shown smoothly only on module hover) */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "2px",
+                      marginLeft: "4px",
+                      opacity: isModHovered ? 1 : 0,
+                      transition: "opacity 0.12s ease",
+                      pointerEvents: isModHovered ? "auto" : "none",
+                    }}
+                  >
                     {onNewPageInModule && (
                       <button
                         type="button"
@@ -447,13 +489,13 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                           border: "none",
                           background: "transparent",
                           cursor: "pointer",
-                          opacity: 0.45,
+                          opacity: 0.6,
                           padding: "2px",
                           display: "grid",
                           placeItems: "center",
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.45")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
                       >
                         <Plus size={11} />
                       </button>
@@ -472,13 +514,13 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                           border: "none",
                           background: "transparent",
                           cursor: "pointer",
-                          opacity: 0.45,
+                          opacity: 0.6,
                           padding: "2px",
                           display: "grid",
                           placeItems: "center",
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.45")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
                       >
                         <Pencil size={10} />
                       </button>
@@ -496,14 +538,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                           border: "none",
                           background: "transparent",
                           cursor: "pointer",
-                          opacity: 0.45,
+                          opacity: 0.6,
                           color: "#991B1B",
                           padding: "2px",
                           display: "grid",
                           placeItems: "center",
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.45")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
                       >
                         <Trash2 size={10} />
                       </button>
@@ -538,6 +580,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                     const state = lessonState({ wordCount: computeWordCount(les.blocks || []) });
                     const isDraggingThis =
                       draggingInfo?.modIdx === modIdx && draggingInfo?.lesIdx === lesIdx;
+                    const isRowHovered = hoveredLessonId === les.id;
 
                     const isDropBefore =
                       dropTarget?.modIdx === modIdx &&
@@ -552,6 +595,8 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                       <div
                         key={les.id}
                         style={{ position: "relative" }}
+                        onMouseEnter={() => setHoveredLessonId(les.id)}
+                        onMouseLeave={() => setHoveredLessonId(null)}
                         onDragOver={(e) => {
                           if (draggingInfo) {
                             e.preventDefault();
@@ -618,6 +663,17 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                             playSound.click();
                             onSelectLesson(modIdx, lesIdx);
                           }}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            playSound.click();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setActionMenu({
+                              modIdx,
+                              lesIdx,
+                              top: Math.min(e.clientY, window.innerHeight - 200),
+                              left: Math.min(e.clientX, window.innerWidth - 180),
+                            });
+                          }}
                           style={{
                             display: "flex",
                             alignItems: "flex-start",
@@ -680,147 +736,38 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                             </em>
                           </div>
 
-                          {/* Quick Row Action Buttons */}
-                          <div style={{ display: "flex", alignItems: "center", gap: "2px", marginTop: "2px" }}>
-                            {/* Add Page Above Button */}
-                            {onCreateLessonAbove && (
-                              <button
-                                type="button"
-                                title="Add page above"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  playSound.click();
-                                  onCreateLessonAbove(modIdx, lesIdx);
-                                }}
-                                style={{
-                                  border: "none",
-                                  background: "transparent",
-                                  color: isSelected ? "#F3F0E8" : "#0A0A0A",
-                                  opacity: 0.35,
-                                  cursor: "pointer",
-                                  padding: "2px 3px",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "1px",
-                                  fontSize: "8px",
-                                  fontFamily: "var(--mono, monospace)",
-                                  fontWeight: 800,
-                                }}
-                                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
-                              >
-                                <ArrowUp size={10} />
-                              </button>
-                            )}
-
-                            {/* Add Page Below Button */}
-                            {onCreateLessonBelow && (
-                              <button
-                                type="button"
-                                title="Add page below"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  playSound.click();
-                                  onCreateLessonBelow(modIdx, lesIdx);
-                                }}
-                                style={{
-                                  border: "none",
-                                  background: "transparent",
-                                  color: isSelected ? "#F3F0E8" : "#0A0A0A",
-                                  opacity: 0.35,
-                                  cursor: "pointer",
-                                  padding: "2px 3px",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "1px",
-                                  fontSize: "8px",
-                                  fontFamily: "var(--mono, monospace)",
-                                  fontWeight: 800,
-                                }}
-                                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
-                              >
-                                <ArrowDown size={10} />
-                              </button>
-                            )}
-
-                            {/* Duplicate Page Button */}
-                            {onDuplicateLesson && (
-                              <button
-                                type="button"
-                                title="Duplicate Page"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  playSound.click();
-                                  onDuplicateLesson(modIdx, lesIdx);
-                                }}
-                                style={{
-                                  border: "none",
-                                  background: "transparent",
-                                  color: isSelected ? "#F3F0E8" : "#0A0A0A",
-                                  opacity: 0.35,
-                                  cursor: "pointer",
-                                  padding: "2px 3px",
-                                  display: "grid",
-                                  placeItems: "center",
-                                }}
-                                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
-                              >
-                                <Copy size={11} />
-                              </button>
-                            )}
-
-                            {onToggleWatched && (
-                              <button
-                                type="button"
-                                title={les.watched ? "Mark as not watched" : "Mark as watched"}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  playSound.click();
-                                  onToggleWatched(modIdx, lesIdx);
-                                }}
-                                style={{
-                                  border: "none",
-                                  background: "transparent",
-                                  color: isSelected ? "#F3F0E8" : "#0A0A0A",
-                                  opacity: les.watched ? 0.6 : 0.3,
-                                  cursor: "pointer",
-                                  padding: "2px 3px",
-                                  display: "grid",
-                                  placeItems: "center",
-                                }}
-                                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                                onMouseLeave={(e) => (e.currentTarget.style.opacity = les.watched ? "0.6" : "0.3")}
-                              >
-                                {les.watched ? <Eye size={12} /> : <EyeOff size={12} />}
-                              </button>
-                            )}
-
-                            {onDeleteLesson && (
-                              <button
-                                type="button"
-                                title={`Delete ${les.title}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDeleteLesson(modIdx, lesIdx);
-                                }}
-                                style={{
-                                  border: "none",
-                                  background: "transparent",
-                                  color: isSelected ? "#F3F0E8" : "#991B1B",
-                                  opacity: 0.35,
-                                  cursor: "pointer",
-                                  fontSize: "11px",
-                                  padding: "2px 3px",
-                                }}
-                                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
+                          {/* Single Clean "⋯" More Options Button (Revealed on hover) */}
+                          <button
+                            type="button"
+                            title="Page options"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playSound.click();
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setActionMenu({
+                                modIdx,
+                                lesIdx,
+                                top: rect.bottom + 4,
+                                left: Math.min(rect.left - 130, window.innerWidth - 180),
+                              });
+                            }}
+                            style={{
+                              border: "none",
+                              background: "transparent",
+                              color: isSelected ? "#F3F0E8" : "#0A0A0A",
+                              opacity: isRowHovered || (actionMenu?.modIdx === modIdx && actionMenu?.lesIdx === lesIdx) ? 0.85 : 0,
+                              cursor: "pointer",
+                              padding: "2px 4px",
+                              marginTop: "2px",
+                              display: "grid",
+                              placeItems: "center",
+                              transition: "opacity 0.1s ease",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                            onMouseLeave={(e) => (e.currentTarget.style.opacity = isRowHovered ? "0.85" : "0")}
+                          >
+                            <MoreHorizontal size={14} />
+                          </button>
                         </div>
 
                         {/* Drop Target Indicator Line (After) */}
@@ -847,6 +794,189 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
           );
         })}
       </div>
+
+      {/* Floating Single Clean Action Menu Popover */}
+      {actionMenu && (
+        <div
+          ref={menuRef}
+          style={{
+            position: "fixed",
+            top: `${actionMenu.top}px`,
+            left: `${actionMenu.left}px`,
+            zIndex: 99999,
+            background: "#FFFFFF",
+            border: "2px solid #0A0A0A",
+            boxShadow: "4px 4px 0 #0A0A0A",
+            minWidth: "160px",
+            padding: "4px 0",
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "10px",
+            fontWeight: 700,
+            animation: "fadeIn 0.08s ease",
+          }}
+        >
+          {onCreateLessonAbove && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                playSound.click();
+                const { modIdx, lesIdx } = actionMenu;
+                setActionMenu(null);
+                onCreateLessonAbove(modIdx, lesIdx);
+              }}
+              style={{
+                width: "100%",
+                padding: "6px 12px",
+                border: "none",
+                background: "transparent",
+                color: "#0A0A0A",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                textAlign: "left",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <ArrowUp size={11} />
+              <span>Add Page Above</span>
+            </button>
+          )}
+
+          {onCreateLessonBelow && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                playSound.click();
+                const { modIdx, lesIdx } = actionMenu;
+                setActionMenu(null);
+                onCreateLessonBelow(modIdx, lesIdx);
+              }}
+              style={{
+                width: "100%",
+                padding: "6px 12px",
+                border: "none",
+                background: "transparent",
+                color: "#0A0A0A",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                textAlign: "left",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <ArrowDown size={11} />
+              <span>Add Page Below</span>
+            </button>
+          )}
+
+          {onDuplicateLesson && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                playSound.click();
+                const { modIdx, lesIdx } = actionMenu;
+                setActionMenu(null);
+                onDuplicateLesson(modIdx, lesIdx);
+              }}
+              style={{
+                width: "100%",
+                padding: "6px 12px",
+                border: "none",
+                background: "transparent",
+                color: "#0A0A0A",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                textAlign: "left",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <Copy size={11} />
+              <span>Duplicate Page</span>
+            </button>
+          )}
+
+          {onToggleWatched && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                playSound.click();
+                const { modIdx, lesIdx } = actionMenu;
+                setActionMenu(null);
+                onToggleWatched(modIdx, lesIdx);
+              }}
+              style={{
+                width: "100%",
+                padding: "6px 12px",
+                border: "none",
+                background: "transparent",
+                color: "#0A0A0A",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                textAlign: "left",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              {course.modules[actionMenu.modIdx]?.lessons[actionMenu.lesIdx]?.watched ? (
+                <>
+                  <EyeOff size={11} />
+                  <span>Mark Unwatched</span>
+                </>
+              ) : (
+                <>
+                  <Eye size={11} />
+                  <span>Mark Watched</span>
+                </>
+              )}
+            </button>
+          )}
+
+          <div style={{ height: "1px", background: "rgba(10,10,10,0.12)", margin: "3px 0" }} />
+
+          {onDeleteLesson && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                playSound.click();
+                const { modIdx, lesIdx } = actionMenu;
+                setActionMenu(null);
+                onDeleteLesson(modIdx, lesIdx);
+              }}
+              style={{
+                width: "100%",
+                padding: "6px 12px",
+                border: "none",
+                background: "transparent",
+                color: "#DC2626",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                textAlign: "left",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#FEE2E2")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <Trash2 size={11} />
+              <span>Delete Page</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Sidebar Footer Action Buttons */}
       <div style={{ padding: "16px 18px 0", marginTop: "12px", borderTop: "2px solid rgba(10,10,10,0.14)", flexShrink: 0 }}>
