@@ -1,5 +1,12 @@
 import { Block, computeWordCount, generateBlockId } from "./blocks";
 import { SEED_COURSES, SEED_COLLISIONS, SeedCourse, CourseCollision } from "./seedData";
+import {
+  setSyncStatus,
+  broadcastRealtimeEvent,
+  queueOfflineSave,
+  clearOfflineItem,
+  getOfflineQueue,
+} from "./realtime";
 
 const COURSES_STORAGE_KEY = "hoard_notebook_courses_v2";
 const COLLISIONS_STORAGE_KEY = "hoard_notebook_collisions_v1";
@@ -294,7 +301,7 @@ export function saveCollisions(collisions: CourseCollision[]): void {
 // ─────────────────────────────────────────────────────────
 
 /**
- * Fetches courses and collisions from the PostgreSQL database API
+ * Fetches all courses and collisions from PostgreSQL
  */
 export async function fetchNotebooksFromDbApi(): Promise<{
   courses: SeedCourse[];
@@ -302,14 +309,25 @@ export async function fetchNotebooksFromDbApi(): Promise<{
 } | null> {
   try {
     const res = await fetch("/api/notebooks", { cache: "no-store" });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        setSyncStatus("offline");
+      }
+      return null;
+    }
     const data = await res.json();
+    setSyncStatus("saved");
     return {
       courses: data.courses || [],
       collisions: data.collisions || [],
     };
   } catch (err) {
     console.error("[fetchNotebooksFromDbApi] Failed:", err);
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setSyncStatus("offline");
+    } else {
+      setSyncStatus("error");
+    }
     return null;
   }
 }
@@ -322,38 +340,82 @@ export async function syncCoursesToDbApi(
   collisions?: CourseCollision[]
 ): Promise<SeedCourse[] | null> {
   try {
+    setSyncStatus("saving");
     const res = await fetch("/api/notebooks/sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ courses, collisions }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      setSyncStatus("error");
+      return null;
+    }
     const data = await res.json();
+    setSyncStatus("saved");
+    broadcastRealtimeEvent({ type: "FULL_SYNC_REQUESTED" });
     return data.courses || null;
   } catch (err) {
     console.error("[syncCoursesToDbApi] Failed:", err);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
     return null;
   }
 }
 
 /**
- * Saves note blocks for a lesson to PostgreSQL
+ * Saves note blocks for a lesson to PostgreSQL with live status updates and offline queuing
  */
 export async function saveLessonBlocksToDbApi(
   lessonId: string,
   blocks: Block[]
 ): Promise<boolean> {
   try {
+    setSyncStatus("saving");
     const res = await fetch(`/api/notebooks/lessons/${encodeURIComponent(lessonId)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ blocks }),
     });
-    return res.ok;
+
+    if (res.ok) {
+      setSyncStatus("saved");
+      clearOfflineItem(lessonId);
+      return true;
+    } else {
+      queueOfflineSave(lessonId, blocks);
+      setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
+      return false;
+    }
   } catch (err) {
     console.error("[saveLessonBlocksToDbApi] Failed:", err);
+    queueOfflineSave(lessonId, blocks);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
     return false;
   }
+}
+
+/**
+ * Flushes all pending offline saves to PostgreSQL
+ */
+export async function flushOfflineQueueToDbApi(): Promise<void> {
+  const queue = getOfflineQueue();
+  if (queue.length === 0) return;
+  setSyncStatus("saving");
+  for (const item of queue) {
+    try {
+      const res = await fetch(`/api/notebooks/lessons/${encodeURIComponent(item.lessonId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blocks: item.blocks }),
+      });
+      if (res.ok) {
+        clearOfflineItem(item.lessonId);
+      }
+    } catch {
+      setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
+      return;
+    }
+  }
+  setSyncStatus("saved");
 }
 
 /**
@@ -368,16 +430,29 @@ export async function createCourseInDbApi(data: {
   url?: string;
 }): Promise<SeedCourse | null> {
   try {
+    setSyncStatus("saving");
     const res = await fetch("/api/notebooks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      setSyncStatus("error");
+      return null;
+    }
     const json = await res.json();
+    setSyncStatus("saved");
+    if (json.course) {
+      broadcastRealtimeEvent({
+        type: "COURSE_UPDATED",
+        courseId: json.course.id,
+        course: json.course,
+      });
+    }
     return json.course || null;
   } catch (err) {
     console.error("[createCourseInDbApi] Failed:", err);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
     return null;
   }
 }
@@ -397,14 +472,22 @@ export async function updateCourseInDbApi(
   }>
 ): Promise<boolean> {
   try {
+    setSyncStatus("saving");
     const res = await fetch(`/api/notebooks/${encodeURIComponent(courseId)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    return res.ok;
+    if (res.ok) {
+      setSyncStatus("saved");
+      broadcastRealtimeEvent({ type: "FULL_SYNC_REQUESTED" });
+      return true;
+    }
+    setSyncStatus("error");
+    return false;
   } catch (err) {
     console.error("[updateCourseInDbApi] Failed:", err);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
     return false;
   }
 }
@@ -414,12 +497,20 @@ export async function updateCourseInDbApi(
  */
 export async function deleteCourseFromDbApi(courseId: string): Promise<boolean> {
   try {
+    setSyncStatus("saving");
     const res = await fetch(`/api/notebooks/${encodeURIComponent(courseId)}`, {
       method: "DELETE",
     });
-    return res.ok;
+    if (res.ok) {
+      setSyncStatus("saved");
+      broadcastRealtimeEvent({ type: "COURSE_DELETED", courseId });
+      return true;
+    }
+    setSyncStatus("error");
+    return false;
   } catch (err) {
     console.error("[deleteCourseFromDbApi] Failed:", err);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
     return false;
   }
 }
@@ -433,16 +524,29 @@ export async function createLessonInDbApi(
   blocks?: Block[]
 ): Promise<any | null> {
   try {
+    setSyncStatus("saving");
     const res = await fetch("/api/notebooks/lessons", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ moduleId, title, blocks }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      setSyncStatus("error");
+      return null;
+    }
     const json = await res.json();
+    setSyncStatus("saved");
+    if (json.lesson) {
+      broadcastRealtimeEvent({
+        type: "LESSON_CREATED",
+        moduleId,
+        lesson: json.lesson,
+      });
+    }
     return json.lesson || null;
   } catch (err) {
     console.error("[createLessonInDbApi] Failed:", err);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
     return null;
   }
 }
@@ -462,14 +566,35 @@ export async function updateLessonInDbApi(
   }
 ): Promise<boolean> {
   try {
+    setSyncStatus("saving");
     const res = await fetch(`/api/notebooks/lessons/${encodeURIComponent(lessonId)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    return res.ok;
+    if (res.ok) {
+      setSyncStatus("saved");
+      if (data.watched !== undefined || data.toggleWatched !== undefined) {
+        broadcastRealtimeEvent({
+          type: "LESSON_WATCHED_TOGGLED",
+          lessonId,
+          watched: Boolean(data.watched),
+        });
+      }
+      if (data.gap !== undefined) {
+        broadcastRealtimeEvent({
+          type: "LESSON_GAP_ADDED",
+          lessonId,
+          gap: data.gap,
+        });
+      }
+      return true;
+    }
+    setSyncStatus("error");
+    return false;
   } catch (err) {
     console.error("[updateLessonInDbApi] Failed:", err);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
     return false;
   }
 }
@@ -479,12 +604,20 @@ export async function updateLessonInDbApi(
  */
 export async function deleteLessonFromDbApi(lessonId: string): Promise<boolean> {
   try {
+    setSyncStatus("saving");
     const res = await fetch(`/api/notebooks/lessons/${encodeURIComponent(lessonId)}`, {
       method: "DELETE",
     });
-    return res.ok;
+    if (res.ok) {
+      setSyncStatus("saved");
+      broadcastRealtimeEvent({ type: "LESSON_DELETED", lessonId });
+      return true;
+    }
+    setSyncStatus("error");
+    return false;
   } catch (err) {
     console.error("[deleteLessonFromDbApi] Failed:", err);
+    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
     return false;
   }
 }

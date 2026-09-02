@@ -18,13 +18,20 @@ import {
   createLessonInDbApi,
   updateLessonInDbApi,
   deleteLessonFromDbApi,
+  flushOfflineQueueToDbApi,
   saveCollisions,
 } from "@/lib/notebooks/storage";
+import {
+  subscribeToRealtimeEvents,
+  broadcastRealtimeEvent,
+  setSyncStatus,
+} from "@/lib/notebooks/realtime";
 import { SeedCourse } from "@/lib/notebooks/seedData";
 import { Block, computeWordCount, generateBlockId } from "@/lib/notebooks/blocks";
 import { CourseCard } from "@/components/notebooks/CourseCard";
 import { OutlineSidebar } from "@/components/notebooks/OutlineSidebar";
 import { BlockEditor } from "@/components/notebooks/BlockEditor";
+import { SyncStatusPill } from "@/components/notebooks/SyncStatusPill";
 import { AiBar } from "@/components/notebooks/AiBar";
 import { EmptyPage } from "@/components/notebooks/EmptyPage";
 import { GapPanel } from "@/components/notebooks/GapPanel";
@@ -217,6 +224,137 @@ export default function NotebooksPage() {
   const currentBlocks = currentLesson?.blocks || [];
   const wordCount = computeWordCount(currentBlocks);
 
+  // ── Real-Time Cross-Tab Live Synchronization (BroadcastChannel) ──────────
+  useEffect(() => {
+    const unsubscribe = subscribeToRealtimeEvents((event) => {
+      if (event.type === "NOTE_BLOCKS_UPDATED") {
+        setCourses((prevCourses) => {
+          const updated = prevCourses.map((c) => ({
+            ...c,
+            modules: c.modules.map((m) => ({
+              ...m,
+              lessons: m.lessons.map((l) => {
+                if (l.id === event.lessonId) {
+                  const wc = event.wordCount;
+                  const nextMeta = wc > 0 ? `${wc.toLocaleString()} WORDS · EDITED JUST NOW` : "NO NOTES YET";
+                  return { ...l, blocks: event.blocks, meta: nextMeta };
+                }
+                return l;
+              }),
+            })),
+          }));
+          saveStoredCourses(updated);
+          return updated;
+        });
+      } else if (event.type === "LESSON_WATCHED_TOGGLED") {
+        setCourses((prevCourses) => {
+          const updated = prevCourses.map((c) => ({
+            ...c,
+            modules: c.modules.map((m) => ({
+              ...m,
+              lessons: m.lessons.map((l) => (l.id === event.lessonId ? { ...l, watched: event.watched } : l)),
+            })),
+          }));
+          saveStoredCourses(updated);
+          return updated;
+        });
+      } else if (event.type === "LESSON_CREATED") {
+        setCourses((prevCourses) => {
+          const updated = prevCourses.map((c) => ({
+            ...c,
+            modules: c.modules.map((m) => {
+              if (m.id === event.moduleId) {
+                if (m.lessons.some((l) => l.id === event.lesson.id)) return m;
+                return { ...m, lessons: [...m.lessons, event.lesson] };
+              }
+              return m;
+            }),
+          }));
+          saveStoredCourses(updated);
+          return updated;
+        });
+      } else if (event.type === "LESSON_DELETED") {
+        setCourses((prevCourses) => {
+          const updated = prevCourses.map((c) => ({
+            ...c,
+            modules: c.modules.map((m) => ({
+              ...m,
+              lessons: m.lessons.filter((l) => l.id !== event.lessonId),
+            })),
+          }));
+          saveStoredCourses(updated);
+          return updated;
+        });
+      } else if (event.type === "COURSE_UPDATED") {
+        setCourses((prevCourses) => {
+          const exists = prevCourses.some((c) => c.id === event.courseId);
+          const updated = exists
+            ? prevCourses.map((c) => (c.id === event.courseId ? event.course : c))
+            : [...prevCourses, event.course];
+          saveStoredCourses(updated);
+          return updated;
+        });
+      } else if (event.type === "COURSE_DELETED") {
+        setCourses((prevCourses) => {
+          const updated = prevCourses.filter((c) => c.id !== event.courseId);
+          saveStoredCourses(updated);
+          return updated;
+        });
+      } else if (event.type === "FULL_SYNC_REQUESTED") {
+        fetchNotebooksFromDbApi().then((dbData) => {
+          if (dbData?.courses && dbData.courses.length > 0) {
+            setCourses(dbData.courses);
+            saveStoredCourses(dbData.courses);
+          }
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // ── Auto-Revalidate on Tab Focus & Network Online/Offline ───────────────
+  useEffect(() => {
+    const handleRevalidate = () => {
+      if (document.visibilityState === "visible") {
+        flushOfflineQueueToDbApi();
+        fetchNotebooksFromDbApi().then((dbData) => {
+          if (dbData?.courses && dbData.courses.length > 0) {
+            setCourses(dbData.courses);
+            saveStoredCourses(dbData.courses);
+          }
+        });
+      }
+    };
+
+    const handleOnline = () => {
+      setSyncStatus("saving");
+      flushOfflineQueueToDbApi();
+      fetchNotebooksFromDbApi().then((dbData) => {
+        if (dbData?.courses && dbData.courses.length > 0) {
+          setCourses(dbData.courses);
+          saveStoredCourses(dbData.courses);
+        }
+      });
+    };
+
+    const handleOffline = () => {
+      setSyncStatus("offline");
+    };
+
+    window.addEventListener("focus", handleRevalidate);
+    document.addEventListener("visibilitychange", handleRevalidate);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("focus", handleRevalidate);
+      document.removeEventListener("visibilitychange", handleRevalidate);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
   // Persisting to localStorage re-serializes every course/lesson/block (including
   // any pasted base64 images), so doing it on every keystroke is what made typing
   // laggy. React state updates instantly for a responsive UI; the localStorage
@@ -242,6 +380,16 @@ export default function NotebooksPage() {
     const updated = computeLessonBlocksUpdate(courses, currentCourse.id, currentLesson.id, newBlocks);
     setCourses(updated);
 
+    // Instant cross-tab broadcast for Notion-style real-time typing mirror
+    broadcastRealtimeEvent({
+      type: "NOTE_BLOCKS_UPDATED",
+      lessonId: currentLesson.id,
+      blocks: newBlocks,
+      wordCount: computeWordCount(newBlocks),
+    });
+
+    setSyncStatus("saving");
+
     if (pendingSaveRef.current) clearTimeout(pendingSaveRef.current.timer);
     pendingSaveRef.current = {
       courses: updated,
@@ -251,7 +399,7 @@ export default function NotebooksPage() {
         saveStoredCourses(updated);
         saveLessonBlocksToDbApi(currentLesson.id, newBlocks);
         pendingSaveRef.current = null;
-      }, 500),
+      }, 400),
     };
   };
 
@@ -687,6 +835,18 @@ export default function NotebooksPage() {
           </>
         )}
         <span style={{ flex: 1 }} />
+        <SyncStatusPill
+          theme={paperTheme}
+          onRetry={() => {
+            flushOfflineQueueToDbApi();
+            fetchNotebooksFromDbApi().then((dbData) => {
+              if (dbData?.courses && dbData.courses.length > 0) {
+                setCourses(dbData.courses);
+                saveStoredCourses(dbData.courses);
+              }
+            });
+          }}
+        />
         <div style={{ display: "flex", border: "2px solid #0A0A0A" }}>
           <button
             type="button"
