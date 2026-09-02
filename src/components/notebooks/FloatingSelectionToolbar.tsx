@@ -185,7 +185,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
           playSound.pop();
           onFormat("==", "==");
         }}
-        title="Highlight (Yellow Marker)"
+        title="Highlight (Cyber Lavender)"
         style={{
           background: "transparent",
           border: "none",
@@ -199,7 +199,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
         onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
       >
-        <Highlighter size={12} strokeWidth={2.5} color="#FFD700" />
+        <Highlighter size={12} strokeWidth={2.5} color="#A78BFA" />
       </button>
 
       {/* Ask AI */}

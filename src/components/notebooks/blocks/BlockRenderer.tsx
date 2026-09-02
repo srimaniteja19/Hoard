@@ -263,7 +263,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   const renderFormattedInline = (lineText: string): React.ReactNode => {
     if (!lineText) return null;
 
-    const tokenRegex = /(<strong>[\s\S]*?<\/strong>|<b>[\s\S]*?<\/b>|\*\*[^*\n]+?\*\*|<code>[\s\S]*?<\/code>|`[^`\n]+`|<em>[\s\S]*?<\/em>|(?<=\s|^)\*(?!\s)[^*\n]+?\*(?=\s|$|<|[.,:;!?])|<mark[\s\S]*?<\/mark>)/g;
+    const tokenRegex = /(<strong>[\s\S]*?<\/strong>|<b>[\s\S]*?<\/b>|\*\*[^*\n]+?\*\*|==[^=\n]+?==|<code>[\s\S]*?<\/code>|`[^`\n]+`|<em>[\s\S]*?<\/em>|(?<=\s|^)\*(?!\s)[^*\n]+?\*(?=\s|$|<|[.,:;!?])|<mark[\s\S]*?<\/mark>)/g;
     const parts = lineText.split(tokenRegex);
 
     return parts.map((part, idx) => {
@@ -279,11 +279,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           <strong
             key={idx}
             style={{
-              fontWeight: 700,
-              background: "#FCE94F",
-              color: "#0A0A0A",
-              padding: "0 4px",
-              boxDecorationBreak: "clone",
+              fontWeight: 800,
+              color: "inherit",
             }}
           >
             {content}
@@ -298,15 +295,33 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           <strong
             key={idx}
             style={{
-              fontWeight: 700,
-              background: "#FCE94F",
-              color: "#0A0A0A",
-              padding: "0 4px",
-              boxDecorationBreak: "clone",
+              fontWeight: 800,
+              color: "inherit",
             }}
           >
             {content}
           </strong>
+        );
+      }
+
+      // Markdown ==highlight==
+      if (part.startsWith("==") && part.endsWith("==") && part.length >= 4) {
+        const content = part.slice(2, -2);
+        return (
+          <mark
+            key={idx}
+            style={{
+              fontWeight: 600,
+              background: tokens.highlightBg,
+              color: tokens.highlightFg,
+              borderBottom: `2px solid ${tokens.highlightBorder}`,
+              borderRadius: "3px",
+              padding: "1px 5px",
+              boxDecorationBreak: "clone",
+            }}
+          >
+            {content}
+          </mark>
         );
       }
 
@@ -317,10 +332,13 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           <mark
             key={idx}
             style={{
-              fontWeight: 700,
-              background: "#FCE94F",
-              color: "#0A0A0A",
-              padding: "0 4px",
+              fontWeight: 600,
+              background: tokens.highlightBg,
+              color: tokens.highlightFg,
+              borderBottom: `2px solid ${tokens.highlightBorder}`,
+              borderRadius: "3px",
+              padding: "1px 5px",
+              boxDecorationBreak: "clone",
             }}
           >
             {content}

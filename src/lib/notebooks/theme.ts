@@ -51,6 +51,9 @@ export interface ThemeTokens {
   accentColor: string;
   accentFg: string;
   highlightYellow: string;
+  highlightBg: string;
+  highlightFg: string;
+  highlightBorder: string;
   activeRowBg: string;
   activeRowBorder: string;
 
@@ -87,6 +90,9 @@ export const THEME_TOKENS: Record<NotebookTheme, ThemeTokens> = {
     accentColor: "#FCE94F",
     accentFg: "#0A0A0A",
     highlightYellow: "#FCE94F",
+    highlightBg: "rgba(139, 92, 246, 0.16)",
+    highlightFg: "#5B21B6",
+    highlightBorder: "#8B5CF6",
     activeRowBg: "#FFFFFF",
     activeRowBorder: "#0A0A0A",
     codeBg: "#EBE7DC",
@@ -117,6 +123,9 @@ export const THEME_TOKENS: Record<NotebookTheme, ThemeTokens> = {
     accentColor: "#FCE94F",
     accentFg: "#0A0A0A",
     highlightYellow: "#FCE94F",
+    highlightBg: "rgba(139, 92, 246, 0.28)",
+    highlightFg: "#F5F3FF",
+    highlightBorder: "#A78BFA",
     activeRowBg: "#222226",
     activeRowBorder: "#F5F5F7",
     codeBg: "#161618",
@@ -147,6 +156,9 @@ export const THEME_TOKENS: Record<NotebookTheme, ThemeTokens> = {
     accentColor: "#2E6B47",
     accentFg: "#F5FDF7",
     highlightYellow: "#A7F3D0",
+    highlightBg: "rgba(139, 92, 246, 0.16)",
+    highlightFg: "#4C1D95",
+    highlightBorder: "#8B5CF6",
     activeRowBg: "#D4E1CE",
     activeRowBorder: "#2E6B47",
     codeBg: "#E0E9DC",
@@ -177,6 +189,9 @@ export const THEME_TOKENS: Record<NotebookTheme, ThemeTokens> = {
     accentColor: "#8B5CF6",
     accentFg: "#FFFFFF",
     highlightYellow: "#C084FC",
+    highlightBg: "rgba(139, 92, 246, 0.35)",
+    highlightFg: "#FFFFFF",
+    highlightBorder: "#C084FC",
     activeRowBg: "#1D243D",
     activeRowBorder: "#8B5CF6",
     codeBg: "#141A2D",
