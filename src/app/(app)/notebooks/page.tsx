@@ -114,6 +114,21 @@ export default function NotebooksPage() {
   // the in-flight edit — so every auto-refetch must wait on this first.
   const inFlightSaveRef = useRef<Promise<unknown> | null>(null);
 
+  // Applies a fetched course snapshot only if no local write is pending or
+  // in flight — otherwise the snapshot predates that write and would revert
+  // it. Shared by the mount fetch, cross-tab FULL_SYNC_REQUESTED, tab-visible/
+  // online revalidation, and background polling below.
+  const applyFetchedCoursesIfSafe = useCallback(
+    (dbData: Awaited<ReturnType<typeof fetchNotebooksFromDbApi>>) => {
+      if (!dbData || !Array.isArray(dbData.courses)) return false;
+      if (pendingSaveRef.current || inFlightSaveRef.current) return false;
+      setCourses(dbData.courses);
+      saveStoredCourses(dbData.courses);
+      return true;
+    },
+    []
+  );
+
   // Load courses & restore active location on mount
   useEffect(() => {
     // 1. Immediate local cache load
@@ -122,12 +137,8 @@ export default function NotebooksPage() {
 
     // 2. Asynchronously fetch from PostgreSQL database
     fetchNotebooksFromDbApi().then((dbData) => {
-      // Skip if a local edit was saved (or is still saving) after this fetch
-      // was kicked off — applying this snapshot now would revert it.
-      if (dbData && Array.isArray(dbData.courses) && !pendingSaveRef.current && !inFlightSaveRef.current) {
-        setCourses(dbData.courses);
-        saveStoredCourses(dbData.courses);
-        saveCollisions(dbData.collisions || []);
+      if (applyFetchedCoursesIfSafe(dbData)) {
+        saveCollisions(dbData!.collisions || []);
       }
     });
 
@@ -316,12 +327,7 @@ export default function NotebooksPage() {
       } else if (event.type === "FULL_SYNC_REQUESTED") {
         Promise.resolve(inFlightSaveRef.current).then(() => {
           if (pendingSaveRef.current || inFlightSaveRef.current) return;
-          fetchNotebooksFromDbApi().then((dbData) => {
-            if (dbData && Array.isArray(dbData.courses) && !pendingSaveRef.current && !inFlightSaveRef.current) {
-              setCourses(dbData.courses);
-              saveStoredCourses(dbData.courses);
-            }
-          });
+          fetchNotebooksFromDbApi().then(applyFetchedCoursesIfSafe);
         });
       }
     });
@@ -360,12 +366,7 @@ export default function NotebooksPage() {
       if (document.visibilityState === "visible") {
         Promise.resolve(flushPendingSave()).then(() => {
           if (pendingSaveRef.current || inFlightSaveRef.current) return;
-          fetchNotebooksFromDbApi().then((dbData) => {
-            if (dbData && Array.isArray(dbData.courses) && !pendingSaveRef.current && !inFlightSaveRef.current) {
-              setCourses(dbData.courses);
-              saveStoredCourses(dbData.courses);
-            }
-          });
+          fetchNotebooksFromDbApi().then(applyFetchedCoursesIfSafe);
         });
       }
     };
@@ -373,12 +374,7 @@ export default function NotebooksPage() {
     const handleOnline = () => {
       setSyncStatus("saving");
       Promise.resolve(flushOfflineQueueToDbApi()).then(() => {
-        fetchNotebooksFromDbApi().then((dbData) => {
-          if (dbData && Array.isArray(dbData.courses) && !pendingSaveRef.current && !inFlightSaveRef.current) {
-            setCourses(dbData.courses);
-            saveStoredCourses(dbData.courses);
-          }
-        });
+        fetchNotebooksFromDbApi().then(applyFetchedCoursesIfSafe);
       });
     };
 
@@ -395,7 +391,23 @@ export default function NotebooksPage() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [flushPendingSave]);
+  }, [flushPendingSave, applyFetchedCoursesIfSafe]);
+
+  // ── Cross-Device Background Sync ──────────────────────────────────────────
+  // BroadcastChannel/localStorage (above) only reaches other tabs of the same
+  // browser, so a phone typing into the same lesson never reaches this tab
+  // that way. Poll for changes from other devices while this tab is the one
+  // actually on screen; applyFetchedCoursesIfSafe still guards against
+  // clobbering an edit that's mid-save here.
+  useEffect(() => {
+    const POLL_INTERVAL_MS = 5000;
+    const interval = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      if (pendingSaveRef.current || inFlightSaveRef.current) return;
+      fetchNotebooksFromDbApi().then(applyFetchedCoursesIfSafe);
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [applyFetchedCoursesIfSafe]);
 
   const handleUpdateBlocks = (newBlocks: Block[]) => {
     if (!currentCourse || !currentLesson) return;
