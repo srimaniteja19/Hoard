@@ -72,26 +72,25 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
       {/* ── Cover Hero Area ── */}
       {hasCover && (
         <div
+          className="nb-cover-hero"
           style={{
-            height: "170px",
-            width: "100%",
             background: coverUrl,
             backgroundSize: "cover",
             backgroundPosition: "center",
             borderBottom: `2.5px solid ${tokens.borderPrimary}`,
             position: "relative",
-            transition: "all 0.2s ease",
           }}
         >
-          {/* Cover Action Pills Overlay (visible on hover) */}
+          {/* Cover Action Pills Overlay (visible on hover and touch devices) */}
           <div
+            className="nb-touch-always-visible"
             style={{
               position: "absolute",
-              bottom: "12px",
-              right: "20px",
+              bottom: "10px",
+              right: "clamp(8px, 3vw, 20px)",
               display: "flex",
               alignItems: "center",
-              gap: "8px",
+              gap: "6px",
               opacity: isHovered || showCoverPicker ? 1 : 0,
               transition: "opacity 0.15s ease",
             }}
@@ -171,16 +170,11 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
           >
             <div
               title="Change page icon"
+              className="nb-cover-icon"
               style={{
-                width: "56px",
-                height: "56px",
-                borderRadius: "10px",
                 background: tokens.cardBg,
                 border: `2.5px solid ${tokens.borderPrimary}`,
                 boxShadow: tokens.boxShadow,
-                display: "grid",
-                placeItems: "center",
-                fontSize: "30px",
                 cursor: "pointer",
                 userSelect: "none",
                 transition: "transform 0.12s ease",
@@ -195,11 +189,12 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
 
         {/* Action Buttons to Add Icon / Cover if missing */}
         <div
+          className="nb-touch-always-visible"
           style={{
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            opacity: isHovered || showCoverPicker || showIconPicker ? 0.9 : (hasCover ? 0 : 0.4),
+            opacity: isHovered || showCoverPicker || showIconPicker ? 0.9 : (hasCover ? 0 : 0.6),
             transition: "opacity 0.15s ease",
             marginBottom: hasCover ? "8px" : "0px",
           }}
@@ -271,13 +266,13 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
           style={{
             position: "absolute",
             top: hasCover ? "130px" : "40px",
-            left: "20px",
+            left: "clamp(8px, 3vw, 20px)",
             zIndex: 9999,
             background: tokens.popoverBg,
             border: `2px solid ${tokens.borderPrimary}`,
             boxShadow: tokens.popoverShadow,
             padding: "14px",
-            width: "320px",
+            width: "min(320px, calc(100vw - 32px))",
             fontFamily: "var(--mono, monospace)",
             animation: "fadeIn 0.1s ease",
           }}
@@ -369,13 +364,13 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
           style={{
             position: "absolute",
             top: hasCover ? "30px" : "40px",
-            left: "10px",
+            left: "clamp(6px, 2vw, 10px)",
             zIndex: 9999,
             background: tokens.popoverBg,
             border: `2px solid ${tokens.borderPrimary}`,
             boxShadow: tokens.popoverShadow,
             padding: "14px",
-            width: "280px",
+            width: "min(280px, calc(100vw - 32px))",
             fontFamily: "var(--mono, monospace)",
             animation: "fadeIn 0.1s ease",
           }}

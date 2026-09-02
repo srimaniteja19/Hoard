@@ -55,7 +55,7 @@ export const EmptyPage: React.FC<EmptyPageProps> = ({
         PAGES STAY EMPTY UNTIL YOU WRITE THEM. THE OUTLINE STILL COUNTS THIS LESSON, SO THE GAP IS VISIBLE RATHER THAN HIDDEN.
       </p>
 
-      <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+      <div className="nb-empty-btn-group">
         {onDraftFromTopic && (
           <button
             type="button"

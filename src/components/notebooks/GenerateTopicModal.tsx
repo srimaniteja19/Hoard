@@ -143,10 +143,11 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
         style={{
           width: "100%",
           maxWidth: "620px",
+          maxHeight: "92vh",
+          overflowY: "auto",
           border: "3px solid #0A0A0A",
           background: "#FFFFFF",
           boxShadow: "10px 10px 0 #0A0A0A",
-          overflow: "hidden",
           display: "flex",
           flexDirection: "column",
         }}
@@ -293,7 +294,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
                 gap: "14px",
                 marginBottom: "20px",
                 padding: "12px",

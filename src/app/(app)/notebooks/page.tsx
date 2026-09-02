@@ -1476,20 +1476,10 @@ export default function NotebooksPage() {
       {/* Top Paper Mode & Global Actions Bar (Hidden in Focus Mode) */}
       {!isFocusMode && (
         <div
-          className="no-print"
+          className="nb-topbar no-print"
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            fontFamily: "var(--mono, monospace)",
-            fontSize: "10.5px",
-            fontWeight: 700,
-            letterSpacing: "0.15em",
-            padding: "12px clamp(16px, 3vw, 28px)",
             borderBottom: `3px solid ${tokens.borderPrimary}`,
             background: tokens.canvasBg,
-            flexShrink: 0,
-            zIndex: 40,
           }}
         >
           {view === "course" && isMobile && (
@@ -1505,6 +1495,8 @@ export default function NotebooksPage() {
                 padding: "4px 8px",
                 fontSize: "13px",
                 lineHeight: 1,
+                flex: "none",
+                borderRadius: "2px",
               }}
             >
               ☰
@@ -1512,14 +1504,17 @@ export default function NotebooksPage() {
           )}
           <span
             onClick={() => setView("index")}
-            style={{ cursor: "pointer", opacity: view === "index" ? 1 : 0.4 }}
+            style={{ cursor: "pointer", opacity: view === "index" ? 1 : 0.4, flex: "none" }}
           >
             NOTEBOOKS
           </span>
           {view === "course" && (
             <>
-              <span style={{ opacity: 0.3 }}>/</span>
-              <span style={{ color: currentCourse?.accent || "inherit" }}>
+              <span style={{ opacity: 0.3, flex: "none" }}>/</span>
+              <span
+                className="nb-breadcrumb-title"
+                style={{ color: currentCourse?.accent || "inherit" }}
+              >
                 {currentCourse?.title.toUpperCase()}
               </span>
             </>
@@ -1542,30 +1537,33 @@ export default function NotebooksPage() {
               border: `2px solid ${tokens.borderPrimary}`,
               background: tokens.cardBg,
               color: tokens.textPrimary,
-              padding: "4px 9px",
+              padding: "4px 8px",
               cursor: "pointer",
               boxShadow: tokens.isDark ? "2px 2px 0 rgba(0,0,0,0.6)" : "2px 2px 0 #0A0A0A",
+              flex: "none",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.background = tokens.isDark ? "rgba(255,255,255,0.15)" : "#FCE94F")}
             onMouseLeave={(e) => (e.currentTarget.style.background = tokens.cardBg)}
           >
             <Search size={11} />
-            <span>QUICK JUMP</span>
-            <span style={{ opacity: 0.5, fontSize: "8.5px" }}>⌘K</span>
+            <span className="nb-text-hide-mobile">QUICK JUMP</span>
+            <span className="nb-text-hide-mobile" style={{ opacity: 0.5, fontSize: "8.5px" }}>⌘K</span>
           </button>
 
-          <SyncStatusPill
-            theme={paperTheme}
-            onRetry={() => {
-              flushOfflineQueueToDbApi();
-              fetchNotebooksFromDbApi().then((dbData) => {
-                if (dbData?.courses && dbData.courses.length > 0) {
-                  setCourses(dbData.courses);
-                  saveStoredCourses(dbData.courses);
-                }
-              });
-            }}
-          />
+          <div className="nb-hide-mobile">
+            <SyncStatusPill
+              theme={paperTheme}
+              onRetry={() => {
+                flushOfflineQueueToDbApi();
+                fetchNotebooksFromDbApi().then((dbData) => {
+                  if (dbData?.courses && dbData.courses.length > 0) {
+                    setCourses(dbData.courses);
+                    saveStoredCourses(dbData.courses);
+                  }
+                });
+              }}
+            />
+          </div>
 
           {/* 4-Theme Segmented Switcher */}
           <div
@@ -1574,6 +1572,7 @@ export default function NotebooksPage() {
               border: `2px solid ${tokens.borderPrimary}`,
               background: tokens.isDark ? "#12151E" : "#E5E1D5",
               boxShadow: tokens.isDark ? "2px 2px 0 rgba(0,0,0,0.6)" : "2px 2px 0 #0A0A0A",
+              flex: "none",
             }}
           >
             {[
@@ -1604,11 +1603,11 @@ export default function NotebooksPage() {
                     color: isActive
                       ? (th.id === "matcha" ? "#F5FDF7" : (th.id === "midnight" ? "#FFFFFF" : (tokens.isDark ? "#FCE94F" : "#F3F0E8")))
                       : (tokens.isDark ? "rgba(240,237,228,0.6)" : "rgba(10,10,10,0.65)"),
-                    padding: "4px 8px",
+                    padding: "4px 7px",
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
-                    gap: "4px",
+                    gap: "3px",
                     transition: "all 0.12s ease",
                   }}
                   onMouseEnter={(e) => {
@@ -1619,19 +1618,21 @@ export default function NotebooksPage() {
                   }}
                 >
                   <span style={{ fontSize: "10px" }}>{th.emoji}</span>
-                  <span>{th.label}</span>
+                  <span className="nb-text-hide-mobile">{th.label}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* Typography Switcher */}
+          {/* Typography Switcher (Hidden on Mobile) */}
           <div
+            className="nb-hide-mobile"
             style={{
               display: "flex",
               border: `2px solid ${tokens.borderPrimary}`,
               background: tokens.isDark ? "#12151E" : "#E5E1D5",
               boxShadow: tokens.isDark ? "2px 2px 0 rgba(0,0,0,0.6)" : "2px 2px 0 #0A0A0A",
+              flex: "none",
             }}
           >
             {(["sans", "serif", "mono"] as TypographyStyle[]).map((fId, fIdx) => {
@@ -2095,6 +2096,7 @@ export default function NotebooksPage() {
                 currentModuleIndex={currentModuleIdx}
                 currentLessonIndex={currentLessonIdx}
                 theme={paperTheme}
+                onClose={() => setMobileSidebarOpen(false)}
                 onSelectCourse={(idx) => {
                   setCurrentCourseIdx(idx);
                   setCurrentModuleIdx(0);
@@ -2257,13 +2259,7 @@ export default function NotebooksPage() {
                 }
               }
             }}
-            style={{
-              padding: "32px clamp(16px, 4vw, 58px) 120px",
-              overflowY: "auto",
-              height: "100%",
-              WebkitOverflowScrolling: "touch",
-              position: "relative",
-            }}
+            className="nb-main-scroll"
           >
             {/* Copied to Clipboard Notification Toast */}
             {copiedMarkdownToast && (
@@ -2488,16 +2484,7 @@ export default function NotebooksPage() {
                   }}
                   title="Click to rename page"
                 >
-                  <h1
-                    style={{
-                      margin: 0,
-                      fontFamily: "var(--display, sans-serif)",
-                      fontWeight: 800,
-                      fontSize: "clamp(28px, 4.8vw, 48px)",
-                      lineHeight: 0.97,
-                      letterSpacing: "-0.05em",
-                    }}
-                  >
+                  <h1 className="nb-page-title">
                     {currentLesson.title}
                   </h1>
                   <span
@@ -2515,23 +2502,13 @@ export default function NotebooksPage() {
 
               {/* Meta Row & Productivity Action Buttons */}
               <div
+                className="nb-meta-bar"
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: "12px",
-                  flexWrap: "wrap",
-                  fontFamily: "var(--mono, monospace)",
-                  fontSize: "9.5px",
-                  fontWeight: 700,
-                  letterSpacing: "0.12em",
-                  marginBottom: "16px",
-                  paddingBottom: "10px",
                   borderBottom: isInk ? "1.5px solid rgba(255,255,255,0.12)" : "1.5px solid rgba(10,10,10,0.1)",
                 }}
               >
                 {/* Stats indicators */}
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", opacity: 0.65 }}>
+                <div className="nb-meta-stats" style={{ display: "flex", alignItems: "center", gap: "10px", opacity: 0.65 }}>
                   <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                     <Clock size={11} />
                     ~{Math.max(1, Math.ceil(wordCount / 200))} MIN READ
@@ -2543,7 +2520,7 @@ export default function NotebooksPage() {
                 </div>
 
                 {/* Clean Unified Action Controls */}
-                <div className="no-print" style={{ display: "flex", alignItems: "center", gap: "8px", position: "relative" }}>
+                <div className="nb-meta-actions no-print" style={{ display: "flex", alignItems: "center", gap: "8px", position: "relative" }}>
                   {/* AI Actions Dropdown Pill */}
                   <div ref={aiMenuRef} style={{ position: "relative" }}>
                     <button

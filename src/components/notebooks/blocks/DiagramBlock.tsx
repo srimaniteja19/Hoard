@@ -167,32 +167,24 @@ export const DiagramBlock: React.FC<DiagramBlockProps> = ({
 
   return (
     <div
+      className="nb-diagram-card"
       style={{
-        margin: "18px 0",
         border: isInk ? "2px solid rgba(255,255,255,0.2)" : "3px solid #0A0A0A",
-        borderRadius: "3px",
         background: isInk ? "#13161F" : "#FFFFFF",
         boxShadow: isInk ? "4px 4px 0 rgba(0,0,0,0.7)" : "5px 5px 0 #0A0A0A",
-        overflow: "hidden",
-        position: "relative",
       }}
     >
       {/* ── Top Toolbar ── */}
       <div
+        className="nb-diagram-toolbar"
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "8px 12px",
           background: isInk ? "#1A1D27" : "#FCE94F",
           color: isInk ? "#F0EDE4" : "#0A0A0A",
           borderBottom: isInk ? "1.5px solid rgba(255,255,255,0.12)" : "2px solid #0A0A0A",
-          gap: "8px",
-          flexWrap: "wrap",
         }}
       >
         {/* Left: Badge & Title */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: "1 1 auto" }}>
           <span
             style={{
               display: "inline-flex",
@@ -210,7 +202,8 @@ export const DiagramBlock: React.FC<DiagramBlockProps> = ({
             }}
           >
             <Network size={11} strokeWidth={2.5} />
-            <span>ARCHITECTURE ILLUSTRATION</span>
+            <span className="nb-diagram-badge-full">ARCHITECTURE ILLUSTRATION</span>
+            <span className="nb-diagram-badge-short" style={{ display: "none" }}>DIAGRAM</span>
           </span>
 
           <span
@@ -442,6 +435,7 @@ export const DiagramBlock: React.FC<DiagramBlockProps> = ({
         /* Rendered Diagram Canvas */
         <div
           ref={containerRef}
+          className="nb-diagram-canvas"
           style={{
             position: "relative",
             minHeight: "180px",
@@ -456,6 +450,7 @@ export const DiagramBlock: React.FC<DiagramBlockProps> = ({
               : "radial-gradient(rgba(10, 10, 10, 0.08) 1px, transparent 0)",
             backgroundSize: "18px 18px",
             transition: "all 0.15s ease",
+            WebkitOverflowScrolling: "touch",
           }}
         >
           {isLoading && (

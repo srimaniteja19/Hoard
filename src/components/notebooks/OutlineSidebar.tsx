@@ -47,6 +47,7 @@ interface OutlineSidebarProps {
   onDeleteCourse?: () => void;
   onBackToIndex: () => void;
   onNewPage: () => void;
+  onClose?: () => void;
 }
 
 export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
@@ -71,6 +72,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   onDeleteCourse,
   onBackToIndex,
   onNewPage,
+  onClose,
 }) => {
   const tokens = getThemeTokens(theme);
   const isDark = tokens.isDark;
@@ -258,6 +260,30 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
               </button>
             )}
             <span>{course.startedAt ? new Date(course.startedAt).toLocaleDateString([], { month: "short", year: "numeric" }).toUpperCase() : "COURSE"}</span>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                title="Close outline drawer"
+                style={{
+                  border: `1.5px solid ${tokens.borderPrimary}`,
+                  background: isDark ? "#242A38" : "#EBE7DC",
+                  color: tokens.textPrimary,
+                  cursor: "pointer",
+                  padding: "2px 6px",
+                  fontSize: "9px",
+                  fontWeight: 800,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "3px",
+                  borderRadius: "2px",
+                  marginLeft: "4px",
+                }}
+              >
+                <span>✕</span>
+                <span>CLOSE</span>
+              </button>
+            )}
           </div>
         </div>
 

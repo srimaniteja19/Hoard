@@ -1033,26 +1033,14 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
               onClick={() => setActiveBlockId(block.id)}
               onMouseEnter={() => setHoveredBlockId(block.id)}
               onMouseLeave={() => setHoveredBlockId(null)}
-              style={{
-                position: "relative",
-                paddingLeft: "54px", // Safe, generous gutter so handles NEVER overlap text
-                minHeight: "28px",
-              }}
+              className="nb-block-row"
             >
-              {/* Hover Action Gutter (Contained safely inside the 54px left gutter) */}
+              {/* Hover Action Gutter (Hidden on mobile screens < 768px via CSS) */}
               <div
+                className="nb-block-gutter"
                 style={{
-                  position: "absolute",
-                  left: "0px",
-                  top: "4px",
-                  width: "48px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
-                  gap: "2px",
                   opacity: isHovered || blockActionMenu?.blockIndex === idx ? 1 : 0,
                   transition: "opacity 0.12s ease",
-                  userSelect: "none",
                 }}
               >
                 {/* + Quick Insert Below */}
@@ -1270,11 +1258,11 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           }
           handleInsertBlock("paragraph", blocks.length - 1);
         }}
+        className="nb-block-row"
         style={{
           flex: 1,
           minHeight: "220px",
           cursor: "text",
-          paddingLeft: "54px",
         }}
       />
 
@@ -1285,7 +1273,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           style={{
             position: "fixed",
             top: `${blockActionMenu.top}px`,
-            left: `${blockActionMenu.left}px`,
+            left: `max(12px, min(${blockActionMenu.left}px, calc(100vw - 230px)))`,
             zIndex: 99999,
             background: tokens.popoverBg,
             border: `2px solid ${tokens.borderPrimary}`,
