@@ -127,12 +127,44 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     }
 
     if (targetText && targetText.includes(selectedStr)) {
-      const wrapped = `${prefix}${selectedStr}${suffix}`;
       let nextText: string;
-      if (targetText.includes(wrapped)) {
-        nextText = targetText.replace(wrapped, selectedStr);
+
+      // Clear formatting if prefix and suffix are empty
+      if (!prefix && !suffix) {
+        const escaped = selectedStr.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const spanRegex = new RegExp(`<span[^>]*>(${escaped})<\\/span>`, "g");
+        const markRegex = new RegExp(`<mark[^>]*>(${escaped})<\\/mark>`, "g");
+        const boldRegex = new RegExp(`\\*\\*(${escaped})\\*\\*`, "g");
+        const italicRegex = new RegExp(`\\*(${escaped})\\*`, "g");
+        const codeRegex = new RegExp(`\`(${escaped})\``, "g");
+        const strikeRegex = new RegExp(`~~(${escaped})~~`, "g");
+        const highlightRegex = new RegExp(`==(${escaped})==`, "g");
+
+        nextText = targetText
+          .replace(spanRegex, "$1")
+          .replace(markRegex, "$1")
+          .replace(boldRegex, "$1")
+          .replace(italicRegex, "$1")
+          .replace(codeRegex, "$1")
+          .replace(strikeRegex, "$1")
+          .replace(highlightRegex, "$1");
       } else {
-        nextText = targetText.replace(selectedStr, wrapped);
+        const wrapped = `${prefix}${selectedStr}${suffix}`;
+        if (targetText.includes(wrapped)) {
+          nextText = targetText.replace(wrapped, selectedStr);
+        } else {
+          // If replacing an existing span or mark with a new one
+          const escaped = selectedStr.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const existingSpanRegex = new RegExp(`<span[^>]*>${escaped}<\\/span>`);
+          const existingMarkRegex = new RegExp(`<mark[^>]*>${escaped}<\\/mark>`);
+          if (prefix.startsWith("<span") && existingSpanRegex.test(targetText)) {
+            nextText = targetText.replace(existingSpanRegex, wrapped);
+          } else if (prefix.startsWith("<mark") && existingMarkRegex.test(targetText)) {
+            nextText = targetText.replace(existingMarkRegex, wrapped);
+          } else {
+            nextText = targetText.replace(selectedStr, wrapped);
+          }
+        }
       }
 
       if ("text" in targetBlock) {

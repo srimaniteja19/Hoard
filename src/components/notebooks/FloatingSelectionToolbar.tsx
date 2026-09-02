@@ -3,7 +3,59 @@
 import React, { useState, useEffect, useRef } from "react";
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 import { playSound } from "@/lib/sound";
-import { Bold, Italic, Strikethrough, Code, Sparkles, Highlighter } from "lucide-react";
+import {
+  Bold,
+  Italic,
+  Strikethrough,
+  Code,
+  Sparkles,
+  Highlighter,
+  Palette,
+  ChevronDown,
+  X,
+} from "lucide-react";
+
+export interface ColorOption {
+  id: string;
+  label: string;
+  color: string;
+  dotColor: string;
+}
+
+export interface BgColorOption {
+  id: string;
+  label: string;
+  bg: string;
+  border: string;
+  lightFg: string;
+  darkFg: string;
+}
+
+export const NOTION_TEXT_COLORS: ColorOption[] = [
+  { id: "default", label: "Default", color: "inherit", dotColor: "#9CA3AF" },
+  { id: "gray", label: "Gray", color: "#9CA3AF", dotColor: "#9CA3AF" },
+  { id: "brown", label: "Brown", color: "#D97706", dotColor: "#D97706" },
+  { id: "orange", label: "Orange", color: "#F97316", dotColor: "#F97316" },
+  { id: "yellow", label: "Yellow", color: "#EAB308", dotColor: "#EAB308" },
+  { id: "green", label: "Green", color: "#10B981", dotColor: "#10B981" },
+  { id: "blue", label: "Blue", color: "#3B82F6", dotColor: "#3B82F6" },
+  { id: "purple", label: "Purple", color: "#8B5CF6", dotColor: "#8B5CF6" },
+  { id: "pink", label: "Pink", color: "#EC4899", dotColor: "#EC4899" },
+  { id: "red", label: "Red", color: "#EF4444", dotColor: "#EF4444" },
+];
+
+export const NOTION_BG_COLORS: BgColorOption[] = [
+  { id: "default", label: "Default (No background)", bg: "transparent", border: "transparent", lightFg: "inherit", darkFg: "inherit" },
+  { id: "gray", label: "Gray background", bg: "rgba(156, 163, 175, 0.22)", border: "#9CA3AF", lightFg: "#374151", darkFg: "#E5E7EB" },
+  { id: "brown", label: "Brown background", bg: "rgba(180, 83, 9, 0.22)", border: "#D97706", lightFg: "#78350F", darkFg: "#FDE68A" },
+  { id: "orange", label: "Orange background", bg: "rgba(249, 115, 22, 0.22)", border: "#F97316", lightFg: "#7C2D12", darkFg: "#FED7AA" },
+  { id: "yellow", label: "Yellow background", bg: "rgba(234, 179, 8, 0.22)", border: "#EAB308", lightFg: "#713F12", darkFg: "#FEF08A" },
+  { id: "green", label: "Green background", bg: "rgba(16, 185, 129, 0.22)", border: "#10B981", lightFg: "#064E3B", darkFg: "#A7F3D0" },
+  { id: "blue", label: "Blue background", bg: "rgba(59, 130, 246, 0.22)", border: "#3B82F6", lightFg: "#1E3A8A", darkFg: "#BFDBFE" },
+  { id: "purple", label: "Purple background", bg: "rgba(139, 92, 246, 0.28)", border: "#A78BFA", lightFg: "#4C1D95", darkFg: "#F3E8FF" },
+  { id: "pink", label: "Pink background", bg: "rgba(236, 72, 153, 0.22)", border: "#EC4899", lightFg: "#831843", darkFg: "#FBCFE8" },
+  { id: "red", label: "Red background", bg: "rgba(239, 68, 68, 0.22)", border: "#EF4444", lightFg: "#7F1D1D", darkFg: "#FECACA" },
+];
 
 interface FloatingSelectionToolbarProps {
   theme?: NotebookTheme;
@@ -19,7 +71,9 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
   const tokens = getThemeTokens(theme);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectedText, setSelectedText] = useState("");
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleSelectionChange = () => {
@@ -27,6 +81,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       if (!selection || selection.isCollapsed) {
         setPosition(null);
         setSelectedText("");
+        setShowColorPicker(false);
         return;
       }
 
@@ -34,6 +89,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       if (!text || text.length === 0) {
         setPosition(null);
         setSelectedText("");
+        setShowColorPicker(false);
         return;
       }
 
@@ -44,6 +100,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       const editorCanvas = document.querySelector("[data-block-editor]");
       if (editorCanvas && !editorCanvas.contains(range.commonAncestorContainer)) {
         setPosition(null);
+        setShowColorPicker(false);
         return;
       }
 
@@ -58,7 +115,47 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
     return () => document.removeEventListener("selectionchange", handleSelectionChange);
   }, []);
 
+  // Close color picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        colorPickerRef.current &&
+        !colorPickerRef.current.contains(e.target as Node) &&
+        toolbarRef.current &&
+        !toolbarRef.current.contains(e.target as Node)
+      ) {
+        setShowColorPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   if (!position || !selectedText) return null;
+
+  const handleApplyTextColor = (c: ColorOption) => {
+    playSound.pop();
+    if (c.id === "default") {
+      onFormat("", "");
+    } else {
+      onFormat(`<span style="color: ${c.color}">`, `</span>`);
+    }
+    setShowColorPicker(false);
+  };
+
+  const handleApplyBgColor = (c: BgColorOption) => {
+    playSound.pop();
+    if (c.id === "default") {
+      onFormat("", "");
+    } else {
+      const fg = tokens.isDark ? c.darkFg : c.lightFg;
+      onFormat(
+        `<mark style="background: ${c.bg}; color: ${fg}; border-bottom: 2px solid ${c.border}; border-radius: 3px; padding: 1px 5px">`,
+        `</mark>`
+      );
+    }
+    setShowColorPicker(false);
+  };
 
   return (
     <div
@@ -77,7 +174,6 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
         border: `2px solid ${tokens.borderPrimary}`,
         boxShadow: tokens.popoverShadow,
         borderRadius: "4px",
-        overflow: "hidden",
         fontFamily: "var(--mono, monospace)",
         animation: "fadeIn 0.1s ease",
       }}
@@ -178,18 +274,18 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
         <Code size={12} strokeWidth={2.5} />
       </button>
 
-      {/* Highlight Marker */}
+      {/* Quick Cyber Lavender Highlighter */}
       <button
         type="button"
         onClick={() => {
           playSound.pop();
           onFormat("==", "==");
         }}
-        title="Highlight (Cyber Lavender)"
+        title="Quick Highlight (Cyber Lavender)"
         style={{
           background: "transparent",
           border: "none",
-          borderRight: onAiExplain ? `1px solid ${tokens.borderSubtle}` : "none",
+          borderRight: `1px solid ${tokens.borderSubtle}`,
           color: tokens.textPrimary,
           padding: "6px 9px",
           cursor: "pointer",
@@ -202,6 +298,37 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
         <Highlighter size={12} strokeWidth={2.5} color="#A78BFA" />
       </button>
 
+      {/* Color & Highlight Palette Trigger (Notion Style 'A' Color Picker) */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          playSound.click();
+          setShowColorPicker(!showColorPicker);
+        }}
+        title="Text & Background Color Palette (Notion style)"
+        style={{
+          background: showColorPicker ? tokens.popoverHoverBg : "transparent",
+          border: "none",
+          borderRight: onAiExplain ? `1px solid ${tokens.borderSubtle}` : "none",
+          color: tokens.textPrimary,
+          padding: "6px 9px",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: "3px",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
+        onMouseLeave={(e) => {
+          if (!showColorPicker) e.currentTarget.style.background = "transparent";
+        }}
+      >
+        <span style={{ fontWeight: 900, fontSize: "12px", textDecoration: "underline", textDecorationColor: "#8B5CF6" }}>
+          A
+        </span>
+        <ChevronDown size={10} style={{ opacity: 0.6 }} />
+      </button>
+
       {/* Ask AI */}
       {onAiExplain && (
         <button
@@ -210,6 +337,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
             playSound.click();
             onAiExplain(selectedText);
             setPosition(null);
+            setShowColorPicker(false);
           }}
           title="Explain selected text with AI"
           style={{
@@ -231,6 +359,161 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
           <Sparkles size={11} color="#7B5CF0" />
           <span>✦ ASK AI</span>
         </button>
+      )}
+
+      {/* ── Notion-Style Color & Background Dropdown Popover ── */}
+      {showColorPicker && (
+        <div
+          ref={colorPickerRef}
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{
+            position: "absolute",
+            top: "38px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: tokens.popoverBg,
+            border: `2px solid ${tokens.borderPrimary}`,
+            boxShadow: tokens.popoverShadow,
+            width: "230px",
+            maxHeight: "340px",
+            overflowY: "auto",
+            padding: "8px 0",
+            zIndex: 100000,
+            borderRadius: "4px",
+            animation: "fadeIn 0.1s ease",
+          }}
+        >
+          {/* SECTION 1: TEXT COLOR */}
+          <div
+            style={{
+              padding: "4px 12px 6px",
+              fontSize: "8.5px",
+              fontWeight: 800,
+              letterSpacing: "0.14em",
+              color: tokens.textMuted,
+            }}
+          >
+            TEXT COLOR
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "1px", padding: "0 4px" }}>
+            {NOTION_TEXT_COLORS.map((tc) => (
+              <button
+                key={tc.id}
+                type="button"
+                onClick={() => handleApplyTextColor(tc)}
+                style={{
+                  width: "100%",
+                  padding: "5px 8px",
+                  background: "transparent",
+                  border: "none",
+                  borderRadius: "3px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "background 0.1s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <div
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    borderRadius: "3px",
+                    background: tokens.isDark ? "#222226" : "#EBE7DC",
+                    border: `1px solid ${tokens.borderSubtle}`,
+                    display: "grid",
+                    placeItems: "center",
+                    fontWeight: 900,
+                    fontSize: "11px",
+                    color: tc.color === "inherit" ? tokens.textPrimary : tc.color,
+                  }}
+                >
+                  A
+                </div>
+                <span
+                  style={{
+                    fontSize: "10.5px",
+                    fontWeight: 600,
+                    color: tc.color === "inherit" ? tokens.textPrimary : tc.color,
+                  }}
+                >
+                  {tc.label}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* DIVIDER */}
+          <div style={{ height: "1px", background: tokens.borderSubtle, margin: "8px 0" }} />
+
+          {/* SECTION 2: BACKGROUND (HIGHLIGHT) */}
+          <div
+            style={{
+              padding: "4px 12px 6px",
+              fontSize: "8.5px",
+              fontWeight: 800,
+              letterSpacing: "0.14em",
+              color: tokens.textMuted,
+            }}
+          >
+            BACKGROUND (HIGHLIGHT)
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "1px", padding: "0 4px" }}>
+            {NOTION_BG_COLORS.map((bg) => (
+              <button
+                key={bg.id}
+                type="button"
+                onClick={() => handleApplyBgColor(bg)}
+                style={{
+                  width: "100%",
+                  padding: "5px 8px",
+                  background: "transparent",
+                  border: "none",
+                  borderRadius: "3px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "background 0.1s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <div
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    borderRadius: "3px",
+                    background: bg.bg === "transparent" ? (tokens.isDark ? "#222226" : "#EBE7DC") : bg.bg,
+                    border: `1px solid ${bg.border === "transparent" ? tokens.borderSubtle : bg.border}`,
+                    display: "grid",
+                    placeItems: "center",
+                    fontWeight: 900,
+                    fontSize: "11px",
+                    color: bg.bg === "transparent" ? tokens.textPrimary : (tokens.isDark ? bg.darkFg : bg.lightFg),
+                  }}
+                >
+                  A
+                </div>
+                <span
+                  style={{
+                    fontSize: "10.5px",
+                    fontWeight: 600,
+                    color: tokens.textPrimary,
+                  }}
+                >
+                  {bg.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

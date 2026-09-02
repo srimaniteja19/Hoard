@@ -325,24 +325,64 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
         );
       }
 
-      // HTML <mark>
+      // HTML <mark> (with optional inline styles)
       if (part.startsWith("<mark") && part.endsWith("</mark>")) {
-        const content = part.replace(/^<mark[^>]*>/, "").replace(/<\/mark>$/, "");
+        const styleMatch = part.match(/style=["']([^"']*)["']/i);
+        const styleStr = styleMatch ? styleMatch[1] : "";
+        const content = part.replace(/^<mark[^>]*>/i, "").replace(/<\/mark>$/i, "");
+
+        const parsedStyle: React.CSSProperties = {
+          fontWeight: 600,
+          background: tokens.highlightBg,
+          color: tokens.highlightFg,
+          borderBottom: `2px solid ${tokens.highlightBorder}`,
+          borderRadius: "3px",
+          padding: "1px 5px",
+          boxDecorationBreak: "clone",
+        };
+
+        if (styleStr) {
+          styleStr.split(";").forEach((pair) => {
+            const [k, v] = pair.split(":").map((s) => s.trim());
+            if (k === "color") parsedStyle.color = v;
+            if (k === "background" || k === "background-color") parsedStyle.background = v;
+            if (k === "border-bottom") parsedStyle.borderBottom = v;
+            if (k === "border-radius") parsedStyle.borderRadius = v;
+          });
+        }
+
         return (
-          <mark
-            key={idx}
-            style={{
-              fontWeight: 600,
-              background: tokens.highlightBg,
-              color: tokens.highlightFg,
-              borderBottom: `2px solid ${tokens.highlightBorder}`,
-              borderRadius: "3px",
-              padding: "1px 5px",
-              boxDecorationBreak: "clone",
-            }}
-          >
-            {content}
+          <mark key={idx} style={parsedStyle}>
+            {renderFormattedInline(content)}
           </mark>
+        );
+      }
+
+      // HTML <span style="...">
+      if (part.startsWith("<span") && part.endsWith("</span>")) {
+        const styleMatch = part.match(/style=["']([^"']*)["']/i);
+        const styleStr = styleMatch ? styleMatch[1] : "";
+        const content = part.replace(/^<span[^>]*>/i, "").replace(/<\/span>$/i, "");
+
+        const parsedStyle: React.CSSProperties = {
+          boxDecorationBreak: "clone",
+        };
+
+        if (styleStr) {
+          styleStr.split(";").forEach((pair) => {
+            const [k, v] = pair.split(":").map((s) => s.trim());
+            if (k === "color") parsedStyle.color = v;
+            if (k === "background" || k === "background-color") parsedStyle.background = v;
+            if (k === "border-bottom") parsedStyle.borderBottom = v;
+            if (k === "border-radius") parsedStyle.borderRadius = v;
+            if (k === "font-weight") parsedStyle.fontWeight = v as any;
+          });
+        }
+
+        return (
+          <span key={idx} style={parsedStyle}>
+            {renderFormattedInline(content)}
+          </span>
         );
       }
 
