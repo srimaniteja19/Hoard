@@ -76,44 +76,100 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
   const colorPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleSelectionChange = () => {
-      const selection = window.getSelection();
-      if (!selection || selection.isCollapsed) {
-        setPosition(null);
-        setSelectedText("");
-        setShowColorPicker(false);
-        return;
+    const updateSelectionPosition = () => {
+      let rect: DOMRect | null = null;
+      let text = "";
+
+      // 1. Try DOM Selection
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+        const candidate = sel.toString().trim();
+        if (candidate) {
+          try {
+            const range = sel.getRangeAt(0);
+            const node = range.commonAncestorContainer;
+            const containerNode = node.nodeType === 3 ? node.parentElement : (node as Element);
+            const editorCanvas = document.querySelector("[data-block-editor]");
+
+            if (editorCanvas && containerNode && editorCanvas.contains(containerNode)) {
+              let r = range.getBoundingClientRect();
+              if ((r.width === 0 || r.height === 0) && range.getClientRects().length > 0) {
+                r = range.getClientRects()[0];
+              }
+              if (r && (r.width > 0 || r.height > 0)) {
+                rect = r;
+                text = candidate;
+              }
+            }
+          } catch {
+            // Ignore range reading error
+          }
+        }
       }
 
-      const text = selection.toString().trim();
-      if (!text || text.length === 0) {
-        setPosition(null);
-        setSelectedText("");
-        setShowColorPicker(false);
-        return;
+      // 2. Fallback: check active textarea or input inside [data-block-editor]
+      if (!text || !rect) {
+        const active = document.activeElement;
+        if (active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement) {
+          const editorCanvas = document.querySelector("[data-block-editor]");
+          if (editorCanvas && editorCanvas.contains(active)) {
+            const start = active.selectionStart;
+            const end = active.selectionEnd;
+            if (start !== null && end !== null && start !== end) {
+              const candidate = active.value.substring(start, end).trim();
+              if (candidate) {
+                text = candidate;
+                rect = active.getBoundingClientRect();
+              }
+            }
+          }
+        }
       }
 
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-
-      // Check if selection is within editor canvas
-      const editorCanvas = document.querySelector("[data-block-editor]");
-      if (editorCanvas && !editorCanvas.contains(range.commonAncestorContainer)) {
-        setPosition(null);
-        setShowColorPicker(false);
+      if (!text || !rect || (rect.width === 0 && rect.height === 0)) {
+        if (!showColorPicker) {
+          setPosition(null);
+          setSelectedText("");
+        }
         return;
       }
 
       setSelectedText(text);
+
+      // Clamp horizontal position so toolbar doesn't overflow screen
+      const toolbarHalfWidth = 145;
+      const safeLeft = Math.max(
+        toolbarHalfWidth + 12,
+        Math.min(window.innerWidth - toolbarHalfWidth - 12, rect.left + rect.width / 2)
+      );
+
+      // If near top of viewport, flip toolbar to appear right below the selection
+      const safeTop = rect.top >= 54 ? rect.top - 46 : rect.bottom + 8;
+
       setPosition({
-        top: Math.max(10, rect.top - 46 + window.scrollY),
-        left: rect.left + rect.width / 2,
+        top: safeTop,
+        left: safeLeft,
       });
     };
 
-    document.addEventListener("selectionchange", handleSelectionChange);
-    return () => document.removeEventListener("selectionchange", handleSelectionChange);
-  }, []);
+    const handleDelayedCheck = () => {
+      setTimeout(updateSelectionPosition, 10);
+    };
+
+    document.addEventListener("selectionchange", updateSelectionPosition);
+    document.addEventListener("mouseup", handleDelayedCheck);
+    document.addEventListener("dblclick", handleDelayedCheck);
+    document.addEventListener("keyup", handleDelayedCheck);
+    window.addEventListener("scroll", updateSelectionPosition, true);
+
+    return () => {
+      document.removeEventListener("selectionchange", updateSelectionPosition);
+      document.removeEventListener("mouseup", handleDelayedCheck);
+      document.removeEventListener("dblclick", handleDelayedCheck);
+      document.removeEventListener("keyup", handleDelayedCheck);
+      window.removeEventListener("scroll", updateSelectionPosition, true);
+    };
+  }, [showColorPicker]);
 
   // Close color picker when clicking outside
   useEffect(() => {
@@ -164,7 +220,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
       onMouseDown={(e) => e.preventDefault()} // prevent blur/loss of selection
       style={{
         position: "fixed",
-        top: `${position.top - window.scrollY}px`,
+        top: `${position.top}px`,
         left: `${position.left}px`,
         transform: "translateX(-50%)",
         zIndex: 99999,

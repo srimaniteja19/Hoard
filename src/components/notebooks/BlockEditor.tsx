@@ -101,19 +101,38 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   };
 
   const handleFormatSelection = (prefix: string, suffix: string) => {
+    let selectedStr = "";
+    let blockIdx: number | null = null;
+
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed && sel.toString()) {
+      selectedStr = sel.toString();
+      const node = sel.anchorNode;
+      const blockEl = node instanceof Element ? node.closest("[data-block-index]") : node?.parentElement?.closest("[data-block-index]");
+      if (blockEl) {
+        const idxStr = blockEl.getAttribute("data-block-index");
+        if (idxStr !== null) blockIdx = parseInt(idxStr, 10);
+      }
+    }
 
-    const selectedStr = sel.toString();
-    if (!selectedStr) return;
+    // Fallback: check active textarea or input
+    if (!selectedStr || blockIdx === null) {
+      const active = document.activeElement;
+      if (active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement) {
+        const start = active.selectionStart;
+        const end = active.selectionEnd;
+        if (start !== null && end !== null && start !== end) {
+          selectedStr = active.value.substring(start, end);
+          const blockEl = active.closest("[data-block-index]");
+          if (blockEl) {
+            const idxStr = blockEl.getAttribute("data-block-index");
+            if (idxStr !== null) blockIdx = parseInt(idxStr, 10);
+          }
+        }
+      }
+    }
 
-    const node = sel.anchorNode;
-    const blockEl = node instanceof Element ? node.closest("[data-block-index]") : node?.parentElement?.closest("[data-block-index]");
-    if (!blockEl) return;
-
-    const idxStr = blockEl.getAttribute("data-block-index");
-    if (idxStr === null) return;
-    const blockIdx = parseInt(idxStr, 10);
+    if (!selectedStr || blockIdx === null) return;
     const targetBlock = blocks[blockIdx];
     if (!targetBlock) return;
 
@@ -124,6 +143,11 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       targetText = (targetBlock as any).body;
     } else {
       return;
+    }
+
+    // If selectedStr has leading/trailing spaces from double-click or drag, trim if needed
+    if (!targetText.includes(selectedStr) && targetText.includes(selectedStr.trim())) {
+      selectedStr = selectedStr.trim();
     }
 
     if (targetText && targetText.includes(selectedStr)) {

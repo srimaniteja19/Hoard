@@ -304,6 +304,16 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
     ...style,
   };
 
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Read-only (e.g. the "Tidy My Notes" diff preview), or simply not the block
   // currently being edited: show the rendered/formatted view. **bold**,
   // `code`, etc. render for real here instead of sitting as literal markdown.
@@ -311,11 +321,35 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
     return React.createElement(
       as,
       {
+        onMouseUp: readOnly
+          ? undefined
+          : () => {
+              const sel = window.getSelection();
+              if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) {
+                if (clickTimeoutRef.current) {
+                  clearTimeout(clickTimeoutRef.current);
+                  clickTimeoutRef.current = null;
+                }
+              }
+            },
         onClick: readOnly
           ? undefined
           : () => {
-              pendingFocusPosRef.current = "end";
-              setIsEditing(true);
+              const sel = window.getSelection();
+              if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) {
+                return;
+              }
+              if (clickTimeoutRef.current) {
+                clearTimeout(clickTimeoutRef.current);
+              }
+              clickTimeoutRef.current = setTimeout(() => {
+                const currentSel = window.getSelection();
+                if (currentSel && !currentSel.isCollapsed && currentSel.toString().trim().length > 0) {
+                  return;
+                }
+                pendingFocusPosRef.current = "end";
+                setIsEditing(true);
+              }, 180);
             },
         // A subtle hover tint is the only signal this text is editable at
         // all — without it, clicking into a block to edit it is invisible
