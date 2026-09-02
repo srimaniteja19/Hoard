@@ -263,7 +263,11 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   const renderFormattedInline = (lineText: string): React.ReactNode => {
     if (!lineText) return null;
 
-    const tokenRegex = /(<mark[\s\S]*?<\/mark>|<span[\s\S]*?<\/span>|<strong>[\s\S]*?<\/strong>|<b>[\s\S]*?<\/b>|\*\*[^*\n]+?\*\*|==[^=\n]+?==|~~[^~\n]+?~~|<code>[\s\S]*?<\/code>|`[^`\n]+`|<em>[\s\S]*?<\/em>|(?<=\s|^)\*(?!\s)[^*\n]+?\*(?=\s|$|<|[.,:;!?]))/g;
+    // Highlight content uses a negative lookahead (rather than excluding "="
+    // outright) so it can contain a single "=" — e.g. from a nested
+    // <span style="color: ...">'s attribute syntax — while still terminating
+    // at the real closing "==".
+    const tokenRegex = /(<mark[\s\S]*?<\/mark>|<span[\s\S]*?<\/span>|<strong>[\s\S]*?<\/strong>|<b>[\s\S]*?<\/b>|\*\*[^*\n]+?\*\*|==(?:(?!==)[^\n])+?==|~~[^~\n]+?~~|<code>[\s\S]*?<\/code>|`[^`\n]+`|<em>[\s\S]*?<\/em>|(?<=\s|^)\*(?!\s)[^*\n]+?\*(?=\s|$|<|[.,:;!?]))/g;
     const parts = lineText.split(tokenRegex);
 
     return parts.map((part, idx) => {

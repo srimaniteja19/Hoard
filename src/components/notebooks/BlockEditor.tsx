@@ -55,6 +55,93 @@ function buildPlainTextMap(raw: string): { plain: string; rawIndexAt: number[] }
   return { plain, rawIndexAt };
 }
 
+// Mirrors BlockRenderer's renderFormattedInline tokenRegex — matches a single
+// complete formatting unit (tag pair or markdown delimiter pair) so nested
+// units can be found by recursing into each match's inner content.
+const ATOMIC_UNIT_REGEX =
+  /<mark[\s\S]*?<\/mark>|<span[\s\S]*?<\/span>|<strong>[\s\S]*?<\/strong>|<b>[\s\S]*?<\/b>|\*\*[^*\n]+?\*\*|==(?:(?!==)[^\n])+?==|~~[^~\n]+?~~|<code>[\s\S]*?<\/code>|`[^`\n]+`|<em>[\s\S]*?<\/em>|(?<=\s|^)\*(?!\s)[^*\n]+?\*(?=\s|$|<|[.,:;!?])/g;
+
+// Strips a matched unit's opening/closing delimiter, returning its inner
+// content and how far that content starts into the matched text (so a
+// recursive scan can compute absolute raw offsets for nested units).
+function stripUnitDelimiters(token: string): { content: string; contentStart: number } | null {
+  const taggedPatterns: [RegExp, RegExp][] = [
+    [/^<mark[^>]*>/i, /<\/mark>$/i],
+    [/^<span[^>]*>/i, /<\/span>$/i],
+    [/^<strong>/, /<\/strong>$/],
+    [/^<b>/, /<\/b>$/],
+    [/^<em>/, /<\/em>$/],
+    [/^<code>/, /<\/code>$/],
+  ];
+  for (const [openRe, closeRe] of taggedPatterns) {
+    const openMatch = token.match(openRe);
+    if (openMatch) {
+      const open = openMatch[0];
+      const closeMatch = token.match(closeRe);
+      const close = closeMatch ? closeMatch[0] : "";
+      return { content: token.slice(open.length, token.length - close.length), contentStart: open.length };
+    }
+  }
+  if (token.startsWith("**") && token.endsWith("**")) return { content: token.slice(2, -2), contentStart: 2 };
+  if (token.startsWith("==") && token.endsWith("==")) return { content: token.slice(2, -2), contentStart: 2 };
+  if (token.startsWith("~~") && token.endsWith("~~")) return { content: token.slice(2, -2), contentStart: 2 };
+  if (token.startsWith("`") && token.endsWith("`")) return { content: token.slice(1, -1), contentStart: 1 };
+  if (token.startsWith("*") && token.endsWith("*")) return { content: token.slice(1, -1), contentStart: 1 };
+  return null;
+}
+
+// Recursively collects [start, end) raw-index bounds for every formatting
+// unit in the text, at every nesting depth. Uses matchAll (which snapshots
+// its own iteration state) rather than a shared exec()/lastIndex loop, since
+// the recursive call below re-enters this function with the SAME module-level
+// regex — reusing exec()/lastIndex here would let the recursive call's scan
+// clobber the outer call's position and spin forever.
+function collectUnitBoundaries(raw: string, offset: number, results: Array<[number, number]>) {
+  for (const match of raw.matchAll(ATOMIC_UNIT_REGEX)) {
+    const uStart = offset + (match.index ?? 0);
+    const uEnd = uStart + match[0].length;
+    results.push([uStart, uEnd]);
+    const stripped = stripUnitDelimiters(match[0]);
+    if (stripped) {
+      collectUnitBoundaries(stripped.content, uStart + stripped.contentStart, results);
+    }
+  }
+}
+
+/**
+ * Adjusts [start, end) so it never bisects an existing formatting unit (e.g.
+ * lands between a **bold**'s two asterisk pairs). A unit fully inside the
+ * range, or fully containing it, is left alone — only a unit that partially
+ * overlaps one edge forces that edge outward to the unit's boundary.
+ */
+function snapToUnitBoundaries(raw: string, start: number, end: number): [number, number] {
+  const boundaries: Array<[number, number]> = [];
+  collectUnitBoundaries(raw, 0, boundaries);
+
+  let snappedStart = start;
+  let snappedEnd = end;
+  let changed = true;
+  let safety = boundaries.length + 1;
+  while (changed && safety-- > 0) {
+    changed = false;
+    for (const [uStart, uEnd] of boundaries) {
+      if (uStart <= snappedStart && snappedEnd <= uEnd) continue; // range inside unit
+      if (snappedStart <= uStart && uEnd <= snappedEnd) continue; // unit inside range
+      if (uEnd <= snappedStart || uStart >= snappedEnd) continue; // no overlap
+      if (uStart < snappedStart && snappedStart < uEnd) {
+        snappedStart = uStart;
+        changed = true;
+      }
+      if (uStart < snappedEnd && snappedEnd < uEnd) {
+        snappedEnd = uEnd;
+        changed = true;
+      }
+    }
+  }
+
+  return [snappedStart, snappedEnd];
+}
+
 interface BlockEditorProps {
   blocks: Block[];
   onChange: (updatedBlocks: Block[]) => void;
@@ -247,8 +334,11 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       const startInPlain = plain.indexOf(selectedStr);
       if (startInPlain !== -1 && selectedStr.length > 0) {
         const endInPlain = startInPlain + selectedStr.length - 1;
-        const rawStart = rawIndexAt[startInPlain];
-        const rawEnd = rawIndexAt[endInPlain] + 1;
+        const initialRawStart = rawIndexAt[startInPlain];
+        const initialRawEnd = rawIndexAt[endInPlain] + 1;
+        // Snap outward to whole-unit boundaries so we never insert a tag in
+        // the middle of an existing delimiter pair (e.g. splitting **bold**).
+        const [rawStart, rawEnd] = snapToUnitBoundaries(targetText, initialRawStart, initialRawEnd);
         const nextText =
           targetText.slice(0, rawStart) + prefix + targetText.slice(rawStart, rawEnd) + suffix + targetText.slice(rawEnd);
 
