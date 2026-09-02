@@ -304,8 +304,8 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
         <div
           style={{
             height: "8px",
-            border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid #0A0A0A",
-            background: isInk ? "#1E222D" : "#FFFFFF",
+            border: `1.5px solid ${tokens.borderPrimary}`,
+            background: tokens.cardBg,
             display: "flex",
             overflow: "hidden",
           }}
@@ -335,7 +335,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             fontSize: "9px",
             fontWeight: 700,
             letterSpacing: "0.1em",
-            color: isInk ? "rgba(240,237,228,0.6)" : "rgba(10,10,10,0.55)",
+            color: tokens.textSecondary,
             marginTop: "8px",
           }}
         >
@@ -357,9 +357,9 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
               fontFamily: "var(--mono, monospace)",
               fontSize: "11px",
               fontWeight: 600,
-              border: isInk ? "1.5px solid rgba(255,255,255,0.2)" : "1.5px solid #0A0A0A",
-              background: isInk ? "#1E222D" : "#FFFFFF",
-              color: isInk ? "#F0EDE4" : "#0A0A0A",
+              border: `1.5px solid ${tokens.borderPrimary}`,
+              background: tokens.cardBg,
+              color: tokens.textPrimary,
               outline: "none",
             }}
           />
@@ -817,10 +817,10 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             top: `${actionMenu.top}px`,
             left: `${actionMenu.left}px`,
             zIndex: 99999,
-            background: isInk ? "#1E232F" : "#FFFFFF",
-            border: isInk ? "2px solid rgba(255,255,255,0.25)" : "2px solid #0A0A0A",
-            boxShadow: isInk ? "4px 4px 0 rgba(0,0,0,0.6)" : "4px 4px 0 #0A0A0A",
-            color: isInk ? "#F0EDE4" : "#0A0A0A",
+            background: tokens.popoverBg,
+            border: `2px solid ${tokens.borderPrimary}`,
+            boxShadow: tokens.popoverShadow,
+            color: tokens.textPrimary,
             minWidth: "160px",
             padding: "4px 0",
             fontFamily: "var(--mono, monospace)",
@@ -844,14 +844,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 padding: "6px 12px",
                 border: "none",
                 background: "transparent",
-                color: isInk ? "#F0EDE4" : "#0A0A0A",
+                color: tokens.textPrimary,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
                 textAlign: "left",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#2C3446" : "#FCE94F")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               <ArrowUp size={11} />
@@ -874,14 +874,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 padding: "6px 12px",
                 border: "none",
                 background: "transparent",
-                color: isInk ? "#F0EDE4" : "#0A0A0A",
+                color: tokens.textPrimary,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
                 textAlign: "left",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#2C3446" : "#FCE94F")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               <ArrowDown size={11} />
@@ -904,14 +904,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 padding: "6px 12px",
                 border: "none",
                 background: "transparent",
-                color: isInk ? "#F0EDE4" : "#0A0A0A",
+                color: tokens.textPrimary,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
                 textAlign: "left",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#2C3446" : "#FCE94F")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               <Copy size={11} />
@@ -934,14 +934,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 padding: "6px 12px",
                 border: "none",
                 background: "transparent",
-                color: isInk ? "#F0EDE4" : "#0A0A0A",
+                color: tokens.textPrimary,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
                 textAlign: "left",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#2C3446" : "#FCE94F")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               {course.modules[actionMenu.modIdx]?.lessons[actionMenu.lesIdx]?.watched ? (
@@ -958,7 +958,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             </button>
           )}
 
-          <div style={{ height: "1px", background: isInk ? "rgba(255,255,255,0.12)" : "rgba(10,10,10,0.12)", margin: "3px 0" }} />
+          <div style={{ height: "1px", background: tokens.borderSubtle, margin: "3px 0" }} />
 
           {onDeleteLesson && (
             <button
@@ -982,7 +982,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 gap: "8px",
                 textAlign: "left",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "rgba(239, 68, 68, 0.15)" : "#FEE2E2")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = tokens.isDark ? "rgba(239, 68, 68, 0.15)" : "#FEE2E2")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               <Trash2 size={11} />
@@ -993,7 +993,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
       )}
 
       {/* Sidebar Footer Action Buttons */}
-      <div style={{ padding: "16px 18px 0", marginTop: "12px", borderTop: isInk ? "2px solid rgba(255,255,255,0.12)" : "2px solid rgba(10,10,10,0.14)", flexShrink: 0 }}>
+      <div style={{ padding: "16px 18px 0", marginTop: "12px", borderTop: `2px solid ${tokens.borderSubtle}`, flexShrink: 0 }}>
         {/* Add Page Button */}
         <button
           type="button"
@@ -1004,16 +1004,16 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             fontSize: "10px",
             fontWeight: 700,
             letterSpacing: "0.13em",
-            border: isInk ? "2px solid rgba(255,255,255,0.25)" : "2px solid #0A0A0A",
-            background: isInk ? "#1E232F" : "#FFFFFF",
-            color: isInk ? "#F0EDE4" : "#0A0A0A",
+            border: `2px solid ${tokens.borderPrimary}`,
+            background: tokens.cardBg,
+            color: tokens.textPrimary,
             padding: "9px",
             cursor: "pointer",
-            boxShadow: isInk ? "3px 3px 0 rgba(0,0,0,0.6)" : "3px 3px 0 #0A0A0A",
+            boxShadow: tokens.boxShadow,
             marginBottom: "8px",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#2C3446" : "#FCE94F")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = isInk ? "#1E232F" : "#FFFFFF")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
+          onMouseLeave={(e) => (e.currentTarget.style.background = tokens.cardBg)}
         >
           ＋ ADD A PAGE
         </button>

@@ -2289,9 +2289,9 @@ export default function NotebooksPage() {
                           top: "calc(100% + 6px)",
                           right: 0,
                           zIndex: 100,
-                          background: isInk ? "#1A1D26" : "#FFFFFF",
-                          border: isInk ? "2px solid rgba(255,255,255,0.2)" : "2px solid #0A0A0A",
-                          boxShadow: isInk ? "4px 4px 0 rgba(0,0,0,0.8)" : "4px 4px 0 #0A0A0A",
+                          background: tokens.popoverBg,
+                          border: `2px solid ${tokens.borderPrimary}`,
+                          boxShadow: tokens.popoverShadow,
                           minWidth: "200px",
                           padding: "6px 0",
                           display: "flex",
@@ -2319,7 +2319,7 @@ export default function NotebooksPage() {
                             alignItems: "center",
                             gap: "8px",
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
                           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         >
                           <Wand2 size={12} color="#7B5CF0" />
@@ -2347,7 +2347,7 @@ export default function NotebooksPage() {
                             alignItems: "center",
                             gap: "8px",
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
                           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         >
                           <HelpCircle size={12} color="#FF9900" />
@@ -2375,7 +2375,7 @@ export default function NotebooksPage() {
                             alignItems: "center",
                             gap: "8px",
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
                           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         >
                           <FileText size={12} color="#00D4FF" />
@@ -2407,7 +2407,7 @@ export default function NotebooksPage() {
                             alignItems: "center",
                             gap: "8px",
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
                           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         >
                           <Search size={12} color="#B8F04A" />
@@ -2515,9 +2515,9 @@ export default function NotebooksPage() {
                           top: "calc(100% + 6px)",
                           right: 0,
                           zIndex: 100,
-                          background: isInk ? "#1A1D26" : "#FFFFFF",
-                          border: isInk ? "2px solid rgba(255,255,255,0.2)" : "2px solid #0A0A0A",
-                          boxShadow: isInk ? "4px 4px 0 rgba(0,0,0,0.8)" : "4px 4px 0 #0A0A0A",
+                          background: tokens.popoverBg,
+                          border: `2px solid ${tokens.borderPrimary}`,
+                          boxShadow: tokens.popoverShadow,
                           minWidth: "190px",
                           padding: "6px 0",
                           display: "flex",
@@ -2545,7 +2545,7 @@ export default function NotebooksPage() {
                             alignItems: "center",
                             gap: "8px",
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
                           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         >
                           <Printer size={12} />
@@ -2572,7 +2572,7 @@ export default function NotebooksPage() {
                             alignItems: "center",
                             gap: "8px",
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
                           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         >
                           <Copy size={12} />
@@ -2599,7 +2599,7 @@ export default function NotebooksPage() {
                             alignItems: "center",
                             gap: "8px",
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
                           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         >
                           <FileText size={12} />
@@ -2627,7 +2627,7 @@ export default function NotebooksPage() {
                               alignItems: "center",
                               gap: "8px",
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                           >
                             <List size={12} />
@@ -2655,7 +2655,7 @@ export default function NotebooksPage() {
                             alignItems: "center",
                             gap: "8px",
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
                           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         >
                           <ArrowUp size={12} />
@@ -2682,14 +2682,14 @@ export default function NotebooksPage() {
                             alignItems: "center",
                             gap: "8px",
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
                           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         >
                           <ArrowDown size={12} />
                           <span>INSERT PAGE BELOW</span>
                         </button>
 
-                        <div style={{ height: "1px", background: isInk ? "rgba(255,255,255,0.12)" : "rgba(10,10,10,0.1)", margin: "4px 0" }} />
+                        <div style={{ height: "1px", background: tokens.borderSubtle, margin: "4px 0" }} />
 
                         {currentBlocks.length > 0 && (
                           <button
@@ -2713,7 +2713,7 @@ export default function NotebooksPage() {
                               alignItems: "center",
                               gap: "8px",
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                           >
                             <span>🧹 CLEAR PAGE CONTENT</span>

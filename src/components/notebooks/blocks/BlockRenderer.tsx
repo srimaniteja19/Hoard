@@ -1185,9 +1185,9 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
       return (
         <div
           style={{
-            border: isInk ? "2px solid rgba(255,255,255,0.25)" : "3px solid #0A0A0A",
-            background: isInk ? "#181B24" : "#FFFFFF",
-            boxShadow: isInk ? `4px 4px 0 rgba(0,0,0,0.6)` : `5px 5px 0 ${config.bg}`,
+            border: `2px solid ${tokens.borderPrimary}`,
+            background: tokens.cardBg,
+            boxShadow: tokens.isDark ? tokens.boxShadow : `5px 5px 0 ${config.bg}`,
             overflow: "hidden",
             margin: "12px 0",
           }}
@@ -1201,7 +1201,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               background: config.bg,
               color: config.fg,
               padding: "6px 13px",
-              borderBottom: isInk ? "2px solid rgba(255,255,255,0.15)" : "3px solid #0A0A0A",
+              borderBottom: `2px solid ${tokens.borderSubtle}`,
             }}
           >
             {config.title}
@@ -1224,7 +1224,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               registerEditorHandle={registerEditorHandle}
               readOnly={readOnly}
               renderFormatted={renderFormattedText}
-              style={{ fontSize: "16px", lineHeight: "1.6", color: isInk ? "#F0EDE4" : "#0A0A0A" }}
+              style={{ fontSize: "16px", lineHeight: "1.6", color: tokens.textPrimary }}
               placeholder="Callout text…"
             />
           </div>
