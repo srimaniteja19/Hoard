@@ -9,7 +9,6 @@ import {
   EyeOff,
   Pencil,
   Trash2,
-  GripVertical,
   Copy,
   ChevronDown,
   ChevronRight,
@@ -479,9 +478,9 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                           style={{
                             display: "flex",
                             alignItems: "flex-start",
-                            gap: "8px",
+                            gap: "10px",
                             padding: "7px 9px",
-                            cursor: "grab",
+                            cursor: "pointer",
                             border: "2px solid",
                             borderColor: isSelected ? "#0A0A0A" : "transparent",
                             background: isSelected ? "#0A0A0A" : "transparent",
@@ -503,19 +502,6 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                             }
                           }}
                         >
-                          {/* Drag Handle Icon */}
-                          <span
-                            title="Drag to reorder"
-                            style={{
-                              opacity: isSelected ? 0.6 : 0.3,
-                              marginTop: "3px",
-                              cursor: "grab",
-                              flexShrink: 0,
-                            }}
-                          >
-                            <GripVertical size={13} />
-                          </span>
-
                           {/* State Status Square */}
                           <span
                             style={{
