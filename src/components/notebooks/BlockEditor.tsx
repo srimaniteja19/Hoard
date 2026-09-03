@@ -154,6 +154,10 @@ interface BlockEditorProps {
 }
 
 const SLASH_MENU_ITEMS: { type: string; glyph: string; label: string; shortcut: string }[] = [
+  { type: "table", glyph: "▦", label: "Data Table (Grid)", shortcut: "/table" },
+  { type: "math", glyph: "∑", label: "Math / LaTeX Equation", shortcut: "/math" },
+  { type: "stat", glyph: "▲", label: "KPI Stat / Metric Card", shortcut: "/stat" },
+  { type: "timeline", glyph: "⏳", label: "Milestone Timeline", shortcut: "/timeline" },
   { type: "subpage", glyph: "📄", label: "Subpage / Nested Note", shortcut: "/page" },
   { type: "paragraph", glyph: "¶", label: "Text Paragraph", shortcut: "/text" },
   { type: "bullet", glyph: "•", label: "Bulleted List (- or *)", shortcut: "/bullet" },
@@ -621,6 +625,60 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         };
         break;
       }
+      case "table": {
+        transformed = {
+          id: baseId,
+          type: "table",
+          title: props.title || "Data Table",
+          columns: props.columns || [
+            { id: "col_1", title: "Item", align: "left" },
+            { id: "col_2", title: "Value", align: "left" },
+            { id: "col_3", title: "Notes", align: "left" },
+          ],
+          rows: props.rows || [
+            ["Example A", "100", "Initial check"],
+            ["Example B", "250", "Verified"],
+          ],
+          hasHeaderRow: true,
+          striped: false,
+        };
+        break;
+      }
+      case "math": {
+        transformed = {
+          id: baseId,
+          type: "math",
+          latex: props.latex || "f(x) = \\int_{-\\infty}^{\\infty} \\hat{f}(\\xi) e^{2\\pi i \\xi x} d\\xi",
+          title: props.title || "Fourier Transform",
+        };
+        break;
+      }
+      case "stat": {
+        transformed = {
+          id: baseId,
+          type: "stat",
+          label: props.label || "KEY METRIC",
+          value: props.value || "98.4%",
+          change: props.change || "+14.2%",
+          trend: props.trend || "up",
+          progress: props.progress ?? 85,
+          target: props.target || "Target: 100%",
+        };
+        break;
+      }
+      case "timeline": {
+        transformed = {
+          id: baseId,
+          type: "timeline",
+          title: props.title || "Execution Roadmap",
+          items: props.items || [
+            { id: "m1", title: "Discovery & Analysis", dateOrPhase: "PHASE 1", status: "completed" },
+            { id: "m2", title: "Implementation & Core Build", dateOrPhase: "PHASE 2", status: "current" },
+            { id: "m3", title: "Verification & Release", dateOrPhase: "PHASE 3", status: "upcoming" },
+          ],
+        };
+        break;
+      }
       case "paragraph":
       default:
         transformed = { id: baseId, type: "paragraph", text: props.text || "" };
@@ -729,6 +787,56 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           diagramType: "mermaid",
           code: "graph TD\n  A[Client Request] --> B[Load Balancer]\n  B --> C[Service Node A]\n  B --> D[Service Node B]\n  C --> E[(Database)]\n  D --> E",
           title: "System Architecture Diagram",
+        };
+        break;
+      case "table":
+        newBlock = {
+          id: generateBlockId(),
+          type: "table",
+          title: "Data Table",
+          columns: [
+            { id: "col_1", title: "Item", align: "left" },
+            { id: "col_2", title: "Value", align: "left" },
+            { id: "col_3", title: "Notes", align: "left" },
+          ],
+          rows: [
+            ["Example A", "100", "Initial check"],
+            ["Example B", "250", "Verified"],
+          ],
+          hasHeaderRow: true,
+          striped: false,
+        };
+        break;
+      case "math":
+        newBlock = {
+          id: generateBlockId(),
+          type: "math",
+          latex: "f(x) = \\int_{-\\infty}^{\\infty} \\hat{f}(\\xi) e^{2\\pi i \\xi x} d\\xi",
+          title: "Fourier Transform",
+        };
+        break;
+      case "stat":
+        newBlock = {
+          id: generateBlockId(),
+          type: "stat",
+          label: "KEY METRIC",
+          value: "98.4%",
+          change: "+14.2%",
+          trend: "up",
+          progress: 85,
+          target: "Target: 100%",
+        };
+        break;
+      case "timeline":
+        newBlock = {
+          id: generateBlockId(),
+          type: "timeline",
+          title: "Execution Roadmap",
+          items: [
+            { id: "m1", title: "Discovery & Analysis", dateOrPhase: "PHASE 1", status: "completed" },
+            { id: "m2", title: "Implementation & Core Build", dateOrPhase: "PHASE 2", status: "current" },
+            { id: "m3", title: "Verification & Release", dateOrPhase: "PHASE 3", status: "upcoming" },
+          ],
         };
         break;
       case "paragraph":
@@ -1334,6 +1442,10 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
               { type: "link", label: "Bookmark", glyph: "🔗" },
               { type: "diagram", label: "Diagram", glyph: "📐" },
               { type: "subpage", label: "Subpage", glyph: "📄" },
+              { type: "table", label: "Table", glyph: "▦" },
+              { type: "math", label: "Math", glyph: "∑" },
+              { type: "stat", label: "Stat / KPI", glyph: "▲" },
+              { type: "timeline", label: "Timeline", glyph: "⏳" },
             ].map((t) => (
               <button
                 key={t.type}

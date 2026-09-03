@@ -44,6 +44,58 @@ export const ScaleItemSchema = z.union([
   })),
 ]);
 
+export const TableColumnSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  align: z.enum(["left", "center", "right"]).optional().default("left"),
+  width: z.number().optional(),
+});
+
+export const TableBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal("table"),
+  title: z.string().optional(),
+  columns: z.array(TableColumnSchema),
+  rows: z.array(z.array(z.string())),
+  hasHeaderRow: z.boolean().optional(),
+  striped: z.boolean().optional(),
+});
+
+export const MathBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal("math"),
+  latex: z.string(),
+  title: z.string().optional(),
+  caption: z.string().optional(),
+});
+
+export const StatBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal("stat"),
+  label: z.string(),
+  value: z.string(),
+  change: z.string().optional(),
+  trend: z.enum(["up", "down", "neutral"]).optional(),
+  progress: z.number().optional(),
+  target: z.string().optional(),
+  note: z.string().optional(),
+});
+
+export const TimelineItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  dateOrPhase: z.string().optional(),
+  description: z.string().optional(),
+  status: z.enum(["completed", "current", "upcoming"]).default("upcoming"),
+});
+
+export const TimelineBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal("timeline"),
+  title: z.string().optional(),
+  items: z.array(TimelineItemSchema),
+});
+
 export const BlockSchema = z.discriminatedUnion("type", [
   z.object({
     id: z.string(),
@@ -190,6 +242,10 @@ export const BlockSchema = z.discriminatedUnion("type", [
     coverUrl: z.string().optional(),
     wordCount: z.number().optional(),
   }),
+  TableBlockSchema,
+  MathBlockSchema,
+  StatBlockSchema,
+  TimelineBlockSchema,
 ]);
 
 export type Block = z.infer<typeof BlockSchema>;
@@ -260,6 +316,27 @@ export function computeWordCount(blocks: Block[]): number {
         if (b.caption) textAccum += " " + b.caption;
         textAccum += " " + b.code;
         break;
+      case "table":
+        if (b.title) textAccum += " " + b.title;
+        textAccum += " " + b.columns.map((c) => c.title).join(" ");
+        for (const row of b.rows) {
+          textAccum += " " + row.join(" ");
+        }
+        break;
+      case "math":
+        if (b.title) textAccum += " " + b.title;
+        if (b.caption) textAccum += " " + b.caption;
+        textAccum += " " + b.latex;
+        break;
+      case "stat":
+        textAccum += " " + b.label + " " + b.value + (b.change ? ` ${b.change}` : "") + (b.note ? ` ${b.note}` : "");
+        break;
+      case "timeline":
+        if (b.title) textAccum += " " + b.title;
+        for (const item of b.items) {
+          textAccum += ` ${item.title} ${item.dateOrPhase || ""} ${item.description || ""}`;
+        }
+        break;
     }
   }
 
@@ -290,6 +367,14 @@ export function blocksToChunks(blocks: Block[]): { blockId: string; text: string
       t = (b.note ? `${b.note}: ` : "") + b.code.trim();
     } else if (b.type === "todo") {
       t = b.items.map((i) => i.text).join("; ").trim();
+    } else if (b.type === "table") {
+      const colStr = b.columns.map((c) => c.title).join(", ");
+      const rowStr = b.rows.map((r) => r.join(" | ")).join("\n");
+      t = `${b.title ? `${b.title}: ` : ""}${colStr}\n${rowStr}`.trim();
+    } else if (b.type === "stat") {
+      t = `${b.label}: ${b.value}${b.change ? ` (${b.change})` : ""}${b.note ? ` - ${b.note}` : ""}`.trim();
+    } else if (b.type === "timeline") {
+      t = b.items.map((i) => `${i.title} (${i.status}): ${i.description || ""}`).join("; ").trim();
     }
 
     if (t.length > 25) {
@@ -369,6 +454,52 @@ export function convertBlocksToMarkdown(title: string, blocks: Block[]): string 
       case "subpage":
         lines.push(`${b.icon || "📄"} [${b.title || "Subpage"}](#${b.pageId})\n`);
         break;
+      case "table": {
+        if (b.title) lines.push(`### ${b.title}\n`);
+        if (b.columns && b.columns.length > 0) {
+          lines.push(`| ${b.columns.map((c) => c.title || " ").join(" | ")} |`);
+          lines.push(
+            `| ${b.columns
+              .map((c) => {
+                if (c.align === "center") return ":---:";
+                if (c.align === "right") return "---:";
+                return ":---";
+              })
+              .join(" | ")} |`
+          );
+          for (const row of b.rows) {
+            const cells = b.columns.map((_, colIdx) => row[colIdx] ?? "");
+            lines.push(`| ${cells.join(" | ")} |`);
+          }
+        }
+        lines.push("");
+        break;
+      }
+      case "math": {
+        if (b.title) lines.push(`**${b.title}**\n`);
+        lines.push(`$$\n${b.latex}\n$$`);
+        if (b.caption) lines.push(`*${b.caption}*\n`);
+        lines.push("");
+        break;
+      }
+      case "stat": {
+        const trendSymbol = b.trend === "up" ? "▲" : b.trend === "down" ? "▼" : "•";
+        lines.push(`> **${b.label}**: **${b.value}** ${b.change ? `(${trendSymbol} ${b.change})` : ""}`);
+        if (b.target) lines.push(`> Target: ${b.target}`);
+        if (b.note) lines.push(`> *${b.note}*`);
+        lines.push("");
+        break;
+      }
+      case "timeline": {
+        if (b.title) lines.push(`### ${b.title}\n`);
+        for (const item of b.items) {
+          const statusMark = item.status === "completed" ? "[x]" : item.status === "current" ? "[*]" : "[ ]";
+          const dateStr = item.dateOrPhase ? ` (${item.dateOrPhase})` : "";
+          lines.push(`- ${statusMark} **${item.title}**${dateStr}${item.description ? `: ${item.description}` : ""}`);
+        }
+        lines.push("");
+        break;
+      }
     }
   }
 

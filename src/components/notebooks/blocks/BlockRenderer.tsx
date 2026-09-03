@@ -24,6 +24,10 @@ import { LinkCardBlock } from "./LinkCardBlock";
 import { EmbedBlock } from "./EmbedBlock";
 import { DiagramBlock } from "./DiagramBlock";
 import { SubpageBlock } from "./SubpageBlock";
+import { TableBlock } from "./TableBlock";
+import { MathBlock } from "./MathBlock";
+import { StatBlock } from "./StatBlock";
+import { TimelineBlock } from "./TimelineBlock";
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 
 interface BlockRendererProps {
@@ -1459,6 +1463,54 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
         <SubpageBlock
           block={block}
           onNavigateToLesson={onNavigateToLesson}
+          onDeleteBlock={onDeleteBlock}
+          accentColor={accentColor}
+          theme={theme}
+        />
+      );
+    }
+
+    case "table": {
+      return (
+        <TableBlock
+          block={block}
+          onUpdateBlock={onUpdateBlock}
+          onDeleteBlock={onDeleteBlock}
+          accentColor={accentColor}
+          theme={theme}
+        />
+      );
+    }
+
+    case "math": {
+      return (
+        <MathBlock
+          block={block}
+          onUpdateBlock={onUpdateBlock}
+          onDeleteBlock={onDeleteBlock}
+          accentColor={accentColor}
+          theme={theme}
+        />
+      );
+    }
+
+    case "stat": {
+      return (
+        <StatBlock
+          block={block}
+          onUpdateBlock={onUpdateBlock}
+          onDeleteBlock={onDeleteBlock}
+          accentColor={accentColor}
+          theme={theme}
+        />
+      );
+    }
+
+    case "timeline": {
+      return (
+        <TimelineBlock
+          block={block}
+          onUpdateBlock={onUpdateBlock}
           onDeleteBlock={onDeleteBlock}
           accentColor={accentColor}
           theme={theme}
