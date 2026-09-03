@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 import { playSound } from "@/lib/sound";
-import { Image as ImageIcon, Smile, X, RefreshCw, Sparkles } from "lucide-react";
+import { Image as ImageIcon, Smile, X, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 
 export const COVER_PRESETS = [
   { id: "aurora", label: "Aurora Mesh", bg: "linear-gradient(135deg, #FF6B6B 0%, #556270 50%, #4ECDC4 100%)" },
@@ -136,13 +136,15 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
                 color: "#EF4444",
                 border: `1.5px solid ${tokens.borderPrimary}`,
                 boxShadow: tokens.boxShadow,
-                padding: "5px 7px",
+                padding: "5px 8px",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
+                gap: "4px",
               }}
             >
-              <X size={11} />
+              <Trash2 size={11} />
+              <span>Remove</span>
             </button>
           </div>
         </div>
@@ -161,15 +163,13 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
         }}
       >
         {hasIcon ? (
-          <div
-            style={{ position: "relative" }}
-            onClick={() => {
-              playSound.pop();
-              setShowIconPicker(!showIconPicker);
-            }}
-          >
+          <div style={{ position: "relative", display: "inline-block" }}>
             <div
-              title="Change page icon"
+              title="Click to change page icon"
+              onClick={() => {
+                playSound.pop();
+                setShowIconPicker(!showIconPicker);
+              }}
               className="nb-cover-icon"
               style={{
                 background: tokens.cardBg,
@@ -184,6 +184,37 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
             >
               {icon}
             </div>
+
+            {/* Direct ✕ Remove Icon Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                playSound.click();
+                onChangeIcon(undefined);
+                setShowIconPicker(false);
+              }}
+              title="Remove icon"
+              style={{
+                position: "absolute",
+                top: "-4px",
+                right: "-4px",
+                width: "18px",
+                height: "18px",
+                borderRadius: "50%",
+                background: "#EF4444",
+                color: "#FFFFFF",
+                border: `1.5px solid ${tokens.borderPrimary}`,
+                display: "grid",
+                placeItems: "center",
+                cursor: "pointer",
+                padding: 0,
+                zIndex: 25,
+                boxShadow: "1px 1px 0 #000000",
+              }}
+            >
+              <X size={10} strokeWidth={3} />
+            </button>
           </div>
         ) : null}
 
@@ -342,16 +373,23 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
               style={{
                 marginTop: "12px",
                 width: "100%",
-                padding: "6px",
-                background: "transparent",
+                padding: "8px",
+                background: tokens.isDark ? "rgba(239, 68, 68, 0.15)" : "#FEE2E2",
                 border: `1.5px solid #EF4444`,
                 color: "#EF4444",
-                fontSize: "9px",
-                fontWeight: 700,
+                fontSize: "9.5px",
+                fontWeight: 800,
+                letterSpacing: "0.08em",
                 cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                borderRadius: "2px",
               }}
             >
-              Remove Cover
+              <Trash2 size={11} />
+              <span>REMOVE COVER ARTWORK</span>
             </button>
           )}
         </div>
@@ -434,16 +472,23 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
               style={{
                 marginTop: "10px",
                 width: "100%",
-                padding: "6px",
-                background: "transparent",
+                padding: "8px",
+                background: tokens.isDark ? "rgba(239, 68, 68, 0.15)" : "#FEE2E2",
                 border: `1.5px solid #EF4444`,
                 color: "#EF4444",
-                fontSize: "9px",
-                fontWeight: 700,
+                fontSize: "9.5px",
+                fontWeight: 800,
+                letterSpacing: "0.08em",
                 cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                borderRadius: "2px",
               }}
             >
-              Remove Icon
+              <Trash2 size={11} />
+              <span>REMOVE PAGE ICON</span>
             </button>
           )}
         </div>

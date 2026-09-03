@@ -234,54 +234,9 @@ export default function NotebooksPage() {
       if (!dbData || !Array.isArray(dbData.courses)) return false;
       if (pendingSaveRef.current || inFlightSaveRef.current) return false;
 
-      // Retain any local attributes (coverUrl, icon, lessonUrl) if the server
-      // snapshot had empty/undefined for them or if they were updated locally.
-      const localCourses = getStoredCourses();
-      const localLessonMap = new Map<string, SeedCourseLesson>();
-      for (const c of localCourses) {
-        for (const m of c.modules) {
-          for (const l of m.lessons) {
-            localLessonMap.set(l.id, l);
-          }
-        }
-      }
-
-      const mergedCourses = dbData.courses.map((course) => ({
-        ...course,
-        modules: course.modules.map((mod) => ({
-          ...mod,
-          lessons: mod.lessons.map((lesson) => {
-            const local = localLessonMap.get(lesson.id);
-            const lessonUrl = lesson.lessonUrl || local?.lessonUrl;
-            const coverUrl = lesson.coverUrl || local?.coverUrl;
-            const icon = lesson.icon || local?.icon;
-
-            // If local had attributes that DB lacked, back-fill to DB
-            if (
-              (!lesson.lessonUrl && local?.lessonUrl) ||
-              (!lesson.coverUrl && local?.coverUrl) ||
-              (!lesson.icon && local?.icon)
-            ) {
-              updateLessonInDbApi(lesson.id, {
-                lessonUrl: lessonUrl || undefined,
-                coverUrl: coverUrl || undefined,
-                icon: icon || undefined,
-              });
-            }
-
-            return {
-              ...lesson,
-              lessonUrl,
-              coverUrl,
-              icon,
-            };
-          }),
-        })),
-      }));
-
-      setCourses(mergedCourses);
-      saveStoredCourses(mergedCourses);
-      for (const course of mergedCourses) {
+      setCourses(dbData.courses);
+      saveStoredCourses(dbData.courses);
+      for (const course of dbData.courses) {
         for (const mod of course.modules) {
           for (const lesson of mod.lessons) {
             primeLessonBlocksVersion(lesson.id, lesson.blocksUpdatedAt);
@@ -638,21 +593,49 @@ export default function NotebooksPage() {
   }, [flushPendingSave]);
 
   const handleUpdateCurrentLessonCover = (coverUrl: string | undefined) => {
-    if (!currentCourse || !currentModule || !currentLesson) return;
-    const next = [...courses];
-    next[currentCourseIdx].modules[currentModuleIdx].lessons[currentLessonIdx].coverUrl = coverUrl;
-    setCourses(next);
-    saveStoredCourses(next);
-    updateLessonInDbApi(currentLesson.id, { coverUrl: coverUrl || "" });
+    if (!currentCourse || !currentLesson) return;
+    const updated = courses.map((c) => {
+      if (c.id !== currentCourse.id) return c;
+      return {
+        ...c,
+        modules: c.modules.map((m) => ({
+          ...m,
+          lessons: m.lessons.map((l) => {
+            if (l.id !== currentLesson.id) return l;
+            return {
+              ...l,
+              coverUrl: coverUrl || undefined,
+            };
+          }),
+        })),
+      };
+    });
+    setCourses(updated);
+    saveStoredCourses(updated);
+    updateLessonInDbApi(currentLesson.id, { coverUrl: coverUrl ? coverUrl : null });
   };
 
   const handleUpdateCurrentLessonIcon = (icon: string | undefined) => {
-    if (!currentCourse || !currentModule || !currentLesson) return;
-    const next = [...courses];
-    next[currentCourseIdx].modules[currentModuleIdx].lessons[currentLessonIdx].icon = icon;
-    setCourses(next);
-    saveStoredCourses(next);
-    updateLessonInDbApi(currentLesson.id, { icon: icon || "" });
+    if (!currentCourse || !currentLesson) return;
+    const updated = courses.map((c) => {
+      if (c.id !== currentCourse.id) return c;
+      return {
+        ...c,
+        modules: c.modules.map((m) => ({
+          ...m,
+          lessons: m.lessons.map((l) => {
+            if (l.id !== currentLesson.id) return l;
+            return {
+              ...l,
+              icon: icon || undefined,
+            };
+          }),
+        })),
+      };
+    });
+    setCourses(updated);
+    saveStoredCourses(updated);
+    updateLessonInDbApi(currentLesson.id, { icon: icon ? icon : null });
   };
 
   const handleSelectCourseFromCard = (idx: number) => {
