@@ -36,23 +36,23 @@ const TRANSFORM_PATTERNS: Array<{
   regex: RegExp;
   build: (rest: string, match: RegExpMatchArray) => Partial<Block>;
 }> = [
-  { regex: /^###\s([\s\S]*)$/, build: (rest) => ({ type: "heading", level: 3, text: rest }) },
-  { regex: /^##\s([\s\S]*)$/, build: (rest) => ({ type: "heading", level: 3, text: rest }) },
-  { regex: /^#\s([\s\S]*)$/, build: (rest) => ({ type: "heading", level: 2, text: rest }) },
-  { regex: /^>\s([\s\S]*)$/, build: (rest) => ({ type: "quote", text: rest }) },
-  { regex: /^\[\]\s([\s\S]*)$/, build: (rest) => ({ type: "todo", items: [{ text: rest, done: false }] }) },
-  { regex: /^-\s\[\s?\]\s([\s\S]*)$/, build: (rest) => ({ type: "todo", items: [{ text: rest, done: false }] }) },
-  { regex: /^!gotcha\s([\s\S]*)$/i, build: (rest) => ({ type: "callout", kind: "gotcha", text: rest }) },
-  { regex: /^!\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "gotcha", text: rest }) },
-  { regex: /^!q\s([\s\S]*)$/i, build: (rest) => ({ type: "callout", kind: "question", text: rest }) },
-  { regex: /^\?\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "question", text: rest }) },
-  { regex: /^!fact\s([\s\S]*)$/i, build: (rest) => ({ type: "callout", kind: "fact", text: rest }) },
-  { regex: /^★\s([\s\S]*)$/, build: (rest) => ({ type: "callout", kind: "fact", text: rest }) },
-  { regex: /^!connects\s([\s\S]*)$/i, build: (rest) => ({ type: "callout", kind: "connects", text: rest }) },
+  { regex: /^###\s([^\n]*)$/, build: (rest) => ({ type: "heading", level: 3, text: rest }) },
+  { regex: /^##\s([^\n]*)$/, build: (rest) => ({ type: "heading", level: 3, text: rest }) },
+  { regex: /^#\s([^\n]*)$/, build: (rest) => ({ type: "heading", level: 2, text: rest }) },
+  { regex: /^>\s([^\n]*)$/, build: (rest) => ({ type: "quote", text: rest }) },
+  { regex: /^\[\]\s([^\n]*)$/, build: (rest) => ({ type: "todo", items: [{ text: rest, done: false }] }) },
+  { regex: /^-\s\[\s?\]\s([^\n]*)$/, build: (rest) => ({ type: "todo", items: [{ text: rest, done: false }] }) },
+  { regex: /^!gotcha\s([^\n]*)$/i, build: (rest) => ({ type: "callout", kind: "gotcha", text: rest }) },
+  { regex: /^!\s([^\n]*)$/, build: (rest) => ({ type: "callout", kind: "gotcha", text: rest }) },
+  { regex: /^!q\s([^\n]*)$/i, build: (rest) => ({ type: "callout", kind: "question", text: rest }) },
+  { regex: /^\?\s([^\n]*)$/, build: (rest) => ({ type: "callout", kind: "question", text: rest }) },
+  { regex: /^!fact\s([^\n]*)$/i, build: (rest) => ({ type: "callout", kind: "fact", text: rest }) },
+  { regex: /^★\s([^\n]*)$/, build: (rest) => ({ type: "callout", kind: "fact", text: rest }) },
+  { regex: /^!connects\s([^\n]*)$/i, build: (rest) => ({ type: "callout", kind: "connects", text: rest }) },
   // Bullet List: -, *, • followed by space
-  { regex: /^[*\-•]\s([\s\S]*)$/, build: (rest) => ({ type: "bullet", text: rest }) },
+  { regex: /^[*\-•]\s([^\n]*)$/, build: (rest) => ({ type: "bullet", text: rest }) },
   // Numbered List: 1. or 1) followed by space
-  { regex: /^(\d+)[\.\)]\s([\s\S]*)$/, build: (rest, match) => ({ type: "numbered", number: parseInt(match[1] || "1", 10), text: rest }) },
+  { regex: /^(\d+)[\.\)]\s([^\n]*)$/, build: (rest, match) => ({ type: "numbered", number: parseInt(match[1] || "1", 10), text: rest }) },
 ];
 
 export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({

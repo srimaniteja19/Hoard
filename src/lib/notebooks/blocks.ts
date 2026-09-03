@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { detectEmbedType, getEmbedInfo } from "./embeds";
 
 export const TodoItemSchema = z.union([
   z.object({
@@ -505,3 +506,291 @@ export function convertBlocksToMarkdown(title: string, blocks: Block[]): string 
 
   return lines.join("\n");
 }
+
+/**
+ * Parses raw markdown or pasted note content into typed Hoard Notebook blocks.
+ * Accurately parses headings (#, ##, ###), code fences (```), math ($$), tables (|...|),
+ * quotes (>), callouts (!gotcha, !q, etc.), checklists (- [ ]), bullets, numbered lists,
+ * URLs/embeds, and regular text paragraphs.
+ */
+export function parseMarkdownToBlocks(markdown: string): Block[] {
+  const lines = markdown.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const blocks: Block[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const rawLine = lines[i];
+    const trimmed = rawLine.trim();
+
+    // Skip blank lines
+    if (!trimmed) {
+      i++;
+      continue;
+    }
+
+    // 1. Code Fence: ```
+    if (trimmed.startsWith("```")) {
+      const lang = trimmed.slice(3).trim().toUpperCase() || "PYTHON";
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith("```")) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length && lines[i].trim().startsWith("```")) {
+        i++;
+      }
+      blocks.push({
+        id: generateBlockId(),
+        type: "code",
+        lang,
+        code: codeLines.join("\n"),
+        note: "SNIPPET",
+      });
+      continue;
+    }
+
+    // 2. Math Block: $$
+    if (trimmed.startsWith("$$")) {
+      if (trimmed.length > 2 && trimmed.endsWith("$$")) {
+        blocks.push({
+          id: generateBlockId(),
+          type: "math",
+          latex: trimmed.slice(2, -2).trim(),
+        });
+        i++;
+        continue;
+      }
+      const mathLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith("$$")) {
+        mathLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length && lines[i].trim().startsWith("$$")) {
+        i++;
+      }
+      blocks.push({
+        id: generateBlockId(),
+        type: "math",
+        latex: mathLines.join("\n").trim(),
+      });
+      continue;
+    }
+
+    // 3. Markdown Table: Starts and ends with |
+    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
+        tableLines.push(lines[i].trim());
+        i++;
+      }
+
+      if (tableLines.length >= 2) {
+        const headerCells = tableLines[0]
+          .split("|")
+          .slice(1, -1)
+          .map((c) => c.trim());
+
+        const sepCells = tableLines[1]
+          .split("|")
+          .slice(1, -1)
+          .map((c) => c.trim());
+
+        const alignments: Array<"left" | "center" | "right"> = sepCells.map((s) => {
+          if (s.startsWith(":") && s.endsWith(":")) return "center";
+          if (s.endsWith(":")) return "right";
+          return "left";
+        });
+
+        const columns = headerCells.map((title, colIdx) => ({
+          id: `col_${colIdx + 1}`,
+          title: title || `Column ${colIdx + 1}`,
+          align: alignments[colIdx] || ("left" as const),
+        }));
+
+        const rows: string[][] = [];
+        for (let r = 2; r < tableLines.length; r++) {
+          const cells = tableLines[r]
+            .split("|")
+            .slice(1, -1)
+            .map((c) => c.trim());
+          while (cells.length < columns.length) cells.push("");
+          rows.push(cells.slice(0, columns.length));
+        }
+
+        blocks.push({
+          id: generateBlockId(),
+          type: "table",
+          columns,
+          rows: rows.length > 0 ? rows : [new Array(columns.length).fill("")],
+          hasHeaderRow: true,
+          striped: false,
+        });
+        continue;
+      }
+      // If not a full table, step back and process normally
+      i -= tableLines.length;
+    }
+
+    // 4. Headings: #, ##, ###, ####, #####, ######
+    const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+    if (headingMatch) {
+      const level = headingMatch[1].length === 1 ? 2 : 3;
+      blocks.push({
+        id: generateBlockId(),
+        type: "heading",
+        level: level as 2 | 3,
+        text: headingMatch[2].trim(),
+      });
+      i++;
+      continue;
+    }
+
+    // 5. Divider: ---, ***, ___
+    if (/^(\-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+      blocks.push({
+        id: generateBlockId(),
+        type: "divider",
+      });
+      i++;
+      continue;
+    }
+
+    // 6. Blockquote: > text
+    if (trimmed.startsWith(">")) {
+      const quoteLines: string[] = [];
+      while (i < lines.length && lines[i].trim().startsWith(">")) {
+        quoteLines.push(lines[i].trim().replace(/^>\s?/, ""));
+        i++;
+      }
+      blocks.push({
+        id: generateBlockId(),
+        type: "quote",
+        text: quoteLines.join("\n"),
+      });
+      continue;
+    }
+
+    // 7. Callouts: !gotcha, !q, !fact, !connects
+    const calloutMatch = trimmed.match(/^!(gotcha|q|fact|connects)\s+(.*)$/i);
+    if (calloutMatch) {
+      const kindMap: Record<string, "gotcha" | "question" | "fact" | "connects"> = {
+        gotcha: "gotcha",
+        q: "question",
+        fact: "fact",
+        connects: "connects",
+      };
+      blocks.push({
+        id: generateBlockId(),
+        type: "callout",
+        kind: kindMap[calloutMatch[1].toLowerCase()] || "gotcha",
+        text: calloutMatch[2].trim(),
+      });
+      i++;
+      continue;
+    }
+
+    // 8. Todo list item: - [ ] or - [x] or [ ] or [x]
+    const todoMatch = trimmed.match(/^[-*•]?\s*\[([ xX])\]\s+(.*)$/);
+    if (todoMatch) {
+      const todoItems: Array<{ text: string; done: boolean }> = [];
+      while (i < lines.length) {
+        const m = lines[i].trim().match(/^[-*•]?\s*\[([ xX])\]\s+(.*)$/);
+        if (!m) break;
+        todoItems.push({
+          text: m[2].trim(),
+          done: m[1].toLowerCase() === "x",
+        });
+        i++;
+      }
+      blocks.push({
+        id: generateBlockId(),
+        type: "todo",
+        items: todoItems,
+      });
+      continue;
+    }
+
+    // 9. Bullet list item: - , * , •
+    const bulletMatch = trimmed.match(/^[-*•]\s+(.*)$/);
+    if (bulletMatch) {
+      blocks.push({
+        id: generateBlockId(),
+        type: "bullet",
+        text: bulletMatch[1].trim(),
+      });
+      i++;
+      continue;
+    }
+
+    // 10. Numbered list item: 1. or 1)
+    const numMatch = trimmed.match(/^(\d+)[\.\)]\s+(.*)$/);
+    if (numMatch) {
+      blocks.push({
+        id: generateBlockId(),
+        type: "numbered",
+        number: parseInt(numMatch[1], 10) || 1,
+        text: numMatch[2].trim(),
+      });
+      i++;
+      continue;
+    }
+
+    // 11. Standalone URL on its own line: https://... or http://...
+    if (/^https?:\/\/[^\s]+$/i.test(trimmed)) {
+      const url = trimmed;
+      try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname.toUpperCase();
+        const embedType = detectEmbedType(url);
+
+        if (embedType !== "generic") {
+          const embedInfo = getEmbedInfo(url);
+          blocks.push({
+            id: generateBlockId(),
+            type: "embed",
+            url,
+            embedType,
+            title: embedInfo.title,
+          });
+        } else {
+          blocks.push({
+            id: generateBlockId(),
+            type: "link",
+            url,
+            title: url.slice(0, 60),
+            site: `${hostname} · RESOURCE`,
+            displayMode: "card",
+          });
+        }
+        i++;
+        continue;
+      } catch {}
+    }
+
+    // 12. Markdown Image: ![caption](url)
+    const imgMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imgMatch) {
+      blocks.push({
+        id: generateBlockId(),
+        type: "image",
+        url: imgMatch[2].trim(),
+        caption: imgMatch[1].trim() || "PASTED IMAGE",
+      });
+      i++;
+      continue;
+    }
+
+    // 13. Regular Paragraph:
+    blocks.push({
+      id: generateBlockId(),
+      type: "paragraph",
+      text: rawLine,
+    });
+    i++;
+  }
+
+  return blocks;
+}
+

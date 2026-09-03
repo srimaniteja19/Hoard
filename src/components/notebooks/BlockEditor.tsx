@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Block, generateBlockId } from "@/lib/notebooks/blocks";
+import { Block, generateBlockId, parseMarkdownToBlocks } from "@/lib/notebooks/blocks";
 import { BlockRenderer } from "./blocks/BlockRenderer";
 import { InlineEditorHandle } from "./blocks/InlineTextEditor";
 import { FloatingSelectionToolbar } from "./FloatingSelectionToolbar";
@@ -878,6 +878,33 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     [blocks, commitBlocks]
   );
 
+  // Helper to insert multiple blocks (e.g. from pasted markdown) at the current cursor / focused location
+  const insertBlocksAtTarget = useCallback(
+    (newBlocks: Block[], targetIndex: number) => {
+      if (newBlocks.length === 0) return;
+
+      const next = [...blocks];
+      if (targetIndex >= 0 && targetIndex < blocks.length) {
+        const targetBlock = blocks[targetIndex];
+        const isEmptyParagraph =
+          targetBlock.type === "paragraph" &&
+          (!("text" in targetBlock) || !targetBlock.text || !targetBlock.text.trim());
+
+        if (isEmptyParagraph) {
+          // Replace the empty line placeholder with the new parsed blocks
+          next.splice(targetIndex, 1, ...newBlocks);
+        } else {
+          // Insert right after the active block
+          next.splice(targetIndex + 1, 0, ...newBlocks);
+        }
+        commitBlocks(next);
+      } else {
+        commitBlocks([...blocks, ...newBlocks]);
+      }
+    },
+    [blocks, commitBlocks]
+  );
+
   const getTargetBlockIndex = useCallback(
     (target?: EventTarget | null): number => {
       // 1. Check the event target element
@@ -1047,6 +1074,25 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       insertBlockAtTarget(imageBlock, targetIdx);
       playSound.fileIt();
       return;
+    }
+
+    // Markdown / multi-line note paste:
+    // If the pasted text contains newlines, or begins with markdown block formatting,
+    // parse it into proper typed blocks instead of dumping raw markdown into one single textarea.
+    if (
+      text &&
+      (text.includes("\n") ||
+        /^(#{1,6}\s|```|\$\|>|\!\w+\s|[-*•]\s|\d+[\.\)]\s|[-*•]?\s*\[[ xX]\]\s|\|)/m.test(text.trim()))
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const parsedBlocks = parseMarkdownToBlocks(text);
+      if (parsedBlocks.length > 0) {
+        insertBlocksAtTarget(parsedBlocks, targetIdx);
+        playSound.fileIt();
+        return;
+      }
     }
 
     if (text && /^https?:\/\//i.test(text.trim())) {
