@@ -378,7 +378,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
           const matchingLessons = mod.lessons.filter((l) =>
             !searchQuery.trim() ||
             l.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            l.meta.toLowerCase().includes(searchQuery.toLowerCase())
+            (l.meta ? l.meta.toLowerCase().includes(searchQuery.toLowerCase()) : false)
           );
 
           if (matchingLessons.length === 0 && searchQuery.trim()) return null;

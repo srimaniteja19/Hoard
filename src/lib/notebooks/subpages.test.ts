@@ -13,6 +13,7 @@ describe("Subpages Hierarchy and Tree Helpers", () => {
       id: "root-1",
       title: "Root Page 1",
       watched: false,
+      meta: "NO NOTES YET",
       blocks: [],
     },
     {
@@ -20,6 +21,7 @@ describe("Subpages Hierarchy and Tree Helpers", () => {
       title: "Subpage 1.1",
       parentId: "root-1",
       watched: false,
+      meta: "NO NOTES YET",
       blocks: [],
     },
     {
@@ -27,6 +29,7 @@ describe("Subpages Hierarchy and Tree Helpers", () => {
       title: "Nested Sub-Subpage 1.1.1",
       parentId: "sub-1",
       watched: false,
+      meta: "NO NOTES YET",
       blocks: [],
     },
     {
@@ -34,12 +37,14 @@ describe("Subpages Hierarchy and Tree Helpers", () => {
       title: "Subpage 1.2",
       parentId: "root-1",
       watched: false,
+      meta: "NO NOTES YET",
       blocks: [],
     },
     {
       id: "root-2",
       title: "Root Page 2",
       watched: false,
+      meta: "NO NOTES YET",
       blocks: [],
     },
   ];
