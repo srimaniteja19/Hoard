@@ -659,14 +659,20 @@ export async function createLessonInDbApi(
   moduleId: string,
   title: string,
   blocks?: Block[],
-  targetPosition?: number
+  targetPosition?: number,
+  extra?: {
+    id?: string;
+    coverUrl?: string | null;
+    icon?: string | null;
+    lessonUrl?: string | null;
+  }
 ): Promise<any | null> {
   try {
     setSyncStatus("saving");
     const res = await fetch("/api/notebooks/lessons", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ moduleId, title, blocks, targetPosition }),
+      body: JSON.stringify({ moduleId, title, blocks, targetPosition, ...extra }),
     });
     if (!res.ok) {
       setSyncStatus("error");

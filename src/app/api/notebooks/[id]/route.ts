@@ -9,7 +9,7 @@ export async function PATCH(
   try {
     const userId = await requireUserId(req);
     const { id } = await params;
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
 
     const success = await updateCourse(userId, id, {
       title: body.title,

@@ -222,11 +222,17 @@ export async function syncLocalCoursesToDb(
   // Delete existing courses & collisions for this user to perform a clean sync
   await db.delete(notebookCourses).where(eq(notebookCourses.userId, userId));
 
+  const courseInserts: any[] = [];
+  const moduleInserts: any[] = [];
+  const lessonInserts: any[] = [];
+  const pageInserts: any[] = [];
+  const transcriptInserts: any[] = [];
+
   for (let cIdx = 0; cIdx < courses.length; cIdx++) {
     const c = courses[cIdx];
     const courseId = toScopedId(userId, c.id);
 
-    await db.insert(notebookCourses).values({
+    courseInserts.push({
       id: courseId,
       userId,
       title: c.title,
@@ -242,7 +248,7 @@ export async function syncLocalCoursesToDb(
       const m = c.modules[mIdx];
       const moduleId = toScopedId(userId, m.id);
 
-      await db.insert(notebookModules).values({
+      moduleInserts.push({
         id: moduleId,
         courseId,
         title: m.title,
@@ -255,7 +261,7 @@ export async function syncLocalCoursesToDb(
         const blocks = l.blocks || [];
         const wordCount = computeWordCount(blocks);
 
-        await db.insert(notebookLessons).values({
+        lessonInserts.push({
           id: lessonId,
           moduleId,
           title: l.title,
@@ -267,7 +273,7 @@ export async function syncLocalCoursesToDb(
           gap: l.gap || [],
         });
 
-        await db.insert(notebookPages).values({
+        pageInserts.push({
           id: crypto.randomUUID(),
           lessonId,
           blocks: blocks,
@@ -276,7 +282,7 @@ export async function syncLocalCoursesToDb(
         });
 
         if (l.transcript) {
-          await db.insert(notebookTranscripts).values({
+          transcriptInserts.push({
             id: crypto.randomUUID(),
             lessonId,
             text: l.transcript.text,
@@ -287,6 +293,12 @@ export async function syncLocalCoursesToDb(
       }
     }
   }
+
+  if (courseInserts.length > 0) await db.insert(notebookCourses).values(courseInserts);
+  if (moduleInserts.length > 0) await db.insert(notebookModules).values(moduleInserts);
+  if (lessonInserts.length > 0) await db.insert(notebookLessons).values(lessonInserts);
+  if (pageInserts.length > 0) await db.insert(notebookPages).values(pageInserts);
+  if (transcriptInserts.length > 0) await db.insert(notebookTranscripts).values(transcriptInserts);
 
   if (collisions && collisions.length > 0) {
     await saveNotebookCollisions(userId, collisions);
@@ -428,6 +440,8 @@ export async function updateCourse(
   if (data.accentFg !== undefined) updateData.accentFg = data.accentFg;
   if (data.init !== undefined) updateData.init = data.init;
   if (data.url !== undefined) updateData.url = data.url;
+
+  if (Object.keys(updateData).length === 0) return true;
 
   const res = await db
     .update(notebookCourses)
@@ -605,7 +619,13 @@ export async function createLesson(
   moduleId: string,
   title: string,
   blocks?: Block[],
-  targetPosition?: number
+  targetPosition?: number,
+  extra?: {
+    id?: string;
+    coverUrl?: string | null;
+    icon?: string | null;
+    lessonUrl?: string | null;
+  }
 ): Promise<SeedCourseLesson | null> {
   // Verify user owns the parent course of this module
   const [mod] = await db
@@ -642,7 +662,7 @@ export async function createLesson(
     }
   }
 
-  const lessonId = crypto.randomUUID();
+  const lessonId = extra?.id ? toScopedId(userId, extra.id) : crypto.randomUUID();
   const initialBlocks = blocks || [{ id: generateBlockId(), type: "paragraph", text: "" }];
   const wordCount = computeWordCount(initialBlocks);
 
@@ -652,6 +672,9 @@ export async function createLesson(
     title: title.trim(),
     position,
     watchedAt: null,
+    coverUrl: extra?.coverUrl || null,
+    icon: extra?.icon || null,
+    lessonUrl: extra?.lessonUrl || null,
     gap: [],
   });
 
@@ -667,6 +690,9 @@ export async function createLesson(
     id: lessonId,
     title: title.trim(),
     watched: false,
+    coverUrl: extra?.coverUrl || undefined,
+    icon: extra?.icon || undefined,
+    lessonUrl: extra?.lessonUrl || undefined,
     meta: formatLessonMeta(wordCount, false),
     blocks: initialBlocks,
   };
@@ -769,7 +795,7 @@ export async function toggleLessonWatched(
   userId: string,
   lessonId: string,
   watched?: boolean
-): Promise<boolean> {
+): Promise<{ success: boolean; watched: boolean }> {
   const [les] = await db
     .select({ lessonId: notebookLessons.id, watchedAt: notebookLessons.watchedAt })
     .from(notebookLessons)
@@ -783,7 +809,7 @@ export async function toggleLessonWatched(
     )
     .limit(1);
 
-  if (!les) return false;
+  if (!les) return { success: false, watched: false };
 
   const nextWatchedAt =
     watched !== undefined
@@ -799,7 +825,7 @@ export async function toggleLessonWatched(
     .set({ watchedAt: nextWatchedAt })
     .where(eq(notebookLessons.id, les.lessonId));
 
-  return Boolean(nextWatchedAt);
+  return { success: true, watched: Boolean(nextWatchedAt) };
 }
 
 /**
@@ -840,6 +866,8 @@ export async function updateLesson(
   if (data.icon !== undefined) updateFields.icon = data.icon || null;
   if (data.watched !== undefined) updateFields.watchedAt = data.watched ? new Date() : null;
 
+  if (Object.keys(updateFields).length === 0) return true;
+
   await db
     .update(notebookLessons)
     .set(updateFields)
@@ -853,7 +881,7 @@ export async function updateLesson(
  */
 export async function deleteLesson(userId: string, lessonId: string): Promise<boolean> {
   const [les] = await db
-    .select({ lessonId: notebookLessons.id })
+    .select({ lessonId: notebookLessons.id, moduleId: notebookLessons.moduleId })
     .from(notebookLessons)
     .innerJoin(notebookModules, eq(notebookLessons.moduleId, notebookModules.id))
     .innerJoin(notebookCourses, eq(notebookModules.courseId, notebookCourses.id))
@@ -867,10 +895,18 @@ export async function deleteLesson(userId: string, lessonId: string): Promise<bo
 
   if (!les) return false;
 
-  const res = await db
-    .delete(notebookLessons)
-    .where(eq(notebookLessons.id, les.lessonId))
-    .returning({ id: notebookLessons.id });
+  const remaining = await db
+    .select({ id: notebookLessons.id })
+    .from(notebookLessons)
+    .where(and(eq(notebookLessons.moduleId, les.moduleId), ne(notebookLessons.id, les.lessonId)))
+    .orderBy(asc(notebookLessons.position), asc(notebookLessons.createdAt));
+
+  const [res] = await db.batch([
+    db.delete(notebookLessons).where(eq(notebookLessons.id, les.lessonId)).returning({ id: notebookLessons.id }),
+    ...remaining.map((l, i) =>
+      db.update(notebookLessons).set({ position: i }).where(eq(notebookLessons.id, l.id))
+    ),
+  ]);
 
   return res.length > 0;
 }
@@ -1072,7 +1108,12 @@ export async function duplicateLesson(
 
   const newLessonId = crypto.randomUUID();
   const title = `${les.title} (Copy)`;
-  const blocks = (page?.blocks as Block[]) || [{ id: generateBlockId(), type: "paragraph", text: "" }];
+  const rawBlocks = (page?.blocks as Block[]) || [{ id: generateBlockId(), type: "paragraph", text: "" }];
+  // Generate fresh unique block IDs so duplicating doesn't cause key / lookup collisions
+  const blocks: Block[] = rawBlocks.map((b) => ({
+    ...b,
+    id: generateBlockId(),
+  }));
   const wordCount = page?.wordCount || computeWordCount(blocks);
 
   await db.insert(notebookLessons).values({

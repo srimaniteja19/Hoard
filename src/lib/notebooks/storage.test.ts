@@ -299,4 +299,44 @@ describe("Notebooks Storage & In-Memory Logic", () => {
       expect(result.map((c) => c.id)).toEqual(["user123_agentic"]);
     });
   });
+
+  describe("createLessonInDbApi with metadata", () => {
+    it("serializes coverUrl, icon, and custom id into request payload", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          lesson: {
+            id: "custom-id-123",
+            title: "Testing Lesson",
+            coverUrl: "linear-gradient(135deg, #000, #fff)",
+            icon: "🧠",
+            blocks: [],
+          },
+        }),
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { createLessonInDbApi } = await import("./storage");
+      const res = await createLessonInDbApi("mod-1", "Testing Lesson", [], 0, {
+        id: "custom-id-123",
+        coverUrl: "linear-gradient(135deg, #000, #fff)",
+        icon: "🧠",
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith("/api/notebooks/lessons", expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          moduleId: "mod-1",
+          title: "Testing Lesson",
+          blocks: [],
+          targetPosition: 0,
+          id: "custom-id-123",
+          coverUrl: "linear-gradient(135deg, #000, #fff)",
+          icon: "🧠",
+        }),
+      }));
+      expect(res?.id).toBe("custom-id-123");
+      vi.unstubAllGlobals();
+    });
+  });
 });

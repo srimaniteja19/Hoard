@@ -1282,13 +1282,10 @@ export default function NotebooksPage() {
       setCourses(updated);
       setCurrentLessonIdx(targetMod.lessons.length);
 
-      createLessonInDbApi(targetMod.id, result.title, result.blocks).then((dbLes) => {
-        if (dbLes) {
-          updateLessonInDbApi(dbLes.id, {
-            coverUrl: result.coverUrl,
-            icon: result.icon,
-          });
-        }
+      createLessonInDbApi(targetMod.id, result.title, result.blocks, undefined, {
+        id: newLessonId,
+        coverUrl: result.coverUrl,
+        icon: result.icon,
       });
     } else {
       if (!currentLesson) return;

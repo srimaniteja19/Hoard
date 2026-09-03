@@ -52,6 +52,11 @@ const AutonomousStudyNotesSchema = z.object({
         lang: z.string().default("PYTHON"),
         note: z.string().default("CODE SNIPPET"),
       }).nullable().optional().describe("Populate if code or programmatic workflows were discussed"),
+      diagram: z.object({
+        title: z.string().default("SYSTEM ARCHITECTURE / WORKFLOW"),
+        code: z.string().describe("Valid Mermaid.js syntax (e.g. 'graph TD\\n  A[Input] --> B[Processing]')"),
+        caption: z.string().optional(),
+      }).nullable().optional().describe("Populate if an architecture, pipeline, flow, or system topology was explained"),
       callout: z.object({
         kind: z.enum(["gotcha", "question", "fact", "connects"]),
         text: z.string(),
@@ -154,7 +159,19 @@ ${transcript.slice(0, 16000)}`;
         });
       }
 
-      // 5. Callout (Gotcha, Question, Fact)
+      // 5. Architecture Diagram (if present)
+      if (section.diagram && section.diagram.code && section.diagram.code.trim()) {
+        blocks.push({
+          id: generateBlockId(),
+          type: "diagram",
+          diagramType: "mermaid",
+          title: section.diagram.title || "SYSTEM ARCHITECTURE / WORKFLOW",
+          code: section.diagram.code.replace(/```mermaid/gi, "").replace(/```/g, "").trim(),
+          caption: section.diagram.caption,
+        });
+      }
+
+      // 6. Callout (Gotcha, Question, Fact)
       if (section.callout && section.callout.text) {
         blocks.push({
           id: generateBlockId(),

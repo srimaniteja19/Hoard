@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const userId = await requireUserId(req);
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
 
     const title = (body.title || "").trim();
     if (!title) {

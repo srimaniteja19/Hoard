@@ -5,7 +5,7 @@ import { createLesson } from "@/lib/dal/notebooks";
 export async function POST(req: NextRequest) {
   try {
     const userId = await requireUserId(req);
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
 
     const moduleId = body.moduleId;
     const title = (body.title || "").trim();
@@ -15,7 +15,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "moduleId and title are required" }, { status: 400 });
     }
 
-    const lesson = await createLesson(userId, moduleId, title, body.blocks, targetPosition);
+    const lesson = await createLesson(userId, moduleId, title, body.blocks, targetPosition, {
+      id: body.id,
+      coverUrl: body.coverUrl,
+      icon: body.icon,
+      lessonUrl: body.lessonUrl,
+    });
     if (!lesson) {
       return NextResponse.json({ error: "Module not found or unauthorized" }, { status: 404 });
     }

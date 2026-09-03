@@ -15,7 +15,7 @@ export async function PATCH(
   try {
     const userId = await requireUserId(req);
     const { id } = await params;
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
 
     // 1. Saving blocks (hot path for debounced note editor)
     if (body.blocks !== undefined) {
@@ -40,8 +40,11 @@ export async function PATCH(
 
     // 3. Toggling watched
     if (body.toggleWatched === true) {
-      const success = await toggleLessonWatched(userId, id, body.watched);
-      return NextResponse.json({ success, watched: success });
+      const result = await toggleLessonWatched(userId, id, body.watched);
+      if (!result.success) {
+        return NextResponse.json({ error: "Lesson not found or unauthorized" }, { status: 404 });
+      }
+      return NextResponse.json({ success: true, watched: result.watched });
     }
 
     // 4. Updating metadata (title, gaps, etc.)
