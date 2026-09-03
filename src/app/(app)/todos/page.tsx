@@ -21,6 +21,7 @@ import { TodoPlaybookEditor } from "@/components/todos/TodoPlaybookEditor";
 import { TodoPlaybookLearning } from "@/components/todos/TodoPlaybookLearning";
 import { TodoLedger } from "@/components/todos/TodoLedger";
 import { TodoSpeedRunHUD } from "@/components/todos/TodoSpeedRunHUD";
+import { TodoCounterView } from "@/components/todos/counter/TodoCounterView";
 import { PlaybookRow, PlaybookRunRow } from "@/db/schema";
 import { isoDay, parseIsoDay, weekContaining } from "@/lib/todos/calendar";
 import { collectTags, dayLoadStamp, openLoadForDay } from "@/lib/todos/load";
@@ -37,7 +38,7 @@ function TodosPageContent() {
   const searchParams = useSearchParams();
   const today = isoDay(new Date());
 
-  const [activeTab, setActiveTab] = useState<"today" | "book">("today");
+  const [activeTab, setActiveTab] = useState<"today" | "book" | "counter">("today");
   const [isSpeedRunOpen, setIsSpeedRunOpen] = useState(false);
   const [speedRunIndex, setSpeedRunIndex] = useState(0);
   const [playbooks, setPlaybooks] = useState<PlaybookRow[]>([]);
@@ -755,6 +756,19 @@ function TodosPageContent() {
 
             {/* The Run Ledger */}
             <TodoLedger runs={playbookRuns} />
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            THE COUNTER (30-DAY PLAN) VIEW
+           ══════════════════════════════════════════════════════════════════ */}
+        {activeTab === "counter" && (
+          <div className="view on" id="vCounter">
+            <TodoCounterView
+              onAddTodo={(title, minutes) => {
+                void actions.createTodo(`${title} ~${minutes}m`);
+              }}
+            />
           </div>
         )}
       </div>

@@ -4,8 +4,8 @@ import React from "react";
 import { playSound } from "@/lib/sound";
 
 interface TodoTabsProps {
-  activeTab: "today" | "book";
-  onTabChange: (tab: "today" | "book") => void;
+  activeTab: "today" | "book" | "counter";
+  onTabChange: (tab: "today" | "book" | "counter") => void;
   todayCount: number;
   bookCount: number;
   inFlightCount: number;
@@ -43,6 +43,17 @@ export const TodoTabs: React.FC<TodoTabsProps> = ({
         }}
       >
         Playbook<sup>{bookCount}</sup>
+      </button>
+      <button
+        type="button"
+        data-v="counter"
+        aria-pressed={activeTab === "counter"}
+        onClick={() => {
+          playSound.click();
+          onTabChange("counter");
+        }}
+      >
+        The Counter<sup>30d</sup>
       </button>
       <span className="sp" />
       <span className="meta">
