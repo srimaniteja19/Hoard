@@ -5,6 +5,7 @@ export interface SeedCourseLesson {
   title: string;
   watched: boolean;
   meta: string;
+  parentId?: string | null;
   icon?: string;
   coverUrl?: string;
   blocks?: Block[];

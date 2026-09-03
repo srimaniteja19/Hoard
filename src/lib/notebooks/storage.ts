@@ -647,9 +647,58 @@ export async function deleteModuleInDbApi(moduleId: string): Promise<boolean> {
     return false;
   } catch (err) {
     console.error("[deleteModuleInDbApi] Failed:", err);
-    setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
     return false;
   }
+}
+
+export interface LessonTreeNode {
+  lesson: SeedCourseLesson;
+  level: number;
+  children: LessonTreeNode[];
+}
+
+/**
+ * Builds a recursive tree structure from a list of lessons in a module.
+ */
+export function buildLessonTree(lessons: SeedCourseLesson[]): LessonTreeNode[] {
+  const byParent = new Map<string | null, SeedCourseLesson[]>();
+  for (const les of lessons) {
+    const pId = les.parentId || null;
+    if (!byParent.has(pId)) byParent.set(pId, []);
+    byParent.get(pId)!.push(les);
+  }
+
+  function buildSubtree(parentId: string | null, level: number): LessonTreeNode[] {
+    const list = byParent.get(parentId) || [];
+    return list.map((les) => ({
+      lesson: les,
+      level,
+      children: buildSubtree(les.id, level + 1),
+    }));
+  }
+
+  return buildSubtree(null, 0);
+}
+
+/**
+ * Traverses upwards to get the breadcrumb path of ancestors for a given lesson.
+ */
+export function getLessonAncestors(lessons: SeedCourseLesson[], lessonId: string): SeedCourseLesson[] {
+  const map = new Map(lessons.map((l) => [l.id, l]));
+  const path: SeedCourseLesson[] = [];
+  let curr = map.get(lessonId);
+  while (curr) {
+    path.unshift(curr);
+    curr = curr.parentId ? map.get(curr.parentId) : undefined;
+  }
+  return path;
+}
+
+/**
+ * Gets direct child subpages for a given parent lesson.
+ */
+export function getDirectChildLessons(lessons: SeedCourseLesson[], parentId: string): SeedCourseLesson[] {
+  return lessons.filter((l) => l.parentId === parentId);
 }
 
 /**
@@ -662,6 +711,7 @@ export async function createLessonInDbApi(
   targetPosition?: number,
   extra?: {
     id?: string;
+    parentId?: string | null;
     coverUrl?: string | null;
     icon?: string | null;
     lessonUrl?: string | null;
@@ -702,6 +752,7 @@ export async function updateLessonInDbApi(
   lessonId: string,
   data: {
     title?: string;
+    parentId?: string | null;
     gap?: { timestamp: string; topic: string }[];
     lessonUrl?: string | null;
     coverUrl?: string | null;

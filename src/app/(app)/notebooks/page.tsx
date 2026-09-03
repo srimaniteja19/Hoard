@@ -28,7 +28,10 @@ import {
   createModuleInDbApi,
   updateModuleInDbApi,
   deleteModuleInDbApi,
+  getLessonAncestors,
+  getDirectChildLessons,
 } from "@/lib/notebooks/storage";
+import { SubpagesDirectory } from "@/components/notebooks/SubpagesDirectory";
 import {
   subscribeToRealtimeEvents,
   broadcastRealtimeEvent,
@@ -364,10 +367,94 @@ export default function NotebooksPage() {
   const currentBlocks = currentLesson?.blocks || [];
   const wordCount = computeWordCount(currentBlocks);
 
+  const lessonAncestors = currentLesson && currentModule
+    ? getLessonAncestors(currentModule.lessons, currentLesson.id)
+    : [];
+
   const isSameId = (a: string, b: string) => {
     if (a === b) return true;
     if (a.endsWith("_" + b) || b.endsWith("_" + a)) return true;
     return false;
+  };
+
+  // Seamless navigation to any lesson/subpage by ID
+  const navigateToLesson = (lessonId: string) => {
+    if (!currentCourse) return;
+    for (let mIdx = 0; mIdx < currentCourse.modules.length; mIdx++) {
+      const mod = currentCourse.modules[mIdx];
+      const lIdx = mod.lessons.findIndex((l) => isSameId(l.id, lessonId));
+      if (lIdx !== -1) {
+        playSound.click();
+        setCurrentModuleIdx(mIdx);
+        setCurrentLessonIdx(lIdx);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+    }
+  };
+
+  // Create Notion-style Subpage (nested under parentLessonId or active page)
+  const handleCreateSubpage = (parentLessonId?: string, targetBlockIdx?: number) => {
+    if (!currentCourse || !currentModule) return;
+    const parentId = parentLessonId || currentLesson?.id;
+    if (!parentId) return;
+
+    playSound.click();
+    const newSubpageId = crypto.randomUUID();
+    const newSubpage: SeedCourseLesson = {
+      id: newSubpageId,
+      title: "Untitled Subpage",
+      watched: false,
+      parentId,
+      icon: "📄",
+      meta: "NO NOTES YET",
+      blocks: [{ id: generateBlockId(), type: "paragraph", text: "" }],
+    };
+
+    const targetMod = currentModule;
+
+    // 1. Add subpage to current module's lessons
+    const updated = courses.map((c) => {
+      if (c.id !== currentCourse.id) return c;
+      return {
+        ...c,
+        modules: c.modules.map((m) => {
+          if (m.id !== targetMod.id) return m;
+          return {
+            ...m,
+            lessons: [...m.lessons, newSubpage],
+          };
+        }),
+      };
+    });
+
+    // 2. If called from inside parent's BlockEditor, insert an inline SubpageBlock
+    if (typeof targetBlockIdx === "number" && currentLesson && currentLesson.id === parentId) {
+      const subpageBlock: Block = {
+        id: generateBlockId(),
+        type: "subpage",
+        pageId: newSubpageId,
+        title: newSubpage.title,
+        icon: newSubpage.icon,
+        wordCount: 0,
+      };
+      const updatedBlocks = [...currentBlocks];
+      updatedBlocks.splice(targetBlockIdx + 1, 0, subpageBlock);
+      handleUpdateBlocks(updatedBlocks);
+    }
+
+    setCourses(updated);
+    saveStoredCourses(updated);
+
+    // 3. Persist to DB API
+    createLessonInDbApi(targetMod.id, newSubpage.title, newSubpage.blocks, undefined, {
+      id: newSubpageId,
+      parentId,
+      icon: newSubpage.icon,
+    });
+
+    // 4. Navigate into the new subpage
+    navigateToLesson(newSubpageId);
   };
 
   // ── Real-Time Cross-Tab Live Synchronization (BroadcastChannel) ──────────
@@ -1497,6 +1584,30 @@ export default function NotebooksPage() {
               >
                 {currentCourse?.title.toUpperCase()}
               </span>
+
+              {/* Dynamic Hierarchical Subpage Breadcrumbs */}
+              {lessonAncestors.map((anc, ancIdx) => {
+                const isLast = ancIdx === lessonAncestors.length - 1;
+                return (
+                  <React.Fragment key={anc.id}>
+                    <span style={{ opacity: 0.3, flex: "none" }}>/</span>
+                    <span
+                      onClick={() => !isLast && navigateToLesson(anc.id)}
+                      className="nb-breadcrumb-title"
+                      style={{
+                        cursor: isLast ? "default" : "pointer",
+                        opacity: isLast ? 1 : 0.6,
+                        fontWeight: isLast ? 800 : 600,
+                        textDecoration: !isLast ? "underline" : "none",
+                        textUnderlineOffset: "2px",
+                      }}
+                      title={anc.title}
+                    >
+                      {anc.icon ? `${anc.icon} ` : ""}{anc.title}
+                    </span>
+                  </React.Fragment>
+                );
+              })}
             </>
           )}
           <span style={{ flex: 1 }} />
@@ -2077,6 +2188,7 @@ export default function NotebooksPage() {
                 currentLessonIndex={currentLessonIdx}
                 theme={paperTheme}
                 onClose={() => setMobileSidebarOpen(false)}
+                onCreateSubpage={(parentLessonId) => handleCreateSubpage(parentLessonId)}
                 onSelectCourse={(idx) => {
                   setCurrentCourseIdx(idx);
                   setCurrentModuleIdx(0);
@@ -3121,6 +3233,7 @@ export default function NotebooksPage() {
                     setTopicModalInitialQuery(currentLesson?.title && currentLesson.title !== "Untitled Page" ? currentLesson.title : "");
                     setShowTopicModal(true);
                   }}
+                  onCreateSubpage={() => handleCreateSubpage(currentLesson?.id)}
                 />
               ) : (
                 <BlockEditor
@@ -3128,6 +3241,19 @@ export default function NotebooksPage() {
                   blocks={currentBlocks}
                   onChange={handleUpdateBlocks}
                   onExplain={handleExplainWithSelection}
+                  onCreateSubpage={(targetIdx) => handleCreateSubpage(currentLesson.id, targetIdx)}
+                  onNavigateToLesson={navigateToLesson}
+                  accentColor={currentCourse.accent}
+                  theme={paperTheme}
+                />
+              )}
+
+              {/* Nested Subpages Directory Gallery Grid */}
+              {currentLesson && currentModule && (
+                <SubpagesDirectory
+                  subpages={getDirectChildLessons(currentModule.lessons, currentLesson.id)}
+                  onSelectSubpage={navigateToLesson}
+                  onCreateSubpage={() => handleCreateSubpage(currentLesson.id)}
                   accentColor={currentCourse.accent}
                   theme={paperTheme}
                 />

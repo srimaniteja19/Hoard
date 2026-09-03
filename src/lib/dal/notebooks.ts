@@ -14,7 +14,7 @@ import {
   NotebookTranscriptRow,
   NotebookCollisionRow,
 } from "@/db/schema";
-import { eq, and, or, like, asc, desc, inArray, ne } from "drizzle-orm";
+import { eq, and, or, like, asc, desc, inArray, ne, isNull } from "drizzle-orm";
 import { Block, computeWordCount, generateBlockId } from "@/lib/notebooks/blocks";
 import {
   SEED_COURSES,
@@ -146,6 +146,7 @@ export async function getUserNotebookCourses(userId: string): Promise<SeedCourse
       id: l.id,
       title: l.title,
       watched: Boolean(l.watchedAt),
+      parentId: l.parentId || undefined,
       lessonUrl: l.lessonUrl || undefined,
       coverUrl: l.coverUrl || undefined,
       icon: l.icon || undefined,
@@ -264,6 +265,7 @@ export async function syncLocalCoursesToDb(
         lessonInserts.push({
           id: lessonId,
           moduleId,
+          parentId: l.parentId ? toScopedId(userId, l.parentId) : null,
           title: l.title,
           position: lIdx,
           watchedAt: l.watched ? new Date() : null,
@@ -622,6 +624,7 @@ export async function createLesson(
   targetPosition?: number,
   extra?: {
     id?: string;
+    parentId?: string | null;
     coverUrl?: string | null;
     icon?: string | null;
     lessonUrl?: string | null;
@@ -642,11 +645,18 @@ export async function createLesson(
 
   if (!mod) return null;
 
-  // Count existing lessons to determine position
+  const parentId = extra?.parentId ? toScopedId(userId, extra.parentId) : null;
+
+  // Count existing sibling lessons (same parentId) to determine position
   const existing = await db
     .select({ id: notebookLessons.id, position: notebookLessons.position })
     .from(notebookLessons)
-    .where(eq(notebookLessons.moduleId, mod.moduleId))
+    .where(
+      and(
+        eq(notebookLessons.moduleId, mod.moduleId),
+        parentId ? eq(notebookLessons.parentId, parentId) : isNull(notebookLessons.parentId)
+      )
+    )
     .orderBy(asc(notebookLessons.position));
 
   let position = existing.length;
@@ -669,6 +679,7 @@ export async function createLesson(
   await db.insert(notebookLessons).values({
     id: lessonId,
     moduleId: mod.moduleId,
+    parentId,
     title: title.trim(),
     position,
     watchedAt: null,
@@ -690,6 +701,7 @@ export async function createLesson(
     id: lessonId,
     title: title.trim(),
     watched: false,
+    parentId: extra?.parentId || undefined,
     coverUrl: extra?.coverUrl || undefined,
     icon: extra?.icon || undefined,
     lessonUrl: extra?.lessonUrl || undefined,
@@ -836,6 +848,7 @@ export async function updateLesson(
   lessonId: string,
   data: {
     title?: string;
+    parentId?: string | null;
     gap?: { timestamp: string; topic: string }[];
     lessonUrl?: string | null;
     coverUrl?: string | null;
@@ -860,6 +873,7 @@ export async function updateLesson(
 
   const updateFields: any = {};
   if (data.title !== undefined) updateFields.title = data.title.trim();
+  if (data.parentId !== undefined) updateFields.parentId = data.parentId ? toScopedId(userId, data.parentId) : null;
   if (data.gap !== undefined) updateFields.gap = data.gap;
   if (data.lessonUrl !== undefined) updateFields.lessonUrl = data.lessonUrl || null;
   if (data.coverUrl !== undefined) updateFields.coverUrl = data.coverUrl || null;

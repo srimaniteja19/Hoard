@@ -1237,6 +1237,7 @@ export const notebookLessons = pgTable(
     moduleId: text("module_id")
       .notNull()
       .references(() => notebookModules.id, { onDelete: "cascade" }),
+    parentId: text("parent_id").references((): any => notebookLessons.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     position: integer("position").notNull().default(0),
     watchedAt: timestamp("watched_at"),
@@ -1248,6 +1249,7 @@ export const notebookLessons = pgTable(
   },
   (table) => [
     index("notebook_lesson_module_pos_idx").on(table.moduleId, table.position),
+    index("notebook_lesson_parent_idx").on(table.parentId),
   ]
 );
 

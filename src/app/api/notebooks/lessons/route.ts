@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
 
     const lesson = await createLesson(userId, moduleId, title, body.blocks, targetPosition, {
       id: body.id,
+      parentId: body.parentId,
       coverUrl: body.coverUrl,
       icon: body.icon,
       lessonUrl: body.lessonUrl,

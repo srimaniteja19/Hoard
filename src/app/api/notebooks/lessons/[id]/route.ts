@@ -50,6 +50,7 @@ export async function PATCH(
     // 4. Updating metadata (title, gaps, etc.)
     const success = await updateLesson(userId, id, {
       title: body.title,
+      parentId: body.parentId,
       gap: body.gap,
       lessonUrl: body.lessonUrl,
       coverUrl: body.coverUrl,

@@ -181,6 +181,15 @@ export const BlockSchema = z.discriminatedUnion("type", [
     id: z.string(),
     type: z.literal("divider"),
   }),
+  z.object({
+    id: z.string(),
+    type: z.literal("subpage"),
+    pageId: z.string(),
+    title: z.string().optional(),
+    icon: z.string().optional(),
+    coverUrl: z.string().optional(),
+    wordCount: z.number().optional(),
+  }),
 ]);
 
 export type Block = z.infer<typeof BlockSchema>;
@@ -356,6 +365,9 @@ export function convertBlocksToMarkdown(title: string, blocks: Block[]): string 
         break;
       case "example":
         lines.push(`**Before:**\n> ${b.v1Text}\n\n**After:**\n> ${b.v2Text}\n`);
+        break;
+      case "subpage":
+        lines.push(`${b.icon || "📄"} [${b.title || "Subpage"}](#${b.pageId})\n`);
         break;
     }
   }

@@ -23,6 +23,7 @@ import { InlineTextEditor, InlineEditorHandle } from "./InlineTextEditor";
 import { LinkCardBlock } from "./LinkCardBlock";
 import { EmbedBlock } from "./EmbedBlock";
 import { DiagramBlock } from "./DiagramBlock";
+import { SubpageBlock } from "./SubpageBlock";
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 
 interface BlockRendererProps {
@@ -37,6 +38,7 @@ interface BlockRendererProps {
   onSlashCommand?: (query: string, rect: DOMRect | null) => void;
   onSlashKeyDown?: (e: React.KeyboardEvent) => boolean;
   registerEditorHandle?: (handle: InlineEditorHandle | null) => void;
+  onNavigateToLesson?: (lessonId: string) => void;
   readOnly?: boolean;
   accentColor?: string;
   theme?: NotebookTheme;
@@ -54,6 +56,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   onSlashCommand,
   onSlashKeyDown,
   registerEditorHandle,
+  onNavigateToLesson,
   readOnly = false,
   accentColor = "#7B5CF0",
   theme = "cream",
@@ -1444,6 +1447,18 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
         <DiagramBlock
           block={block}
           onUpdateBlock={onUpdateBlock}
+          onDeleteBlock={onDeleteBlock}
+          accentColor={accentColor}
+          theme={theme}
+        />
+      );
+    }
+
+    case "subpage": {
+      return (
+        <SubpageBlock
+          block={block}
+          onNavigateToLesson={onNavigateToLesson}
           onDeleteBlock={onDeleteBlock}
           accentColor={accentColor}
           theme={theme}

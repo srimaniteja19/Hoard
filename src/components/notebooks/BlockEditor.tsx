@@ -147,11 +147,14 @@ interface BlockEditorProps {
   blocks: Block[];
   onChange: (updatedBlocks: Block[]) => void;
   onExplain?: (text: string) => void;
+  onCreateSubpage?: (targetIdx?: number) => void;
+  onNavigateToLesson?: (lessonId: string) => void;
   accentColor?: string;
   theme?: NotebookTheme;
 }
 
 const SLASH_MENU_ITEMS: { type: string; glyph: string; label: string; shortcut: string }[] = [
+  { type: "subpage", glyph: "📄", label: "Subpage / Nested Note", shortcut: "/page" },
   { type: "paragraph", glyph: "¶", label: "Text Paragraph", shortcut: "/text" },
   { type: "bullet", glyph: "•", label: "Bulleted List (- or *)", shortcut: "/bullet" },
   { type: "numbered", glyph: "1.", label: "Numbered List (1.)", shortcut: "/num" },
@@ -178,6 +181,8 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   blocks,
   onChange,
   onExplain,
+  onCreateSubpage,
+  onNavigateToLesson,
   accentColor = "#7B5CF0",
   theme = "cream",
 }) => {
@@ -602,6 +607,20 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         };
         break;
       }
+      case "subpage": {
+        if (onCreateSubpage) {
+          onCreateSubpage(index);
+          setSlashMenu(null);
+          return;
+        }
+        transformed = {
+          id: baseId,
+          type: "subpage",
+          pageId: baseId,
+          title: "Untitled Subpage",
+        };
+        break;
+      }
       case "paragraph":
       default:
         transformed = { id: baseId, type: "paragraph", text: props.text || "" };
@@ -623,6 +642,14 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       fileInputRef.current?.click();
       setSlashMenu(null);
       return;
+    }
+
+    if (type === "subpage") {
+      if (onCreateSubpage) {
+        onCreateSubpage(afterIndex);
+        setSlashMenu(null);
+        return;
+      }
     }
 
     let newBlock: Block;
@@ -1129,6 +1156,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                 onFocusNext={() => focusBlockById(blocks[idx + 1]?.id, "start")}
                 registerEditorHandle={(handle) => registerEditorHandleFor(block.id, handle)}
                 onTransformBlock={(props) => handleTransformBlock(idx, props)}
+                onNavigateToLesson={onNavigateToLesson}
                 onSlashCommand={(query, rect) => {
                   if (query.startsWith("/")) {
                     setSlashMenu({
@@ -1305,6 +1333,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
               { type: "embed", label: "Embed", glyph: "▶" },
               { type: "link", label: "Bookmark", glyph: "🔗" },
               { type: "diagram", label: "Diagram", glyph: "📐" },
+              { type: "subpage", label: "Subpage", glyph: "📄" },
             ].map((t) => (
               <button
                 key={t.type}

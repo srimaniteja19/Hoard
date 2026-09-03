@@ -8,6 +8,7 @@ interface EmptyPageProps {
   onPasteTranscript: () => void;
   onDraftFromSlides: () => void;
   onDraftFromTopic?: () => void;
+  onCreateSubpage?: () => void;
 }
 
 export const EmptyPage: React.FC<EmptyPageProps> = ({
@@ -15,6 +16,7 @@ export const EmptyPage: React.FC<EmptyPageProps> = ({
   onPasteTranscript,
   onDraftFromSlides,
   onDraftFromTopic,
+  onCreateSubpage,
 }) => {
   return (
     <div
@@ -159,6 +161,31 @@ export const EmptyPage: React.FC<EmptyPageProps> = ({
         >
           DRAFT FROM THE SLIDES
         </button>
+
+        {onCreateSubpage && (
+          <button
+            type="button"
+            onClick={() => {
+              playSound.click();
+              onCreateSubpage();
+            }}
+            style={{
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "10px",
+              fontWeight: 800,
+              letterSpacing: "0.13em",
+              border: "2px solid #0A0A0A",
+              background: "#FFFFFF",
+              color: "#7B5CF0",
+              padding: "10px 16px",
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#F0EDFE")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
+          >
+            ＋ CREATE SUBPAGE
+          </button>
+        )}
       </div>
     </div>
   );
