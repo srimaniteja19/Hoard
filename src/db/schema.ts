@@ -59,6 +59,7 @@ export const tilTypeValues = [
   "QUOTE",
   "OPINION",
   "LINK",
+  "NEWS",
 ] as const;
 
 export type TilType = typeof tilTypeValues[number];

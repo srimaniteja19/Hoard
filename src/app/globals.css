@@ -11380,7 +11380,78 @@ input[type=range].wall-zoom-slider {
   line-height: 1.16;
   letter-spacing: -0.03em;
   margin: 0 0 18px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.op.op--short {
   max-width: 30ch;
+}
+
+/* ═══ TIL BULLET LIST & BRIEFING ITEMS ═══ */
+.til-bullet-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.til-bullet-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-family: var(--body, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 14.5px;
+  line-height: 1.48;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.til-bullet-pip {
+  width: 7px;
+  height: 7px;
+  background: var(--c, var(--ink));
+  border: 1.5px solid var(--ink);
+  flex-shrink: 0;
+  margin-top: 6px;
+  box-shadow: 1px 1px 0 var(--ink);
+}
+.til-bullet-text {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ═══ NEWS — intelligence wire, briefings, key developments ═══ */
+.e--news {
+  --c: var(--orange, #FF7A00);
+}
+.e--news .e__b {
+  padding-bottom: 14px;
+}
+.news__headline {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(17px, 2.2vw, 22px);
+  line-height: 1.22;
+  letter-spacing: -0.025em;
+  margin: 0 0 12px 0;
+  color: var(--ink);
+}
+.news__src {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1.5px dashed rgba(10, 10, 10, 0.25);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+.news__src a {
+  color: var(--ink);
+  text-decoration: underline;
 }
 .conv {
   display: flex;

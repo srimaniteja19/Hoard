@@ -7,6 +7,8 @@ import {
   parseNote,
   stripNote,
   combineWithNote,
+  parseNews,
+  extractBulletPoints,
 } from "./entryParser";
 
 describe("entryParser", () => {
@@ -95,4 +97,31 @@ describe("entryParser", () => {
       expect(combineWithNote("Base insight", "")).toBe("Base insight");
     });
   });
+
+  describe("extractBulletPoints & parseNews", () => {
+    it("extracts multiline bullet points with asterisks and dashes", () => {
+      const input = "* First point\n* Second point\n- Third point";
+      const res = parseNews(input);
+      expect(res.items).toEqual(["First point", "Second point", "Third point"]);
+      expect(res.headline).toBeUndefined();
+    });
+
+    it("parses headline, bullet items, and source", () => {
+      const input = "HEADLINE: Frontline Intelligence\n* Item A\n* Item B\nSOURCE: Reuters";
+      const res = parseNews(input);
+      expect(res.headline).toBe("Frontline Intelligence");
+      expect(res.items).toEqual(["Item A", "Item B"]);
+      expect(res.source).toBe("Reuters");
+    });
+
+    it("handles the exact user briefing format with asterisks", () => {
+      const input = "* Leaked internal documents indicate low probability.\n  * Ukrainian forces secure minor gains.\n  * Russia escalates aerial attacks.";
+      const res = parseNews(input);
+      expect(res.items).toHaveLength(3);
+      expect(res.items[0]).toContain("Leaked internal documents");
+      expect(res.items[1]).toContain("Ukrainian forces");
+      expect(res.items[2]).toContain("Russia escalates");
+    });
+  });
 });
+

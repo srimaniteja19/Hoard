@@ -20,6 +20,7 @@ const TYPE_TO_CODE: Record<TilType, string> = {
   QUOTE: "Q",
   OPINION: "O",
   LINK: "L",
+  NEWS: "N",
 };
 
 const CODE_TO_TYPE: Record<string, TilType> = Object.fromEntries(

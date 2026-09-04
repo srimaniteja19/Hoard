@@ -79,11 +79,17 @@ function TilPageContent() {
     return new Set(items.map((i) => i.shortHash.toLowerCase()));
   }, [items]);
 
-  const updateUrlFilters = (tag: string | null, type: TilType | null, day: string | null) => {
+  const updateUrlFilters = (
+    tag: string | null,
+    type: TilType | null,
+    day: string | null,
+    hash: string | null = selectedHash
+  ) => {
     const params = new URLSearchParams(searchParams.toString());
     if (tag) params.set("tag", tag); else params.delete("tag");
     if (type) params.set("type", type); else params.delete("type");
     if (day) params.set("day", day); else params.delete("day");
+    if (hash) params.set("hash", hash); else params.delete("hash");
     const queryStr = params.toString();
     router.push(queryStr ? `/til?${queryStr}` : "/til");
   };
@@ -471,9 +477,11 @@ function TilPageContent() {
                 selectedTag={selectedTag}
                 selectedType={selectedType}
                 selectedDay={selectedDay}
+                selectedHash={selectedHash}
                 onClearTagFilter={() => updateUrlFilters(null, selectedType, selectedDay)}
                 onClearTypeFilter={() => updateUrlFilters(selectedTag, null, selectedDay)}
                 onClearDayFilter={() => updateUrlFilters(selectedTag, selectedType, null)}
+                onClearHashFilter={() => updateUrlFilters(selectedTag, selectedType, selectedDay, null)}
                 onSelectTag={navigateToCodexTopic}
                 onSelectType={(type) => updateUrlFilters(selectedTag, type, selectedDay)}
               />

@@ -16,6 +16,7 @@ export const TIL_TYPE_TOKEN: Record<TilType, string> = {
   QUOTE: "--orange",
   OPINION: "--mint",
   LINK: "--yel",
+  NEWS: "--orange",
 };
 
 export function tilTypeColorVar(type: TilType): string {

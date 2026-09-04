@@ -62,6 +62,11 @@ const FORMS_CONFIG: Record<TilType, FormConfig> = {
     colorVar: "var(--card, #FFFDF7)",
     opt: "WITHOUT A REASON THIS IS A BOOKMARK, NOT A TIL.",
   },
+  NEWS: {
+    ask: "WHAT HAPPENED? INTEL & NEWS DISPATCH.",
+    colorVar: "var(--orange, #FF7A00)",
+    opt: "ENTER HEADLINE & BULLETED DEVELOPMENTS. ⌘↵ TO COMMIT.",
+  },
 };
 
 const KINDS: { key: TilType; label: string }[] = [
@@ -72,6 +77,7 @@ const KINDS: { key: TilType; label: string }[] = [
   { key: "QUOTE", label: "QUOTE" },
   { key: "OPINION", label: "OPINION" },
   { key: "LINK", label: "LINK" },
+  { key: "NEWS", label: "NEWS" },
 ];
 
 export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatch }) => {
@@ -106,6 +112,12 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
   // Fields for LINK
   const [linkUrl, setLinkUrl] = useState("");
   const [linkWhy, setLinkWhy] = useState("");
+
+  // Fields for NEWS
+  const [newsHeadline, setNewsHeadline] = useState("");
+  const [newsBullets, setNewsBullets] = useState("");
+  const [newsSource, setNewsSource] = useState("");
+  const [saveToHoardQueue, setSaveToHoardQueue] = useState(false);
 
   // Global / Tags
   const [tags, setTags] = useState<string[]>([]);
@@ -182,6 +194,18 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
       if (!linkUrl.trim()) return;
       targetLinkUrl = linkUrl.trim();
       body = linkWhy.trim() || "Evidence reference link";
+    } else if (type === "NEWS") {
+      if (!newsBullets.trim() && !newsHeadline.trim()) return;
+      let compiled = "";
+      if (newsHeadline.trim()) {
+        compiled = `HEADLINE: ${newsHeadline.trim()}\n\n`;
+      }
+      compiled += newsBullets.trim();
+      if (newsSource.trim()) {
+        targetLinkUrl = newsSource.trim().startsWith("http") ? newsSource.trim() : undefined;
+        compiled += `\n\nSOURCE: ${newsSource.trim()}`;
+      }
+      body = compiled;
     }
 
     try {
@@ -193,7 +217,7 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
         codeLang,
         linkUrl: targetLinkUrl,
         tags,
-        saveToHoardQueue: false,
+        saveToHoardQueue,
       });
 
       // Clear fields
@@ -212,6 +236,10 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
       setOpinionConviction(4);
       setLinkUrl("");
       setLinkWhy("");
+      setNewsHeadline("");
+      setNewsBullets("");
+      setNewsSource("");
+      setSaveToHoardQueue(false);
       setTags([]);
     } catch (err) {
       console.error("Failed to commit TIL entry", err);
@@ -452,7 +480,81 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
               </div>
             </>
           )}
+
+          {type === "NEWS" && (
+            <>
+              <div className="f">
+                <label>HEADLINE / TOPIC (OPTIONAL)</label>
+                <input
+                  ref={activeFieldRef as React.RefObject<HTMLInputElement>}
+                  type="text"
+                  value={newsHeadline}
+                  onChange={(e) => setNewsHeadline(e.target.value)}
+                  placeholder="e.g. Frontline Military Intelligence Assessment"
+                />
+              </div>
+              <div className="f">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                  <label>KEY DEVELOPMENTS / BULLETS (* or -)</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prefix = newsBullets.length > 0 && !newsBullets.endsWith("\n") ? "\n* " : "* ";
+                      setNewsBullets((prev) => prev + prefix);
+                    }}
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      background: "var(--paper)",
+                      border: "1px solid var(--ink)",
+                      padding: "2px 6px",
+                      cursor: "pointer",
+                      boxShadow: "1px 1px 0 var(--ink)",
+                    }}
+                  >
+                    + ADD BULLET
+                  </button>
+                </div>
+                <textarea
+                  rows={5}
+                  value={newsBullets}
+                  onChange={(e) => setNewsBullets(e.target.value)}
+                  placeholder={"* Leaked internal documents indicate low probability of total victory...\n* Ukrainian forces continue to secure minor territorial gains in south...\n* Russia escalates aerial attacks against logistics..."}
+                  style={{
+                    fontFamily: "var(--body)",
+                    fontSize: "13.5px",
+                    lineHeight: "1.45",
+                  }}
+                />
+              </div>
+              <div className="f">
+                <label>SOURCE / PUBLICATION (OPTIONAL)</label>
+                <input
+                  type="text"
+                  value={newsSource}
+                  onChange={(e) => setNewsSource(e.target.value)}
+                  placeholder="e.g. Reuters / https://reuters.com/... attaches as evidence"
+                />
+              </div>
+            </>
+          )}
         </div>
+
+        {/* Save to queue checkbox if link or URL is entered */}
+        {(type === "LINK" || (type === "FACT" && factSource) || (type === "NEWS" && newsSource.startsWith("http"))) && (
+          <div style={{ margin: "8px 0" }}>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: "7px", fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 700, cursor: "pointer", color: "var(--ink)" }}>
+              <input
+                type="checkbox"
+                checked={saveToHoardQueue}
+                onChange={(e) => setSaveToHoardQueue(e.target.checked)}
+                style={{ cursor: "pointer", accentColor: "var(--ink)" }}
+              />
+              ALSO SAVE LINK TO HOARD BOOKMARK QUEUE
+            </label>
+          </div>
+        )}
 
         {/* Tags Row */}
         <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", margin: "10px 0" }}>

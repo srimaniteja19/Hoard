@@ -24,6 +24,7 @@ const TIL_HINTS: Record<TilType, string> = {
   QUOTE: "A line worth stealing",
   OPINION: "Your verdict, not a citation",
   LINK: "A URL plus why it matters",
+  NEWS: "Key developments, briefing, or intelligence",
 };
 
 const TIL_PLACEHOLDERS: Record<TilType, string> = {
@@ -34,6 +35,7 @@ const TIL_PLACEHOLDERS: Record<TilType, string> = {
   QUOTE: "the line, then who said it…",
   OPINION: "the take…",
   LINK: "why this link is going in the record…",
+  NEWS: "headline or bulleted news briefing…",
 };
 
 export const PALETTE_ENTRIES: PaletteEntry[] = [

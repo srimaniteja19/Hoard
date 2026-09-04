@@ -15,9 +15,11 @@ interface TilFeedProps {
   selectedTag: string | null;
   selectedType: TilType | null;
   selectedDay: string | null;
+  selectedHash?: string | null;
   onClearTagFilter: () => void;
   onClearTypeFilter: () => void;
   onClearDayFilter: () => void;
+  onClearHashFilter?: () => void;
   onSelectTag: (tag: string) => void;
   onSelectType: (type: TilType) => void;
 }
@@ -32,9 +34,11 @@ export const TilFeed: React.FC<TilFeedProps> = ({
   selectedTag,
   selectedType,
   selectedDay,
+  selectedHash,
   onClearTagFilter,
   onClearTypeFilter,
   onClearDayFilter,
+  onClearHashFilter,
   onSelectTag,
   onSelectType,
 }) => {
@@ -54,7 +58,7 @@ export const TilFeed: React.FC<TilFeedProps> = ({
     return new Set(items.map((i) => i.shortHash.toLowerCase()));
   }, [items]);
 
-  const hasActiveFilters = Boolean(selectedTag || selectedType || selectedDay);
+  const hasActiveFilters = Boolean(selectedTag || selectedType || selectedDay || selectedHash);
 
   const formatDayHeader = (dayStr: string) => {
     try {
@@ -98,6 +102,36 @@ export const TilFeed: React.FC<TilFeedProps> = ({
           <span style={{ fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 800, color: "var(--ink)", display: "flex", alignItems: "center", gap: "4px" }}>
             <Filter size={12} /> ACTIVE FILTERS:
           </span>
+
+          {selectedHash && (
+            <span
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "11px",
+                fontWeight: 800,
+                background: "var(--pink, #FF007A)",
+                color: "#FFF",
+                border: "1px solid var(--ink)",
+                padding: "2px 6px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              HASH: #{selectedHash}
+              {onClearHashFilter && (
+                <button
+                  type="button"
+                  className="filter-clear-btn"
+                  aria-label="Clear hash filter"
+                  onClick={onClearHashFilter}
+                  style={{ background: "none", border: "none", color: "#FFF", cursor: "pointer", display: "inline-flex", padding: 0 }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </span>
+          )}
 
           {selectedDay && (
             <span

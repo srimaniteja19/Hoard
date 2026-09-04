@@ -49,6 +49,7 @@ const TYPE_COLORS: Record<TilType, string> = {
   QUOTE: "#9D4EDD",
   OPINION: "#FF9100",
   LINK: "#7209B7",
+  NEWS: "#FF7A00",
 };
 
 export const TilArchiveView: React.FC<TilArchiveViewProps> = ({

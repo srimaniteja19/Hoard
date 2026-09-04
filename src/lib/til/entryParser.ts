@@ -173,3 +173,108 @@ export function parsePattern(body: string | null, defaultDate: string): ParsedPa
 
   return { name, instances };
 }
+
+export interface BulletExtraction {
+  intro?: string;
+  bullets: string[];
+}
+
+export function extractBulletPoints(text: string | null): BulletExtraction | null {
+  if (!text) return null;
+  const cleaned = text.trim();
+  if (!cleaned) return null;
+
+  // Does the text contain any bullet markers?
+  const hasBulletMarkers = /(?:^|\n|\s)[*•-]\s+/.test(cleaned);
+  if (!hasBulletMarkers) return null;
+
+  const lines = cleaned.split("\n").map((l) => l.trim()).filter(Boolean);
+  const bullets: string[] = [];
+  let intro: string | undefined;
+
+  for (const line of lines) {
+    const isBulletLine = /^[-*•]\s+/.test(line);
+    // Count inline bullets like "* item 1 * item 2"
+    const inlineBulletMatches = (line.match(/(?:^|\s)[*•-]\s+/g) || []).length;
+
+    if (inlineBulletMatches > 1) {
+      // Split inline bullets
+      const parts = line.split(/(?:^|\s)[*•-]\s+/).map((p) => p.trim()).filter(Boolean);
+      bullets.push(...parts);
+    } else if (isBulletLine) {
+      bullets.push(line.replace(/^[-*•]\s+/, "").trim());
+    } else if (bullets.length === 0 && !intro) {
+      intro = line;
+    } else {
+      // Continuation line of previous bullet or new line
+      if (bullets.length > 0) {
+        bullets[bullets.length - 1] += " " + line;
+      } else {
+        bullets.push(line);
+      }
+    }
+  }
+
+  if (bullets.length === 0) return null;
+  return { intro, bullets };
+}
+
+export interface ParsedNews {
+  headline?: string;
+  items: string[];
+  source?: string;
+}
+
+export function parseNews(body: string | null): ParsedNews {
+  const cleanBody = stripNote(body);
+  if (!cleanBody) return { items: [] };
+
+  let text = cleanBody;
+  let source: string | undefined;
+
+  // Extract trailing SOURCE: or FROM: or VIA:
+  const sourceMatch = text.match(/(?:\n|^)(?:SOURCE|FROM|VIA):\s*([^\n]+)$/i);
+  if (sourceMatch) {
+    source = sourceMatch[1].trim();
+    text = text.slice(0, sourceMatch.index).trim();
+  }
+
+  // Check for explicit HEADLINE: or TOPIC: or TITLE:
+  let headline: string | undefined;
+  const headlineMatch = text.match(/^(?:HEADLINE|TOPIC|TITLE):\s*([^\n]+)(?:\n+([\s\S]*))?$/i);
+  if (headlineMatch) {
+    headline = headlineMatch[1].trim();
+    text = (headlineMatch[2] || "").trim();
+  }
+
+  // Use extractBulletPoints if text contains bullets
+  const extracted = extractBulletPoints(text);
+  if (extracted) {
+    if (!headline && extracted.intro) {
+      headline = extracted.intro;
+    }
+    return {
+      headline,
+      items: extracted.bullets,
+      source,
+    };
+  }
+
+  // Fallback: split by newlines or treat as single item
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (!headline && lines.length > 1) {
+    headline = lines[0];
+    return {
+      headline,
+      items: lines.slice(1),
+      source,
+    };
+  }
+
+  return {
+    headline,
+    items: lines.length > 0 ? lines : [text],
+    source,
+  };
+}
+

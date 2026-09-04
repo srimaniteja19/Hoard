@@ -11,11 +11,14 @@ import {
   parseNote,
   stripNote,
   combineWithNote,
+  parseNews,
+  extractBulletPoints,
 } from "@/lib/til/entryParser";
 import { Edit2, Trash2, X, Check, ExternalLink, StickyNote, Sparkles } from "lucide-react";
 import { tilTypeColorVar } from "@/lib/til/typeColorTokens";
 import { TilMediaPreview } from "@/components/til/TilMediaPreview";
 import { ClampedText } from "@/components/til/ClampedText";
+import { MarkdownLite } from "@/components/til/MarkdownLite";
 import { useYouTubeDigest } from "@/components/youtube/YouTubeDigestProvider";
 import { extractYouTubeVideoId } from "@/lib/cleanTitle";
 import { DigestJsonViewer } from "@/components/youtube/DigestJsonViewer";
@@ -61,6 +64,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
   onDelete,
   onSelectTag,
   onSelectType,
+  validHashes,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isNoteOpen, setIsNoteOpen] = useState(false);
@@ -71,6 +75,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
   const [editBody, setEditBody] = useState(item.body || "");
   const [editCode, setEditCode] = useState(item.code || "");
   const [editCodeLang, setEditCodeLang] = useState(item.codeLang || "typescript");
+  const [editLinkUrl, setEditLinkUrl] = useState(item.linkUrl || "");
   const [editType, setEditType] = useState<TilType>(item.type);
   const [editTags, setEditTags] = useState<string[]>(item.tags || []);
   const [tagInput, setTagInput] = useState("");
@@ -163,6 +168,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         body: editBody,
         code: editType === "SNIPPET" ? editCode : undefined,
         codeLang: editType === "SNIPPET" ? editCodeLang : undefined,
+        linkUrl: editLinkUrl.trim() || null,
         tags: editTags,
       });
       setIsEditing(false);
@@ -193,7 +199,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
     setEditTags(editTags.filter((tag) => tag !== t));
   };
 
-  // Render card based on 7 distinct architectural archetypes
+  // Render card based on 8 distinct architectural archetypes
   const renderCardContent = () => {
     switch (item.type) {
       case "GOTCHA": {
@@ -202,15 +208,19 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
           <div className="gt">
             <div className="gt__row">
               <div className="gt__l">I THOUGHT</div>
-              <ClampedText text={gotcha.thought} className="gt__v wrong" as="div" lines={4} />
+              <ClampedText className="gt__v wrong" as="div" lines={4}>
+                <MarkdownLite content={gotcha.thought} validHashes={validHashes} />
+              </ClampedText>
             </div>
             <div className="gt__row">
               <div className="gt__l">ACTUALLY</div>
-              <ClampedText text={gotcha.actually} className="gt__v right" as="div" lines={4} />
+              <ClampedText className="gt__v right" as="div" lines={4}>
+                <MarkdownLite content={gotcha.actually} validHashes={validHashes} />
+              </ClampedText>
             </div>
             {gotcha.cost && (
               <div className="gt__cost">
-                <b>COST</b> {gotcha.cost}
+                <b>COST</b> <MarkdownLite content={gotcha.cost} validHashes={validHashes} />
               </div>
             )}
           </div>
@@ -221,7 +231,9 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         const lines = (item.code || "").split("\n");
         return (
           <>
-            <ClampedText text={item.body || "Key code snippet"} className="snip__why" as="div" lines={4} />
+            <ClampedText className="snip__why" as="div" lines={4}>
+              <MarkdownLite content={item.body || "Key code snippet"} validHashes={validHashes} />
+            </ClampedText>
             <pre className="code">
               {lines.map((line, idx) => (
                 <div key={idx} className={idx === lines.length - 1 && lines.length > 2 ? "h" : ""}>
@@ -238,13 +250,15 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         const pattern = parsePattern(item.body, item.loggedFor || "TODAY");
         return (
           <>
-            <ClampedText text={pattern.name || item.body || ""} className="pat__n" as="p" lines={5} />
+            <ClampedText className="pat__n" as="div" lines={5}>
+              <MarkdownLite content={pattern.name || item.body || ""} validHashes={validHashes} />
+            </ClampedText>
             <div className="pat__seen">
               {pattern.instances.length > 0 ? (
                 pattern.instances.map((inst, idx) => (
                   <div key={idx}>
                     <b>{inst.date}</b>
-                    <span>{inst.note}</span>
+                    <span><MarkdownLite content={inst.note} validHashes={validHashes} /></span>
                   </div>
                 ))
               ) : (
@@ -262,7 +276,9 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         const parsed = parseQuote(item.body);
         return (
           <>
-            <ClampedText text={parsed.quote} className="qt" as="blockquote" lines={6} />
+            <ClampedText className="qt" as="blockquote" lines={6}>
+              <MarkdownLite content={parsed.quote} validHashes={validHashes} />
+            </ClampedText>
             {parsed.author && (
               <div className="qt__by">
                 {parsed.author.toUpperCase()} <span>· QUOTE</span>
@@ -272,11 +288,87 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         );
       }
 
+      case "NEWS": {
+        const news = parseNews(item.body);
+        const targetUrl = item.linkUrl || item.linkPreview?.url;
+
+        return (
+          <div style={{ display: "flex", gap: "18px", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+              {news.headline && (
+                <div className="news__headline">
+                  <MarkdownLite content={news.headline} validHashes={validHashes} />
+                </div>
+              )}
+
+              <ClampedText lines={6} as="div">
+                <ul className="til-bullet-list">
+                  {news.items.map((bullet, idx) => (
+                    <li key={idx} className="til-bullet-item">
+                      <span className="til-bullet-pip" aria-hidden="true" />
+                      <span className="til-bullet-text">
+                        <MarkdownLite content={bullet} validHashes={validHashes} />
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </ClampedText>
+
+              {(news.source || targetUrl) && (
+                <div className="news__src">
+                  SOURCE ▸{" "}
+                  {targetUrl ? (
+                    <a href={targetUrl} target="_blank" rel="noopener noreferrer">
+                      {news.source || item.linkPreview?.host || targetUrl}
+                    </a>
+                  ) : (
+                    <span>{news.source}</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {targetUrl && (
+              <TilMediaPreview url={targetUrl} preview={item.linkPreview} />
+            )}
+          </div>
+        );
+      }
+
       case "OPINION": {
         const opinion = parseOpinion(item.body, item.createdAt);
+        const bulletData = extractBulletPoints(opinion.take);
+
         return (
           <>
-            <ClampedText text={opinion.take} className="op" as="p" lines={5} />
+            {bulletData ? (
+              <ClampedText lines={6} as="div">
+                {bulletData.intro && (
+                  <div className="news__headline" style={{ marginBottom: "10px" }}>
+                    <MarkdownLite content={bulletData.intro} validHashes={validHashes} />
+                  </div>
+                )}
+                <ul className="til-bullet-list">
+                  {bulletData.bullets.map((bullet, idx) => (
+                    <li key={idx} className="til-bullet-item">
+                      <span className="til-bullet-pip" aria-hidden="true" />
+                      <span className="til-bullet-text">
+                        <MarkdownLite content={bullet} validHashes={validHashes} />
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </ClampedText>
+            ) : (
+              <ClampedText
+                className={`op ${opinion.take.length < 80 ? "op--short" : ""}`}
+                as="div"
+                lines={5}
+              >
+                <MarkdownLite content={opinion.take} validHashes={validHashes} />
+              </ClampedText>
+            )}
+
             <div className="conv">
               <span className="conv__l">CONVICTION WHEN FILED</span>
               <span className="conv__d">
@@ -301,12 +393,13 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
             <div style={{ flex: "1 1 260px", minWidth: 0 }}>
               {item.body && (
                 <ClampedText
-                  text={item.body}
                   className="lk__why"
                   as="div"
                   lines={4}
                   style={{ margin: "0 0 12px", border: "none", padding: 0 }}
-                />
+                >
+                  <MarkdownLite content={item.body} validHashes={validHashes} />
+                </ClampedText>
               )}
               {targetUrl && (
                 <div className="src" style={{ marginTop: "8px", paddingTop: "8px" }}>
@@ -327,10 +420,33 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
 
       case "FACT":
       default: {
+        const bulletData = extractBulletPoints(item.body);
         return (
           <div style={{ display: "flex", gap: "18px", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
             <div style={{ flex: "1 1 260px", minWidth: 0 }}>
-              <ClampedText text={item.body || ""} className="claim" as="p" lines={6} />
+              {bulletData ? (
+                <ClampedText lines={6} as="div">
+                  {bulletData.intro && (
+                    <div style={{ fontWeight: 800, marginBottom: "8px", fontSize: "16px" }}>
+                      <MarkdownLite content={bulletData.intro} validHashes={validHashes} />
+                    </div>
+                  )}
+                  <ul className="til-bullet-list">
+                    {bulletData.bullets.map((b, idx) => (
+                      <li key={idx} className="til-bullet-item">
+                        <span className="til-bullet-pip" aria-hidden="true" />
+                        <span className="til-bullet-text">
+                          <MarkdownLite content={b} validHashes={validHashes} />
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </ClampedText>
+              ) : (
+                <ClampedText lines={6} as="div" className="claim">
+                  <MarkdownLite content={item.body || ""} validHashes={validHashes} />
+                </ClampedText>
+              )}
               {item.linkUrl && (
                 <div className="src" style={{ marginTop: "12px", paddingTop: "8px" }}>
                   FROM ▸{" "}
@@ -359,6 +475,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
     QUOTE: "❝ QUOTE",
     OPINION: "✱ OPINION",
     LINK: "⇱ LINK",
+    NEWS: "⚡ NEWS",
   };
 
   const cardClass = `e e--${item.type.toLowerCase()}`;
@@ -749,16 +866,42 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
             <textarea
               value={editBody}
               onChange={(e) => setEditBody(e.target.value)}
-              rows={3}
+              rows={6}
               style={{
                 width: "100%",
-                fontFamily: "inherit",
+                fontFamily: "var(--body)",
                 fontSize: "14px",
+                lineHeight: "1.45",
                 border: "2px solid var(--ink)",
-                padding: "6px 8px",
+                padding: "8px 10px",
                 boxSizing: "border-box",
+                minHeight: "120px",
+                background: "var(--paper)",
+                color: "var(--ink)",
               }}
             />
+
+            <div>
+              <label style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 800, opacity: 0.7, display: "block", marginBottom: "4px" }}>
+                SOURCE LINK (OPTIONAL)
+              </label>
+              <input
+                type="text"
+                value={editLinkUrl}
+                onChange={(e) => setEditLinkUrl(e.target.value)}
+                placeholder="https://... source evidence link"
+                style={{
+                  width: "100%",
+                  fontFamily: "var(--mono)",
+                  fontSize: "12px",
+                  border: "1.5px solid var(--ink)",
+                  padding: "6px 8px",
+                  boxSizing: "border-box",
+                  background: "var(--paper)",
+                  color: "var(--ink)",
+                }}
+              />
+            </div>
 
             {editType === "SNIPPET" && (
               <textarea
@@ -893,15 +1036,70 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
               </>
             )}
 
+            {item.type === "NEWS" && (
+              <>
+                <button className="p" type="button" onClick={handleCopy}>
+                  {actionFeedback || "COPY BRIEFING"}
+                </button>
+                {item.linkUrl ? (
+                  <a
+                    href={item.linkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ textDecoration: "none" }}
+                  >
+                    <button type="button">SOURCE ↗</button>
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const newCount = (item.reviewCount || 0) + 1;
+                      await onUpdate(item.id, {
+                        reviewCount: newCount,
+                        lastReviewedAt: new Date().toISOString(),
+                      });
+                      triggerFeedback(`LOGGED REVIEW ${newCount}×`);
+                    }}
+                  >
+                    {actionFeedback || "REVIEWED"}
+                  </button>
+                )}
+                <button type="button" onClick={() => setIsEditing(true)}>
+                  UPDATE
+                </button>
+              </>
+            )}
+
             {item.type === "OPINION" && (
               <>
-                <button className="p" type="button" onClick={() => triggerFeedback("STILL BELIEVED!")}>
+                <button
+                  className="p"
+                  type="button"
+                  onClick={async () => {
+                    const newCount = (item.reviewCount || 0) + 1;
+                    await onUpdate(item.id, {
+                      reviewCount: newCount,
+                      lastReviewedAt: new Date().toISOString(),
+                    });
+                    triggerFeedback(`CONFIRMED! REVISITED ${newCount}×`);
+                  }}
+                >
                   {actionFeedback || "STILL BELIEVE THIS?"}
                 </button>
                 <button type="button" onClick={() => setIsEditing(true)}>
                   REVISE
                 </button>
-                <button type="button" onClick={() => triggerFeedback("RETRACTED")}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const updatedBody = item.body?.startsWith("[RETRACTED]")
+                      ? item.body
+                      : `[RETRACTED] ${item.body || ""}`;
+                    await onUpdate(item.id, { body: updatedBody });
+                    triggerFeedback("RETRACTED");
+                  }}
+                >
                   RETRACT
                 </button>
               </>
