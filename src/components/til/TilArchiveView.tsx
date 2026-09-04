@@ -46,7 +46,7 @@ const TYPE_COLORS: Record<TilType, string> = {
   GOTCHA: "#FF007A",
   SNIPPET: "#FFE600",
   PATTERN: "#B6FF3C",
-  QUOTE: "#9D4EDD",
+  QUOTE: "#FFE94A",
   OPINION: "#FF9100",
   LINK: "#7209B7",
   NEWS: "#FF7A00",

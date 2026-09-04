@@ -150,10 +150,18 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
 
   const handleCopy = async () => {
     let text = item.body || "";
-    if (item.code) text += `\n\n\`\`\`${item.codeLang || ""}\n${item.code}\n\`\`\``;
+    if (item.type === "QUOTE") {
+      const q = parseQuote(item.body);
+      text = `“${q.quote}”`;
+      if (q.author) text += `\n— ${q.author}`;
+      if (q.source) text += `, ${q.source}`;
+      if (item.linkUrl) text += `\n${item.linkUrl}`;
+    } else if (item.code) {
+      text += `\n\n\`\`\`${item.codeLang || ""}\n${item.code}\n\`\`\``;
+    }
     try {
       await navigator.clipboard.writeText(text);
-      triggerFeedback("COPIED!");
+      triggerFeedback(item.type === "QUOTE" ? "COPIED QUOTE!" : "COPIED!");
     } catch {
       // fallback
     }
@@ -274,17 +282,64 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
 
       case "QUOTE": {
         const parsed = parseQuote(item.body);
+        const targetUrl = item.linkUrl || item.linkPreview?.url;
+        const isLong = (parsed.quote || "").length > 110;
+
         return (
-          <>
-            <ClampedText className="qt" as="blockquote" lines={6}>
-              <MarkdownLite content={parsed.quote} validHashes={validHashes} />
-            </ClampedText>
-            {parsed.author && (
-              <div className="qt__by">
-                {parsed.author.toUpperCase()} <span>· QUOTE</span>
+          <div className="qt-card">
+            <div className="qt-layout">
+              <div className="qt-content">
+                <div className="qt-quote-box">
+                  <span className="qt-mark" aria-hidden="true">“</span>
+                  <ClampedText
+                    className={`qt ${isLong ? "qt--long" : "qt--short"}`}
+                    as="blockquote"
+                    lines={isLong ? 8 : 5}
+                  >
+                    <MarkdownLite content={parsed.quote} validHashes={validHashes} />
+                  </ClampedText>
+                </div>
+
+                {(parsed.author || parsed.source || targetUrl) && (
+                  <div className="qt__attribution">
+                    <div className="qt__by">
+                      {parsed.author && (
+                        <span className="qt__author">
+                          — {parsed.author.toUpperCase()}
+                        </span>
+                      )}
+                      {parsed.source && (
+                        <span className="qt__source">
+                          {parsed.source}
+                        </span>
+                      )}
+                      {!parsed.author && !parsed.source && (
+                        <span className="qt__badge">VERBATIM QUOTE</span>
+                      )}
+                    </div>
+
+                    {targetUrl && (
+                      <div className="qt__src">
+                        <a href={targetUrl} target="_blank" rel="noopener noreferrer">
+                          {item.linkPreview?.title
+                            ? item.linkPreview.title.length > 36
+                              ? `${item.linkPreview.title.slice(0, 36)}…`
+                              : item.linkPreview.title
+                            : item.linkPreview?.host || "SOURCE ↗"}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
-          </>
+
+              {targetUrl && (
+                <div className="qt-preview-slot">
+                  <TilMediaPreview url={targetUrl} preview={item.linkPreview} />
+                </div>
+              )}
+            </div>
+          </div>
         );
       }
 
@@ -1014,27 +1069,40 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
               </>
             )}
 
-            {item.type === "QUOTE" && (
-              <>
-                <button className="p" type="button" onClick={handleCopy}>
-                  {actionFeedback || "COPY"}
-                </button>
-                {item.linkUrl ? (
-                  <a
-                    href={item.linkUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ textDecoration: "none" }}
-                  >
-                    <button type="button">FIND SOURCE ↗</button>
-                  </a>
-                ) : (
-                  <button type="button" onClick={() => triggerFeedback("NO URL ATTACHED")}>
-                    FIND SOURCE
+            {item.type === "QUOTE" && (() => {
+              const q = parseQuote(item.body);
+              const searchQuery = `"${q.quote}" ${q.author || ""}`.trim();
+              const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+
+              return (
+                <>
+                  <button className="p" type="button" onClick={handleCopy}>
+                    {actionFeedback || "COPY QUOTE"}
                   </button>
-                )}
-              </>
-            )}
+                  {item.linkUrl ? (
+                    <a
+                      href={item.linkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ textDecoration: "none" }}
+                    >
+                      <button type="button">VIEW SOURCE ↗</button>
+                    </a>
+                  ) : (
+                    <a
+                      href={searchUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ textDecoration: "none" }}
+                    >
+                      <button type="button" title="Search web for original source">
+                        SEARCH SOURCE ↗
+                      </button>
+                    </a>
+                  )}
+                </>
+              );
+            })()}
 
             {item.type === "NEWS" && (
               <>

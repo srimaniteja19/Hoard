@@ -51,6 +51,37 @@ describe("entryParser", () => {
       expect(res.quote).toBe("Simplicity is prerequisite for reliability.");
       expect(res.author).toBeUndefined();
     });
+
+    it("does not falsely split on hyphenated words within quote text", () => {
+      const input = "web-workers entries under load need aggregate-first queries, not per-row fetches.";
+      const res = parseQuote(input);
+      expect(res.quote).toBe("web-workers entries under load need aggregate-first queries, not per-row fetches.");
+      expect(res.author).toBeUndefined();
+    });
+
+    it("parses author and source work", () => {
+      const input = '"Design is how it works." — Steve Jobs, 2003';
+      const res = parseQuote(input);
+      expect(res.quote).toBe("Design is how it works.");
+      expect(res.author).toBe("Steve Jobs");
+      expect(res.source).toBe("2003");
+    });
+
+    it("parses author with parenthesized citation", () => {
+      const input = '"Simplicity is prerequisite for reliability." - Edsger W. Dijkstra (EWD498)';
+      const res = parseQuote(input);
+      expect(res.quote).toBe("Simplicity is prerequisite for reliability.");
+      expect(res.author).toBe("Edsger W. Dijkstra");
+      expect(res.source).toBe("EWD498");
+    });
+
+    it("parses multiline quote with attribution on new line", () => {
+      const input = "Line 1\nLine 2\n— Seneca, Letters from a Stoic";
+      const res = parseQuote(input);
+      expect(res.quote).toBe("Line 1\nLine 2");
+      expect(res.author).toBe("Seneca");
+      expect(res.source).toBe("Letters from a Stoic");
+    });
   });
 
   describe("parseOpinion", () => {

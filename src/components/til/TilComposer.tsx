@@ -104,6 +104,8 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
   // Fields for QUOTE
   const [quoteText, setQuoteText] = useState("");
   const [quoteWho, setQuoteWho] = useState("");
+  const [quoteSource, setQuoteSource] = useState("");
+  const [quoteUrl, setQuoteUrl] = useState("");
 
   // Fields for OPINION
   const [opinionTake, setOpinionTake] = useState("");
@@ -186,6 +188,14 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
       body = `"${quoteText.trim()}"`;
       if (quoteWho.trim()) {
         body += ` — ${quoteWho.trim()}`;
+        if (quoteSource.trim()) {
+          body += `, ${quoteSource.trim()}`;
+        }
+      } else if (quoteSource.trim()) {
+        body += ` — ${quoteSource.trim()}`;
+      }
+      if (quoteUrl.trim()) {
+        targetLinkUrl = quoteUrl.trim();
       }
     } else if (type === "OPINION") {
       if (!opinionTake.trim()) return;
@@ -232,6 +242,8 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
       setPatternInstance("");
       setQuoteText("");
       setQuoteWho("");
+      setQuoteSource("");
+      setQuoteUrl("");
       setOpinionTake("");
       setOpinionConviction(4);
       setLinkUrl("");
@@ -400,19 +412,43 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
                 <label>THE QUOTE</label>
                 <textarea
                   ref={activeFieldRef as React.RefObject<HTMLTextAreaElement>}
-                  rows={2}
+                  rows={3}
                   value={quoteText}
                   onChange={(e) => setQuoteText(e.target.value)}
-                  placeholder="keep it short enough to remember"
+                  placeholder="verbatim quote, keep it memorable..."
+                  onKeyDown={handleKeyDown}
                 />
               </div>
+              <div className="f" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label>WHO SAID IT</label>
+                  <input
+                    type="text"
+                    value={quoteWho}
+                    onChange={(e) => setQuoteWho(e.target.value)}
+                    placeholder="author (e.g. Dieter Rams)"
+                    onKeyDown={handleKeyDown}
+                  />
+                </div>
+                <div>
+                  <label>WORK / SOURCE (OPTIONAL)</label>
+                  <input
+                    type="text"
+                    value={quoteSource}
+                    onChange={(e) => setQuoteSource(e.target.value)}
+                    placeholder="book, speech, essay..."
+                    onKeyDown={handleKeyDown}
+                  />
+                </div>
+              </div>
               <div className="f">
-                <label>WHO SAID IT</label>
+                <label>SOURCE URL (OPTIONAL)</label>
                 <input
-                  type="text"
-                  value={quoteWho}
-                  onChange={(e) => setQuoteWho(e.target.value)}
-                  placeholder="name · where · when"
+                  type="url"
+                  value={quoteUrl}
+                  onChange={(e) => setQuoteUrl(e.target.value)}
+                  placeholder="https://..."
+                  onKeyDown={handleKeyDown}
                 />
               </div>
             </>

@@ -11329,41 +11329,148 @@ input[type=range].wall-zoom-slider {
   min-width: 0;
 }
 
-/* ═══ QUOTE — a pull quote ═══ */
+/* ═══ QUOTE — a literary pull quote ═══ */
 .e--quote {
   --c: var(--yellow, #FFE94A);
 }
 .e--quote .e__b {
-  padding: 26px 26px 20px;
+  padding: 24px 26px 20px;
 }
+
+.qt-card {
+  position: relative;
+  width: 100%;
+}
+
+.qt-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.qt-content {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.qt-preview-slot {
+  flex: 0 0 auto;
+}
+
+.qt-quote-box {
+  position: relative;
+  padding-left: 18px;
+  border-left: 3px solid var(--c);
+}
+
+.qt-mark {
+  position: absolute;
+  left: 2px;
+  top: -10px;
+  font-family: var(--serif, "Newsreader", "Charter", Georgia, serif);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--c);
+  opacity: 0.9;
+  user-select: none;
+  pointer-events: none;
+}
+
 .qt {
   margin: 0;
-  font-family: var(--serif);
-  font-size: clamp(23px, 3.6vw, 36px);
-  line-height: 1.2;
+  font-family: var(--serif, "Newsreader", "Charter", Georgia, serif);
+  font-style: italic;
   letter-spacing: -0.01em;
-  max-width: 26ch;
-  position: relative;
+  color: var(--ink);
+  white-space: pre-wrap;
+  width: 100%;
+  max-width: 68ch;
 }
-.qt::before {
-  content: "\201C";
-  position: absolute;
-  left: -0.42em;
-  top: -0.12em;
-  font-size: 2.1em;
-  color: var(--yellow, #FFE94A);
-  z-index: -1;
-  line-height: 1;
+
+.qt--short {
+  font-size: clamp(21px, 3.2vw, 28px);
+  line-height: 1.34;
+  font-weight: 500;
 }
+
+.qt--long {
+  font-size: clamp(16px, 2.2vw, 20px);
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.qt__attribution {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] .qt__attribution {
+  border-top-color: rgba(255, 255, 255, 0.15);
+}
+
 .qt__by {
-  margin-top: 16px;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
   font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
 }
-.qt__by span {
+
+.qt__author {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+
+.qt__source {
+  font-size: 11.5px;
+  font-family: var(--serif, Georgia, serif);
+  font-style: italic;
+  opacity: 0.75;
+  color: var(--ink);
+}
+
+.qt__badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
   opacity: 0.55;
+}
+
+.qt__src {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.qt__src a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink);
+  background: var(--shelf, #E7E2D8);
+  border: 1px solid var(--ink);
+  padding: 2px 7px;
+  text-decoration: none;
+  box-shadow: 1px 1px 0 var(--ink);
+  transition: all 0.12s ease;
+}
+
+.qt__src a:hover {
+  background: var(--c);
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0 var(--ink);
 }
 
 /* ═══ OPINION — signed, with conviction ═══ */

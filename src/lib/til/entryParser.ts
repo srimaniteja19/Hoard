@@ -87,25 +87,51 @@ export function parseGotcha(body: string | null): ParsedGotcha {
 export interface ParsedQuote {
   quote: string;
   author?: string;
+  source?: string;
 }
 
 export function parseQuote(body: string | null): ParsedQuote {
   const cleanBody = stripNote(body);
   if (!cleanBody) return { quote: "" };
 
-  // Check for "Quote" — Author or Author, Year
-  const authorMatch = cleanBody.match(/^(?:["“]([\s\S]*?)["”]|([\s\S]*?))\s*(?:[-—–\n]\s*|\s+by\s+)([\s\S]*)$/i);
-  if (authorMatch) {
-    const quote = (authorMatch[1] || authorMatch[2] || "").trim();
-    const author = authorMatch[3].trim();
-    if (quote && author) {
-      return { quote, author };
+  let quote = cleanBody;
+  let author: string | undefined = undefined;
+  let source: string | undefined = undefined;
+
+  // Check for attribution at the end:
+  // 1. Newline followed by dash, tilde, or "by": \n\s*[-—–~]\s* or \n\s*by\s+
+  // 2. Inline attribution separated by em-dash (—), en-dash (–), double-dash (--), or spaced hyphen ( - )
+  // 3. Inline closing quote or space followed by "by "
+  const pattern = /^([\s\S]+?)(?:\r?\n\s*(?:[-—–~]\s*|by\s+)|\s+(?:[—–]|--|-)\s+|["”']\s*(?:[—–]|--|-)\s*|["”']\s+by\s+|\s+by\s+)([^—–\n\r]+)$/i;
+  const match = cleanBody.match(pattern);
+
+  if (match) {
+    const candidateQuote = match[1].trim();
+    const rawAttribution = match[2].trim();
+
+    if (candidateQuote && rawAttribution && rawAttribution.length < 120) {
+      quote = candidateQuote;
+
+      // Parse author and optional source: e.g. "Author, Source" or "Author (Source)"
+      const sourceMatch = rawAttribution.match(/^([^,(]+?)(?:\s*[,(]\s*([^)]+)\)?)?$/);
+      if (sourceMatch) {
+        author = sourceMatch[1].trim();
+        if (sourceMatch[2]) {
+          source = sourceMatch[2].trim();
+        }
+      } else {
+        author = rawAttribution;
+      }
     }
   }
 
-  // Fallback: entire text is quote
+  // Strip leading/trailing quote characters from the quote
+  quote = quote.replace(/^["“'‘\s]+|["”'’\s]+$/g, "").trim();
+
   return {
-    quote: cleanBody.replace(/^["“]|["”]$/g, "").trim(),
+    quote,
+    ...(author ? { author } : {}),
+    ...(source ? { source } : {}),
   };
 }
 

@@ -13,7 +13,7 @@ export const TIL_TYPE_TOKEN: Record<TilType, string> = {
   GOTCHA: "--pink",
   SNIPPET: "--lime",
   PATTERN: "--violet",
-  QUOTE: "--orange",
+  QUOTE: "--yellow",
   OPINION: "--mint",
   LINK: "--yel",
   NEWS: "--orange",
