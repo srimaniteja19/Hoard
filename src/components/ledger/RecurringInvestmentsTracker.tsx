@@ -21,11 +21,10 @@ import {
   Sparkles,
   Calendar,
   Building,
-  Target,
-  Zap,
   CheckCircle2,
+  Zap,
 } from "lucide-react";
-import { InvestmentCompoundingChart } from "./charts/InvestmentCompoundingChart";
+import { InvestmentRealtimeAnalysis } from "./InvestmentRealtimeAnalysis";
 import { parseAccrualNotes, computeDueAccrualPlan, getNextAccrualDate } from "@/lib/ledger/investmentAccrual";
 
 const CADENCE_ACCRUAL_LABEL: Partial<Record<string, string>> = {
@@ -195,6 +194,23 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
               </span>
             </span>
 
+            {metrics.totalValuation > 0 && (
+              <span
+                style={{
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "12.5px",
+                  fontWeight: 800,
+                  color: "#1E40AF",
+                  background: "#EFF6FF",
+                  padding: "3px 8px",
+                  border: "1px solid #3B82F6",
+                  borderRadius: "2px",
+                }}
+              >
+                Accumulated: {formatCurrency(metrics.totalValuation, 2, dominantCurrency)}
+              </span>
+            )}
+
             <span
               style={{
                 fontFamily: "var(--mono, monospace)",
@@ -213,6 +229,26 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
         </div>
 
         <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="sub-filter-btn"
+            style={{
+              padding: "6px 10px",
+              fontSize: "11px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+            }}
+            onClick={() => {
+              playSound.click();
+              const el = document.getElementById("investment-realtime-analysis");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+          >
+            <TrendingUp size={12} aria-hidden="true" />
+            ANALYSIS ↓
+          </button>
+
           {/* Monthly / Yearly view switcher */}
           <div className="debt-strategy-toggle">
             <button
@@ -247,15 +283,6 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
           </button>
         </div>
       </div>
-
-      {/* ── INTERACTIVE COMPOUND WEALTH HORIZON SIMULATION ── */}
-      {metrics.monthlyTotal > 0 && (
-        <InvestmentCompoundingChart
-          monthlyInvestment={metrics.monthlyTotal}
-          initialReturnRate={metrics.weightedReturnRatePct}
-          currency={dominantCurrency}
-        />
-      )}
 
       {/* ── TOOLBAR & CATEGORY FILTERS ── */}
       <div className="sub-toolbar">
@@ -565,6 +592,16 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
             );
           })}
         </div>
+      )}
+
+      {/* ── REALTIME CATEGORY & COMPOUND INVESTMENT ANALYSIS ── */}
+      {investments.length > 0 && (
+        <InvestmentRealtimeAnalysis
+          investments={investments}
+          metrics={metrics}
+          currency={dominantCurrency}
+          onSelectCategory={(cat) => setSelectedAssetType(cat)}
+        />
       )}
     </div>
   );

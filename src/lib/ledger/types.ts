@@ -353,7 +353,15 @@ export interface CategoryInvestmentStat {
   assetType: InvestmentAssetType;
   monthlyTotal: number;
   yearlyTotal: number;
+  pausedMonthlyTotal?: number;
   count: number;
+  activeCount: number;
+  pausedCount: number;
+  totalValuation: number;
+  totalValuationUsd?: number;
+  weightedReturnRatePct: number;
+  valuationSharePct: number;
+  monthlySharePct: number;
 }
 
 export interface InvestmentMetrics {
@@ -361,9 +369,14 @@ export interface InvestmentMetrics {
   yearlyTotal: number;
   monthlyTotalUsd?: number;
   yearlyTotalUsd?: number;
+  totalValuation: number;
+  totalValuationUsd?: number;
+  pausedMonthlyTotal: number;
+  pausedYearlyTotal: number;
   currency?: string;
   activeCount: number;
   pausedCount: number;
+  totalCount: number;
   weightedReturnRatePct: number;
   categoryBreakdown: Record<InvestmentAssetType, CategoryInvestmentStat>;
   compoundProjections: CompoundProjectionPoint[];

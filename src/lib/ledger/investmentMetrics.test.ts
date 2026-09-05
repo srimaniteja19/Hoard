@@ -4,6 +4,7 @@ import {
   normalizeInvestmentCadenceToYearly,
   calculateCompoundWealth,
   calculateInvestmentMetrics,
+  calculateDetailedCompoundProjection,
 } from "./investmentMetrics";
 import { FinancialInvestmentRow } from "./types";
 
@@ -177,6 +178,90 @@ describe("Investment Metrics & Compounding Calculator", () => {
       // The USD leg must be converted to INR (~43,425) before summing.
       expect(metrics.monthlyTotal).not.toBe(10500);
       expect(metrics.monthlyTotal).toBeCloseTo(5000 + 5000 + 500 * 86.85, 0);
+    });
+
+    it("includes accumulated valuation for paused investments in portfolio and category totals", () => {
+      const portfolioWithPaused: FinancialInvestmentRow[] = [
+        {
+          id: "inv-active-1",
+          userId: "user-1",
+          name: "Axis Gold Direct",
+          assetType: "GOLD_PRECIOUS_METALS",
+          amount: 4000,
+          currency: "INR",
+          cadence: "MONTHLY",
+          investmentDay: 20,
+          platform: "Groww",
+          expectedReturnRate: 20.0,
+          currentValuation: 60000,
+          status: "ACTIVE",
+          targetAssetId: null,
+          notes: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "inv-paused-1",
+          userId: "user-1",
+          name: "ICICI Prudential Tech",
+          assetType: "MUTUAL_FUND",
+          amount: 1200,
+          currency: "INR",
+          cadence: "ANNUAL",
+          investmentDay: 1,
+          platform: "Groww",
+          expectedReturnRate: 14.0,
+          currentValuation: 40000,
+          status: "PAUSED",
+          targetAssetId: null,
+          notes: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const metrics = calculateInvestmentMetrics(portfolioWithPaused);
+      expect(metrics.totalValuation).toBe(100000); // 60k + 40k
+      expect(metrics.activeCount).toBe(1);
+      expect(metrics.pausedCount).toBe(1);
+      expect(metrics.totalCount).toBe(2);
+      expect(metrics.monthlyTotal).toBe(4000); // Only active
+      expect(metrics.pausedMonthlyTotal).toBe(100); // 1200 / 12
+
+      // Category stats
+      const goldCat = metrics.categoryBreakdown.GOLD_PRECIOUS_METALS;
+      expect(goldCat.totalValuation).toBe(60000);
+      expect(goldCat.valuationSharePct).toBe(60.0);
+      expect(goldCat.monthlyTotal).toBe(4000);
+      expect(goldCat.monthlySharePct).toBe(100.0);
+
+      const mfCat = metrics.categoryBreakdown.MUTUAL_FUND;
+      expect(mfCat.totalValuation).toBe(40000);
+      expect(mfCat.valuationSharePct).toBe(40.0);
+      expect(mfCat.monthlyTotal).toBe(0); // Paused
+      expect(mfCat.pausedMonthlyTotal).toBe(100);
+      expect(mfCat.pausedCount).toBe(1);
+      expect(mfCat.weightedReturnRatePct).toBe(14.0);
+    });
+  });
+
+  describe("Detailed Compound Wealth Projections", () => {
+    it("calculates multi-year wealth horizon with non-zero initial principal", () => {
+      const res = calculateDetailedCompoundProjection(10000, 12, 10, 100000);
+      expect(res.initialPrincipal).toBe(100000);
+      expect(res.futureContributions).toBe(1200000);
+      expect(res.totalInvested).toBe(1300000);
+      expect(res.projectedWealth).toBeGreaterThan(2500000);
+      expect(res.wealthMultiplier).toBeGreaterThan(1.8);
+      expect(res.isInflationAdjusted).toBe(false);
+    });
+
+    it("adjusts returns for inflation using real purchasing power formula", () => {
+      const nominal = calculateDetailedCompoundProjection(10000, 12, 10, 100000, 0);
+      const real = calculateDetailedCompoundProjection(10000, 12, 10, 100000, 6); // 6% inflation
+      expect(real.isInflationAdjusted).toBe(true);
+      expect(real.effectiveAnnualRatePct).toBeCloseTo(((1 + 0.12) / (1 + 0.06) - 1) * 100, 1);
+      expect(real.projectedWealth).toBeLessThan(nominal.projectedWealth);
     });
   });
 });
