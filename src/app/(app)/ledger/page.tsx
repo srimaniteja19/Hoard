@@ -10,6 +10,7 @@ import {
   CreditCard,
   TrendingUp,
   Coins,
+  Receipt,
 } from "lucide-react";
 import { AppPage } from "@/components/chrome/AppPage";
 import { AppLoading } from "@/components/chrome/AppLoading";
@@ -21,8 +22,10 @@ import {
   FinancialIncomeRow,
   FinancialAuditRow,
   FinancialInvestmentRow,
+  FinancialDailyExpenseRow,
 } from "@/lib/ledger/types";
 import { LedgerOverview } from "@/components/ledger/LedgerOverview";
+import { DailyExpenseTracker } from "@/components/ledger/DailyExpenseTracker";
 import { SubscriptionTracker } from "@/components/ledger/SubscriptionTracker";
 import { RecurringInvestmentsTracker } from "@/components/ledger/RecurringInvestmentsTracker";
 import { DebtPayoffTracker } from "@/components/ledger/DebtPayoffTracker";
@@ -43,10 +46,11 @@ import { calculateSubscriptionMetrics } from "@/lib/ledger/subscriptionMetrics";
 import { calculateInvestmentMetrics } from "@/lib/ledger/investmentMetrics";
 import { calculateCashFlow } from "@/lib/ledger/cashFlow";
 import { calculateDebtPayoff } from "@/lib/ledger/debtPayoff";
+import { calculateDailyMetrics } from "@/lib/ledger/dailyExpenses";
 import { playSound } from "@/lib/sound";
 import { useMemo } from "react";
 
-type LedgerTab = "OVERVIEW" | "SUBSCRIPTIONS" | "INVESTMENTS" | "DEBTS" | "CASHFLOW" | "NETWORTH";
+type LedgerTab = "OVERVIEW" | "DAILY" | "SUBSCRIPTIONS" | "INVESTMENTS" | "DEBTS" | "CASHFLOW" | "NETWORTH";
 
 function LedgerContent() {
   const [overview, setOverview] = useState<FinancialOverviewPayload | null>(null);
@@ -89,9 +93,9 @@ function LedgerContent() {
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [isMarketOracleOpen, setIsMarketOracleOpen] = useState(false);
 
-  const fetchOverview = async () => {
+  const fetchOverview = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await fetch("/api/financial/overview");
       if (res.ok) {
         const data: FinancialOverviewPayload = await res.json();
@@ -100,7 +104,7 @@ function LedgerContent() {
     } catch {
       // ignore
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -115,7 +119,8 @@ function LedgerContent() {
     assets: FinancialAssetRow[],
     incomes: FinancialIncomeRow[],
     investments: FinancialInvestmentRow[],
-    latestAudit: FinancialAuditRow | null
+    latestAudit: FinancialAuditRow | null = overview?.latestAudit || null,
+    dailyExpenses: FinancialDailyExpenseRow[] = overview?.dailyExpenses || []
   ): FinancialOverviewPayload => {
     const inrRate = overview?.fxSnapshot?.inrPerUsd;
     const subscriptionMetrics = calculateSubscriptionMetrics(subs);
@@ -123,6 +128,15 @@ function LedgerContent() {
     const { cashFlow, netWorth } = calculateCashFlow(incomes, subs, debts, assets, investments, inrRate);
     const avalanchePayoff = calculateDebtPayoff(debts, "AVALANCHE", 100);
     const snowballPayoff = calculateDebtPayoff(debts, "SNOWBALL", 100);
+    const dailyMetrics = calculateDailyMetrics({
+      incomes,
+      subscriptions: subs,
+      debts,
+      investments,
+      assets,
+      dailyExpenses,
+      customFxInrRate: inrRate,
+    });
 
     return {
       subscriptions: subs,
@@ -130,6 +144,7 @@ function LedgerContent() {
       assets,
       incomes,
       investments,
+      dailyExpenses,
       fxSnapshot: overview?.fxSnapshot,
       metrics: {
         subscriptionMetrics,
@@ -138,9 +153,43 @@ function LedgerContent() {
         netWorth,
         avalanchePayoff,
         snowballPayoff,
+        dailyMetrics,
       },
       latestAudit,
     };
+  };
+
+  // Handlers for Daily Expenses
+  const handleDailyExpenseCreated = (expense: FinancialDailyExpenseRow) => {
+    if (!overview) return;
+    const newDaily = [expense, ...(overview.dailyExpenses || [])];
+    setOverview(
+      recomputeOverview(
+        overview.subscriptions,
+        overview.debts,
+        overview.assets,
+        overview.incomes,
+        overview.investments || [],
+        overview.latestAudit,
+        newDaily
+      )
+    );
+  };
+
+  const handleDailyExpenseDeleted = (id: string) => {
+    if (!overview) return;
+    const newDaily = (overview.dailyExpenses || []).filter((e) => e.id !== id);
+    setOverview(
+      recomputeOverview(
+        overview.subscriptions,
+        overview.debts,
+        overview.assets,
+        overview.incomes,
+        overview.investments || [],
+        overview.latestAudit,
+        newDaily
+      )
+    );
   };
 
   // Handlers for Subscriptions
@@ -387,6 +436,19 @@ function LedgerContent() {
           <button
             type="button"
             role="tab"
+            aria-selected={activeTab === "DAILY"}
+            className={`ledger-nav-tab ${activeTab === "DAILY" ? "active" : ""}`}
+            onClick={() => {
+              playSound.click();
+              setActiveTab("DAILY");
+            }}
+          >
+            <Receipt size={13} aria-hidden="true" />
+            DAILY EXPENSES ({overview?.dailyExpenses?.length || 0})
+          </button>
+          <button
+            type="button"
+            role="tab"
             aria-selected={activeTab === "SUBSCRIPTIONS"}
             className={`ledger-nav-tab ${activeTab === "SUBSCRIPTIONS" ? "active" : ""}`}
             onClick={() => {
@@ -491,6 +553,15 @@ function LedgerContent() {
               onOpenSurplusSweeper={() => setIsSurplusSweeperOpen(true)}
               onOpenReceipt={() => setIsReceiptOpen(true)}
               onOpenMarketOracle={() => setIsMarketOracleOpen(true)}
+            />
+          )}
+
+          {activeTab === "DAILY" && (
+            <DailyExpenseTracker
+              overview={overview}
+              onExpenseCreated={handleDailyExpenseCreated}
+              onExpenseDeleted={handleDailyExpenseDeleted}
+              onRefresh={(silent) => fetchOverview(silent ?? true)}
             />
           )}
 

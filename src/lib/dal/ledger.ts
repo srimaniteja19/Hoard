@@ -6,6 +6,7 @@ import {
   financialIncomes,
   financialAudits,
   financialInvestments,
+  financialDailyExpenses,
   FinancialSubscriptionRow,
   NewFinancialSubscriptionRow,
   FinancialDebtRow,
@@ -18,12 +19,15 @@ import {
   NewFinancialAuditRow,
   FinancialInvestmentRow,
   NewFinancialInvestmentRow,
+  FinancialDailyExpenseRow,
+  NewFinancialDailyExpenseRow,
 } from "@/db/schema";
-import { eq, and, desc, asc, isNull } from "drizzle-orm";
+import { eq, and, desc, asc, isNull, like } from "drizzle-orm";
 import { calculateSubscriptionMetrics } from "@/lib/ledger/subscriptionMetrics";
 import { calculateInvestmentMetrics } from "@/lib/ledger/investmentMetrics";
 import { calculateCashFlow } from "@/lib/ledger/cashFlow";
 import { calculateDebtPayoff } from "@/lib/ledger/debtPayoff";
+import { calculateDailyMetrics } from "@/lib/ledger/dailyExpenses";
 import { FinancialOverviewPayload } from "@/lib/ledger/types";
 
 // ─── SUBSCRIPTIONS ────────────────────────────────────────────────────────────
@@ -312,25 +316,67 @@ export async function createFinancialAudit(data: NewFinancialAuditRow): Promise<
   return created;
 }
 
+// ─── DAILY EXPENSES ──────────────────────────────────────────────────────────
+
+export async function getUserDailyExpenses(
+  userId: string,
+  monthPrefix?: string
+): Promise<FinancialDailyExpenseRow[]> {
+  try {
+    const conditions = [eq(financialDailyExpenses.userId, userId)];
+    if (monthPrefix) {
+      conditions.push(like(financialDailyExpenses.date, `${monthPrefix}%`));
+    }
+    return await db
+      .select()
+      .from(financialDailyExpenses)
+      .where(and(...conditions))
+      .orderBy(desc(financialDailyExpenses.date), desc(financialDailyExpenses.createdAt));
+  } catch (err) {
+    console.error("[ledger] getUserDailyExpenses failed:", err);
+    return [];
+  }
+}
+
+export async function createDailyExpense(
+  data: NewFinancialDailyExpenseRow
+): Promise<FinancialDailyExpenseRow> {
+  const [created] = await db.insert(financialDailyExpenses).values(data).returning();
+  return created;
+}
+
+export async function deleteDailyExpense(userId: string, id: string): Promise<boolean> {
+  const res = await db
+    .delete(financialDailyExpenses)
+    .where(and(eq(financialDailyExpenses.id, id), eq(financialDailyExpenses.userId, userId)))
+    .returning({ id: financialDailyExpenses.id });
+  return res.length > 0;
+}
+
 import { getLiveFxSnapshot } from "@/lib/ledger/fx";
 
 export async function getFinancialOverview(
   userId: string,
   extraMonthlyPayment: number = 0
 ): Promise<FinancialOverviewPayload> {
-  const [subscriptions, debts, assets, incomes, investmentsResult, latestAudit, fxSnapshot] = await Promise.all([
-    getUserSubscriptions(userId),
-    getUserDebts(userId),
-    getUserAssets(userId),
-    getUserIncomes(userId),
-    // Wrap separately so a missing table never kills the full overview fetch.
-    getUserInvestments(userId).catch((err: unknown) => {
-      console.error('[ledger] getUserInvestments failed:', err);
-      return [] as FinancialInvestmentRow[];
-    }),
-    getLatestFinancialAudit(userId),
-    getLiveFxSnapshot(),
-  ]);
+  const [subscriptions, debts, assets, incomes, investmentsResult, dailyExpensesResult, latestAudit, fxSnapshot] =
+    await Promise.all([
+      getUserSubscriptions(userId),
+      getUserDebts(userId),
+      getUserAssets(userId),
+      getUserIncomes(userId),
+      // Wrap separately so a missing table never kills the full overview fetch.
+      getUserInvestments(userId).catch((err: unknown) => {
+        console.error('[ledger] getUserInvestments failed:', err);
+        return [] as FinancialInvestmentRow[];
+      }),
+      getUserDailyExpenses(userId).catch((err: unknown) => {
+        console.error('[ledger] getUserDailyExpenses failed:', err);
+        return [] as FinancialDailyExpenseRow[];
+      }),
+      getLatestFinancialAudit(userId),
+      getLiveFxSnapshot(),
+    ]);
   let investments = investmentsResult;
   try {
     const { processAutomaticInvestmentAccruals } = await import("@/lib/ledger/investmentAccrual");
@@ -353,12 +399,23 @@ export async function getFinancialOverview(
   const avalanchePayoff = calculateDebtPayoff(debts, "AVALANCHE", extraMonthlyPayment);
   const snowballPayoff = calculateDebtPayoff(debts, "SNOWBALL", extraMonthlyPayment);
 
+  const dailyMetrics = calculateDailyMetrics({
+    incomes,
+    subscriptions,
+    debts,
+    investments,
+    assets,
+    dailyExpenses: dailyExpensesResult,
+    customFxInrRate: fxSnapshot.inrPerUsd,
+  });
+
   return {
     subscriptions,
     debts,
     assets,
     incomes,
     investments,
+    dailyExpenses: dailyExpensesResult,
     fxSnapshot: {
       date: fxSnapshot.date,
       formattedDate: fxSnapshot.formattedDate,
@@ -373,7 +430,9 @@ export async function getFinancialOverview(
       netWorth,
       avalanchePayoff,
       snowballPayoff,
+      dailyMetrics,
     },
     latestAudit,
   };
 }
+

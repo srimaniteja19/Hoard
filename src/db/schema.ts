@@ -1177,6 +1177,32 @@ export const financialInvestments = pgTable(
 export type FinancialInvestmentRow = typeof financialInvestments.$inferSelect;
 export type NewFinancialInvestmentRow = typeof financialInvestments.$inferInsert;
 
+export const financialDailyExpenses = pgTable(
+  "financial_daily_expenses",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    amount: real("amount").notNull(),
+    currency: varchar("currency", { length: 8 }).notNull().default("USD"),
+    note: text("note").notNull(),
+    category: varchar("category", { length: 32 }).notNull().default("misc"),
+    date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD
+    time: varchar("time", { length: 8 }).notNull(), // HH:mm
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("financial_daily_expense_user_date_idx").on(table.userId, table.date, table.createdAt.desc()),
+  ]
+);
+
+export type FinancialDailyExpenseRow = typeof financialDailyExpenses.$inferSelect;
+export type NewFinancialDailyExpenseRow = typeof financialDailyExpenses.$inferInsert;
+
 // ==========================================
 // NOTEBOOKS TABLES (Course-bound long-form notes)
 // ==========================================

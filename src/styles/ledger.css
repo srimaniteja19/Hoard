@@ -869,3 +869,1041 @@
   justify-content: space-between;
   align-items: center;
 }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   9. DUES · TODAY — SIMPLE NEO-BRUTALIST DAILY TRACKER (AS IN IMAGES)
+   ═════════════════════════════════════════════════════════════════════════════ */
+
+.dues-wrap {
+  --ink: #0A0A0A;
+  --paper: #F4F1EA;
+  --card: #FFFFFF;
+  --lime: #B8F04A;
+  --pink: #FF2D8A;
+  --violet: #7B5CF0;
+  --b: 3px;
+  --display: "Bricolage Grotesque", sans-serif;
+  --body: "Space Grotesk", system-ui, sans-serif;
+  --mono: "Space Mono", ui-monospace, monospace;
+
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 16px 12px 64px 12px;
+  color: var(--ink);
+  font-family: var(--body);
+}
+
+/* 1. HERO BOX */
+.dues-hero-box {
+  background: #0A0A0A;
+  color: #FFFFFF;
+  border: var(--b) solid var(--ink);
+  box-shadow: 6px 6px 0 var(--lime);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.dues-hero-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dues-hero-kicker-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--lime);
+}
+
+.dues-hero-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 10px var(--lime);
+  display: inline-block;
+  animation: pulse-lime 2s infinite ease-in-out;
+}
+
+@keyframes pulse-lime {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.85); }
+}
+
+.dues-hero-day-stat {
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.06em;
+}
+
+.dues-hero-body {
+  padding: 28px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.dues-hero-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.dues-hero-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--display);
+  font-weight: 900;
+  line-height: 0.95;
+  margin-bottom: 16px;
+}
+
+.dues-hero-curr {
+  font-size: clamp(48px, 6vw, 76px);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dues-hero-num {
+  font-size: clamp(76px, 11vw, 120px);
+  color: #FFFFFF;
+  letter-spacing: -0.04em;
+}
+
+.dues-hero-sub {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+
+.dues-hero-sub-line1 {
+  color: #FFFFFF;
+}
+
+.dues-hero-sub-line2 {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+/* Hero Visual Budget Meter Card */
+.dues-hero-meter-wrap {
+  width: 320px;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
+.dues-hero-meter-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dues-hero-meter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dues-hero-meter-lbl {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.dues-hero-meter-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.dues-hero-meter-badge.safe {
+  background: rgba(184, 240, 74, 0.16);
+  color: var(--lime);
+  border: 1px solid rgba(184, 240, 74, 0.35);
+}
+
+.dues-hero-meter-badge.over {
+  background: rgba(255, 45, 138, 0.16);
+  color: var(--pink);
+  border: 1px solid rgba(255, 45, 138, 0.35);
+}
+
+.dues-hero-progress-track {
+  width: 100%;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  position: relative;
+  overflow: hidden;
+}
+
+.dues-hero-progress-fill {
+  height: 100%;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dues-hero-progress-fill.safe {
+  background: var(--lime);
+  box-shadow: 0 0 10px rgba(184, 240, 74, 0.4);
+}
+
+.dues-hero-progress-fill.over {
+  background: var(--pink);
+  box-shadow: 0 0 10px rgba(255, 45, 138, 0.4);
+}
+
+.dues-hero-meter-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dues-meter-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dues-meter-stat-val {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.dues-meter-stat-lbl {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+}
+
+.dues-meter-stat-div {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Integrated Arithmetic Ribbon */
+.dues-hero-arithmetic {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.02);
+  overflow-x: auto;
+}
+
+.dues-arith-col {
+  flex: 1;
+  min-width: 125px;
+  padding: 14px 18px;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dues-arith-col:last-child {
+  border-right: none;
+}
+
+.dues-arith-val {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 900;
+  color: #FFFFFF;
+  letter-spacing: -0.01em;
+}
+
+.dues-arith-lbl {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dues-arith-op {
+  padding: 0 10px;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.dues-arith-col.highlight {
+  background: rgba(184, 240, 74, 0.08);
+}
+
+.dues-arith-col.highlight .dues-arith-val,
+.dues-arith-col.highlight .dues-arith-lbl {
+  color: var(--lime);
+}
+
+/* 2. CONSEQUENCES 2-CARD ROW */
+.dues-conseq-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.dues-conseq-col {
+  background: #FFFFFF;
+  border: var(--b) solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.dues-conseq-col:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.dues-conseq-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.dues-conseq-icon-wrap {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.dues-conseq-icon-wrap.safe {
+  background: var(--lime);
+  color: var(--ink);
+}
+
+.dues-conseq-icon-wrap.neutral {
+  background: var(--shade);
+  color: var(--ink);
+}
+
+.dues-conseq-kicker {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink);
+  flex: 1;
+}
+
+.dues-conseq-pill {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.dues-conseq-pill.safe {
+  background: #DCFCE7;
+  color: #166534;
+}
+
+.dues-conseq-pill.neutral {
+  background: var(--shade);
+  color: var(--ink);
+}
+
+.dues-conseq-num {
+  font-family: var(--display);
+  font-size: clamp(38px, 5vw, 48px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.dues-conseq-num.safe {
+  color: #16A34A;
+}
+
+.dues-conseq-num.max {
+  color: var(--pink);
+}
+
+.dues-conseq-lbl {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #777777;
+}
+
+/* 3. SPEED LOGGER */
+.dues-log-box {
+  border: var(--b) solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 5px 5px 0 var(--ink);
+  margin-bottom: 32px;
+}
+
+.dues-log-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: var(--b) solid var(--ink);
+  min-height: 64px;
+}
+
+.dues-log-amount-wrap {
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  min-width: 170px;
+  gap: 6px;
+  background: #FAFAFA;
+  border-right: var(--b) solid var(--ink);
+}
+
+.dues-log-curr {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 900;
+  color: #888888;
+}
+
+.dues-log-input-num {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 800;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  width: 100%;
+}
+
+.dues-log-divider {
+  display: none;
+}
+
+.dues-log-input-text {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0 20px;
+  font-family: var(--body);
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.dues-log-input-text::placeholder {
+  color: #888888;
+}
+
+.dues-log-btn {
+  background: #0A0A0A;
+  color: var(--lime);
+  border: none;
+  border-left: var(--b) solid var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 0 32px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: background 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dues-log-btn:hover:not(:disabled) {
+  background: var(--lime);
+  color: #0A0A0A;
+}
+
+.dues-log-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.dues-log-controls {
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #FFFFFF;
+}
+
+.dues-log-increments-group,
+.dues-log-tags-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dues-log-group-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #777777;
+  text-transform: uppercase;
+  min-width: 72px;
+}
+
+.dues-log-chip {
+  background: #FFFFFF;
+  border: 1.5px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--ink);
+  border-radius: 4px;
+  transition: transform 0.08s ease, background 0.08s ease, box-shadow 0.08s ease;
+}
+
+.dues-log-chip:hover {
+  background: var(--shade);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.dues-log-chip:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.dues-log-tag-chip {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1.5px solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  transition: transform 0.08s ease, background 0.08s ease, box-shadow 0.08s ease;
+}
+
+.dues-log-tag-chip:hover {
+  background: var(--shade);
+  transform: translate(-1px, -1px);
+  box-shadow: 2.5px 2.5px 0 var(--ink);
+}
+
+.dues-log-tag-chip.active {
+  box-shadow: 1px 1px 0 var(--ink);
+  transform: translate(1px, 1px);
+  font-weight: 800;
+}
+
+.dues-log-footer {
+  padding: 10px 20px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #777777;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-top: 1px dashed rgba(10, 10, 10, 0.15);
+  background: #FAFAFA;
+}
+
+/* 4. TODAY FEED */
+.dues-today-section {
+  margin-bottom: 36px;
+}
+
+.dues-today-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.dues-today-title {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 900;
+  margin: 0;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.dues-today-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(10, 10, 10, 0.18);
+}
+
+.dues-today-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #666666;
+  text-transform: uppercase;
+}
+
+.dues-today-meta-dot {
+  color: #CCCCCC;
+}
+
+.dues-today-meta-spent {
+  color: #DC2626;
+  font-weight: 800;
+}
+
+.dues-today-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dues-today-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 2px solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 10px 16px;
+  gap: 14px;
+  border-radius: 4px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.dues-today-row:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.dues-today-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dues-today-icon-badge {
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--ink);
+}
+
+.dues-today-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.dues-today-note {
+  font-family: var(--body);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.dues-today-sep {
+  color: #CCCCCC;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.dues-today-cat-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #666666;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dues-today-time {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: #888888;
+}
+
+.dues-today-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.dues-today-amt {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.dues-today-del {
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid var(--ink);
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #777777;
+  border-radius: 3px;
+  box-shadow: 1px 1px 0 var(--ink);
+  transition: all 0.08s ease;
+}
+
+.dues-today-del:hover {
+  background: #FF2D8A;
+  color: #FFFFFF;
+  border-color: var(--ink);
+  transform: translate(1px, 1px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+.dues-today-empty {
+  border: 2px solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #666666;
+  text-transform: uppercase;
+  border-radius: 4px;
+}
+
+/* 5. THE MONTH, DAY BY DAY */
+.dues-month-box {
+  border: var(--b) solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 5px 5px 0 var(--ink);
+  margin-bottom: 32px;
+}
+
+.dues-month-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: var(--b) solid var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.dues-month-body {
+  position: relative;
+  height: 170px;
+  padding: 24px 18px 10px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-bottom: 1px solid rgba(10, 10, 10, 0.15);
+}
+
+.dues-month-bars {
+  display: flex;
+  align-items: flex-end;
+  height: 120px;
+  gap: 4px;
+  z-index: 1;
+}
+
+.dues-mbar-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  position: relative;
+}
+
+.dues-mbar-fill {
+  width: 100%;
+  border: 2px solid var(--ink);
+}
+
+.dues-mbar-fill.under {
+  background: var(--lime);
+}
+
+.dues-mbar-fill.over {
+  background: var(--pink);
+}
+
+.dues-mbar-fill.future {
+  border: 2px dashed #999999;
+  background: transparent;
+}
+
+.dues-mbar-col.today {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.dues-month-thresh-line {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  height: 2px;
+  background: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.dues-month-thresh-pill {
+  background: #0A0A0A;
+  color: #FFFFFF;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  transform: translateY(-50%);
+}
+
+.dues-month-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #888888;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.dues-month-legend {
+  display: flex;
+  gap: 20px;
+  padding: 12px 18px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #666666;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dues-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dues-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--ink);
+}
+
+.dues-legend-swatch.under {
+  background: var(--lime);
+}
+
+.dues-legend-swatch.over {
+  background: var(--pink);
+}
+
+.dues-legend-swatch.future {
+  border: 1.5px dashed #999999;
+  background: transparent;
+}
+
+/* 6. COMPARED ONLY WITH YOUR OWN PAST */
+.dues-comp-box {
+  border: var(--b) solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 6px 6px 0 var(--violet);
+  margin-bottom: 24px;
+}
+
+.dues-comp-header {
+  background: var(--violet);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dues-comp-body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dues-comp-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dues-comp-label {
+  width: 160px;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.dues-comp-track {
+  flex: 1;
+  height: 22px;
+  background: #FFFFFF;
+  border: 2px solid var(--ink);
+  overflow: hidden;
+}
+
+.dues-comp-bar {
+  height: 100%;
+  background: var(--violet);
+}
+
+.dues-comp-val {
+  width: 90px;
+  text-align: right;
+  color: var(--ink);
+}
+
+.dues-comp-footer {
+  background: #F8F6F0;
+  border-top: 1px solid rgba(10, 10, 10, 0.15);
+  padding: 12px 18px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #777777;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+/* RESPONSIVE MEDIA QUERIES FOR DAILY EXPENSE TRACKER */
+@media (max-width: 768px) {
+  .dues-hero-topline {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+
+  .dues-hero-body {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+    padding: 20px 16px;
+  }
+
+  .dues-hero-meter-wrap {
+    width: 100%;
+  }
+
+  .dues-conseq-box {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .dues-log-row {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .dues-log-amount-wrap {
+    border-right: none;
+    border-bottom: var(--b) solid var(--ink);
+    padding: 12px 16px;
+  }
+
+  .dues-log-input-text {
+    padding: 14px 16px;
+  }
+
+  .dues-log-btn {
+    border-left: none;
+    border-top: var(--b) solid var(--ink);
+    padding: 14px 20px;
+    width: 100%;
+  }
+}
+
+
+

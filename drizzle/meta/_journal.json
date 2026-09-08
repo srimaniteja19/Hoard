@@ -127,6 +127,13 @@
       "when": 1788050000000,
       "tag": "0025_add_til_type_news",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788060000000,
+      "tag": "0026_add_daily_expenses",
+      "breakpoints": true
     }
   ]
 }

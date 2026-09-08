@@ -24,7 +24,7 @@ import { MarketTickerTape } from "./MarketTickerTape";
 
 interface LedgerOverviewProps {
   overview: FinancialOverviewPayload;
-  onNavigateTab: (tab: "SUBSCRIPTIONS" | "INVESTMENTS" | "DEBTS" | "CASHFLOW" | "NETWORTH") => void;
+  onNavigateTab: (tab: "OVERVIEW" | "DAILY" | "SUBSCRIPTIONS" | "INVESTMENTS" | "DEBTS" | "CASHFLOW" | "NETWORTH") => void;
   onAddSubscription: () => void;
   onAddDebt: () => void;
   onAddAsset: () => void;
@@ -83,6 +83,46 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
             {formatCurrency(netWorth.totalAssets, 0, currency)} Assets − {formatCurrency(netWorth.totalLiabilities, 0, currency)} Debt
           </div>
         </div>
+
+        {/* Safe to Spend Today (Dues · Daily Tracker) */}
+        {metrics.dailyMetrics && (
+          <div
+            className="ledger-kpi-card"
+            style={
+              {
+                "--kpi-accent": metrics.dailyMetrics.isOverBudgetToday
+                  ? "var(--neo-red, #EF4444)"
+                  : "#B8F04A",
+                cursor: "pointer",
+                borderLeft: `4px solid ${
+                  metrics.dailyMetrics.isOverBudgetToday ? "#EF4444" : "#16A34A"
+                }`,
+              } as React.CSSProperties
+            }
+            onClick={() => {
+              playSound.click();
+              onNavigateTab("DAILY");
+            }}
+          >
+            <div className="ledger-kpi-label" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <Receipt size={12} />
+              SAFE TO SPEND TODAY
+            </div>
+            <div
+              className="ledger-kpi-value"
+              style={{
+                color: metrics.dailyMetrics.isOverBudgetToday ? "#DC2626" : "#15803D",
+              }}
+            >
+              ${Math.abs(metrics.dailyMetrics.safeToSpendToday).toFixed(0)}
+            </div>
+            <div className="ledger-kpi-sub">
+              {metrics.dailyMetrics.isOverBudgetToday
+                ? `Deficit by $${Math.abs(metrics.dailyMetrics.safeToSpendToday).toFixed(0)} today`
+                : `Base: $${metrics.dailyMetrics.baseDailyAllowance.toFixed(0)}/day • ${metrics.dailyMetrics.daysRemaining} days left`}
+            </div>
+          </div>
+        )}
 
         {/* Monthly Fixed Burn */}
         <div

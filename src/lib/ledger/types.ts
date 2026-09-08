@@ -6,6 +6,8 @@ import {
   FinancialAuditRow,
   FinancialInvestmentRow,
   NewFinancialInvestmentRow,
+  FinancialDailyExpenseRow,
+  NewFinancialDailyExpenseRow,
   SubscriptionCadence,
   SubscriptionCategory,
   SubscriptionStatus,
@@ -24,6 +26,8 @@ export type {
   FinancialAuditRow,
   FinancialInvestmentRow,
   NewFinancialInvestmentRow,
+  FinancialDailyExpenseRow,
+  NewFinancialDailyExpenseRow,
   SubscriptionCadence,
   SubscriptionCategory,
   SubscriptionStatus,
@@ -521,12 +525,74 @@ export interface FinancialAuditAnalysis {
   };
 }
 
+export interface DailyExpenseDayStat {
+  date: string; // YYYY-MM-DD
+  dayOfMonth: number;
+  dayOfWeek: string; // Sun, Mon, etc.
+  spent: number;
+  count: number;
+  allowanceThreshold: number;
+  isToday: boolean;
+  isPast: boolean;
+  isFuture: boolean;
+  isOverBudget: boolean;
+}
+
+export interface DailyExpenseBenchmarks {
+  last7DaysTotal: number;
+  last7DaysDailyAvg: number;
+  prior7DaysTotal: number;
+  prior7DaysDailyAvg: number;
+  monthToDateTotal: number;
+  monthToDateDailyAvg: number;
+  todayAllowance: number;
+}
+
+export interface DailyExpenseMetrics {
+  availablePool: number;
+  committedTotal: number;
+  discretionaryPool: number;
+  spentEarlierInMonth: number;
+  spentToday: number;
+  totalSpentThisMonth: number;
+  daysInMonth: number;
+  currentDay: number;
+  daysRemaining: number;
+  safeToSpendToday: number;
+  baseDailyAllowance: number;
+  tomorrowIfZeroSpend: number;
+  tomorrowIfFullSpend: number;
+  isOverBudgetToday: boolean;
+  currency: string;
+  todayExpenses: FinancialDailyExpenseRow[];
+  monthDailyBreakdown: DailyExpenseDayStat[];
+  benchmarks: DailyExpenseBenchmarks;
+}
+
+export interface PurchaseSimulationInput {
+  amount: number;
+  note?: string;
+}
+
+export interface PurchaseSimulationResult {
+  amount: number;
+  effectiveSpentToday: number;
+  newTodayRemaining: number;
+  newTomorrowAllowance: number;
+  repricedDailyAllowance: number;
+  dailyAllowanceDelta: number;
+  canAffordToday: boolean;
+  severity: "SAFE" | "TIGHT" | "OVERBUDGET";
+  verdict: string;
+}
+
 export interface FinancialOverviewPayload {
   subscriptions: FinancialSubscriptionRow[];
   debts: FinancialDebtRow[];
   assets: FinancialAssetRow[];
   incomes: FinancialIncomeRow[];
   investments: FinancialInvestmentRow[];
+  dailyExpenses?: FinancialDailyExpenseRow[];
   fxSnapshot?: {
     date: string;
     formattedDate: string;
@@ -541,6 +607,8 @@ export interface FinancialOverviewPayload {
     netWorth: NetWorthSummary;
     avalanchePayoff: PayoffSimulationResult;
     snowballPayoff: PayoffSimulationResult;
+    dailyMetrics?: DailyExpenseMetrics;
   };
   latestAudit: FinancialAuditRow | null;
 }
+
