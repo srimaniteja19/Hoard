@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Layers, BookOpen, RotateCcw, Printer, Grid3x3, Network, Archive } from "lucide-react";
+import { Layers, BookOpen, RotateCcw, Printer, Grid3x3, Network, Archive, Plus } from "lucide-react";
 
 export type TilViewMode = "stream" | "codex" | "recall" | "press" | "wall" | "constellation" | "archive";
 
@@ -23,8 +23,34 @@ export const TilHeaderNav: React.FC = () => {
 
   const handleSwitchView = (view: TilViewMode) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("view", view);
-    router.push(`/til?${params.toString()}`);
+    if (view === "stream") {
+      params.delete("view");
+    } else {
+      params.set("view", view);
+    }
+    const query = params.toString();
+    router.push(query ? `/til?${query}` : "/til");
+  };
+
+  const handleQuickCompose = () => {
+    if (currentView !== "stream") {
+      handleSwitchView("stream");
+      setTimeout(() => {
+        const comp = document.getElementById("til-composer");
+        if (comp) {
+          comp.scrollIntoView({ behavior: "smooth", block: "center" });
+          const input = comp.querySelector("textarea, input") as HTMLElement | null;
+          input?.focus();
+        }
+      }, 150);
+    } else {
+      const comp = document.getElementById("til-composer");
+      if (comp) {
+        comp.scrollIntoView({ behavior: "smooth", block: "center" });
+        const input = comp.querySelector("textarea, input") as HTMLElement | null;
+        input?.focus();
+      }
+    }
   };
 
   const VIEWS: ViewConfig[] = [
@@ -42,7 +68,7 @@ export const TilHeaderNav: React.FC = () => {
       label: "CODEX",
       shortLabel: "CODEX",
       icon: <BookOpen size={13} strokeWidth={2.4} />,
-      color: "var(--yel, #FFE600)",
+      color: "var(--yellow, #FFE600)",
       hotkey: "2",
       description: "Organized topical knowledge library",
     },
@@ -127,32 +153,51 @@ export const TilHeaderNav: React.FC = () => {
         role="tablist"
         aria-label="TIL views navigation"
       >
-        {VIEWS.map((v) => {
-          const isActive = currentView === v.mode;
-          return (
-            <button
-              key={v.mode}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              aria-label={`${v.label} view: ${v.description}`}
-              title={`${v.label} (⌥${v.hotkey}) — ${v.description}`}
-              className={`til-view-tab ${isActive ? "on" : ""}`}
-              style={
-                isActive
-                  ? ({
-                      "--tab-accent": v.color,
-                    } as React.CSSProperties)
-                  : undefined
-              }
-              onClick={() => handleSwitchView(v.mode)}
-            >
-              <span className="til-tab-icon">{v.icon}</span>
-              <span className="til-tab-label">{v.label}</span>
-              <span className="til-tab-pip" />
-            </button>
-          );
-        })}
+        <div className="til-tabs-group">
+          {VIEWS.map((v) => {
+            const isActive = currentView === v.mode;
+            return (
+              <button
+                key={v.mode}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-label={`${v.label} view: ${v.description}`}
+                title={`${v.label} (⌥${v.hotkey}) — ${v.description}`}
+                className={`til-view-tab ${isActive ? "on" : ""}`}
+                style={
+                  isActive
+                    ? ({
+                        "--tab-accent": v.color,
+                      } as React.CSSProperties)
+                    : undefined
+                }
+                onClick={() => handleSwitchView(v.mode)}
+              >
+                <span className="til-tab-icon">{v.icon}</span>
+                <span className="til-tab-label">{v.label}</span>
+                <span className="til-tab-pip" aria-hidden="true" />
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="til-nav-actions">
+          <div className="til-nav-hint" title="Switch views using Option + 1-7">
+            <span className="til-nav-hint-kbd">⌥1–7</span>
+            <span className="til-nav-hint-label">VIEWS</span>
+          </div>
+
+          <button
+            type="button"
+            className="til-nav-compose-btn"
+            onClick={handleQuickCompose}
+            title="Compose a new insight in today's stream"
+          >
+            <Plus size={13} strokeWidth={2.8} />
+            <span>LOG INSIGHT</span>
+          </button>
+        </div>
       </nav>
     </div>
   );

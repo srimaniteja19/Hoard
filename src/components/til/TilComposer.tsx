@@ -290,7 +290,7 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
   const currentConfig = FORMS_CONFIG[type];
 
   return (
-    <div className="comp" onPaste={handlePaste} onKeyDown={handleKeyDown}>
+    <div id="til-composer" className="comp" onPaste={handlePaste} onKeyDown={handleKeyDown}>
       {/* Morphing Kind Selector Bar */}
       <div className="kinds" style={{ ["--kc" as string]: currentConfig.colorVar }}>
         {KINDS.map((k) => {
