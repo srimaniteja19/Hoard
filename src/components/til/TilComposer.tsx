@@ -2,7 +2,20 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { TilType } from "@/db/schema";
-import { X } from "lucide-react";
+import {
+  Lightbulb,
+  AlertTriangle,
+  Code2,
+  Layers,
+  Quote,
+  Flame,
+  Link2,
+  Newspaper,
+  Sparkles,
+  CornerDownLeft,
+  X,
+  Tag,
+} from "lucide-react";
 import { parseClipImport, type ClipLink, type ClipTilDraft } from "@/lib/til/clipImport";
 
 interface TilComposerProps {
@@ -69,16 +82,23 @@ const FORMS_CONFIG: Record<TilType, FormConfig> = {
   },
 };
 
-const KINDS: { key: TilType; label: string }[] = [
-  { key: "FACT", label: "FACT" },
-  { key: "GOTCHA", label: "GOTCHA" },
-  { key: "SNIPPET", label: "SNIPPET" },
-  { key: "PATTERN", label: "PATTERN" },
-  { key: "QUOTE", label: "QUOTE" },
-  { key: "OPINION", label: "OPINION" },
-  { key: "LINK", label: "LINK" },
-  { key: "NEWS", label: "NEWS" },
+const KINDS: {
+  key: TilType;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
+  tagline: string;
+}[] = [
+  { key: "FACT", label: "FACT", icon: Lightbulb, tagline: "Empirical claim or verified knowledge" },
+  { key: "GOTCHA", label: "GOTCHA", icon: AlertTriangle, tagline: "Hard-won debugging trap or sharp edge" },
+  { key: "SNIPPET", label: "SNIPPET", icon: Code2, tagline: "High-leverage reusable code or query" },
+  { key: "PATTERN", label: "PATTERN", icon: Layers, tagline: "Recurring architectural mental model" },
+  { key: "QUOTE", label: "QUOTE", icon: Quote, tagline: "Memorable words, verbatim citation" },
+  { key: "OPINION", label: "OPINION", icon: Flame, tagline: "Strong conviction tested over time" },
+  { key: "LINK", label: "LINK", icon: Link2, tagline: "Primary evidence or foundational source" },
+  { key: "NEWS", label: "NEWS", icon: Newspaper, tagline: "Intel dispatch & development notes" },
 ];
+
+const SUGGESTED_TAGS = ["hardware", "typescript", "architecture", "perf", "database", "security", "react"];
 
 export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatch }) => {
   const [type, setType] = useState<TilType>("FACT");
@@ -273,39 +293,62 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
     <div className="comp" onPaste={handlePaste} onKeyDown={handleKeyDown}>
       {/* Morphing Kind Selector Bar */}
       <div className="kinds" style={{ ["--kc" as string]: currentConfig.colorVar }}>
-        {KINDS.map((k) => (
-          <button
-            key={k.key}
-            type="button"
-            data-k={k.key.toLowerCase()}
-            aria-pressed={type === k.key ? "true" : "false"}
-            onClick={() => setType(k.key)}
-          >
-            {k.label}
-          </button>
-        ))}
+        {KINDS.map((k) => {
+          const Icon = k.icon;
+          const isSelected = type === k.key;
+          return (
+            <button
+              key={k.key}
+              type="button"
+              data-k={k.key.toLowerCase()}
+              aria-pressed={isSelected ? "true" : "false"}
+              onClick={() => setType(k.key)}
+              title={k.tagline}
+            >
+              <Icon size={12} strokeWidth={2.4} />
+              <span>{k.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Composer Input Surface */}
       <div className="comp__in">
-        <div className="comp__ask">{currentConfig.ask}</div>
+        <div className="comp__ask-row">
+          <span className="comp__ask">{currentConfig.ask}</span>
+          <span className="comp__ask-tagline">
+            {KINDS.find((k) => k.key === type)?.tagline}
+          </span>
+        </div>
 
         {/* Dynamic Fields per Type */}
         <div id="fields">
           {type === "FACT" && (
             <>
               <div className="f">
-                <label>THE CLAIM</label>
-                <textarea
-                  ref={activeFieldRef as React.RefObject<HTMLTextAreaElement>}
-                  rows={2}
-                  value={factClaim}
-                  onChange={(e) => setFactClaim(e.target.value)}
-                  placeholder="LPCAMM2 replaces both SO-DIMM and soldered RAM."
-                />
+                <div className="f__label-row">
+                  <label>THE CLAIM</label>
+                  <span className="f__helper-pill">PRIMARY STATEMENT</span>
+                </div>
+                <div className="f__input-wrap">
+                  <textarea
+                    ref={activeFieldRef as React.RefObject<HTMLTextAreaElement>}
+                    rows={2}
+                    value={factClaim}
+                    onChange={(e) => setFactClaim(e.target.value)}
+                    placeholder="LPCAMM2 replaces both SO-DIMM and soldered RAM."
+                  />
+                  <div className="f__ai-badge" title="Hoard Knowledge Synthesizer">
+                    <Sparkles size={11} strokeWidth={2.4} />
+                    <span>AI READY</span>
+                  </div>
+                </div>
               </div>
               <div className="f">
-                <label>SOURCE (OPTIONAL)</label>
+                <div className="f__label-row">
+                  <label>SOURCE (OPTIONAL)</label>
+                  <span className="f__helper-pill">EVIDENCE LINK</span>
+                </div>
                 <input
                   type="text"
                   value={factSource}
@@ -592,60 +635,62 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
           </div>
         )}
 
-        {/* Tags Row */}
-        <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", margin: "10px 0" }}>
-          {tags.map((t) => (
-            <span
-              key={t}
-              style={{
-                fontFamily: "var(--mono)",
-                fontSize: "10.5px",
-                fontWeight: 700,
-                background: "var(--ink)",
-                color: "var(--yellow, #FFE94A)",
-                padding: "2px 6px",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              #{t}
-              <X size={11} style={{ cursor: "pointer" }} onClick={() => handleRemoveTag(t)} />
+        {/* Tags Section with Quick Suggestions */}
+        <div className="comp__tags-section">
+          <div className="comp__tags-row">
+            <span className="comp__tags-lbl">
+              <Tag size={11} strokeWidth={2.2} />
+              TAGS:
             </span>
-          ))}
-          <input
-            type="text"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === ",") {
-                e.preventDefault();
-                handleAddTag(tagInput);
-              }
-            }}
-            placeholder="+ tag"
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: "11px",
-              background: "transparent",
-              color: "var(--ink)",
-              border: "1.5px solid var(--ink)",
-              padding: "3px 7px",
-              width: "80px",
-            }}
-          />
+            {tags.map((t) => (
+              <span key={t} className="comp__tag-chip">
+                #{t}
+                <X size={11} className="comp__tag-del" onClick={() => handleRemoveTag(t)} />
+              </span>
+            ))}
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault();
+                  handleAddTag(tagInput);
+                }
+              }}
+              placeholder="+ tag"
+              className="comp__tag-input"
+            />
+          </div>
+
+          {tags.length === 0 && (
+            <div className="comp__tag-suggestions">
+              <span className="comp__tag-sug-lbl">SUGGESTIONS:</span>
+              {SUGGESTED_TAGS.map((stag) => (
+                <button
+                  key={stag}
+                  type="button"
+                  onClick={() => handleAddTag(stag)}
+                  className="comp__tag-sug-btn"
+                >
+                  +{stag}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Composer Footer */}
         <div className="comp__foot">
-          <span className="opt">{currentConfig.opt}</span>
+          <span className="opt">⚡ {currentConfig.opt}</span>
           <button
             className="commit"
             type="button"
             onClick={handleCommit}
             disabled={submitting}
           >
-            {submitting ? "COMMITTING..." : "COMMIT ↵"}
+            <span>{submitting ? "COMMITTING..." : "COMMIT"}</span>
+            <CornerDownLeft size={13} strokeWidth={2.5} />
           </button>
         </div>
       </div>

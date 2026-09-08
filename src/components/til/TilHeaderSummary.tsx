@@ -53,20 +53,30 @@ export const TilHeaderSummary: React.FC<TilHeaderSummaryProps> = ({
       <div>
         <h1>Today I Learned</h1>
         <div className="facts">
-          <span className="fact-streak-pill">
-            <Flame size={13} className={streak.currentStreak > 0 ? "text-amber-500 fill-amber-500" : ""} />
-            STREAK <b>{streak.currentStreak}</b> {streak.currentStreak === 1 ? "DAY" : "DAYS"}
-          </span>
-          <span>
-            SKIPS LEFT <b>{skipsLeft}</b> OF 2
-          </span>
-          <span className={needsTending > 0 ? "warn" : ""}>
-            {needsTending > 0 && <ShieldAlert size={12} style={{ marginRight: 3 }} />}
-            NEEDS TENDING <b>{needsTending}</b>
-          </span>
-          <span>
-            FILED <b>{totalFiled}</b> ALL TIME
-          </span>
+          <div className="fact-pill fact-streak">
+            <Flame size={13} className={streak.currentStreak > 0 ? "fact-flame active" : "fact-flame"} />
+            <span className="fact-label">STREAK</span>
+            <b className="fact-val">{streak.currentStreak}</b>
+            <span className="fact-unit">{streak.currentStreak === 1 ? "DAY" : "DAYS"}</span>
+          </div>
+
+          <div className="fact-pill">
+            <span className="fact-label">SKIPS LEFT</span>
+            <b className="fact-val">{skipsLeft}</b>
+            <span className="fact-unit">OF 2</span>
+          </div>
+
+          <div className={`fact-pill ${needsTending > 0 ? "warn" : ""}`}>
+            {needsTending > 0 && <ShieldAlert size={12} className="fact-icon-warn" />}
+            <span className="fact-label">NEEDS TENDING</span>
+            <b className="fact-val">{needsTending}</b>
+          </div>
+
+          <div className="fact-pill">
+            <span className="fact-label">FILED</span>
+            <b className="fact-val">{totalFiled}</b>
+            <span className="fact-unit">ALL TIME</span>
+          </div>
         </div>
       </div>
 

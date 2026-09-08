@@ -14,7 +14,28 @@ import {
   parseNews,
   extractBulletPoints,
 } from "@/lib/til/entryParser";
-import { Edit2, Trash2, X, Check, ExternalLink, StickyNote, Sparkles } from "lucide-react";
+import {
+  Lightbulb,
+  AlertTriangle,
+  Code2,
+  Layers,
+  Quote,
+  Flame,
+  Link2,
+  Newspaper,
+  Edit2,
+  Trash2,
+  X,
+  Check,
+  ExternalLink,
+  StickyNote,
+  Sparkles,
+  Copy,
+  RotateCcw,
+  Play,
+  Plus,
+  Bookmark,
+} from "lucide-react";
 import { tilTypeColorVar } from "@/lib/til/typeColorTokens";
 import { TilMediaPreview } from "@/components/til/TilMediaPreview";
 import { ClampedText } from "@/components/til/ClampedText";
@@ -23,6 +44,23 @@ import { useYouTubeDigest } from "@/components/youtube/YouTubeDigestProvider";
 import { extractYouTubeVideoId } from "@/lib/cleanTitle";
 import { DigestJsonViewer } from "@/components/youtube/DigestJsonViewer";
 import { DigestJson } from "@/lib/youtube/digest";
+
+const KIND_CONFIG: Record<
+  TilType,
+  {
+    label: string;
+    icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  }
+> = {
+  FACT: { label: "FACT", icon: Lightbulb },
+  GOTCHA: { label: "GOTCHA", icon: AlertTriangle },
+  SNIPPET: { label: "SNIPPET", icon: Code2 },
+  PATTERN: { label: "PATTERN", icon: Layers },
+  QUOTE: { label: "QUOTE", icon: Quote },
+  OPINION: { label: "OPINION", icon: Flame },
+  LINK: { label: "LINK", icon: Link2 },
+  NEWS: { label: "NEWS", icon: Newspaper },
+};
 
 export interface TilItem {
   id: string;
@@ -214,21 +252,28 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         const gotcha = parseGotcha(item.body);
         return (
           <div className="gt">
-            <div className="gt__row">
-              <div className="gt__l">I THOUGHT</div>
-              <ClampedText className="gt__v wrong" as="div" lines={4}>
+            <div className="gt__panel trap">
+              <div className="gt__panel-head">
+                <AlertTriangle size={11} strokeWidth={2.4} />
+                <span>I THOUGHT (ASSUMPTION)</span>
+              </div>
+              <ClampedText className="gt__panel-text wrong" as="div" lines={4}>
                 <MarkdownLite content={gotcha.thought} validHashes={validHashes} />
               </ClampedText>
             </div>
-            <div className="gt__row">
-              <div className="gt__l">ACTUALLY</div>
-              <ClampedText className="gt__v right" as="div" lines={4}>
+            <div className="gt__panel truth">
+              <div className="gt__panel-head">
+                <Check size={11} strokeWidth={3} />
+                <span>ACTUALLY (REALITY)</span>
+              </div>
+              <ClampedText className="gt__panel-text right" as="div" lines={4}>
                 <MarkdownLite content={gotcha.actually} validHashes={validHashes} />
               </ClampedText>
             </div>
             {gotcha.cost && (
               <div className="gt__cost">
-                <b>COST</b> <MarkdownLite content={gotcha.cost} validHashes={validHashes} />
+                <b>WHAT IT COST</b>
+                <span><MarkdownLite content={gotcha.cost} validHashes={validHashes} /></span>
               </div>
             )}
           </div>
@@ -262,15 +307,19 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
               <MarkdownLite content={pattern.name || item.body || ""} validHashes={validHashes} />
             </ClampedText>
             <div className="pat__seen">
+              <div className="pat__seen-head">
+                <Layers size={11} strokeWidth={2.4} />
+                <span>RECURRING INSTANCES TIMELINE</span>
+              </div>
               {pattern.instances.length > 0 ? (
                 pattern.instances.map((inst, idx) => (
-                  <div key={idx}>
+                  <div key={idx} className="pat__instance-row">
                     <b>{inst.date}</b>
                     <span><MarkdownLite content={inst.note} validHashes={validHashes} /></span>
                   </div>
                 ))
               ) : (
-                <div>
+                <div className="pat__instance-row">
                   <b>{item.loggedFor}</b>
                   <span>First recurring pattern recognized</span>
                 </div>
@@ -476,9 +525,11 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
       case "FACT":
       default: {
         const bulletData = extractBulletPoints(item.body);
+        const cleanBody = (item.body || "").replace(/^["“](.*)["”]$/, "$1");
+        const targetUrl = item.linkUrl || item.linkPreview?.url;
         return (
-          <div style={{ display: "flex", gap: "18px", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
-            <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+          <div style={{ display: "flex", gap: "20px", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 280px", minWidth: 0 }}>
               {bulletData ? (
                 <ClampedText lines={6} as="div">
                   {bulletData.intro && (
@@ -499,38 +550,27 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                 </ClampedText>
               ) : (
                 <ClampedText lines={6} as="div" className="claim">
-                  <MarkdownLite content={item.body || ""} validHashes={validHashes} />
+                  <MarkdownLite content={cleanBody} validHashes={validHashes} />
                 </ClampedText>
               )}
-              {item.linkUrl && (
-                <div className="src" style={{ marginTop: "12px", paddingTop: "8px" }}>
-                  FROM ▸{" "}
-                  <a href={item.linkUrl} target="_blank" rel="noopener noreferrer">
-                    {item.linkPreview?.host || item.linkUrl}
+              {targetUrl && (
+                <div className="src">
+                  <span className="src__lbl">SOURCE</span>
+                  <a href={targetUrl} target="_blank" rel="noopener noreferrer" className="src__link">
+                    <span>{item.linkPreview?.host || targetUrl.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]}</span>
+                    <ExternalLink size={10} />
                   </a>
                 </div>
               )}
             </div>
 
-            {item.linkUrl && (
-              <TilMediaPreview url={item.linkUrl} preview={item.linkPreview} />
+            {targetUrl && (
+              <TilMediaPreview url={targetUrl} preview={item.linkPreview} />
             )}
           </div>
         );
       }
     }
-  };
-
-  // Card kind icon prefix
-  const kindIcons: Record<TilType, string> = {
-    FACT: "◆ FACT",
-    GOTCHA: "⚠ GOTCHA",
-    SNIPPET: "▤ SNIPPET",
-    PATTERN: "◈ PATTERN",
-    QUOTE: "❝ QUOTE",
-    OPINION: "✱ OPINION",
-    LINK: "⇱ LINK",
-    NEWS: "⚡ NEWS",
   };
 
   const cardClass = `e e--${item.type.toLowerCase()}`;
@@ -544,38 +584,35 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
     >
       {/* Card Header Bar */}
       <div className="e__h">
-        <span
-          className="e__kind"
+        <div
+          className="e__kind-badge"
           onClick={() => onSelectType && onSelectType(item.type)}
           style={{ cursor: "pointer" }}
+          title={`Filter by ${item.type}`}
         >
-          {kindIcons[item.type] || item.type}
-        </span>
+          {React.createElement(KIND_CONFIG[item.type]?.icon || Lightbulb, { size: 12, strokeWidth: 2.5 })}
+          <span>{item.type}</span>
+        </div>
         <span className="e__id">#{item.shortHash}</span>
 
         {item.type === "SNIPPET" && item.codeLang && (
-          <>
-            <span className="e__sp" />
-            <span className="e__id">{item.codeLang.toUpperCase()}</span>
-          </>
+          <span className="e__pill-badge">{item.codeLang.toUpperCase()}</span>
         )}
 
         {item.type === "PATTERN" && (
-          <>
-            <span className="e__sp" />
-            <span className="e__id">SEEN {item.reviewCount ? item.reviewCount + 1 : 1}×</span>
-          </>
+          <span className="e__pill-badge">SEEN {item.reviewCount ? item.reviewCount + 1 : 1}×</span>
         )}
 
         <span className="e__sp" />
 
         {/* Memory Holding Bar */}
-        <span className="hold" title={`Memory Retention: ${Math.round(fVal * 100)}%`}>
+        <div className="hold" title={`Memory Retention: ${Math.round(fVal * 100)}%`}>
           <span className="hold__l">{decayLabel}</span>
           <span className="hold__t">
             <span className="hold__f" style={{ width: `${Math.round(fVal * 100)}%` }} />
           </span>
-        </span>
+          <span className="hold__pct">{Math.round(fVal * 100)}%</span>
+        </div>
       </div>
 
       {/* Card Body */}
@@ -1030,13 +1067,16 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                   type="button"
                   onClick={() => triggerFeedback("TEST QUEUED!")}
                 >
-                  {actionFeedback || "TEST ME"}
+                  <RotateCcw size={11} strokeWidth={2.4} />
+                  <span>{actionFeedback || "TEST ME"}</span>
                 </button>
                 <button type="button" onClick={() => triggerFeedback("CONFIRMED STILL TRUE!")}>
-                  STILL TRUE
+                  <Check size={11} strokeWidth={2.6} />
+                  <span>STILL TRUE</span>
                 </button>
                 <button type="button" onClick={handleCopy}>
-                  COPY
+                  <Copy size={11} strokeWidth={2.2} />
+                  <span>COPY</span>
                 </button>
               </>
             )}
@@ -1044,13 +1084,16 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
             {item.type === "SNIPPET" && (
               <>
                 <button className="p" type="button" onClick={handleCopyCode}>
-                  {actionFeedback || "COPY CODE"}
+                  <Copy size={11} strokeWidth={2.2} />
+                  <span>{actionFeedback || "COPY CODE"}</span>
                 </button>
                 <button type="button" onClick={() => triggerFeedback("TEST QUEUED!")}>
-                  TEST ME
+                  <RotateCcw size={11} strokeWidth={2.4} />
+                  <span>TEST ME</span>
                 </button>
                 <button type="button" onClick={() => triggerFeedback("EXECUTING...")}>
-                  RUN IT
+                  <Play size={11} strokeWidth={2.4} />
+                  <span>RUN IT</span>
                 </button>
               </>
             )}
@@ -1058,13 +1101,16 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
             {item.type === "PATTERN" && (
               <>
                 <button className="p" type="button" onClick={() => triggerFeedback("TEST QUEUED!")}>
-                  {actionFeedback || "TEST ME"}
+                  <RotateCcw size={11} strokeWidth={2.4} />
+                  <span>{actionFeedback || "TEST ME"}</span>
                 </button>
                 <button type="button" onClick={() => setIsEditing(true)}>
-                  ADD INSTANCE
+                  <Plus size={11} strokeWidth={2.4} />
+                  <span>ADD INSTANCE</span>
                 </button>
                 <button type="button" onClick={() => triggerFeedback("PROMOTED TO ATLAS!")}>
-                  PROMOTE TO ATLAS
+                  <Layers size={11} strokeWidth={2.4} />
+                  <span>PROMOTE TO ATLAS</span>
                 </button>
               </>
             )}
@@ -1077,7 +1123,8 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
               return (
                 <>
                   <button className="p" type="button" onClick={handleCopy}>
-                    {actionFeedback || "COPY QUOTE"}
+                    <Copy size={11} strokeWidth={2.2} />
+                    <span>{actionFeedback || "COPY QUOTE"}</span>
                   </button>
                   {item.linkUrl ? (
                     <a
@@ -1086,7 +1133,10 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                       rel="noopener noreferrer"
                       style={{ textDecoration: "none" }}
                     >
-                      <button type="button">VIEW SOURCE ↗</button>
+                      <button type="button">
+                        <ExternalLink size={11} strokeWidth={2.2} />
+                        <span>VIEW SOURCE ↗</span>
+                      </button>
                     </a>
                   ) : (
                     <a
@@ -1096,7 +1146,8 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                       style={{ textDecoration: "none" }}
                     >
                       <button type="button" title="Search web for original source">
-                        SEARCH SOURCE ↗
+                        <ExternalLink size={11} strokeWidth={2.2} />
+                        <span>SEARCH SOURCE ↗</span>
                       </button>
                     </a>
                   )}
@@ -1107,7 +1158,8 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
             {item.type === "NEWS" && (
               <>
                 <button className="p" type="button" onClick={handleCopy}>
-                  {actionFeedback || "COPY BRIEFING"}
+                  <Copy size={11} strokeWidth={2.2} />
+                  <span>{actionFeedback || "COPY BRIEFING"}</span>
                 </button>
                 {item.linkUrl ? (
                   <a
@@ -1116,7 +1168,10 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                     rel="noopener noreferrer"
                     style={{ textDecoration: "none" }}
                   >
-                    <button type="button">SOURCE ↗</button>
+                    <button type="button">
+                      <ExternalLink size={11} strokeWidth={2.2} />
+                      <span>SOURCE ↗</span>
+                    </button>
                   </a>
                 ) : (
                   <button
@@ -1130,11 +1185,13 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                       triggerFeedback(`LOGGED REVIEW ${newCount}×`);
                     }}
                   >
-                    {actionFeedback || "REVIEWED"}
+                    <RotateCcw size={11} strokeWidth={2.4} />
+                    <span>{actionFeedback || "REVIEWED"}</span>
                   </button>
                 )}
                 <button type="button" onClick={() => setIsEditing(true)}>
-                  UPDATE
+                  <Edit2 size={11} strokeWidth={2.2} />
+                  <span>UPDATE</span>
                 </button>
               </>
             )}
@@ -1153,10 +1210,12 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                     triggerFeedback(`CONFIRMED! REVISITED ${newCount}×`);
                   }}
                 >
-                  {actionFeedback || "STILL BELIEVE THIS?"}
+                  <Flame size={11} strokeWidth={2.4} />
+                  <span>{actionFeedback || "STILL BELIEVE THIS?"}</span>
                 </button>
                 <button type="button" onClick={() => setIsEditing(true)}>
-                  REVISE
+                  <Edit2 size={11} strokeWidth={2.2} />
+                  <span>REVISE</span>
                 </button>
                 <button
                   type="button"
@@ -1168,7 +1227,8 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                     triggerFeedback("RETRACTED");
                   }}
                 >
-                  RETRACT
+                  <X size={11} strokeWidth={2.4} />
+                  <span>RETRACT</span>
                 </button>
               </>
             )}
@@ -1183,16 +1243,19 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                     style={{ textDecoration: "none" }}
                   >
                     <button className="p" type="button">
-                      OPEN ↗
+                      <ExternalLink size={11} strokeWidth={2.2} />
+                      <span>OPEN ↗</span>
                     </button>
                   </a>
                 ) : (
                   <button className="p" type="button">
-                    OPEN ↗
+                    <ExternalLink size={11} strokeWidth={2.2} />
+                    <span>OPEN ↗</span>
                   </button>
                 )}
                 <button type="button" onClick={() => triggerFeedback("FILED TO SHELF!")}>
-                  FILE TO SHELF
+                  <Bookmark size={11} strokeWidth={2.2} />
+                  <span>FILE TO SHELF</span>
                 </button>
               </>
             )}
@@ -1200,13 +1263,16 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
             {item.type === "FACT" && (
               <>
                 <button className="p" type="button" onClick={() => triggerFeedback("TEST QUEUED!")}>
-                  {actionFeedback || "TEST ME"}
+                  <RotateCcw size={11} strokeWidth={2.4} />
+                  <span>{actionFeedback || "TEST ME"}</span>
                 </button>
                 <button type="button" onClick={() => triggerFeedback("CONFIRMED STILL TRUE!")}>
-                  STILL TRUE
+                  <Check size={11} strokeWidth={2.6} />
+                  <span>STILL TRUE</span>
                 </button>
                 <button type="button" onClick={handleCopy}>
-                  COPY
+                  <Copy size={11} strokeWidth={2.2} />
+                  <span>COPY</span>
                 </button>
               </>
             )}

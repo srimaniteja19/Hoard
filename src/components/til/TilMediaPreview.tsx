@@ -199,7 +199,19 @@ export const TilMediaPreview: React.FC<TilMediaPreviewProps> = ({
           </div>
 
           <div style={{ marginTop: "8px" }}>
-            <YouTubeDigestButton url={url} title={title} variant="pill" />
+            <YouTubeDigestButton
+              url={url}
+              title={title}
+              variant="badge"
+              style={{
+                width: "100%",
+                justifyContent: "center",
+                padding: "5px 8px",
+                fontSize: "10px",
+                letterSpacing: "0.06em",
+                borderRadius: "2px",
+              }}
+            />
           </div>
         </div>
       </div>
