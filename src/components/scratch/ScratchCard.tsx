@@ -10,6 +10,7 @@ import {
 } from "@/lib/scratch/image";
 import { createInkEngine, SAMPLE_SKETCHES } from "@/lib/scratch/ink";
 import { ScratchNoteModal } from "./ScratchNoteModal";
+import { ScratchReaderModal } from "./ScratchReaderModal";
 import { playSound } from "@/lib/sound";
 import { getScrapAgeTier, getRingSeed } from "@/lib/scratch/aging";
 
@@ -38,6 +39,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(isOpenDefault);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isReaderOpen, setIsReaderOpen] = useState(false);
   const [mode, setMode] = useState<NoteMode>("split");
   const [notes, setNotes] = useState(scrap.notes || "");
   const [savedStatus, setSavedStatus] = useState("AUTOSAVED");
@@ -491,6 +493,18 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
         )}
 
         <div className="scrap__quick-acts">
+          <button
+            type="button"
+            className="scrap__quick-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              playSound.pop();
+              setIsReaderOpen(true);
+            }}
+            title="Read full note in dialog"
+          >
+            📖 READ
+          </button>
           {!isInk && (
             <button
               type="button"
@@ -529,9 +543,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
         ) : (
           <div className="scrap__body-wrap">
             <div
-              className={`scrap__t ${isLongContent ? "scrap__t--long" : "scrap__t--short"}${
-                isLongContent && !isContentExpanded ? " is-clamped" : ""
-              }`}
+              className={`scrap__t ${isLongContent ? "scrap__t--long is-clamped" : "scrap__t--short"}`}
             >
               {renderFormattedText(scrap.content)}
             </div>
@@ -542,15 +554,12 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
                 className="scrap__expand-toggle"
                 onClick={(e) => {
                   e.stopPropagation();
-                  playSound.click();
-                  setIsContentExpanded((prev) => !prev);
+                  playSound.pop();
+                  setIsReaderOpen(true);
                 }}
+                title="Open full note in reader dialog (Esc to close)"
               >
-                {isContentExpanded ? (
-                  <span>▲ COLLAPSE NOTE</span>
-                ) : (
-                  <span>▼ SHOW FULL NOTE ({contentWordCount} WORDS · {contentLineCount} LINES)</span>
-                )}
+                <span>⤢ SHOW FULL NOTE ({contentWordCount} WORDS · {contentLineCount} LINES)</span>
               </button>
             )}
           </div>
@@ -1060,6 +1069,19 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
         onUpdateNotes={onUpdateNotes}
         onClose={() => setIsModalOpen(false)}
         onPromoteTil={onPromoteTil}
+      />
+
+      {/* ── IMMERSIVE FULL NOTE READER DIALOG ── */}
+      <ScratchReaderModal
+        isOpen={isReaderOpen}
+        scrap={scrap}
+        onClose={() => setIsReaderOpen(false)}
+        onPromoteTil={onPromoteTil}
+        onPromoteTodo={onPromoteTodo}
+        onWeld={onWeld}
+        onBury={onBury}
+        onTogglePin={onTogglePin}
+        onOpenStudio={() => setIsModalOpen(true)}
       />
     </article>
   );

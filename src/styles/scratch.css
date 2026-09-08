@@ -5679,5 +5679,517 @@ code.md-slash-cmd:hover {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   FULL NOTE READER DIALOG MODAL (IMMERSIVE, ZERO-JANK READING)
+   ═══════════════════════════════════════════════════════════════════ */
 
+.scratch-reader-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 3vw, 32px);
+  animation: scratchReaderFadeIn 0.15s ease-out;
+}
 
+@keyframes scratchReaderFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.scratch-reader-window {
+  background: var(--paper, #FFFDF8);
+  border: 3.5px solid var(--ink);
+  box-shadow: 10px 10px 0 var(--ink);
+  width: 100%;
+  max-width: 860px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  animation: scratchReaderSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes scratchReaderSlideUp {
+  from {
+    transform: translateY(16px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* ── HEADER ── */
+.scratch-reader-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 2.5px solid var(--ink);
+  background: var(--shelf, #E7E2D8);
+  flex-wrap: wrap;
+}
+
+.scratch-reader-header__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+.scratch-reader-pin-btn {
+  background: transparent;
+  border: 1.5px solid var(--ink);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ink);
+  background: #FFFFFF;
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+  transition: transform 0.08s ease, background 0.08s ease;
+}
+
+.scratch-reader-pin-btn:hover {
+  background: var(--yellow, #FFE94A);
+  transform: translate(-1px, -1px);
+}
+
+.scratch-reader-pin-btn.is-pinned {
+  background: var(--pink);
+  color: #FFFFFF;
+}
+
+.scratch-reader-kind-badge {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  padding: 3px 8px;
+  border: 1.5px solid var(--ink);
+  background: var(--c, var(--cyan));
+  color: var(--ink);
+  text-transform: uppercase;
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+}
+
+.scratch-reader-kicker {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  background: var(--card, #FFFFFF);
+  border: 1px solid var(--ink);
+  color: var(--ink);
+}
+
+.scratch-reader-date {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+  opacity: 0.7;
+}
+
+.scratch-reader-header__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.scratch-reader-tool-btn {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 5px 10px;
+  border: 1.5px solid var(--ink);
+  background: var(--card, #FFFFFF);
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+  transition: all 0.08s ease;
+}
+
+.scratch-reader-tool-btn:hover {
+  background: var(--yellow, #FFE94A);
+  transform: translate(-1px, -1px);
+  box-shadow: 2.5px 2.5px 0 var(--ink);
+}
+
+.scratch-reader-close-btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  padding: 5px 12px;
+  border: 1.5px solid var(--ink);
+  background: var(--ink);
+  color: var(--yellow, #FFE94A);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 2px 2px 0 var(--pink, #FF2D8A);
+  transition: all 0.08s ease;
+}
+
+.scratch-reader-close-btn:hover {
+  background: var(--pink, #FF2D8A);
+  color: #FFFFFF;
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* ── STATS RIBBON ── */
+.scratch-reader-stats-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 18px;
+  border-bottom: 1.5px solid rgba(10, 10, 10, 0.18);
+  background: var(--card, #FFFFFF);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink);
+  flex-wrap: wrap;
+}
+
+.scratch-reader-stats-items {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.scratch-reader-stats-items .stat-pill b {
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.scratch-reader-stats-items .stat-sep {
+  opacity: 0.4;
+}
+
+.scratch-reader-id-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+
+.scratch-reader-id-tag .status-indicator {
+  background: var(--ink);
+  color: var(--yellow, #FFE94A);
+  padding: 1px 5px;
+  font-weight: 800;
+}
+
+/* ── BODY READING AREA ── */
+.scratch-reader-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: clamp(20px, 3.5vw, 36px);
+  background: var(--paper, #FFFDF8);
+}
+
+.scratch-reader-body::-webkit-scrollbar {
+  width: 9px;
+  background: var(--shelf, #E7E2D8);
+}
+
+.scratch-reader-body::-webkit-scrollbar-thumb {
+  background: var(--ink);
+  border: 1px solid var(--shelf, #E7E2D8);
+}
+
+.scratch-reader-prose {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.scratch-reader-markdown {
+  font-family: var(--body, "Space Grotesk", sans-serif);
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+
+.scratch-reader-markdown p {
+  margin: 0 0 1.25em;
+}
+
+.scratch-reader-markdown h1,
+.scratch-reader-markdown h2,
+.scratch-reader-markdown h3,
+.scratch-reader-markdown h4 {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  margin: 1.4em 0 0.6em;
+}
+
+.scratch-reader-markdown h1 { font-size: 26px; }
+.scratch-reader-markdown h2 { font-size: 22px; }
+.scratch-reader-markdown h3 { font-size: 19px; }
+
+.scratch-reader-markdown blockquote {
+  border-left: 3.5px solid var(--ink);
+  padding: 8px 16px;
+  margin: 1.25em 0;
+  background: var(--shelf, #E7E2D8);
+  font-style: italic;
+}
+
+.scratch-reader-markdown pre {
+  background: #0A0A0A;
+  color: #E9E5DA;
+  border: 2px solid var(--ink);
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin: 1.25em 0;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.scratch-reader-markdown code:not(pre code) {
+  background: var(--shelf, #E7E2D8);
+  border: 1px solid rgba(10, 10, 10, 0.2);
+  padding: 2px 6px;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.scratch-reader-markdown img,
+.scratch-reader-markdown .md-figure {
+  margin: 1.5em 0;
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  display: block;
+  max-width: 100%;
+}
+
+.scratch-reader-markdown ul,
+.scratch-reader-markdown ol {
+  margin: 0 0 1.25em;
+  padding-left: 1.5em;
+}
+
+.scratch-reader-markdown li {
+  margin-bottom: 0.4em;
+}
+
+/* ── INK SKETCH IN READER ── */
+.scratch-reader-ink-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scratch-reader-ink-svg {
+  border: 2.5px solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 20px;
+  overflow: hidden;
+}
+
+.scratch-reader-ink-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.scratch-reader-transcription {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scratch-reader-transcription b {
+  background: var(--ink);
+  color: var(--yellow);
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+.scratch-reader-export-btn {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 6px 12px;
+  border: 1.5px solid var(--ink);
+  background: var(--card, #FFFFFF);
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.scratch-reader-export-btn:hover {
+  background: var(--lime);
+  transform: translate(-1px, -1px);
+}
+
+/* ── TAGS ROW ── */
+.scratch-reader-tags-row {
+  max-width: 720px;
+  margin: 24px auto 0;
+  padding-top: 14px;
+  border-top: 1.5px dashed rgba(10, 10, 10, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.scratch-reader-tags-row .tags-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  opacity: 0.65;
+}
+
+.scratch-reader-tag-chip {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  background: var(--card, #FFFFFF);
+  border: 1px solid var(--ink);
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+}
+
+/* ── ATTACHED STUDIO SCRATCHPAD ── */
+.scratch-reader-attached-notes {
+  max-width: 720px;
+  margin: 28px auto 0;
+  border: 2px solid var(--ink);
+  background: var(--card, #FFFFFF);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.scratch-reader-attached-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--shelf, #E7E2D8);
+  border: none;
+  border-bottom: 1.5px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.scratch-reader-attached-toggle:hover {
+  background: var(--yellow, #FFE94A);
+}
+
+.scratch-reader-attached-body {
+  padding: 20px 24px;
+  background: var(--card, #FFFFFF);
+}
+
+/* ── FOOTER TOOLBAR ── */
+.scratch-reader-footer {
+  display: flex;
+  align-items: stretch;
+  border-top: 2.5px solid var(--ink);
+  background: var(--shelf, #E7E2D8);
+  flex-wrap: wrap;
+}
+
+.scratch-reader-act-btn {
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  background: var(--card, #FFFFFF);
+  border: none;
+  border-right: 1.5px solid var(--ink);
+  padding: 10px 15px;
+  cursor: pointer;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  transition: all 0.08s ease;
+}
+
+.scratch-reader-act-btn:hover {
+  background: var(--yellow, #FFE94A);
+}
+
+.scratch-reader-act-btn.til:hover {
+  background: var(--cyan, #00F0FF);
+}
+
+.scratch-reader-act-btn.todo:hover {
+  background: var(--lime, #B6FF3C);
+}
+
+.scratch-reader-act-btn.weld:hover {
+  background: var(--violet, #9D4EDD);
+  color: #FFFFFF;
+}
+
+.scratch-reader-act-btn.compost:hover {
+  background: var(--pink, #FF3366);
+  color: #FFFFFF;
+}
+
+.scratch-reader-footer__spacer {
+  flex: 1;
+}
+
+.scratch-reader-act-btn.close-action {
+  border-right: none;
+  border-left: 1.5px solid var(--ink);
+  background: var(--ink);
+  color: var(--yellow, #FFE94A);
+}
+
+.scratch-reader-act-btn.close-action:hover {
+  background: var(--pink, #FF2D8A);
+  color: #FFFFFF;
+}
