@@ -141,6 +141,13 @@
       "when": 1788070000000,
       "tag": "0027_add_reader_feature",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1788080000000,
+      "tag": "0028_add_reader_ingest_fields",
+      "breakpoints": true
     }
   ]
 }

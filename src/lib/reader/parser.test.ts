@@ -4,7 +4,9 @@ import {
   estimateReadMinutes,
   countWords,
   deriveIssueStatus,
+  status,
   parseHtmlToBlocks,
+  parseNewsletter,
 } from "./parser";
 
 describe("splitLedeAndRest", () => {
@@ -72,6 +74,26 @@ describe("deriveIssueStatus", () => {
   });
 });
 
+describe("status (derived status helper)", () => {
+  it("returns unread when not closed", () => {
+    expect(status({ closedAt: null, keeps: [] })).toBe("unread");
+    expect(status({ closedAt: undefined, keeps: [] })).toBe("unread");
+  });
+
+  it("returns kept when keeps exist on closed issue", () => {
+    expect(status({ closedAt: new Date(), keeps: [{ id: "k1" }] })).toBe("kept");
+  });
+
+  it("returns skimmed when density is skim and closed with no keeps", () => {
+    expect(status({ closedAt: new Date(), keeps: [], density: "skim" })).toBe("skimmed");
+  });
+
+  it("returns nothing when closed at regular density with no keeps", () => {
+    expect(status({ closedAt: new Date(), keeps: [], density: "read" })).toBe("nothing");
+    expect(status({ closedAt: new Date(), keeps: [], density: "study" })).toBe("nothing");
+  });
+});
+
 describe("parseHtmlToBlocks", () => {
   it("parses headings, paragraphs, and lists into structured blocks", () => {
     const html = `
@@ -104,3 +126,92 @@ describe("parseHtmlToBlocks", () => {
     });
   });
 });
+
+describe("parseNewsletter", () => {
+  it("returns blocks: null when given empty or unparseable input", () => {
+    expect(parseNewsletter("").blocks).toBeNull();
+    expect(parseNewsletter("   ").blocks).toBeNull();
+  });
+
+  it("parses Substack format cleanly", () => {
+    const substackHtml = `
+      <!DOCTYPE html><html><head><title>The Pragmatic Engineer</title></head>
+      <body>
+        <table><tr><td>
+          <h1>Big Tech Compensation in 2026</h1>
+          <p>Compensation packages have shifted dramatically over the past two years. Equity refreshes are now standard across senior bands. Total comp is up 18% on average.</p>
+          <h2>Key Data Points</h2>
+          <ul>
+            <li>Staff level median reached $620k</li>
+            <li>Principal bands saw largest divergence</li>
+          </ul>
+          <p>Read the full benchmarking report on <a href="https://levels.fyi/2026-report">Levels.fyi</a>.</p>
+        </td></tr></table>
+      </body></html>
+    `;
+    const result = parseNewsletter(substackHtml);
+    expect(result.blocks).not.toBeNull();
+    expect(result.blocks?.length).toBeGreaterThanOrEqual(4);
+    expect(result.links.length).toBeGreaterThanOrEqual(1);
+    expect(result.wordCount).toBeGreaterThan(20);
+    expect(result.readMinutes).toBeGreaterThanOrEqual(1);
+  });
+
+  it("parses Beehiiv format cleanly", () => {
+    const beehiivHtml = `
+      <!DOCTYPE html><html><head><title>Superhuman AI</title><meta name="description" content="AI models are becoming agentic faster than predicted."></head>
+      <body>
+        <table width="100%" class="beehiiv-wrapper">
+          <tr><td>
+            <h1>The Next Horizon of LLMs</h1>
+            <p>Reasoning models use test-time compute to verify step-by-step logic before answering. This changes how we think about token generation speed.</p>
+            <figure id="chart-compute">
+              <figcaption>Inference compute scaling curve</figcaption>
+            </figure>
+            <p>Check out the technical paper on <a href="https://arxiv.org/abs/2401.0001">ArXiv</a> for empirical proofs.</p>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+    const result = parseNewsletter(beehiivHtml);
+    expect(result.blocks).not.toBeNull();
+    expect(result.blocks?.some((b) => b.type === "fig")).toBe(true);
+    expect(result.dek).toContain("AI models are becoming agentic");
+  });
+
+  it("parses Ghost format cleanly", () => {
+    const ghostHtml = `
+      <!DOCTYPE html><html><head><title>Stratechery</title></head>
+      <body>
+        <article class="post">
+          <h1>Aggregation Theory and AI Agents</h1>
+          <p>The original Aggregation Theory was built on zero distribution costs and zero marginal transaction costs. Now agents introduce zero coordination costs between distributed services.</p>
+          <blockquote>The aggregator that commands consumer attention commands the entire value chain.</blockquote>
+          <p>For earlier analysis see <a href="https://stratechery.com/aggregation-theory">The Original Essay</a>.</p>
+        </article>
+      </body></html>
+    `;
+    const result = parseNewsletter(ghostHtml);
+    expect(result.blocks).not.toBeNull();
+    expect(result.blocks?.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("parses plain text format cleanly", () => {
+    const plainText = `
+The Future of Distributed Systems in 2026.
+
+Consensus algorithms have stabilized around Raft and Multi-Paxos variants. However, modern Byzantine fault tolerant algorithms are gaining ground in edge networks.
+
+Key takeaways for engineering leaders:
+- Always benchmark under packet drop conditions.
+- Test partition recovery scenarios with chaos engineering.
+- Hardware failovers happen more often than cloud providers admit.
+
+Read more at https://dist-systems.io/2026
+    `;
+    const result = parseNewsletter(plainText);
+    expect(result.blocks).not.toBeNull();
+    expect(result.blocks?.length).toBeGreaterThanOrEqual(3);
+  });
+});
+

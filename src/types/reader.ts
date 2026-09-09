@@ -45,11 +45,13 @@ export type ReaderPaperTheme = "cream" | "ink";
 
 export type ReaderKeep = {
   id: string;
-  issueId: string;
+  issueId?: string | null;
   userId: string;
   kind: ReaderKeepKind;
   quote?: string | null;
   reason: string;
+  sourceName: string;
+  sourceUrl?: string | null;
   color?: string | null;
   createdAt: string;
 };
@@ -57,6 +59,7 @@ export type ReaderKeep = {
 export type ReaderIssue = {
   id: string;
   userId: string;
+  messageId?: string | null;
   sender: string;
   senderId?: string | null;
   subject: string;
@@ -64,6 +67,9 @@ export type ReaderIssue = {
   category: ReaderCategoryKey;
   categoryConfidence: number; // 0.0 - 1.0 (below 0.6 is treated as guess / uncertain)
   arrivedAt: string; // ISO string
+  closedAt?: string | null;
+  density?: ReaderDensity | null;
+  deletedAt?: string | null;
   wordCount: number;
   readMinutes: number;
   bodyBlocks: ReaderBlock[] | null;
@@ -79,6 +85,7 @@ export type ReaderSender = {
   id: string;
   userId: string;
   name: string;
+  email?: string | null;
   issueCount: number;
   hasKept: boolean;
 };

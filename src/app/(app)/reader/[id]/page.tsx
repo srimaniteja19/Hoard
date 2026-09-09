@@ -189,6 +189,25 @@ export default function ReaderIssuePage() {
     router.push("/reader");
   }, [closeCurrentIssue, router]);
 
+  // One-keystroke DROP: soft-delete with 30-day window, NO confirm dialog, advance immediately
+  const handleDrop = useCallback(async () => {
+    if (!issueId) return;
+
+    fetch(`/api/reader/issues/${issueId}`, {
+      method: "DELETE",
+    }).catch((err) => console.error("Failed to drop issue:", err));
+
+    setDeckIssues((prev) => prev.filter((iss) => iss.id !== issueId));
+
+    if (currentIndex < deckIssues.length - 1) {
+      router.push(`/reader/${deckIssues[currentIndex + 1].id}`);
+    } else if (currentIndex > 0) {
+      router.push(`/reader/${deckIssues[currentIndex - 1].id}`);
+    } else {
+      router.push("/reader");
+    }
+  }, [issueId, currentIndex, deckIssues, router]);
+
   // Text selection & Highlight popover
   const triggerPopover = useCallback((text: string, rect: DOMRect) => {
     if (!issueRef.current) return;
@@ -237,6 +256,9 @@ export default function ReaderIssuePage() {
         handleChangeDensity("read");
       } else if (e.key === "3") {
         handleChangeDensity("study");
+      } else if (e.key.toLowerCase() === "d" || e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        handleDrop();
       } else if (e.key.toLowerCase() === "j") {
         e.preventDefault();
         handleNext();
@@ -261,7 +283,7 @@ export default function ReaderIssuePage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleNext, handlePrev, triggerPopover]);
+  }, [handleNext, handlePrev, handleDrop, triggerPopover]);
 
   // Save Keep from popover
   const handleSaveKeep = async (quote: string, reason: string) => {
@@ -548,6 +570,31 @@ export default function ReaderIssuePage() {
       <div className="reader-bar-foot">
         <button className="back" id="toList" type="button" onClick={handleBackToList}>
           ← ALL ISSUES
+        </button>
+
+        <button
+          className="drop-btn"
+          id="dropBtn"
+          type="button"
+          onClick={handleDrop}
+          title="Drop issue (soft delete, 30 days) [D]"
+          style={{
+            background: "transparent",
+            border: "2px solid var(--reader-line)",
+            padding: "5px 12px",
+            fontFamily: "var(--reader-mono)",
+            fontSize: "11px",
+            fontWeight: 700,
+            cursor: "pointer",
+            color: "var(--reader-ink)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            letterSpacing: "0.04em",
+          }}
+        >
+          <kbd style={{ background: "var(--reader-shade)", border: "1px solid var(--reader-line)", padding: "1px 5px", fontSize: "10px" }}>D</kbd>
+          DROP
         </button>
 
         <span className="reader-dens" id="dens">

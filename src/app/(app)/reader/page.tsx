@@ -404,6 +404,31 @@ export default function ReaderListPage() {
                           ) : (
                             <span className="reader-st nothing">KEPT NOTHING</span>
                           )}
+
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setIssues((prev) => prev.filter((it) => it.id !== m.id));
+                              fetch(`/api/reader/issues/${m.id}`, { method: "DELETE" }).catch(console.error);
+                            }}
+                            title="Drop issue (soft delete, 30 days)"
+                            style={{
+                              background: "transparent",
+                              border: "1px solid var(--reader-line)",
+                              borderRadius: "2px",
+                              padding: "2px 6px",
+                              fontFamily: "var(--reader-mono)",
+                              fontSize: "10px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              color: "var(--reader-ink)",
+                              marginTop: "4px",
+                            }}
+                          >
+                            DROP
+                          </button>
                         </span>
                       </Link>
                     );

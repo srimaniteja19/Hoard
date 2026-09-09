@@ -26,6 +26,7 @@ import type {
   ReaderCategoryKey,
   ReaderKeepKind,
   ReaderIssueStatus,
+  ReaderDensity,
 } from "@/types/reader";
 
 const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
@@ -1396,12 +1397,14 @@ export const readerSenders = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    email: text("email"),
     issueCount: integer("issue_count").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
     uniqueIndex("reader_sender_user_name_idx").on(table.userId, table.name),
+    index("reader_sender_email_idx").on(table.email),
   ]
 );
 
@@ -1417,6 +1420,7 @@ export const readerIssues = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    messageId: text("message_id").unique(),
     sender: text("sender").notNull(),
     senderId: text("sender_id").references(() => readerSenders.id, { onDelete: "set null" }),
     subject: text("subject").notNull(),
@@ -1424,6 +1428,9 @@ export const readerIssues = pgTable(
     category: varchar("category", { length: 32 }).$type<ReaderCategoryKey>().notNull().default("unsorted"),
     categoryConfidence: real("category_confidence").notNull().default(1.0),
     arrivedAt: timestamp("arrived_at", { withTimezone: true }).notNull().defaultNow(),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    density: varchar("density", { length: 16 }).$type<ReaderDensity>(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     wordCount: integer("word_count").notNull().default(0),
     readMinutes: integer("read_minutes").notNull().default(1),
     bodyBlocks: jsonb("body_blocks").$type<ReaderBlock[] | null>(),
@@ -1438,6 +1445,8 @@ export const readerIssues = pgTable(
     index("reader_issues_user_status_idx").on(table.userId, table.status),
     index("reader_issues_user_category_idx").on(table.userId, table.category),
     index("reader_issues_user_sender_idx").on(table.userId, table.sender),
+    index("reader_issues_message_id_idx").on(table.messageId),
+    index("reader_issues_deleted_at_idx").on(table.deletedAt),
   ]
 );
 
@@ -1451,14 +1460,15 @@ export const readerKeeps = pgTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     issueId: text("issue_id")
-      .notNull()
-      .references(() => readerIssues.id, { onDelete: "cascade" }),
+      .references(() => readerIssues.id, { onDelete: "set null" }),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     kind: varchar("kind", { length: 16 }).$type<ReaderKeepKind>().notNull().default("CLAIM"),
     quote: text("quote"),
     reason: text("reason").notNull(),
+    sourceName: text("source_name").notNull().default(""),
+    sourceUrl: text("source_url"),
     color: varchar("color", { length: 32 }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },

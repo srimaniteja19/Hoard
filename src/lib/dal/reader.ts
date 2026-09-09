@@ -10,7 +10,7 @@ import {
   NewReaderKeepRow,
   NewReaderSenderRow,
 } from "@/db/schema";
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, isNull } from "drizzle-orm";
 import {
   ReaderBlock,
   ReaderDensity,
@@ -52,7 +52,7 @@ export async function getReaderIssues(userId: string): Promise<ReaderIssue[]> {
   const issueRows = await db
     .select()
     .from(readerIssues)
-    .where(eq(readerIssues.userId, userId))
+    .where(and(eq(readerIssues.userId, userId), isNull(readerIssues.deletedAt)))
     .orderBy(desc(readerIssues.arrivedAt));
 
   if (issueRows.length === 0) return [];
@@ -66,6 +66,7 @@ export async function getReaderIssues(userId: string): Promise<ReaderIssue[]> {
 
   const keepsMap = new Map<string, ReaderKeep[]>();
   for (const k of keepsRows) {
+    if (!k.issueId) continue;
     const arr = keepsMap.get(k.issueId) || [];
     arr.push({
       id: k.id,
@@ -74,32 +75,49 @@ export async function getReaderIssues(userId: string): Promise<ReaderIssue[]> {
       kind: k.kind,
       quote: k.quote,
       reason: k.reason,
+      sourceName: k.sourceName || "",
+      sourceUrl: k.sourceUrl,
       color: k.color,
       createdAt: k.createdAt.toISOString(),
     });
     keepsMap.set(k.issueId, arr);
   }
 
-  return issueRows.map((row) => ({
-    id: row.id,
-    userId: row.userId,
-    sender: row.sender,
-    senderId: row.senderId,
-    subject: row.subject,
-    dek: row.dek,
-    category: row.category as ReaderCategoryKey,
-    categoryConfidence: row.categoryConfidence,
-    arrivedAt: row.arrivedAt.toISOString(),
-    wordCount: row.wordCount,
-    readMinutes: row.readMinutes,
-    bodyBlocks: row.bodyBlocks as ReaderBlock[] | null,
-    links: row.links || [],
-    status: row.status,
-    keptCount: row.keptCount,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-    keeps: keepsMap.get(row.id) || [],
-  }));
+  return issueRows.map((row) => {
+    const keeps = keepsMap.get(row.id) || [];
+    const derivedStatus = deriveIssueStatus({
+      closedAt: row.closedAt,
+      keeps,
+      keptCount: row.keptCount,
+      density: row.density,
+      currentStatus: row.status,
+    });
+
+    return {
+      id: row.id,
+      userId: row.userId,
+      messageId: row.messageId,
+      sender: row.sender,
+      senderId: row.senderId,
+      subject: row.subject,
+      dek: row.dek,
+      category: row.category as ReaderCategoryKey,
+      categoryConfidence: row.categoryConfidence,
+      arrivedAt: row.arrivedAt.toISOString(),
+      closedAt: row.closedAt ? row.closedAt.toISOString() : null,
+      density: (row.density as ReaderDensity) || null,
+      deletedAt: row.deletedAt ? row.deletedAt.toISOString() : null,
+      wordCount: row.wordCount,
+      readMinutes: row.readMinutes,
+      bodyBlocks: row.bodyBlocks as ReaderBlock[] | null,
+      links: row.links || [],
+      status: derivedStatus,
+      keptCount: row.keptCount,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      keeps,
+    };
+  });
 }
 
 export async function getReaderIssueById(
@@ -120,9 +138,31 @@ export async function getReaderIssueById(
     .where(and(eq(readerKeeps.userId, userId), eq(readerKeeps.issueId, issueId)))
     .orderBy(desc(readerKeeps.createdAt));
 
+  const keeps: ReaderKeep[] = keepsRows.map((k) => ({
+    id: k.id,
+    issueId: k.issueId,
+    userId: k.userId,
+    kind: k.kind,
+    quote: k.quote,
+    reason: k.reason,
+    sourceName: k.sourceName || "",
+    sourceUrl: k.sourceUrl,
+    color: k.color,
+    createdAt: k.createdAt.toISOString(),
+  }));
+
+  const derivedStatus = deriveIssueStatus({
+    closedAt: row.closedAt,
+    keeps,
+    keptCount: row.keptCount,
+    density: row.density,
+    currentStatus: row.status,
+  });
+
   return {
     id: row.id,
     userId: row.userId,
+    messageId: row.messageId,
     sender: row.sender,
     senderId: row.senderId,
     subject: row.subject,
@@ -130,24 +170,18 @@ export async function getReaderIssueById(
     category: row.category as ReaderCategoryKey,
     categoryConfidence: row.categoryConfidence,
     arrivedAt: row.arrivedAt.toISOString(),
+    closedAt: row.closedAt ? row.closedAt.toISOString() : null,
+    density: (row.density as ReaderDensity) || null,
+    deletedAt: row.deletedAt ? row.deletedAt.toISOString() : null,
     wordCount: row.wordCount,
     readMinutes: row.readMinutes,
     bodyBlocks: row.bodyBlocks as ReaderBlock[] | null,
     links: row.links || [],
-    status: row.status,
+    status: derivedStatus,
     keptCount: row.keptCount,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
-    keeps: keepsRows.map((k) => ({
-      id: k.id,
-      issueId: k.issueId,
-      userId: k.userId,
-      kind: k.kind,
-      quote: k.quote,
-      reason: k.reason,
-      color: k.color,
-      createdAt: k.createdAt.toISOString(),
-    })),
+    keeps,
   };
 }
 
@@ -159,24 +193,44 @@ export async function closeReaderIssue(
   const issue = await getReaderIssueById(userId, issueId);
   if (!issue) return null;
 
+  const now = new Date();
   const newStatus = deriveIssueStatus({
+    closedAt: now,
     keptCount: issue.keptCount,
     density,
     wasClosed: true,
-    currentStatus: issue.status,
   });
 
   const [updated] = await db
     .update(readerIssues)
     .set({
+      closedAt: now,
+      density,
       status: newStatus,
-      updatedAt: new Date(),
+      updatedAt: now,
     })
     .where(and(eq(readerIssues.userId, userId), eq(readerIssues.id, issueId)))
     .returning();
 
   if (!updated) return null;
   return getReaderIssueById(userId, issueId);
+}
+
+export async function dropReaderIssue(
+  userId: string,
+  issueId: string
+): Promise<boolean> {
+  const now = new Date();
+  const [updated] = await db
+    .update(readerIssues)
+    .set({
+      deletedAt: now,
+      updatedAt: now,
+    })
+    .where(and(eq(readerIssues.userId, userId), eq(readerIssues.id, issueId)))
+    .returning({ id: readerIssues.id });
+
+  return Boolean(updated);
 }
 
 export async function createReaderKeep(
@@ -186,10 +240,32 @@ export async function createReaderKeep(
     kind: "CLAIM" | "LINK" | "FIGURE";
     quote?: string | null;
     reason: string;
+    sourceName?: string;
+    sourceUrl?: string | null;
     color?: string | null;
     linkUrl?: string | null;
   }
 ): Promise<ReaderKeep> {
+  // Snapshot sender & arrival date into sourceName if not explicitly passed
+  let sourceName = data.sourceName || "";
+  let sourceUrl = data.sourceUrl || data.linkUrl || null;
+
+  const [issue] = await db
+    .select({ sender: readerIssues.sender, arrivedAt: readerIssues.arrivedAt })
+    .from(readerIssues)
+    .where(eq(readerIssues.id, data.issueId))
+    .limit(1);
+
+  if (!sourceName && issue) {
+    const d = new Date(issue.arrivedAt);
+    const dateFormatted = d.toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    sourceName = `${issue.sender} · ${dateFormatted}`;
+  }
+
   const keepId = crypto.randomUUID();
   const [created] = await db
     .insert(readerKeeps)
@@ -198,8 +274,10 @@ export async function createReaderKeep(
       issueId: data.issueId,
       userId,
       kind: data.kind,
-      quote: data.quote || null,
+      quote: data.quote || null, // SNAPSHOT string, not a pointer
       reason: data.reason,
+      sourceName,
+      sourceUrl,
       color: data.color || null,
     })
     .returning();
@@ -212,7 +290,7 @@ export async function createReaderKeep(
       status: "kept",
       updatedAt: new Date(),
     })
-    .where(and(eq(readerIssues.userId, userId), eq(readerIssues.id, data.issueId)));
+    .where(eq(readerIssues.id, data.issueId));
 
   // If kind === 'LINK', push candidate to Stacks (bookmarks table)
   if (data.kind === "LINK" && data.reason) {
@@ -257,6 +335,8 @@ export async function createReaderKeep(
     kind: created.kind,
     quote: created.quote,
     reason: created.reason,
+    sourceName: created.sourceName,
+    sourceUrl: created.sourceUrl,
     color: created.color,
     createdAt: created.createdAt.toISOString(),
   };
@@ -274,6 +354,8 @@ export async function deleteReaderKeep(userId: string, keepId: string): Promise<
   await db
     .delete(readerKeeps)
     .where(and(eq(readerKeeps.userId, userId), eq(readerKeeps.id, keepId)));
+
+  if (!keep.issueId) return true;
 
   // Recalculate keptCount
   const remainingKeeps = await db

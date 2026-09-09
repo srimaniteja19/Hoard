@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.77",
+    "@mozilla/readability": "^0.6.0",
     "@neondatabase/serverless": "^1.1.0",
     "@types/katex": "^0.16.8",
     "ai": "^7.0.74",
@@ -26,6 +27,7 @@
     "d3-force": "^3.0.0",
     "drizzle-orm": "^0.45.2",
     "katex": "^0.18.5",
+    "linkedom": "^0.18.13",
     "lucide-react": "^0.468.0",
     "mermaid": "^11.17.2",
     "next": "^16.3.0",
@@ -36,6 +38,7 @@
   },
   "devDependencies": {
     "@types/d3-force": "^3.0.10",
+    "@types/mozilla__readability": "^0.4.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

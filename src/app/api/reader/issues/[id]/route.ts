@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getReaderUserId } from "@/lib/reader/sessionUser";
-import { getReaderIssueById, closeReaderIssue } from "@/lib/dal/reader";
+import { getReaderIssueById, closeReaderIssue, dropReaderIssue } from "@/lib/dal/reader";
 import { db } from "@/db";
 import { readerIssues } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -36,6 +36,11 @@ export async function PATCH(
     const body = await req.json();
 
     const { action, density = "read" } = body;
+
+    if (action === "drop") {
+      const ok = await dropReaderIssue(userId, id);
+      return NextResponse.json({ ok, dropped: true });
+    }
 
     if (action === "close") {
       const updated = await closeReaderIssue(userId, id, density as ReaderDensity);
@@ -101,5 +106,20 @@ export async function PATCH(
   } catch (error) {
     console.error("PATCH /api/reader/issues/[id] error:", error);
     return NextResponse.json({ error: "Failed to update issue" }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
+    const userId = await getReaderUserId(req);
+    const ok = await dropReaderIssue(userId, id);
+    return NextResponse.json({ ok, dropped: true });
+  } catch (error) {
+    console.error("DELETE /api/reader/issues/[id] error:", error);
+    return NextResponse.json({ error: "Failed to drop issue" }, { status: 500 });
   }
 }
