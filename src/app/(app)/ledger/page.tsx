@@ -374,6 +374,7 @@ function LedgerContent() {
   const tabs: Array<{
     id: LedgerTab;
     label: string;
+    shortLabel: string;
     icon: LucideIcon;
     count?: number;
     shortcut: string;
@@ -382,6 +383,7 @@ function LedgerContent() {
     {
       id: "OVERVIEW",
       label: "OVERVIEW",
+      shortLabel: "OVERVIEW",
       icon: LayoutDashboard,
       shortcut: "1",
       colorKey: "overview",
@@ -389,6 +391,7 @@ function LedgerContent() {
     {
       id: "DAILY",
       label: "DAILY EXPENSES",
+      shortLabel: "DAILY",
       icon: Receipt,
       count: overview?.dailyExpenses?.length || 0,
       shortcut: "2",
@@ -397,6 +400,7 @@ function LedgerContent() {
     {
       id: "SUBSCRIPTIONS",
       label: "SUBSCRIPTIONS",
+      shortLabel: "SUBS",
       icon: Repeat,
       count: overview?.subscriptions?.length || 0,
       shortcut: "3",
@@ -405,6 +409,7 @@ function LedgerContent() {
     {
       id: "INVESTMENTS",
       label: "INVESTMENTS",
+      shortLabel: "INVEST",
       icon: Coins,
       count: overview?.investments?.length || 0,
       shortcut: "4",
@@ -413,6 +418,7 @@ function LedgerContent() {
     {
       id: "DEBTS",
       label: "DEBT PAYOFF",
+      shortLabel: "DEBTS",
       icon: CreditCard,
       count: overview?.debts?.length || 0,
       shortcut: "5",
@@ -421,6 +427,7 @@ function LedgerContent() {
     {
       id: "CASHFLOW",
       label: "CASH FLOW",
+      shortLabel: "CASH",
       icon: TrendingUp,
       count: overview?.incomes?.length || 0,
       shortcut: "6",
@@ -429,6 +436,7 @@ function LedgerContent() {
     {
       id: "NETWORTH",
       label: "NET WORTH",
+      shortLabel: "NET WORTH",
       icon: Landmark,
       count: overview?.assets?.length || 0,
       shortcut: "7",
@@ -569,7 +577,10 @@ function LedgerContent() {
                 <span className="tab-icon-box">
                   <Icon size={13} aria-hidden="true" />
                 </span>
-                <span className="tab-label">{tab.label}</span>
+                <span className="tab-label">
+                  <span className="label-full">{tab.label}</span>
+                  <span className="label-compact">{tab.shortLabel}</span>
+                </span>
                 {tab.count !== undefined && (
                   <span className="tab-count-badge">
                     {tab.count}
