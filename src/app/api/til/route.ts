@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { tilEntries, tilEntryTags, tags as tagsTable, bookmarks, TilType } from "@/db/schema";
-import { eq, and, desc, lt, inArray, isNull } from "drizzle-orm";
+import { eq, and, desc, lt, inArray, isNull, or, ilike, sql } from "drizzle-orm";
 import { requireUserId, AuthError } from "@/lib/session";
 import { createTilSchema } from "@/lib/validations/til";
 import { getLoggedForDate, generateShortHash, getUserTimezone, getTagsForTilEntries } from "@/lib/dal/til";
@@ -25,6 +25,7 @@ export async function GET(req: Request) {
     const type = searchParams.get("type");
     const day = searchParams.get("day");
     const sort = searchParams.get("sort");
+    const q = searchParams.get("q")?.trim() || null;
     const includeSuperseded = searchParams.get("includeSuperseded") === "true";
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
 
@@ -63,9 +64,37 @@ export async function GET(req: Request) {
 
       const matchingTilIds = matchingTilRows.map((r) => r.tilId);
       if (matchingTilIds.length === 0) {
-        return NextResponse.json({ items: [], nextCursor: null });
+        return NextResponse.json({ items: [], nextCursor: null, typeCounts: { ALL: 0 }, topTags: [] });
       }
       conditions.push(inArray(tilEntries.id, matchingTilIds));
+    }
+
+    if (q) {
+      const cleanQ = q.startsWith("#") ? q.slice(1).trim() : q;
+      if (cleanQ) {
+        const searchTerm = `%${cleanQ}%`;
+
+        const matchingTagRows = await db
+          .select({ tilId: tilEntryTags.tilId })
+          .from(tilEntryTags)
+          .innerJoin(tagsTable, eq(tilEntryTags.tagId, tagsTable.id))
+          .where(and(eq(tagsTable.userId, userId), ilike(tagsTable.name, searchTerm)));
+
+        const tagTilIds = matchingTagRows.map((r) => r.tilId);
+
+        const searchConditions = [
+          ilike(tilEntries.body, searchTerm),
+          ilike(tilEntries.code, searchTerm),
+          ilike(tilEntries.shortHash, searchTerm),
+          ilike(tilEntries.linkUrl, searchTerm),
+        ];
+
+        if (tagTilIds.length > 0) {
+          searchConditions.push(inArray(tilEntries.id, tagTilIds));
+        }
+
+        conditions.push(or(...searchConditions)!);
+      }
     }
 
     const orderByClause = sort === "confidence"
@@ -112,7 +141,42 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json({ items, nextCursor });
+    // Compute category counts for user
+    const typeCountRows = await db
+      .select({
+        type: tilEntries.type,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(tilEntries)
+      .where(and(eq(tilEntries.userId, userId), isNull(tilEntries.supersededById)))
+      .groupBy(tilEntries.type);
+
+    const typeCounts: Record<string, number> = { ALL: 0 };
+    let totalCount = 0;
+    for (const row of typeCountRows) {
+      const cnt = Number(row.count) || 0;
+      typeCounts[row.type] = cnt;
+      totalCount += cnt;
+    }
+    typeCounts["ALL"] = totalCount;
+
+    // Top tags
+    const topTagRows = await db
+      .select({
+        name: tagsTable.name,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(tilEntryTags)
+      .innerJoin(tagsTable, eq(tilEntryTags.tagId, tagsTable.id))
+      .innerJoin(tilEntries, eq(tilEntryTags.tilId, tilEntries.id))
+      .where(and(eq(tagsTable.userId, userId), isNull(tilEntries.supersededById)))
+      .groupBy(tagsTable.name)
+      .orderBy(desc(sql`count(*)`))
+      .limit(12);
+
+    const topTags = topTagRows.map((r) => ({ name: r.name, count: Number(r.count) || 0 }));
+
+    return NextResponse.json({ items, nextCursor, typeCounts, topTags });
   } catch (e) {
     if (e instanceof AuthError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

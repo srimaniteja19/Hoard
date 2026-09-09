@@ -5,6 +5,7 @@ import { TilHeaderNav, TilViewMode } from "@/components/til/TilHeaderNav";
 import { TilComposer } from "@/components/til/TilComposer";
 import { TilFeed } from "@/components/til/TilFeed";
 import { TilItem } from "@/components/til/TilFeedItem";
+import { TilSearchFilterBar } from "@/components/til/TilSearchFilterBar";
 import { TilHeaderSummary } from "@/components/til/TilHeaderSummary";
 import { TilStreakBar } from "@/components/til/TilStreakBar";
 import { TilHeatmap } from "@/components/til/TilHeatmap";
@@ -74,6 +75,11 @@ function TilPageContent() {
   const selectedTag = searchParams.get("tag") || null;
   const selectedType = (searchParams.get("type") as TilType) || null;
   const selectedDay = searchParams.get("day") || null;
+  const searchQuery = searchParams.get("q") || "";
+
+  // Dynamic category and topic statistics from API
+  const [typeCounts, setTypeCounts] = useState<Record<string, number>>({});
+  const [topTags, setTopTags] = useState<Array<{ name: string; count: number }>>([]);
 
   const validHashes = useMemo(() => {
     return new Set(items.map((i) => i.shortHash.toLowerCase()));
@@ -83,13 +89,15 @@ function TilPageContent() {
     tag: string | null,
     type: TilType | null,
     day: string | null,
-    hash: string | null = selectedHash
+    hash: string | null = selectedHash,
+    q: string | null = searchQuery
   ) => {
     const params = new URLSearchParams(searchParams.toString());
     if (tag) params.set("tag", tag); else params.delete("tag");
     if (type) params.set("type", type); else params.delete("type");
     if (day) params.set("day", day); else params.delete("day");
     if (hash) params.set("hash", hash); else params.delete("hash");
+    if (q && q.trim()) params.set("q", q.trim()); else params.delete("q");
     const queryStr = params.toString();
     router.push(queryStr ? `/til?${queryStr}` : "/til");
   };
@@ -126,6 +134,7 @@ function TilPageContent() {
         if (selectedTag) params.set("tag", selectedTag);
         if (selectedType) params.set("type", selectedType);
         if (selectedDay) params.set("day", selectedDay);
+        if (searchQuery.trim()) params.set("q", searchQuery.trim());
         if (viewMode === "archive") {
           params.set("limit", "100");
           params.set("includeSuperseded", "true");
@@ -141,6 +150,12 @@ function TilPageContent() {
             setItems(data.items);
           }
           setNextCursor(data.nextCursor);
+          if (data.typeCounts) {
+            setTypeCounts(data.typeCounts);
+          }
+          if (data.topTags) {
+            setTopTags(data.topTags);
+          }
         }
       } catch (err) {
         console.error("Failed to load TIL feed", err);
@@ -149,7 +164,7 @@ function TilPageContent() {
         setLoadingMore(false);
       }
     },
-    [selectedHash, selectedTag, selectedType, selectedDay]
+    [selectedHash, selectedTag, selectedType, selectedDay, searchQuery, viewMode]
   );
 
   const fetchCodex = useCallback(async () => {
@@ -444,7 +459,7 @@ function TilPageContent() {
               heatmap={heatmap}
               totalCount={items.length}
               selectedDay={selectedDay}
-              onSelectDay={(day) => updateUrlFilters(selectedTag, selectedType, day)}
+              onSelectDay={(day) => updateUrlFilters(selectedTag, selectedType, day, selectedHash, searchQuery)}
             />
 
             {/* On This Day Resurfacing Card */}
@@ -452,6 +467,24 @@ function TilPageContent() {
 
             {/* Hero Morphing Composer Surface */}
             <TilComposer onCommit={handleCommit} onCommitBatch={handleCommitBatch} />
+
+            {/* Search & Find by Category Console */}
+            <TilSearchFilterBar
+              searchQuery={searchQuery}
+              onSearchChange={(q) => updateUrlFilters(selectedTag, selectedType, selectedDay, selectedHash, q)}
+              selectedType={selectedType}
+              onSelectType={(type) => updateUrlFilters(selectedTag, type, selectedDay, selectedHash, searchQuery)}
+              selectedTag={selectedTag}
+              onSelectTag={(tag) => updateUrlFilters(tag, selectedType, selectedDay, selectedHash, searchQuery)}
+              selectedDay={selectedDay}
+              onClearDay={() => updateUrlFilters(selectedTag, selectedType, null, selectedHash, searchQuery)}
+              selectedHash={selectedHash}
+              onClearHash={() => updateUrlFilters(selectedTag, selectedType, selectedDay, null, searchQuery)}
+              onClearAll={() => router.push("/til")}
+              typeCounts={typeCounts}
+              topTags={topTags}
+              totalCount={typeCounts["ALL"]}
+            />
 
             {/* Timeline Feed Container */}
             {loading ? (
@@ -478,12 +511,15 @@ function TilPageContent() {
                 selectedType={selectedType}
                 selectedDay={selectedDay}
                 selectedHash={selectedHash}
-                onClearTagFilter={() => updateUrlFilters(null, selectedType, selectedDay)}
-                onClearTypeFilter={() => updateUrlFilters(selectedTag, null, selectedDay)}
-                onClearDayFilter={() => updateUrlFilters(selectedTag, selectedType, null)}
-                onClearHashFilter={() => updateUrlFilters(selectedTag, selectedType, selectedDay, null)}
+                searchQuery={searchQuery}
+                onClearTagFilter={() => updateUrlFilters(null, selectedType, selectedDay, selectedHash, searchQuery)}
+                onClearTypeFilter={() => updateUrlFilters(selectedTag, null, selectedDay, selectedHash, searchQuery)}
+                onClearDayFilter={() => updateUrlFilters(selectedTag, selectedType, null, selectedHash, searchQuery)}
+                onClearHashFilter={() => updateUrlFilters(selectedTag, selectedType, selectedDay, null, searchQuery)}
+                onClearSearchFilter={() => updateUrlFilters(selectedTag, selectedType, selectedDay, selectedHash, "")}
+                onClearAllFilters={() => router.push("/til")}
                 onSelectTag={navigateToCodexTopic}
-                onSelectType={(type) => updateUrlFilters(selectedTag, type, selectedDay)}
+                onSelectType={(type) => updateUrlFilters(selectedTag, type, selectedDay, selectedHash, searchQuery)}
               />
             )}
           </div>
