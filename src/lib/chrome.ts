@@ -3,6 +3,7 @@ export function pageLabelFromPath(pathname: string): string {
   if (path === "/") return "HOME";
   if (path === "/ask" || path.startsWith("/ask/") || path === "/library/ask") return "ASK";
   if (path === "/library" || path.startsWith("/library/")) return "LIBRARY";
+  if (path === "/reader" || path.startsWith("/reader/")) return "READER";
   if (path === "/notebooks" || path.startsWith("/notebooks/")) return "NOTEBOOKS";
   if (path === "/marginalia" || path.startsWith("/marginalia/")) return "MARGINALIA";
   if (path === "/scratch" || path.startsWith("/scratch/")) return "SCRATCH";

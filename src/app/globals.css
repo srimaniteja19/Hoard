@@ -3,6 +3,7 @@
 @import "../styles/marginalia.css";
 @import "../styles/ledger.css";
 @import "../styles/notebooks.css";
+@import "../styles/reader.css";
 
 :root, [data-theme="default"] {
   --cream: #F4F0EA;
