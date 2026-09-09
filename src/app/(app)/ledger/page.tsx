@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import {
+  LucideIcon,
   Landmark,
   Sparkles,
   Plus,
@@ -362,6 +363,112 @@ function LedgerContent() {
     setOverview({ ...overview, latestAudit: audit });
   };
 
+  const totalRecords =
+    (overview?.dailyExpenses?.length || 0) +
+    (overview?.subscriptions?.length || 0) +
+    (overview?.investments?.length || 0) +
+    (overview?.debts?.length || 0) +
+    (overview?.incomes?.length || 0) +
+    (overview?.assets?.length || 0);
+
+  const tabs: Array<{
+    id: LedgerTab;
+    label: string;
+    icon: LucideIcon;
+    count?: number;
+    shortcut: string;
+    colorKey: "overview" | "daily" | "subscriptions" | "investments" | "debts" | "cashflow" | "networth";
+  }> = [
+    {
+      id: "OVERVIEW",
+      label: "OVERVIEW",
+      icon: LayoutDashboard,
+      shortcut: "1",
+      colorKey: "overview",
+    },
+    {
+      id: "DAILY",
+      label: "DAILY EXPENSES",
+      icon: Receipt,
+      count: overview?.dailyExpenses?.length || 0,
+      shortcut: "2",
+      colorKey: "daily",
+    },
+    {
+      id: "SUBSCRIPTIONS",
+      label: "SUBSCRIPTIONS",
+      icon: Repeat,
+      count: overview?.subscriptions?.length || 0,
+      shortcut: "3",
+      colorKey: "subscriptions",
+    },
+    {
+      id: "INVESTMENTS",
+      label: "INVESTMENTS",
+      icon: Coins,
+      count: overview?.investments?.length || 0,
+      shortcut: "4",
+      colorKey: "investments",
+    },
+    {
+      id: "DEBTS",
+      label: "DEBT PAYOFF",
+      icon: CreditCard,
+      count: overview?.debts?.length || 0,
+      shortcut: "5",
+      colorKey: "debts",
+    },
+    {
+      id: "CASHFLOW",
+      label: "CASH FLOW",
+      icon: TrendingUp,
+      count: overview?.incomes?.length || 0,
+      shortcut: "6",
+      colorKey: "cashflow",
+    },
+    {
+      id: "NETWORTH",
+      label: "NET WORTH",
+      icon: Landmark,
+      count: overview?.assets?.length || 0,
+      shortcut: "7",
+      colorKey: "networth",
+    },
+  ];
+
+  // Number key shortcuts (1-7) to switch sectors instantly
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput =
+        activeEl instanceof HTMLInputElement ||
+        activeEl instanceof HTMLTextAreaElement ||
+        activeEl?.getAttribute("contenteditable") === "true";
+
+      if (isInput || e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const keyMap: Record<string, LedgerTab> = {
+        "1": "OVERVIEW",
+        "2": "DAILY",
+        "3": "SUBSCRIPTIONS",
+        "4": "INVESTMENTS",
+        "5": "DEBTS",
+        "6": "CASHFLOW",
+        "7": "NETWORTH",
+      };
+
+      const targetTab = keyMap[e.key];
+      if (targetTab) {
+        e.preventDefault();
+        playSound.click();
+        setActiveTab(targetTab);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
     <div className="ledger-container">
       {/* ── HEADER MASTHEAD ── */}
@@ -417,100 +524,65 @@ function LedgerContent() {
         </div>
       </header>
 
-      {/* ── SEGMENTED NAVIGATION TABS ── */}
-      <nav className="ledger-nav-bar" aria-label="Ledger Sections">
+      {/* ── SEGMENTED NAVIGATION TABS (NEUBRUTALIST FLIGHT DECK) ── */}
+      <nav className="ledger-nav-deck" aria-label="Ledger Sections">
+        {/* Terminal Top Rail */}
+        <div className="ledger-deck-rail">
+          <div className="ledger-deck-rail-left">
+            <span className="deck-dot dot-red" />
+            <span className="deck-dot dot-yellow" />
+            <span className="deck-dot dot-green" />
+            <span className="deck-rail-title">FISCAL_OS // SECTOR_ROUTER</span>
+          </div>
+          <div className="ledger-deck-rail-right">
+            <span className="deck-status-pulse" />
+            <span className="deck-active-badge">
+              SECTOR: <b>{activeTab.replace("NETWORTH", "NET WORTH").replace("CASHFLOW", "CASH FLOW")}</b>
+            </span>
+            <span className="deck-count-pill">
+              <b>{totalRecords}</b> ENTRIES
+            </span>
+          </div>
+        </div>
+
+        {/* Tactile Keycap Switchboard */}
         <div className="ledger-nav-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "OVERVIEW"}
-            className={`ledger-nav-tab ${activeTab === "OVERVIEW" ? "active" : ""}`}
-            onClick={() => {
-              playSound.click();
-              setActiveTab("OVERVIEW");
-            }}
-          >
-            <LayoutDashboard size={13} aria-hidden="true" />
-            OVERVIEW
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "DAILY"}
-            className={`ledger-nav-tab ${activeTab === "DAILY" ? "active" : ""}`}
-            onClick={() => {
-              playSound.click();
-              setActiveTab("DAILY");
-            }}
-          >
-            <Receipt size={13} aria-hidden="true" />
-            DAILY EXPENSES ({overview?.dailyExpenses?.length || 0})
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "SUBSCRIPTIONS"}
-            className={`ledger-nav-tab ${activeTab === "SUBSCRIPTIONS" ? "active" : ""}`}
-            onClick={() => {
-              playSound.click();
-              setActiveTab("SUBSCRIPTIONS");
-            }}
-          >
-            <Repeat size={13} aria-hidden="true" />
-            SUBSCRIPTIONS ({overview?.subscriptions.length || 0})
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "INVESTMENTS"}
-            className={`ledger-nav-tab ${activeTab === "INVESTMENTS" ? "active" : ""}`}
-            onClick={() => {
-              playSound.click();
-              setActiveTab("INVESTMENTS");
-            }}
-          >
-            <Coins size={13} aria-hidden="true" />
-            INVESTMENTS ({overview?.investments?.length || 0})
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "DEBTS"}
-            className={`ledger-nav-tab ${activeTab === "DEBTS" ? "active" : ""}`}
-            onClick={() => {
-              playSound.click();
-              setActiveTab("DEBTS");
-            }}
-          >
-            <CreditCard size={13} aria-hidden="true" />
-            DEBT PAYOFF ({overview?.debts.length || 0})
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "CASHFLOW"}
-            className={`ledger-nav-tab ${activeTab === "CASHFLOW" ? "active" : ""}`}
-            onClick={() => {
-              playSound.click();
-              setActiveTab("CASHFLOW");
-            }}
-          >
-            <TrendingUp size={13} aria-hidden="true" />
-            CASH FLOW ({overview?.incomes.length || 0})
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "NETWORTH"}
-            className={`ledger-nav-tab ${activeTab === "NETWORTH" ? "active" : ""}`}
-            onClick={() => {
-              playSound.click();
-              setActiveTab("NETWORTH");
-            }}
-          >
-            <Landmark size={13} aria-hidden="true" />
-            NET WORTH ({overview?.assets.length || 0})
-          </button>
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                data-tab={tab.colorKey}
+                className={`ledger-nav-tab ${isActive ? "active" : ""} tab-${tab.colorKey}`}
+                onClick={() => {
+                  playSound.click();
+                  setActiveTab(tab.id);
+                }}
+              >
+                <span className="tab-key-num" title={`Press ${tab.shortcut} to switch`}>
+                  {tab.shortcut}
+                </span>
+                <span className="tab-icon-box">
+                  <Icon size={13} aria-hidden="true" />
+                </span>
+                <span className="tab-label">{tab.label}</span>
+                {tab.count !== undefined && (
+                  <span className="tab-count-badge">
+                    {tab.count}
+                  </span>
+                )}
+                {isActive && (
+                  <span className="tab-active-pip" aria-hidden="true">
+                    ✦
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </nav>
 

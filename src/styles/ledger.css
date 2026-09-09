@@ -148,47 +148,408 @@
   box-shadow: 3.5px 3.5px 0 #00F0FF;
 }
 
-/* ── 2. SEGMENTED NAVIGATION TABS ── */
+/* ── 2. SEGMENTED NAVIGATION TABS (NEUBRUTALIST FLIGHT DECK) ── */
+.ledger-nav-deck,
 .ledger-nav-bar {
   margin-bottom: 28px;
+  background: var(--card, #FFFDF7);
+  border: 3px solid var(--ink, #0A0A0A);
+  box-shadow: 5px 5px 0 var(--ink, #0A0A0A);
+  overflow: hidden;
+  position: relative;
+}
+
+.ledger-deck-rail {
+  background: var(--ink, #0A0A0A);
+  color: var(--cream, #FFFDF7);
+  padding: 7px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  user-select: none;
+  border-bottom: 2.5px solid var(--ink, #0A0A0A);
+}
+
+.ledger-deck-rail-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.deck-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid #000;
+  display: inline-block;
+}
+
+.deck-dot.dot-red { background: #FF5F56; }
+.deck-dot.dot-yellow { background: #FFBD2E; }
+.deck-dot.dot-green { background: #27C93F; }
+
+.deck-rail-title {
+  margin-left: 6px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  opacity: 0.9;
+  color: var(--cream, #FFFDF7);
+}
+
+.ledger-deck-rail-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.deck-status-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #27C93F;
+  border: 1px solid #000;
+  box-shadow: 0 0 6px #27C93F;
+  animation: deck-live-pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes deck-live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.deck-active-badge {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 1px 7px;
+  color: #FFF;
+}
+
+.deck-active-badge b {
+  color: #FFE600;
+  letter-spacing: 0.05em;
+}
+
+.deck-count-pill {
+  font-size: 10px;
+  background: #FFE600;
+  color: #000;
+  border: 1px solid #000;
+  padding: 1px 7px;
+  font-weight: 900;
 }
 
 .ledger-nav-tabs {
   display: flex;
-  background: rgba(0, 0, 0, 0.05);
-  padding: 4px;
-  border: 1.5px solid var(--ink, #0A0A0A);
-  border-radius: 4px;
-  gap: 4px;
+  align-items: center;
+  background: var(--paper, #F9F8F3);
+  padding: 10px 12px;
+  gap: 8px;
   flex-wrap: wrap;
+  overflow-x: auto;
 }
 
 .ledger-nav-tab {
   font-family: var(--mono, "Space Mono", monospace);
   font-size: 11.5px;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: 0.04em;
-  padding: 8px 16px;
-  border: none;
-  background: transparent;
+  padding: 6px 12px;
+  border: 2px solid var(--ink, #0A0A0A);
+  background: var(--card, #FFFFFF);
   color: var(--ink, #0A0A0A);
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  box-shadow: 2.5px 2.5px 0 var(--ink, #0A0A0A);
   border-radius: 2px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.1s ease;
+  user-select: none;
+  position: relative;
 }
 
 .ledger-nav-tab:hover {
-  background: rgba(255, 255, 255, 0.7);
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--ink, #0A0A0A);
 }
 
-.ledger-nav-tab.active {
-  background: var(--ink, #0A0A0A);
-  color: #FFFFFF;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+.ledger-nav-tab:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1.5px 1.5px 0 var(--ink, #0A0A0A);
+}
+
+.tab-key-num {
+  font-size: 9px;
+  font-weight: 900;
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+  padding: 0 4px;
+  line-height: 1.3;
+  opacity: 0.75;
+}
+
+.tab-icon-box {
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--ink, #0A0A0A);
+  background: rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.1s ease;
+}
+
+.tab-label {
+  line-height: 1;
+}
+
+.tab-count-badge {
+  background: rgba(0, 0, 0, 0.08);
+  border: 1.5px solid var(--ink, #0A0A0A);
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 900;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.4;
+  border-radius: 2px;
+}
+
+.tab-active-pip {
+  font-size: 9px;
+  margin-left: -2px;
+  animation: pip-spin 4s infinite linear;
+}
+
+@keyframes pip-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ── DOMAIN SPECIFIC ACCENTS & ACTIVE STATES ── */
+
+/* OVERVIEW */
+.ledger-nav-tab.tab-overview:hover {
+  background: #FFFCE8;
+}
+.ledger-nav-tab.tab-overview.active {
+  background: var(--ink, #0A0A0A) !important;
+  color: #FFFFFF !important;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink, #0A0A0A);
+  border-width: 2.5px;
+}
+.ledger-nav-tab.tab-overview.active .tab-icon-box {
+  background: #FFE600;
+  color: #0A0A0A;
+}
+.ledger-nav-tab.tab-overview.active .tab-key-num {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #FFF;
+}
+.ledger-nav-tab.tab-overview.active .tab-active-pip {
+  color: #FFE600;
+}
+
+/* DAILY EXPENSES */
+.ledger-nav-tab.tab-daily:hover {
+  background: #FFF9D2;
+}
+.ledger-nav-tab.tab-daily.active {
+  background: #FFE600 !important;
+  color: #0A0A0A !important;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink, #0A0A0A);
+  border-width: 2.5px;
+}
+.ledger-nav-tab.tab-daily.active .tab-icon-box {
+  background: #0A0A0A;
+  color: #FFE600;
+}
+.ledger-nav-tab.tab-daily.active .tab-count-badge {
+  background: #0A0A0A;
+  border-color: #0A0A0A;
+  color: #FFE600;
+}
+.ledger-nav-tab.tab-daily.active .tab-key-num {
+  background: rgba(0, 0, 0, 0.15);
+  border-color: rgba(0, 0, 0, 0.3);
+  color: #000;
+}
+.ledger-nav-tab.tab-daily.active .tab-active-pip {
+  color: #0A0A0A;
+}
+
+/* SUBSCRIPTIONS */
+.ledger-nav-tab.tab-subscriptions:hover {
+  background: #F1EAFF;
+}
+.ledger-nav-tab.tab-subscriptions.active {
+  background: #7C4DFF !important;
+  color: #FFFFFF !important;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink, #0A0A0A);
+  border-width: 2.5px;
+}
+.ledger-nav-tab.tab-subscriptions.active .tab-icon-box {
+  background: #FFFFFF;
+  color: #7C4DFF;
+  border-color: #0A0A0A;
+}
+.ledger-nav-tab.tab-subscriptions.active .tab-count-badge {
+  background: #0A0A0A;
+  border-color: #0A0A0A;
+  color: #FFF;
+}
+.ledger-nav-tab.tab-subscriptions.active .tab-key-num {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #FFF;
+}
+.ledger-nav-tab.tab-subscriptions.active .tab-active-pip {
+  color: #FFE600;
+}
+
+/* INVESTMENTS */
+.ledger-nav-tab.tab-investments:hover {
+  background: #E5FFF4;
+}
+.ledger-nav-tab.tab-investments.active {
+  background: #00E58A !important;
+  color: #0A0A0A !important;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink, #0A0A0A);
+  border-width: 2.5px;
+}
+.ledger-nav-tab.tab-investments.active .tab-icon-box {
+  background: #0A0A0A;
+  color: #00E58A;
+}
+.ledger-nav-tab.tab-investments.active .tab-count-badge {
+  background: #0A0A0A;
+  border-color: #0A0A0A;
+  color: #00E58A;
+}
+.ledger-nav-tab.tab-investments.active .tab-key-num {
+  background: rgba(0, 0, 0, 0.15);
+  border-color: rgba(0, 0, 0, 0.3);
+  color: #000;
+}
+.ledger-nav-tab.tab-investments.active .tab-active-pip {
+  color: #0A0A0A;
+}
+
+/* DEBTS */
+.ledger-nav-tab.tab-debts:hover {
+  background: #FFE5F0;
+}
+.ledger-nav-tab.tab-debts.active {
+  background: #FF007A !important;
+  color: #FFFFFF !important;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink, #0A0A0A);
+  border-width: 2.5px;
+}
+.ledger-nav-tab.tab-debts.active .tab-icon-box {
+  background: #FFFFFF;
+  color: #FF007A;
+  border-color: #0A0A0A;
+}
+.ledger-nav-tab.tab-debts.active .tab-count-badge {
+  background: #0A0A0A;
+  border-color: #0A0A0A;
+  color: #FFF;
+}
+.ledger-nav-tab.tab-debts.active .tab-key-num {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #FFF;
+}
+.ledger-nav-tab.tab-debts.active .tab-active-pip {
+  color: #FFE600;
+}
+
+/* CASH FLOW */
+.ledger-nav-tab.tab-cashflow:hover {
+  background: #E5FDFF;
+}
+.ledger-nav-tab.tab-cashflow.active {
+  background: #00F0FF !important;
+  color: #0A0A0A !important;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink, #0A0A0A);
+  border-width: 2.5px;
+}
+.ledger-nav-tab.tab-cashflow.active .tab-icon-box {
+  background: #0A0A0A;
+  color: #00F0FF;
+}
+.ledger-nav-tab.tab-cashflow.active .tab-count-badge {
+  background: #0A0A0A;
+  border-color: #0A0A0A;
+  color: #00F0FF;
+}
+.ledger-nav-tab.tab-cashflow.active .tab-key-num {
+  background: rgba(0, 0, 0, 0.15);
+  border-color: rgba(0, 0, 0, 0.3);
+  color: #000;
+}
+.ledger-nav-tab.tab-cashflow.active .tab-active-pip {
+  color: #0A0A0A;
+}
+
+/* NET WORTH */
+.ledger-nav-tab.tab-networth:hover {
+  background: #FFF0E5;
+}
+.ledger-nav-tab.tab-networth.active {
+  background: #FF6B00 !important;
+  color: #FFFFFF !important;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink, #0A0A0A);
+  border-width: 2.5px;
+}
+.ledger-nav-tab.tab-networth.active .tab-icon-box {
+  background: #FFFFFF;
+  color: #FF6B00;
+  border-color: #0A0A0A;
+}
+.ledger-nav-tab.tab-networth.active .tab-count-badge {
+  background: #0A0A0A;
+  border-color: #0A0A0A;
+  color: #FFF;
+}
+.ledger-nav-tab.tab-networth.active .tab-key-num {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #FFF;
+}
+.ledger-nav-tab.tab-networth.active .tab-active-pip {
+  color: #FFE600;
+}
+
+@media (max-width: 768px) {
+  .ledger-deck-rail {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .tab-key-num {
+    display: none;
+  }
+  .ledger-nav-tabs {
+    gap: 6px;
+    padding: 8px;
+  }
 }
 
 /* ── 3. KPI METRIC CARDS ── */
