@@ -28,6 +28,7 @@ import { TableBlock } from "./TableBlock";
 import { MathBlock } from "./MathBlock";
 import { StatBlock } from "./StatBlock";
 import { TimelineBlock } from "./TimelineBlock";
+import { HtmlBlock } from "./HtmlBlock";
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 
 interface BlockRendererProps {
@@ -1827,6 +1828,19 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               });
             }
           }}
+          readOnly={readOnly}
+          accentColor={accentColor}
+          theme={theme}
+        />
+      );
+    }
+
+    case "html": {
+      return (
+        <HtmlBlock
+          block={block}
+          onUpdateBlock={onUpdateBlock}
+          onDeleteBlock={onDeleteBlock}
           readOnly={readOnly}
           accentColor={accentColor}
           theme={theme}

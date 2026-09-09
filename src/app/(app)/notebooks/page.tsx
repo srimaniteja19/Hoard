@@ -38,7 +38,7 @@ import {
   setSyncStatus,
 } from "@/lib/notebooks/realtime";
 import { SeedCourse, SeedCourseLesson, SeedCourseModule, CourseCollision } from "@/lib/notebooks/seedData";
-import { Block, computeWordCount, generateBlockId, convertBlocksToMarkdown } from "@/lib/notebooks/blocks";
+import { Block, computeWordCount, generateBlockId, convertBlocksToMarkdown, isHtmlContent, extractHtmlTitle } from "@/lib/notebooks/blocks";
 import { CourseCard } from "@/components/notebooks/CourseCard";
 import { CollisionsPanel } from "@/components/notebooks/CollisionsPanel";
 import { OutlineSidebar } from "@/components/notebooks/OutlineSidebar";
@@ -2293,6 +2293,24 @@ export default function NotebooksPage() {
                       return;
                     }
                   }
+                }
+              }
+
+              if (currentBlocks.length === 0) {
+                const text = e.clipboardData?.getData("text");
+                if (text && isHtmlContent(text)) {
+                  e.preventDefault();
+                  const htmlBlock: Block = {
+                    id: generateBlockId(),
+                    type: "html",
+                    html: text.trim(),
+                    title: extractHtmlTitle(text) || "HTML Document",
+                    viewMode: "preview",
+                    viewport: "responsive",
+                  };
+                  handleUpdateBlocks([htmlBlock]);
+                  playSound.fileIt();
+                  return;
                 }
               }
             }}

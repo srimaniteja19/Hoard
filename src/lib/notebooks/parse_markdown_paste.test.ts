@@ -152,4 +152,74 @@ console.log(answer);
       text: "Step Two",
     });
   });
+
+  it("parses pasted full HTML document with CSS into a single interactive HTML sandbox block", () => {
+    const htmlPaste = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escalation flow & queue management — reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2" rel="stylesheet">
+<style>
+:root {
+  --paper: #EEF0E6;
+  --accent: #FF2D8A;
+}
+body {
+  background: var(--paper);
+  font-family: sans-serif;
+  margin: 0;
+  padding: 24px;
+}
+.escalation-card {
+  border: 2px solid #0A0A0A;
+  box-shadow: 4px 4px 0 #0A0A0A;
+  padding: 16px;
+  background: white;
+}
+</style>
+</head>
+<body>
+  <div class="escalation-card">
+    <h1>Escalation flow & queue management</h1>
+    <p>Tier 3 on-call triage process</p>
+  </div>
+</body>
+</html>`;
+
+    const blocks = parseMarkdownToBlocks(htmlPaste);
+
+    // Must NOT split into 30+ paragraph blocks!
+    expect(blocks.length).toBe(1);
+
+    const htmlBlock = blocks[0];
+    expect(htmlBlock.type).toBe("html");
+    if (htmlBlock.type === "html") {
+      expect(htmlBlock.title).toBe("Escalation flow & queue management — reference");
+      expect(htmlBlock.html).toContain(":root");
+      expect(htmlBlock.html).toContain("--paper: #EEF0E6;");
+      expect(htmlBlock.html).toContain("escalation-card");
+      expect(htmlBlock.viewMode).toBe("preview");
+      expect(htmlBlock.viewport).toBe("responsive");
+    }
+  });
+
+  it("parses html:preview code fence into an interactive html block", () => {
+    const snippet = `\`\`\`html:preview
+<div style="background: #B8F04A; padding: 20px; border: 2px solid black;">
+  <h2>Live Component Preview</h2>
+</div>
+\`\`\``;
+
+    const blocks = parseMarkdownToBlocks(snippet);
+    expect(blocks.length).toBe(1);
+    expect(blocks[0].type).toBe("html");
+    if (blocks[0].type === "html") {
+      expect(blocks[0].html).toContain("Live Component Preview");
+      expect(blocks[0].html).toContain("background: #B8F04A;");
+    }
+  });
 });
+

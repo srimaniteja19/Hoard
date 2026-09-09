@@ -433,6 +433,42 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
 
         {/* Right: Controls (Theme, Copy, Edit) */}
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          {/* If HTML code, allow instant 1-click render into interactive sandbox! */}
+          {(block.lang?.toUpperCase() === "HTML" || block.lang?.toUpperCase() === "HTM") && onUpdateBlock && (
+            <button
+              type="button"
+              onClick={() => {
+                playSound.fileIt();
+                onUpdateBlock({
+                  id: block.id,
+                  type: "html",
+                  html: block.code,
+                  title: block.note || "HTML Document",
+                  viewMode: "preview",
+                  viewport: "responsive",
+                });
+              }}
+              title="Render as live interactive HTML + CSS sandbox"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                background: "#B8F04A",
+                border: "1.5px solid #0A0A0A",
+                color: "#0A0A0A",
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "8.5px",
+                fontWeight: 800,
+                padding: "3px 8px",
+                cursor: "pointer",
+                borderRadius: "2px",
+                boxShadow: "1px 1px 0 #0A0A0A",
+              }}
+            >
+              <span>👁️ RENDER WITH CSS</span>
+            </button>
+          )}
+
           {/* Theme Toggle Button */}
           <button
             type="button"

@@ -97,6 +97,16 @@ export const TimelineBlockSchema = z.object({
   items: z.array(TimelineItemSchema),
 });
 
+export const HtmlBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal("html"),
+  html: z.string(),
+  title: z.string().optional(),
+  viewport: z.enum(["responsive", "desktop", "tablet", "mobile"]).optional(),
+  viewMode: z.enum(["preview", "source", "split"]).optional(),
+  height: z.number().optional(),
+});
+
 export const BlockSchema = z.discriminatedUnion("type", [
   z.object({
     id: z.string(),
@@ -247,6 +257,7 @@ export const BlockSchema = z.discriminatedUnion("type", [
   MathBlockSchema,
   StatBlockSchema,
   TimelineBlockSchema,
+  HtmlBlockSchema,
 ]);
 
 export type Block = z.infer<typeof BlockSchema>;
@@ -338,6 +349,15 @@ export function computeWordCount(blocks: Block[]): number {
           textAccum += ` ${item.title} ${item.dateOrPhase || ""} ${item.description || ""}`;
         }
         break;
+      case "html": {
+        if (b.title) textAccum += " " + b.title;
+        const stripped = b.html
+          .replace(/<style[\s\S]*?<\/style>/gi, " ")
+          .replace(/<script[\s\S]*?<\/script>/gi, " ")
+          .replace(/<[^>]+>/g, " ");
+        textAccum += " " + stripped;
+        break;
+      }
     }
   }
 
@@ -376,6 +396,13 @@ export function blocksToChunks(blocks: Block[]): { blockId: string; text: string
       t = `${b.label}: ${b.value}${b.change ? ` (${b.change})` : ""}${b.note ? ` - ${b.note}` : ""}`.trim();
     } else if (b.type === "timeline") {
       t = b.items.map((i) => `${i.title} (${i.status}): ${i.description || ""}`).join("; ").trim();
+    } else if (b.type === "html") {
+      const stripped = b.html
+        .replace(/<style[\s\S]*?<\/style>/gi, " ")
+        .replace(/<script[\s\S]*?<\/script>/gi, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ");
+      t = `${b.title ? `${b.title}: ` : ""}${stripped}`.trim();
     }
 
     if (t.length > 25) {
@@ -501,10 +528,65 @@ export function convertBlocksToMarkdown(title: string, blocks: Block[]): string 
         lines.push("");
         break;
       }
+      case "html": {
+        if (b.title) lines.push(`### ${b.title}\n`);
+        lines.push(`\`\`\`html:preview\n${b.html}\n\`\`\`\n`);
+        break;
+      }
     }
   }
 
   return lines.join("\n");
+}
+
+/**
+ * Extracts a title from an HTML string (from <title>, <h1>, or comments)
+ */
+export function extractHtmlTitle(html: string): string | undefined {
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  if (titleMatch && titleMatch[1].trim()) {
+    return titleMatch[1].trim();
+  }
+  const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  if (h1Match && h1Match[1].trim()) {
+    return h1Match[1].replace(/<[^>]+>/g, "").trim();
+  }
+  return undefined;
+}
+
+/**
+ * Detects if a string is raw HTML content (full document or styled HTML snippet)
+ */
+export function isHtmlContent(text: string): boolean {
+  if (!text || typeof text !== "string") return false;
+  const trimmed = text.trim();
+  if (trimmed.length < 7) return false;
+
+  // 1. Full document doctype or <html> tag
+  if (/^<!DOCTYPE\s+html/i.test(trimmed) || /^<html[\s>]/i.test(trimmed)) {
+    return true;
+  }
+
+  // 2. Starts with <head>, <style>, or <body>
+  if (/^<(head|style|body)[\s>]/i.test(trimmed)) {
+    return true;
+  }
+
+  // 3. Starts with an HTML tag and has style tags or multiple semantic tags
+  if (trimmed.startsWith("<") && (trimmed.endsWith(">") || trimmed.includes("</"))) {
+    const hasStyleTag = /<style[\s\S]*?>/i.test(trimmed);
+    const tagMatches = trimmed.match(/<\/?([a-z][a-z0-9]*)\b[^>]*>/gi);
+    if (hasStyleTag || (tagMatches && tagMatches.length >= 4)) {
+      return true;
+    }
+  }
+
+  // 4. Contains full HTML document anywhere in text
+  if (/<html[\s\S]*?<\/html>/i.test(trimmed) || /<!DOCTYPE\s+html[\s\S]*?>/i.test(trimmed)) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -514,6 +596,21 @@ export function convertBlocksToMarkdown(title: string, blocks: Block[]): string 
  * URLs/embeds, and regular text paragraphs.
  */
 export function parseMarkdownToBlocks(markdown: string): Block[] {
+  // Check if the entire markdown text is an HTML document or rich HTML snippet
+  if (isHtmlContent(markdown)) {
+    const title = extractHtmlTitle(markdown);
+    return [
+      {
+        id: generateBlockId(),
+        type: "html",
+        html: markdown.trim(),
+        title: title || "HTML Document",
+        viewMode: "preview",
+        viewport: "responsive",
+      },
+    ];
+  }
+
   const lines = markdown.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   const blocks: Block[] = [];
   let i = 0;
@@ -528,9 +625,35 @@ export function parseMarkdownToBlocks(markdown: string): Block[] {
       continue;
     }
 
+    // 0. Embedded HTML document in middle of text:
+    if (/^<!DOCTYPE\s+html/i.test(trimmed) || /^<html[\s>]/i.test(trimmed) || /^<head[\s>]/i.test(trimmed)) {
+      const htmlLines: string[] = [rawLine];
+      i++;
+      while (i < lines.length) {
+        htmlLines.push(lines[i]);
+        if (/<\/html>/i.test(lines[i])) {
+          i++;
+          break;
+        }
+        i++;
+      }
+      const fullHtml = htmlLines.join("\n");
+      blocks.push({
+        id: generateBlockId(),
+        type: "html",
+        html: fullHtml,
+        title: extractHtmlTitle(fullHtml) || "HTML Document",
+        viewMode: "preview",
+        viewport: "responsive",
+      });
+      continue;
+    }
+
     // 1. Code Fence: ```
     if (trimmed.startsWith("```")) {
-      const lang = trimmed.slice(3).trim().toUpperCase() || "PYTHON";
+      const fenceTag = trimmed.slice(3).trim();
+      const isHtmlPreview = /^html:(preview|render)$/i.test(fenceTag) || /^html-(preview|render)$/i.test(fenceTag);
+      const lang = fenceTag.toUpperCase() || "PYTHON";
       const codeLines: string[] = [];
       i++;
       while (i < lines.length && !lines[i].trim().startsWith("```")) {
@@ -540,11 +663,23 @@ export function parseMarkdownToBlocks(markdown: string): Block[] {
       if (i < lines.length && lines[i].trim().startsWith("```")) {
         i++;
       }
+      const code = codeLines.join("\n");
+      if (isHtmlPreview) {
+        blocks.push({
+          id: generateBlockId(),
+          type: "html",
+          html: code,
+          title: extractHtmlTitle(code) || "HTML Document",
+          viewMode: "preview",
+          viewport: "responsive",
+        });
+        continue;
+      }
       blocks.push({
         id: generateBlockId(),
         type: "code",
         lang,
-        code: codeLines.join("\n"),
+        code,
         note: "SNIPPET",
       });
       continue;

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Block, generateBlockId, parseMarkdownToBlocks } from "@/lib/notebooks/blocks";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { Block, generateBlockId, parseMarkdownToBlocks, isHtmlContent, extractHtmlTitle } from "@/lib/notebooks/blocks";
 import { BlockRenderer } from "./blocks/BlockRenderer";
 import { InlineEditorHandle } from "./blocks/InlineTextEditor";
 import { FloatingSelectionToolbar } from "./FloatingSelectionToolbar";
@@ -179,6 +179,7 @@ const SLASH_MENU_ITEMS: { type: string; glyph: string; label: string; shortcut: 
   { type: "pdf", glyph: "📄", label: "PDF Document Viewer", shortcut: "/pdf" },
   { type: "audio", glyph: "🎵", label: "Audio / Spotify Player", shortcut: "/audio" },
   { type: "diagram", glyph: "📐", label: "Architecture / Mermaid Diagram", shortcut: "/diagram" },
+  { type: "html", glyph: "</>", label: "HTML & CSS Sandbox (Live Render)", shortcut: "/html" },
 ];
 
 export const BlockEditor: React.FC<BlockEditorProps> = ({
@@ -574,6 +575,18 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       case "toggle":
         transformed = { id: baseId, type: "toggle", summary: props.summary || "Toggle Title", body: "" };
         break;
+      case "html":
+        transformed = {
+          id: baseId,
+          type: "html",
+          html:
+            props.html ||
+            `<div style="font-family: system-ui, sans-serif; padding: 24px; text-align: center;">\n  <h2 style="color: #7B5CF0; margin-bottom: 8px;">HTML + CSS Sandbox</h2>\n  <p style="color: #666; font-size: 14px;">Render custom HTML, CSS animations, and layout directly inside your notebook.</p>\n</div>`,
+          title: props.title || "HTML Sandbox",
+          viewMode: "preview",
+          viewport: "responsive",
+        };
+        break;
       case "embed":
       case "youtube":
       case "pdf":
@@ -748,6 +761,16 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       case "toggle":
         newBlock = { id: generateBlockId(), type: "toggle", summary: "Toggle heading", body: "" };
         break;
+      case "html":
+        newBlock = {
+          id: generateBlockId(),
+          type: "html",
+          html: `<div style="font-family: system-ui, sans-serif; padding: 24px; text-align: center;">\n  <h2 style="color: #7B5CF0; margin-bottom: 8px;">HTML + CSS Sandbox</h2>\n  <p style="color: #666; font-size: 14px;">Render custom HTML, CSS animations, and layout directly inside your notebook.</p>\n</div>`,
+          title: "HTML Sandbox",
+          viewMode: "preview",
+          viewport: "responsive",
+        };
+        break;
       case "todo":
         newBlock = { id: generateBlockId(), type: "todo", items: [{ text: "", done: false }] };
         break;
@@ -904,6 +927,40 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     },
     [blocks, commitBlocks]
   );
+
+  // Detect if consecutive blocks look like a split raw HTML document (e.g. pasted before HTML support)
+  const detectedHtmlBlocks = useMemo(() => {
+    if (blocks.length < 2) return null;
+    for (let i = 0; i < blocks.length; i++) {
+      const b = blocks[i];
+      if (b.type === "paragraph" && /^<!DOCTYPE\s+html/i.test(b.text.trim())) {
+        const htmlLines: string[] = [b.text];
+        let j = i + 1;
+        while (j < blocks.length) {
+          const nextB = blocks[j];
+          if (nextB.type === "paragraph") {
+            htmlLines.push(nextB.text);
+            j++;
+          } else if (nextB.type === "heading" || nextB.type === "bullet") {
+            htmlLines.push((nextB as any).text);
+            j++;
+          } else {
+            break;
+          }
+        }
+        if (htmlLines.length >= 2) {
+          const merged = htmlLines.join("\n");
+          return {
+            startIndex: i,
+            count: htmlLines.length,
+            mergedHtml: merged,
+            title: extractHtmlTitle(merged) || "Rendered HTML Document",
+          };
+        }
+      }
+    }
+    return null;
+  }, [blocks]);
 
   const getTargetBlockIndex = useCallback(
     (target?: EventTarget | null): number => {
@@ -1076,6 +1133,27 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       return;
     }
 
+    // HTML document or rich snippet paste:
+    // When raw HTML (e.g. <!DOCTYPE html>, <html>, <head>, <style>, or styled elements) is pasted,
+    // render it directly into a single interactive HTML sandbox block with CSS instead of breaking it into
+    // hundreds of plain paragraph blocks!
+    if (text && isHtmlContent(text)) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const htmlBlock: Block = {
+        id: generateBlockId(),
+        type: "html",
+        html: text.trim(),
+        title: extractHtmlTitle(text) || "HTML Document",
+        viewMode: "preview",
+        viewport: "responsive",
+      };
+      insertBlockAtTarget(htmlBlock, targetIdx);
+      playSound.fileIt();
+      return;
+    }
+
     // Markdown / multi-line note paste:
     // If the pasted text contains newlines, or begins with markdown block formatting,
     // parse it into proper typed blocks instead of dumping raw markdown into one single textarea.
@@ -1201,6 +1279,97 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         container lets normal CSS margin collapsing do its job.
       */}
       <div>
+        {/* Smart Raw HTML Merge Banner for pre-existing split HTML blocks */}
+        {detectedHtmlBlocks && (
+          <div
+            style={{
+              margin: "8px 0 20px",
+              padding: "14px 18px",
+              background: isInk ? "#1A1D24" : "#FFF9C4",
+              border: `2.5px solid ${tokens.borderPrimary}`,
+              boxShadow: tokens.boxShadow,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "14px",
+              flexWrap: "wrap",
+              borderRadius: "3px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "20px" }}>⚡</span>
+              <div>
+                <div
+                  style={{
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    letterSpacing: "0.08em",
+                    color: tokens.textPrimary,
+                  }}
+                >
+                  RAW HTML DOCUMENT DETECTED ({detectedHtmlBlocks.count} BLOCKS)
+                </div>
+                <div
+                  style={{
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "10px",
+                    opacity: 0.75,
+                    color: tokens.textSecondary,
+                    marginTop: "2px",
+                  }}
+                >
+                  Found split HTML markup on this page{detectedHtmlBlocks.title ? ` ("${detectedHtmlBlocks.title}")` : ""}. Click to merge and render as a live interactive CSS sandbox!
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                playSound.fileIt();
+                const newBlock: Block = {
+                  id: generateBlockId(),
+                  type: "html",
+                  html: detectedHtmlBlocks.mergedHtml,
+                  title: detectedHtmlBlocks.title || "Rendered HTML Document",
+                  viewMode: "preview",
+                  viewport: "responsive",
+                };
+                const nextBlocks = [...blocks];
+                nextBlocks.splice(detectedHtmlBlocks.startIndex, detectedHtmlBlocks.count, newBlock);
+                commitBlocks(nextBlocks);
+              }}
+              style={{
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "11px",
+                fontWeight: 800,
+                letterSpacing: "0.08em",
+                padding: "8px 16px",
+                background: "#B8F04A",
+                color: "#0A0A0A",
+                border: "2px solid #0A0A0A",
+                boxShadow: "3px 3px 0 #0A0A0A",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.1s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translate(-1px, -1px)";
+                e.currentTarget.style.boxShadow = "4px 4px 0 #0A0A0A";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "3px 3px 0 #0A0A0A";
+              }}
+            >
+              <span>⚡ MERGE & RENDER WITH CSS</span>
+            </button>
+          </div>
+        )}
+
         {blocks.map((block, idx) => {
           const isHovered = hoveredBlockId === block.id;
 

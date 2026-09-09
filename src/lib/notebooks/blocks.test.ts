@@ -5,6 +5,8 @@ import {
   blocksToChunks,
   BlockSchema,
   Block,
+  isHtmlContent,
+  extractHtmlTitle,
 } from "./blocks";
 
 describe("Notebooks Block Contract & Logic", () => {
@@ -83,6 +85,14 @@ describe("Notebooks Block Contract & Logic", () => {
         title: "JVM Architecture",
         code: "graph TD\n  A[Classloader] --> B[Memory Areas]\n  B --> C[Execution Engine]",
         caption: "High level JVM topology",
+      },
+      {
+        id: "19",
+        type: "html",
+        title: "Interactive Widget",
+        html: "<!DOCTYPE html><html><body><h1>Hello World</h1></body></html>",
+        viewMode: "preview",
+        viewport: "responsive",
       },
     ];
 
@@ -240,5 +250,38 @@ describe("Notebooks Block Contract & Logic", () => {
     expect(md).toContain("[Linux Repository](https://github.com/torvalds/linux)");
     expect(md).toContain("```mermaid\ngraph TD\n  A --> B\n```");
     expect(md).toContain("*Data Pipeline*");
+  });
+
+  it("detects raw HTML documents, extracts title, and serializes html blocks", () => {
+    const fullHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Escalation flow & queue management — reference</title>
+  <style>:root { --paper: #EEF0E6; }</style>
+</head>
+<body>
+  <div>Content</div>
+</body>
+</html>`;
+
+    expect(isHtmlContent(fullHtml)).toBe(true);
+    expect(isHtmlContent("Hello world just plain text")).toBe(false);
+    expect(isHtmlContent("# Just a markdown heading")).toBe(false);
+
+    expect(extractHtmlTitle(fullHtml)).toBe("Escalation flow & queue management — reference");
+
+    const htmlBlock: Block = {
+      id: "html-1",
+      type: "html",
+      title: "Escalation flow & queue management",
+      html: fullHtml,
+    };
+
+    const words = computeWordCount([htmlBlock]);
+    expect(words).toBeGreaterThan(0);
+
+    const chunks = blocksToChunks([htmlBlock]);
+    expect(chunks.length).toBe(1);
+    expect(chunks[0].text).toContain("Content");
   });
 });
