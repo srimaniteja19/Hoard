@@ -49,18 +49,23 @@ export const InvestmentCompoundingChart: React.FC<InvestmentCompoundingChartProp
     projectionData.find((d) => d.years === hoveredYear) || projectionData[3] || projectionData[0];
 
   return (
-    <div
-      style={{
-        background: "var(--card, #FFFFFF)",
-        border: "2px solid var(--ink, #0A0A0A)",
-        boxShadow: "4px 4px 0 var(--ink, #0A0A0A)",
-        padding: "22px 24px",
-        borderRadius: "4px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "20px",
-      }}
-    >
+    <div className="flight-deck-panel">
+      {/* ── Terminal Flight Rail ── */}
+      <div className="flight-deck-rail">
+        <div className="flight-deck-rail-left">
+          <span className="deck-dot dot-red" />
+          <span className="deck-dot dot-yellow" />
+          <span className="deck-dot dot-green" />
+          <span className="flight-deck-rail-title">// COMPOUND_WEALTH_PROJECTION</span>
+        </div>
+        <div className="flight-deck-rail-right">
+          <span className="deck-count-pill" style={{ fontSize: "9.5px", padding: "1px 6px" }}>
+            {returnRate}% CAGR
+          </span>
+        </div>
+      </div>
+
+      <div className="flight-deck-content">
       {/* Header with Title and CAGR Slider */}
       <div
         style={{
@@ -335,6 +340,7 @@ export const InvestmentCompoundingChart: React.FC<InvestmentCompoundingChartProp
           Investing <b>{formatCurrency(monthlyInvestment, 0, currency)}/mo</b> at {returnRate}% CAGR turns into{" "}
           <b style={{ color: "#166534" }}>{formatCurrency(projectionData[3]?.projectedWealth || 0, 0, currency)}</b> in 10 years.
         </div>
+      </div>
       </div>
     </div>
   );

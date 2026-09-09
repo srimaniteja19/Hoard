@@ -16,6 +16,9 @@ import {
   Flame,
   Zap,
   Receipt,
+  Landmark,
+  Repeat,
+  ShieldCheck,
 } from "lucide-react";
 import { SubscriptionBreakdownChart } from "./charts/SubscriptionBreakdownChart";
 import { CashFlowVelocityWaterfall } from "./charts/CashFlowVelocityWaterfall";
@@ -61,137 +64,323 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
       {/* ── REAL-TIME MARKET TICKER TAPE ── */}
       <MarketTickerTape onOpenOracle={onOpenMarketOracle} />
 
-      {/* ── TOP KPI METRIC CARDS ── */}
+      {/* ── TOP KPI METRIC CARDS (NEUBRUTALIST COMMAND MATRIX) ── */}
       <div className="ledger-kpi-grid">
-        {/* Net Worth */}
+        {/* 1. Net Worth */}
         <div
           className="ledger-kpi-card"
-          style={{ "--kpi-accent": "var(--neo-cyan, #00F0FF)", cursor: "pointer" } as React.CSSProperties}
+          style={
+            {
+              "--kpi-accent": "#00F0FF",
+              "--kpi-icon-bg": "#E0F2FE",
+              "--kpi-icon-fg": "#0369A1",
+              cursor: "pointer",
+            } as React.CSSProperties
+          }
           onClick={() => {
             playSound.click();
             onNavigateTab("NETWORTH");
           }}
+          title="Click to inspect Net Worth & Asset register"
         >
-          <div className="ledger-kpi-label">TOTAL NET WORTH</div>
-          <div
-            className="ledger-kpi-value"
-            style={{ color: netWorth.netWorth >= 0 ? "var(--ink, #0A0A0A)" : "#DC2626" }}
-          >
-            {formatCurrency(netWorth.netWorth, 2, currency)}
+          <div className="kpi-top-bar">
+            <div className="kpi-tag-group">
+              <span className="kpi-icon-box">
+                <Landmark size={13} strokeWidth={2.5} aria-hidden="true" />
+              </span>
+              <span className="kpi-sector-name">NET WORTH</span>
+            </div>
+            <span
+              className={`kpi-status-chip ${
+                netWorth.netWorth >= 0 ? "chip-positive" : "chip-negative"
+              }`}
+            >
+              {netWorth.netWorth >= 0 ? "SOLVENT" : "DEFICIT"}
+            </span>
           </div>
-          <div className="ledger-kpi-sub">
-            {formatCurrency(netWorth.totalAssets, 0, currency)} Assets − {formatCurrency(netWorth.totalLiabilities, 0, currency)} Debt
+
+          <div className="kpi-main-readout">
+            <div
+              className="ledger-kpi-value"
+              style={{
+                color: netWorth.netWorth >= 0 ? "var(--ink, #0A0A0A)" : "#DC2626",
+              }}
+            >
+              {formatCurrency(netWorth.netWorth, 2, currency)}
+            </div>
+          </div>
+
+          <div className="kpi-bottom-strip">
+            <span className="kpi-sub-text">
+              {formatCurrency(netWorth.totalAssets, 0, currency)} Assets − {formatCurrency(netWorth.totalLiabilities, 0, currency)} Debt
+            </span>
+            <span className="kpi-nav-cue">VAULT →</span>
           </div>
         </div>
 
-        {/* Safe to Spend Today (Dues · Daily Tracker) */}
+        {/* 2. Safe to Spend Today */}
         {metrics.dailyMetrics && (
           <div
             className="ledger-kpi-card"
             style={
               {
                 "--kpi-accent": metrics.dailyMetrics.isOverBudgetToday
-                  ? "var(--neo-red, #EF4444)"
+                  ? "#FF007A"
                   : "#B8F04A",
+                "--kpi-icon-bg": metrics.dailyMetrics.isOverBudgetToday
+                  ? "#FFE5F0"
+                  : "#F4FBD0",
+                "--kpi-icon-fg": metrics.dailyMetrics.isOverBudgetToday
+                  ? "#BE123C"
+                  : "#365314",
                 cursor: "pointer",
-                borderLeft: `4px solid ${
-                  metrics.dailyMetrics.isOverBudgetToday ? "#EF4444" : "#16A34A"
-                }`,
               } as React.CSSProperties
             }
             onClick={() => {
               playSound.click();
               onNavigateTab("DAILY");
             }}
+            title="Click to open Daily Expenses speed logger"
           >
-            <div className="ledger-kpi-label" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <Receipt size={12} />
-              SAFE TO SPEND TODAY
+            <div className="kpi-top-bar">
+              <div className="kpi-tag-group">
+                <span className="kpi-icon-box">
+                  <Receipt size={13} strokeWidth={2.5} aria-hidden="true" />
+                </span>
+                <span className="kpi-sector-name">SAFE TO SPEND</span>
+              </div>
+              <span
+                className={`kpi-status-chip ${
+                  metrics.dailyMetrics.isOverBudgetToday
+                    ? "chip-negative"
+                    : "chip-accent"
+                }`}
+              >
+                {metrics.dailyMetrics.isOverBudgetToday ? "DEFICIT" : "HEADROOM"}
+              </span>
             </div>
-            <div
-              className="ledger-kpi-value"
-              style={{
-                color: metrics.dailyMetrics.isOverBudgetToday ? "#DC2626" : "#15803D",
-              }}
-            >
-              ${Math.abs(metrics.dailyMetrics.safeToSpendToday).toFixed(0)}
+
+            <div className="kpi-main-readout">
+              <div
+                className="ledger-kpi-value"
+                style={{
+                  color: metrics.dailyMetrics.isOverBudgetToday ? "#DC2626" : "#15803D",
+                }}
+              >
+                ${Math.abs(metrics.dailyMetrics.safeToSpendToday).toFixed(0)}
+              </div>
             </div>
-            <div className="ledger-kpi-sub">
-              {metrics.dailyMetrics.isOverBudgetToday
-                ? `Deficit by $${Math.abs(metrics.dailyMetrics.safeToSpendToday).toFixed(0)} today`
-                : `Base: $${metrics.dailyMetrics.baseDailyAllowance.toFixed(0)}/day • ${metrics.dailyMetrics.daysRemaining} days left`}
+
+            <div className="kpi-bottom-strip">
+              <span className="kpi-sub-text">
+                {metrics.dailyMetrics.isOverBudgetToday
+                  ? `Exceeded by $${Math.abs(metrics.dailyMetrics.safeToSpendToday).toFixed(0)} today`
+                  : `Base: $${metrics.dailyMetrics.baseDailyAllowance.toFixed(0)}/day • ${metrics.dailyMetrics.daysRemaining}d left`}
+              </span>
+              <span className="kpi-nav-cue">DUES →</span>
             </div>
           </div>
         )}
 
-        {/* Monthly Fixed Burn */}
+        {/* 3. Monthly Recurring Burn */}
         <div
           className="ledger-kpi-card"
-          style={{ "--kpi-accent": "var(--neo-yellow, #FFE600)", cursor: "pointer" } as React.CSSProperties}
+          style={
+            {
+              "--kpi-accent": "#7C4DFF",
+              "--kpi-icon-bg": "#F1EAFF",
+              "--kpi-icon-fg": "#6B21A8",
+              cursor: "pointer",
+            } as React.CSSProperties
+          }
           onClick={() => {
             playSound.click();
             onNavigateTab("SUBSCRIPTIONS");
           }}
+          title="Click to audit recurring subscriptions"
         >
-          <div className="ledger-kpi-label">MONTHLY RECURRING BURN</div>
-          <div className="ledger-kpi-value">{formatCurrency(subscriptionMetrics.monthlyTotal, 2, currency)}</div>
-          <div className="ledger-kpi-sub">
-            {subscriptionMetrics.activeCount} active subscriptions ({formatCurrency(subscriptionMetrics.yearlyTotal, 0, currency)}/yr)
+          <div className="kpi-top-bar">
+            <div className="kpi-tag-group">
+              <span className="kpi-icon-box">
+                <Repeat size={13} strokeWidth={2.5} aria-hidden="true" />
+              </span>
+              <span className="kpi-sector-name">RECURRING BURN</span>
+            </div>
+            <span className="kpi-status-chip chip-neutral">
+              {subscriptionMetrics.activeCount} SERVICES
+            </span>
+          </div>
+
+          <div className="kpi-main-readout">
+            <div className="ledger-kpi-value">
+              {formatCurrency(subscriptionMetrics.monthlyTotal, 2, currency)}
+            </div>
+          </div>
+
+          <div className="kpi-bottom-strip">
+            <span className="kpi-sub-text">
+              {formatCurrency(subscriptionMetrics.yearlyTotal, 0, currency)}/yr committed
+            </span>
+            <span className="kpi-nav-cue">SUBS →</span>
           </div>
         </div>
 
-        {/* Recurring Investments / SIPs */}
+        {/* 4. Recurring Investments / SIPs */}
         <div
           className="ledger-kpi-card"
-          style={{ "--kpi-accent": "#F59E0B", cursor: "pointer" } as React.CSSProperties}
+          style={
+            {
+              "--kpi-accent": "#00E58A",
+              "--kpi-icon-bg": "#E5FFF4",
+              "--kpi-icon-fg": "#047857",
+              cursor: "pointer",
+            } as React.CSSProperties
+          }
           onClick={() => {
             playSound.click();
             onNavigateTab("INVESTMENTS");
           }}
+          title="Click to manage Recurring SIP & DCA allocations"
         >
-          <div className="ledger-kpi-label">MONTHLY RECURRING INVESTMENTS</div>
-          <div className="ledger-kpi-value" style={{ color: "#166534" }}>
-            {formatCurrency(investmentMetrics?.monthlyTotal || 0, 2, investmentCurrency)}
+          <div className="kpi-top-bar">
+            <div className="kpi-tag-group">
+              <span className="kpi-icon-box">
+                <Coins size={13} strokeWidth={2.5} aria-hidden="true" />
+              </span>
+              <span className="kpi-sector-name">INVESTMENTS</span>
+            </div>
+            <span className="kpi-status-chip chip-positive">
+              {investmentMetrics?.weightedReturnRatePct || 14.6}% CAGR
+            </span>
           </div>
-          <div className="ledger-kpi-sub">
-            {investmentMetrics?.monthlyTotalUsd && investmentCurrency !== "USD"
-              ? `~${formatCurrency(investmentMetrics.monthlyTotalUsd, 0, "USD")}/mo • `
-              : ""}
-            {investments.length} SIPs/DCAs • {investmentMetrics?.weightedReturnRatePct || 8}% Avg CAGR
+
+          <div className="kpi-main-readout">
+            <div className="ledger-kpi-value" style={{ color: "#15803D" }}>
+              {formatCurrency(investmentMetrics?.monthlyTotal || 0, 2, investmentCurrency)}
+            </div>
+          </div>
+
+          <div className="kpi-bottom-strip">
+            <span className="kpi-sub-text">
+              {investmentMetrics?.monthlyTotalUsd && investmentCurrency !== "USD"
+                ? `~${formatCurrency(investmentMetrics.monthlyTotalUsd, 0, "USD")}/mo • `
+                : ""}
+              {investments.length} SIPs/DCAs
+            </span>
+            <span className="kpi-nav-cue">INVEST →</span>
           </div>
         </div>
 
-        {/* Total Debt & Horizon */}
+        {/* 5. Total Debt Liabilities */}
         <div
           className="ledger-kpi-card"
-          style={{ "--kpi-accent": "var(--neo-red, #EF4444)", cursor: "pointer" } as React.CSSProperties}
+          style={
+            {
+              "--kpi-accent": "#FF007A",
+              "--kpi-icon-bg": "#FFE5F0",
+              "--kpi-icon-fg": "#BE123C",
+              cursor: "pointer",
+            } as React.CSSProperties
+          }
           onClick={() => {
             playSound.click();
             onNavigateTab("DEBTS");
           }}
+          title="Click to launch Debt Payoff Simulator"
         >
-          <div className="ledger-kpi-label">TOTAL DEBT LIABILITIES</div>
-          <div className="ledger-kpi-value">{formatCurrency(netWorth.totalLiabilities, 0, currency)}</div>
-          <div className="ledger-kpi-sub">
-            {debts.filter((d) => !d.isPaidOff).length > 0
-              ? `Debt-Free: ${avalanchePayoff.debtFreeDate} (${avalanchePayoff.monthsToPayoff} mos)`
-              : "100% Debt-Free"}
+          <div className="kpi-top-bar">
+            <div className="kpi-tag-group">
+              <span className="kpi-icon-box">
+                <CreditCard size={13} strokeWidth={2.5} aria-hidden="true" />
+              </span>
+              <span className="kpi-sector-name">TOTAL DEBT</span>
+            </div>
+            <span
+              className={`kpi-status-chip ${
+                debts.filter((d) => !d.isPaidOff).length > 0
+                  ? "chip-negative"
+                  : "chip-positive"
+              }`}
+            >
+              {debts.filter((d) => !d.isPaidOff).length > 0
+                ? `${avalanchePayoff.monthsToPayoff} MOS`
+                : "DEBT FREE"}
+            </span>
+          </div>
+
+          <div className="kpi-main-readout">
+            <div
+              className="ledger-kpi-value"
+              style={{
+                color: debts.filter((d) => !d.isPaidOff).length > 0 ? "#DC2626" : "#15803D",
+              }}
+            >
+              {formatCurrency(netWorth.totalLiabilities, 0, currency)}
+            </div>
+          </div>
+
+          <div className="kpi-bottom-strip">
+            <span className="kpi-sub-text">
+              {debts.filter((d) => !d.isPaidOff).length > 0
+                ? `Debt-Free: ${avalanchePayoff.debtFreeDate}`
+                : "100% Debt-Free"}
+            </span>
+            <span className="kpi-nav-cue">DEBTS →</span>
           </div>
         </div>
 
-        {/* Liquid Runway */}
+        {/* 6. Liquid Runway Reserve */}
         <div
           className="ledger-kpi-card"
-          style={{ "--kpi-accent": "var(--neo-green, #10B981)", cursor: "pointer" } as React.CSSProperties}
+          style={
+            {
+              "--kpi-accent": "#00F0FF",
+              "--kpi-icon-bg": "#E5FDFF",
+              "--kpi-icon-fg": "#0369A1",
+              cursor: "pointer",
+            } as React.CSSProperties
+          }
           onClick={() => {
             playSound.click();
             onNavigateTab("CASHFLOW");
           }}
+          title="Click to inspect Cash Flow & Emergency Runway"
         >
-          <div className="ledger-kpi-label">LIQUID EMERGENCY RUNWAY</div>
-          <div className="ledger-kpi-value">{cashFlow.runwayMonths.toFixed(1)} MOS</div>
-          <div className="ledger-kpi-sub">
-            {formatCurrency(cashFlow.liquidCashTotal, 0, currency)} cash ÷ {formatCurrency(cashFlow.totalFixedOutflow, 0, currency)}/mo burn
+          <div className="kpi-top-bar">
+            <div className="kpi-tag-group">
+              <span className="kpi-icon-box">
+                <ShieldCheck size={13} strokeWidth={2.5} aria-hidden="true" />
+              </span>
+              <span className="kpi-sector-name">RUNWAY RESERVE</span>
+            </div>
+            <span
+              className={`kpi-status-chip ${
+                cashFlow.runwayMonths >= 6
+                  ? "chip-positive"
+                  : cashFlow.runwayMonths >= 3
+                  ? "chip-accent"
+                  : "chip-negative"
+              }`}
+            >
+              {cashFlow.runwayMonths >= 6
+                ? "STRONG"
+                : cashFlow.runwayMonths >= 3
+                ? "STABLE"
+                : "LOW BUFFER"}
+            </span>
+          </div>
+
+          <div className="kpi-main-readout">
+            <div className="ledger-kpi-value">
+              {cashFlow.runwayMonths.toFixed(1)} MOS
+            </div>
+          </div>
+
+          <div className="kpi-bottom-strip">
+            <span className="kpi-sub-text">
+              {formatCurrency(cashFlow.liquidCashTotal, 0, currency)} cash ÷ {formatCurrency(cashFlow.totalFixedOutflow, 0, currency)}/mo burn
+            </span>
+            <span className="kpi-nav-cue">CASH →</span>
           </div>
         </div>
       </div>
@@ -404,182 +593,138 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
       </div>
 
       {/* ── INSTITUTIONAL WEALTH TOOLS & SIMULATORS ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "12px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
         {/* Card 1: FIRE Freedom Clock */}
         <div
+          className="wealth-tool-card"
           onClick={() => {
             playSound.click();
             onOpenFireWarRoom();
           }}
-          style={{
-            background: "var(--card, #FFFFFF)",
-            border: "2px solid var(--ink, #0A0A0A)",
-            boxShadow: "3.5px 3.5px 0 var(--ink, #0A0A0A)",
-            padding: "16px 18px",
-            borderRadius: "3px",
-            cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            gap: "10px",
-            transition: "transform 0.1s ease",
-          }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 900, color: "#FF6B00", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "4px" }}>
-              <Flame size={12} color="#FF6B00" />
+          <div className="wealth-tool-header">
+            <span className="wealth-tool-tag" style={{ color: "#FF6B00" }}>
+              <Flame size={13} color="#FF6B00" />
               FREEDOM CLOCK
             </span>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "9px", fontWeight: 900, background: "#FFEDD5", color: "#C2410C", padding: "1px 5px", borderRadius: "2px" }}>
+            <span
+              className="wealth-tool-chip"
+              style={{ background: "#FFEDD5", color: "#C2410C", borderColor: "#EA580C" }}
+            >
               WAR ROOM
             </span>
           </div>
           <div>
-            <div style={{ fontFamily: "var(--display)", fontSize: "18px", fontWeight: 900 }}>
-              FIRE Retirement Simulator
-            </div>
-            <div style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "#555555", marginTop: "2px" }}>
-              Model what-if SIP boosts &amp; calculate exact years of life reclaimed.
+            <h4 className="wealth-tool-title">FIRE Retirement Simulator</h4>
+            <div className="wealth-tool-desc">
+              Model what-if SIP boosts &amp; calculate exact years of life reclaimed from corporate servitude.
             </div>
           </div>
-          <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 800, color: "#FF6B00", display: "flex", alignItems: "center", gap: "4px" }}>
+          <div className="wealth-tool-link" style={{ color: "#EA580C" }}>
             LAUNCH SIMULATOR <ArrowRight size={11} />
           </div>
         </div>
 
         {/* Card 2: Surplus Sweeper */}
         <div
+          className="wealth-tool-card"
           onClick={() => {
             playSound.click();
             onOpenSurplusSweeper();
           }}
-          style={{
-            background: "var(--card, #FFFFFF)",
-            border: "2px solid var(--ink, #0A0A0A)",
-            boxShadow: "3.5px 3.5px 0 var(--ink, #0A0A0A)",
-            padding: "16px 18px",
-            borderRadius: "3px",
-            cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            gap: "10px",
-            transition: "transform 0.1s ease",
-          }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 900, color: "#0284C7", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "4px" }}>
-              <Zap size={12} color="#0284C7" />
-              CAPITAL DEPLOYMENT
+          <div className="wealth-tool-header">
+            <span className="wealth-tool-tag" style={{ color: "#0284C7" }}>
+              <Zap size={13} color="#0284C7" />
+              CAPITAL ALLOCATION
             </span>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "9px", fontWeight: 900, background: "#E0F2FE", color: "#0369A1", padding: "1px 5px", borderRadius: "2px" }}>
+            <span
+              className="wealth-tool-chip"
+              style={{ background: "#E0F2FE", color: "#0369A1", borderColor: "#0284C7" }}
+            >
               +{formatCurrency(cashFlow.monthlyNetSurplus, 0, currency)}/MO
             </span>
           </div>
           <div>
-            <div style={{ fontFamily: "var(--display)", fontSize: "18px", fontWeight: 900 }}>
-              Monthly Surplus Sweeper
-            </div>
-            <div style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "#555555", marginTop: "2px" }}>
-              Auto-distribute free cash into Equities, Gold, HYSA, &amp; Debt payoff.
+            <h4 className="wealth-tool-title">Monthly Surplus Sweeper</h4>
+            <div className="wealth-tool-desc">
+              Auto-distribute free cash surplus across Equities, Gold, HYSA, &amp; Debt payoff vectors.
             </div>
           </div>
-          <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 800, color: "#0284C7", display: "flex", alignItems: "center", gap: "4px" }}>
+          <div className="wealth-tool-link" style={{ color: "#0284C7" }}>
             DEPLOY ALLOCATIONS <ArrowRight size={11} />
           </div>
         </div>
 
         {/* Card 3: Thermal Receipt Export */}
         <div
+          className="wealth-tool-card"
           onClick={() => {
             playSound.click();
             onOpenReceipt();
           }}
-          style={{
-            background: "var(--card, #FFFFFF)",
-            border: "2px solid var(--ink, #0A0A0A)",
-            boxShadow: "3.5px 3.5px 0 var(--ink, #0A0A0A)",
-            padding: "16px 18px",
-            borderRadius: "3px",
-            cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            gap: "10px",
-            transition: "transform 0.1s ease",
-          }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 900, color: "#15803D", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "4px" }}>
-              <Receipt size={12} color="#15803D" />
+          <div className="wealth-tool-header">
+            <span className="wealth-tool-tag" style={{ color: "#15803D" }}>
+              <Receipt size={13} color="#15803D" />
               ARCHIVAL VOUCHER
             </span>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "9px", fontWeight: 900, background: "#DCFCE7", color: "#166534", padding: "1px 5px", borderRadius: "2px" }}>
+            <span
+              className="wealth-tool-chip"
+              style={{ background: "#DCFCE7", color: "#166534", borderColor: "#16A34A" }}
+            >
               PNG / PRINT
             </span>
           </div>
           <div>
-            <div style={{ fontFamily: "var(--display)", fontSize: "18px", fontWeight: 900 }}>
-              Dover St Thermal Receipt
-            </div>
-            <div style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "#555555", marginTop: "2px" }}>
-              Export high-fashion monospace balance sheet receipt with live FX stamp.
+            <h4 className="wealth-tool-title">Dover St Thermal Receipt</h4>
+            <div className="wealth-tool-desc">
+              Export editorial high-fashion monospace balance sheet voucher with live FX seal &amp; cryptographic hash.
             </div>
           </div>
-          <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 800, color: "#15803D", display: "flex", alignItems: "center", gap: "4px" }}>
+          <div className="wealth-tool-link" style={{ color: "#15803D" }}>
             GENERATE RECEIPT <ArrowRight size={11} />
           </div>
         </div>
 
         {/* Card 4: Live Market Oracle */}
         <div
+          className="wealth-tool-card"
           onClick={() => {
             playSound.click();
             onOpenMarketOracle();
           }}
-          style={{
-            background: "var(--card, #FFFFFF)",
-            border: "2px solid var(--ink, #0A0A0A)",
-            boxShadow: "3.5px 3.5px 0 var(--ink, #0A0A0A)",
-            padding: "16px 18px",
-            borderRadius: "3px",
-            cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            gap: "10px",
-            transition: "transform 0.1s ease",
-          }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 900, color: "#7C3AED", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "4px" }}>
-              <Coins size={12} color="#7C3AED" />
+          <div className="wealth-tool-header">
+            <span className="wealth-tool-tag" style={{ color: "#7C3AED" }}>
+              <Coins size={13} color="#7C3AED" />
               SPOT ORACLE
             </span>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "9px", fontWeight: 900, background: "#F3E8FF", color: "#6B21A8", padding: "1px 5px", borderRadius: "2px" }}>
-              CRYPTO · METALS · STOCKS
+            <span
+              className="wealth-tool-chip"
+              style={{ background: "#F3E8FF", color: "#6B21A8", borderColor: "#7C3AED" }}
+            >
+              METALS · CRYPTO · INDICES
             </span>
           </div>
           <div>
-            <div style={{ fontFamily: "var(--display)", fontSize: "18px", fontWeight: 900 }}>
-              Live Market Oracle
-            </div>
-            <div style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "#555555", marginTop: "2px" }}>
-              24K Gold, Silver, Top 5 Cryptos, &amp; mutual funds in USD &amp; INR.
+            <h4 className="wealth-tool-title">Live Market Oracle</h4>
+            <div className="wealth-tool-desc">
+              Live spot rates for 24K Gold, Silver, Top 5 Cryptos, &amp; major market index funds in USD &amp; INR.
             </div>
           </div>
-          <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 800, color: "#7C3AED", display: "flex", alignItems: "center", gap: "4px" }}>
+          <div className="wealth-tool-link" style={{ color: "#7C3AED" }}>
             OPEN TERMINAL <ArrowRight size={11} />
           </div>
         </div>
       </div>
 
-      {/* ── AI AUDIT PROMPT BANNER ── */}
+      {/* ── AI AUDIT PROMPT BANNER (CYBER QUANT OBSIDIAN DECK) ── */}
       <div
         style={{
-          background: overview.latestAudit ? "#0A0A0A" : "var(--card, #FFFFFF)",
-          color: overview.latestAudit ? "#FFFFFF" : "var(--ink, #000000)",
-          border: "2.5px solid var(--ink, #000000)",
+          background: "#0A0A0A",
+          color: "#FFFFFF",
+          border: "3px solid var(--ink, #000000)",
           boxShadow: "5px 5px 0 var(--ink, #000000)",
           padding: "22px 24px",
           display: "flex",
@@ -587,24 +732,28 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
           justifyContent: "space-between",
           flexWrap: "wrap",
           gap: "16px",
-          borderRadius: "4px",
+          borderRadius: "3px",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+        <div style={{ maxWidth: "780px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px", flexWrap: "wrap" }}>
             <Sparkles size={18} color="#FFE600" aria-hidden="true" />
-            <span style={{ fontFamily: "var(--display)", fontSize: "20px", fontWeight: 900 }}>
+            <span style={{ fontFamily: "var(--display)", fontSize: "20px", fontWeight: 900, letterSpacing: "-0.02em" }}>
               AI FINANCIAL SCRIBE &amp; INSTITUTIONAL AUDITOR
             </span>
             <span
               style={{
                 fontFamily: "var(--mono)",
-                fontSize: "10px",
+                fontSize: "9.5px",
                 fontWeight: 900,
                 background: "#FFE600",
                 color: "#0A0A0A",
-                padding: "2px 6px",
+                padding: "2px 7px",
+                border: "1px solid #000",
                 borderRadius: "2px",
+                boxShadow: "1px 1px 0 #FFE600",
               }}
             >
               GEMINI 3.5 QUANT
@@ -613,31 +762,35 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
           <div
             style={{
               fontFamily: "var(--mono)",
-              fontSize: "12px",
-              color: overview.latestAudit ? "#D1D5DB" : "#444444",
+              fontSize: "11.5px",
+              color: "#E4E4E7",
+              lineHeight: 1.45,
             }}
           >
             {overview.latestAudit ? (
               <span>
                 Latest Health Score: <b style={{ color: "#FFE600" }}>{(overview.latestAudit.analysis as any)?.healthScore || 80}/100</b> •{" "}
                 {(overview.latestAudit.analysis as any)?.subscriptionCullList?.length || 0} subscription leaks flagged •{" "}
-                10-yr wealth trajectory modeled
+                10-yr compounding trajectory active.
               </span>
             ) : (
-              "Let Gemini analyze your subscriptions, recurring SIPs, debt APRs, and cash flow to generate a prioritized cull list and 10-year compounding trajectory."
+              "Deploy Gemini to audit recurring subscription leaks, simulate debt APR knockout velocity, and model your 10-year compounding trajectory."
             )}
           </div>
         </div>
 
         <button
           type="button"
-          className="btn-ledger btn-ledger-ai"
+          className="btn-ledger"
           onClick={onOpenAudit}
           style={{
             background: "#FFE600",
             color: "#0A0A0A",
             border: "2px solid #000000",
-            boxShadow: "3px 3px 0 #FFFFFF",
+            boxShadow: "3px 3px 0 #00F0FF",
+            fontWeight: 900,
+            fontSize: "11px",
+            padding: "9px 16px",
           }}
         >
           <Sparkles size={13} aria-hidden="true" />

@@ -75,8 +75,9 @@ export const AssetsNetWorth: React.FC<AssetsNetWorthProps> = ({
       <div
         style={{
           background: "var(--card, #FFFFFF)",
-          border: "2px solid var(--ink, #0A0A0A)",
-          boxShadow: "4px 4px 0 var(--ink, #0A0A0A)",
+          border: "2.5px solid var(--ink, #0A0A0A)",
+          borderLeft: "6px solid #FF6B00",
+          boxShadow: "4.5px 4.5px 0 var(--ink, #0A0A0A)",
           padding: "24px 26px",
           display: "flex",
           alignItems: "center",

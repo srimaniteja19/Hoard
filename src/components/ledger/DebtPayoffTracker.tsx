@@ -975,9 +975,11 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
           <div
             style={{
               marginTop: "14px",
-              padding: "14px 18px",
+              padding: "16px 20px",
               background: "#0A0A0A",
-              border: "2px solid #1E1E1E",
+              border: "2.5px solid #000000",
+              boxShadow: "4px 4px 0 #000000",
+              borderRadius: "3px",
               display: "flex",
               flexWrap: "wrap",
               gap: "18px",

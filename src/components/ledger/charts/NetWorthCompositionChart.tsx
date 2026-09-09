@@ -42,53 +42,36 @@ export const NetWorthCompositionChart: React.FC<NetWorthCompositionChartProps> =
   const liquidRatio = totalAssets > 0 ? (totalLiquidCash / totalAssets) * 100 : 0;
 
   return (
-    <div
-      style={{
-        background: "var(--card, #FFFFFF)",
-        border: "1.5px solid var(--ink, #0A0A0A)",
-        boxShadow: "3px 3px 0 var(--ink, #0A0A0A)",
-        padding: "20px 24px",
-        borderRadius: "3px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "16px",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "10px" }}>
-        <div>
-          <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 800, textTransform: "uppercase", color: "#666666", marginBottom: "2px" }}>
-            PORTFOLIO DIVERSIFICATION
-          </div>
-          <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900 }}>
-            Asset Allocation &amp; Solvency
-          </div>
+    <div className="flight-deck-panel">
+      {/* ── Terminal Flight Rail ── */}
+      <div className="flight-deck-rail">
+        <div className="flight-deck-rail-left">
+          <span className="deck-dot dot-red" />
+          <span className="deck-dot dot-yellow" />
+          <span className="deck-dot dot-green" />
+          <span className="flight-deck-rail-title">// ASSET_ALLOCATION_MATRIX</span>
         </div>
-
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div className="flight-deck-rail-right">
           <span
+            className="kpi-status-chip"
             style={{
-              fontFamily: "var(--mono, monospace)",
-              fontSize: "10.5px",
-              fontWeight: 800,
-              padding: "2px 8px",
               background: debtToAssetRatio > 50 ? "#FEE2E2" : "#DCFCE7",
               color: debtToAssetRatio > 50 ? "#991B1B" : "#166534",
-              border: "1px solid currentColor",
-              borderRadius: "2px",
+              borderColor: debtToAssetRatio > 50 ? "#DC2626" : "#16A34A",
+              fontSize: "9px",
+              padding: "1px 6px",
             }}
           >
             {debtToAssetRatio.toFixed(1)}% DEBT-TO-ASSET
           </span>
           <span
+            className="kpi-status-chip"
             style={{
-              fontFamily: "var(--mono, monospace)",
-              fontSize: "10.5px",
-              fontWeight: 800,
-              padding: "2px 8px",
               background: "#E0F2FE",
               color: "#0369A1",
-              border: "1px solid #0284C7",
-              borderRadius: "2px",
+              borderColor: "#0284C7",
+              fontSize: "9px",
+              padding: "1px 6px",
             }}
           >
             {liquidRatio.toFixed(0)}% LIQUID
@@ -96,71 +79,99 @@ export const NetWorthCompositionChart: React.FC<NetWorthCompositionChartProps> =
         </div>
       </div>
 
-      {/* ── Segmented Stacked Bar Visual ── */}
-      <div>
-        <div
-          style={{
-            display: "flex",
-            height: "22px",
-            border: "1.5px solid var(--ink, #0A0A0A)",
-            borderRadius: "2px",
-            overflow: "hidden",
-            marginBottom: "12px",
-          }}
-        >
-          {categories.map((cat) => {
-            const pct = totalAssets > 0 ? (cat.value / totalAssets) * 100 : 0;
-            const isHovered = hoveredSegment === cat.label;
-            return (
-              <div
-                key={cat.label}
-                style={{
-                  width: `${pct}%`,
-                  background: cat.color,
-                  borderRight: "1px solid #000000",
-                  cursor: "pointer",
-                  transition: "opacity 0.15s ease",
-                  opacity: hoveredSegment && !isHovered ? 0.4 : 1,
-                }}
-                onMouseEnter={() => setHoveredSegment(cat.label)}
-                onMouseLeave={() => setHoveredSegment(null)}
-                title={`${cat.label}: ${formatCurrency(cat.value, 0, currency)} (${pct.toFixed(1)}%)`}
-              />
-            );
-          })}
+      <div className="flight-deck-content">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "10px" }}>
+          <div>
+            <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", color: "#666666", letterSpacing: "0.06em", marginBottom: "2px" }}>
+              PORTFOLIO DIVERSIFICATION &amp; SOLVENCY
+            </div>
+            <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900, letterSpacing: "-0.02em" }}>
+              Asset Allocation &amp; Balance Sheet Composition
+            </div>
+          </div>
+
+          <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 800, color: "#166534" }}>
+            NET ASSETS {formatCurrency(totalAssets, 0, currency)}
+          </div>
         </div>
 
-        {/* Legend grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px" }}>
-          {categories.map((cat) => {
-            const pct = totalAssets > 0 ? (cat.value / totalAssets) * 100 : 0;
-            const isHovered = hoveredSegment === cat.label;
-            return (
-              <div
-                key={cat.label}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "6px 10px",
-                  border: "1px solid rgba(0, 0, 0, 0.1)",
-                  borderRadius: "2px",
-                  background: isHovered ? "rgba(0, 0, 0, 0.04)" : "transparent",
-                  cursor: "pointer",
-                }}
-                onMouseEnter={() => setHoveredSegment(cat.label)}
-                onMouseLeave={() => setHoveredSegment(null)}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontFamily: "var(--mono, monospace)", fontSize: "11px" }}>
-                  <div style={{ width: "10px", height: "10px", background: cat.color, border: "1px solid #000000" }} />
-                  <span style={{ fontWeight: 800 }}>{cat.label.split(" ")[0]}</span>
+        {/* ── Segmented Stacked Bar Visual ── */}
+        <div>
+          <div
+            className="meter-level-track"
+            style={{
+              display: "flex",
+              height: "24px",
+              marginBottom: "14px",
+            }}
+          >
+            {categories.map((cat) => {
+              const pct = totalAssets > 0 ? (cat.value / totalAssets) * 100 : 0;
+              const isHovered = hoveredSegment === cat.label;
+              return (
+                <div
+                  key={cat.label}
+                  style={{
+                    width: `${pct}%`,
+                    background: cat.color,
+                    borderRight: "1.5px solid #000000",
+                    cursor: "pointer",
+                    transition: "opacity 0.15s ease",
+                    opacity: hoveredSegment && !isHovered ? 0.35 : 1,
+                    height: "100%",
+                  }}
+                  onMouseEnter={() => setHoveredSegment(cat.label)}
+                  onMouseLeave={() => setHoveredSegment(null)}
+                  title={`${cat.label}: ${formatCurrency(cat.value, 0, currency)} (${pct.toFixed(1)}%)`}
+                />
+              );
+            })}
+          </div>
+
+          {/* Legend grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "10px" }}>
+            {categories.map((cat) => {
+              const pct = totalAssets > 0 ? (cat.value / totalAssets) * 100 : 0;
+              const isHovered = hoveredSegment === cat.label;
+              return (
+                <div
+                  key={cat.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "8px 12px",
+                    border: isHovered ? "2px solid var(--ink, #0A0A0A)" : "1.5px solid var(--ink, #0A0A0A)",
+                    boxShadow: isHovered ? "3.5px 3.5px 0 var(--ink, #0A0A0A)" : "2px 2px 0 var(--ink, #0A0A0A)",
+                    borderRadius: "2px",
+                    background: isHovered ? "#FFFDF7" : "#FFFFFF",
+                    cursor: "pointer",
+                    transition: "all 0.1s ease",
+                  }}
+                  onMouseEnter={() => setHoveredSegment(cat.label)}
+                  onMouseLeave={() => setHoveredSegment(null)}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "7px", fontFamily: "var(--mono, monospace)", fontSize: "11px" }}>
+                    <div
+                      style={{
+                        width: "12px",
+                        height: "12px",
+                        background: cat.color,
+                        border: "1.5px solid #000000",
+                        borderRadius: "2px",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ fontWeight: 800 }}>{cat.label.split(" ")[0]}</span>
+                  </div>
+                  <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px" }}>
+                    <b>{formatCurrency(cat.value, 0, currency)}</b>{" "}
+                    <span style={{ color: "#777777", fontSize: "10px", fontWeight: 800 }}>({pct.toFixed(0)}%)</span>
+                  </div>
                 </div>
-                <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px" }}>
-                  <b>{formatCurrency(cat.value, 0, currency)}</b> <span style={{ color: "#777777", fontSize: "10px" }}>({pct.toFixed(0)}%)</span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

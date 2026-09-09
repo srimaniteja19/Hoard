@@ -603,10 +603,10 @@
   }
 }
 
-/* ── 3. KPI METRIC CARDS ── */
+/* ── 3. KPI METRIC CARDS (NEUBRUTALIST 3×2 COMMAND MATRIX) ── */
 .ledger-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -625,20 +625,28 @@
 
 .ledger-kpi-card {
   background: var(--card, #FFFFFF);
-  border: 1.5px solid var(--ink, #0A0A0A);
-  box-shadow: 3px 3px 0 var(--ink, #0A0A0A);
-  padding: 18px 20px;
+  border: 2.5px solid var(--ink, #0A0A0A);
+  box-shadow: 4.5px 4.5px 0 var(--ink, #0A0A0A);
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 12px;
   position: relative;
   border-radius: 3px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.12s ease;
+  user-select: none;
 }
 
 .ledger-kpi-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 4.5px 4.5px 0 var(--ink, #0A0A0A);
+  transform: translate(-2px, -2px);
+  box-shadow: 6.5px 6.5px 0 var(--ink, #0A0A0A);
+}
+
+.ledger-kpi-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink, #0A0A0A);
 }
 
 .ledger-kpi-card::before {
@@ -647,35 +655,313 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
+  height: 5px;
   background: var(--kpi-accent, var(--ink, #0A0A0A));
+  border-bottom: 1.5px solid var(--ink, #0A0A0A);
 }
 
-.ledger-kpi-label {
+/* KPI Top Strip */
+.kpi-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.kpi-tag-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kpi-icon-box {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--ink, #0A0A0A);
+  background: var(--kpi-icon-bg, #F4F4F5);
+  color: var(--kpi-icon-fg, var(--ink, #0A0A0A));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  box-shadow: 1.5px 1.5px 0 var(--ink, #0A0A0A);
+  flex-shrink: 0;
+}
+
+.kpi-sector-name {
   font-family: var(--mono, "Space Mono", monospace);
   font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: #666666;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--ink, #0A0A0A);
   text-transform: uppercase;
-  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpi-status-chip {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border: 1.5px solid var(--ink, #0A0A0A);
+  box-shadow: 1.5px 1.5px 0 var(--ink, #0A0A0A);
+  border-radius: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.kpi-status-chip.chip-positive {
+  background: #DCFCE7;
+  color: #166534;
+}
+
+.kpi-status-chip.chip-negative {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.kpi-status-chip.chip-neutral {
+  background: #F4F4F5;
+  color: #27272A;
+}
+
+.kpi-status-chip.chip-accent {
+  background: #FFE600;
+  color: #0A0A0A;
+}
+
+.kpi-status-chip.chip-cyan {
+  background: #E0F2FE;
+  color: #0369A1;
+}
+
+/* KPI Main Readout */
+.kpi-main-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .ledger-kpi-value {
   font-family: var(--display, "Bricolage Grotesque", sans-serif);
-  font-size: 32px;
+  font-size: clamp(26px, 2.3vw, 34px);
   font-weight: 900;
   letter-spacing: -0.03em;
   color: var(--ink, #0A0A0A);
-  line-height: 1;
-  margin-bottom: 6px;
+  line-height: 1.05;
+  margin: 0;
 }
 
-.ledger-kpi-sub {
+/* KPI Bottom Strip */
+.kpi-bottom-strip {
+  border-top: 1.5px dashed rgba(0, 0, 0, 0.22);
+  padding-top: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-family: var(--mono, "Space Mono", monospace);
   font-size: 10.5px;
   font-weight: 700;
-  color: #666666;
+  color: #4B5563;
+}
+
+.kpi-sub-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.kpi-nav-cue {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: var(--ink, #0A0A0A);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  opacity: 0.7;
+  transition: all 0.12s ease;
+  flex-shrink: 0;
+}
+
+.ledger-kpi-card:hover .kpi-nav-cue {
+  opacity: 1;
+  color: #000000;
+  transform: translateX(2px);
+}
+
+/* ── REUSABLE FLIGHT DECK WIDGET CONTAINERS ── */
+.flight-deck-panel {
+  background: var(--card, #FFFFFF);
+  border: 2.5px solid var(--ink, #0A0A0A);
+  box-shadow: 4.5px 4.5px 0 var(--ink, #0A0A0A);
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.flight-deck-rail {
+  background: var(--ink, #0A0A0A);
+  color: var(--cream, #FFFDF7);
+  padding: 7px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  border-bottom: 2px solid var(--ink, #0A0A0A);
+  user-select: none;
+}
+
+.flight-deck-rail-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.flight-deck-rail-title {
+  margin-left: 6px;
+  letter-spacing: 0.08em;
+  color: #FFFDF7;
+}
+
+.flight-deck-rail-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flight-deck-content {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #FFFFFF;
+}
+
+/* ── CHUNKY NEUBRUTALIST LEVEL METERS ── */
+.meter-level-track {
+  width: 100%;
+  height: 20px;
+  background: #F4F4F5;
+  border: 2px solid var(--ink, #0A0A0A);
+  box-shadow: 2px 2px 0 var(--ink, #0A0A0A);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.meter-level-fill {
+  height: 100%;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.meter-level-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 3px;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* ── INSTITUTIONAL WEALTH TOOL CARDS ── */
+.wealth-tool-card {
+  background: var(--card, #FFFFFF);
+  border: 2.5px solid var(--ink, #0A0A0A);
+  box-shadow: 4px 4px 0 var(--ink, #0A0A0A);
+  border-radius: 3px;
+  padding: 16px 18px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.wealth-tool-card:hover {
+  transform: translate(-2.5px, -2.5px);
+  box-shadow: 6.5px 6.5px 0 var(--ink, #0A0A0A);
+}
+
+.wealth-tool-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink, #0A0A0A);
+}
+
+.wealth-tool-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wealth-tool-tag {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.wealth-tool-chip {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 2px;
+  border: 1.5px solid var(--ink, #0A0A0A);
+  box-shadow: 1.5px 1.5px 0 var(--ink, #0A0A0A);
+}
+
+.wealth-tool-title {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--ink, #0A0A0A);
+}
+
+.wealth-tool-desc {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11px;
+  color: #555555;
+  margin-top: 3px;
+  line-height: 1.35;
+}
+
+.wealth-tool-link {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.1s ease;
+}
+
+.wealth-tool-card:hover .wealth-tool-link {
+  transform: translateX(3px);
 }
 
 /* ── 4. SUBSCRIPTION CARDS (NEOBRUTALISM EDITION) ── */
@@ -974,9 +1260,9 @@
 
 .debt-simulator-box {
   background: var(--card, #FFFFFF);
-  border: 1.5px solid var(--ink, #0A0A0A);
-  box-shadow: 3.5px 3.5px 0 var(--ink, #0A0A0A);
-  padding: 22px 24px;
+  border: 2.5px solid var(--ink, #0A0A0A);
+  box-shadow: 4.5px 4.5px 0 var(--ink, #0A0A0A);
+  padding: 24px;
   border-radius: 3px;
 }
 
@@ -1093,28 +1379,33 @@
 
 .cashflow-box {
   background: var(--card, #FFFFFF);
-  border: 1.5px solid var(--ink, #0A0A0A);
-  box-shadow: 3px 3px 0 var(--ink, #0A0A0A);
+  border: 2.5px solid var(--ink, #0A0A0A);
+  box-shadow: 4.5px 4.5px 0 var(--ink, #0A0A0A);
   padding: 22px 24px;
   border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .cashflow-box h3 {
   font-family: var(--display, "Bricolage Grotesque", sans-serif);
   font-size: 19px;
   font-weight: 900;
+  letter-spacing: -0.02em;
   margin: 0 0 16px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  color: var(--ink, #0A0A0A);
 }
 
 .cashflow-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 0;
-  border-bottom: 1px dashed rgba(0, 0, 0, 0.12);
+  padding: 10px 0;
+  border-bottom: 1.5px dashed rgba(0, 0, 0, 0.18);
   font-family: var(--mono, "Space Mono", monospace);
   font-size: 12px;
   font-weight: 700;

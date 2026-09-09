@@ -117,43 +117,48 @@ export const DebtAmortizationChart: React.FC<DebtAmortizationChartProps> = ({
   const sym = getCurrencySymbol(currency);
 
   return (
-    <div
-      style={{
-        background: "var(--card, #FFFFFF)",
-        border: "1.5px solid var(--ink, #0A0A0A)",
-        boxShadow: "3px 3px 0 var(--ink, #0A0A0A)",
-        padding: "20px 24px",
-        borderRadius: "3px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "14px",
-      }}
-    >
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
-        <div>
-          <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10.5px", fontWeight: 800, textTransform: "uppercase", color: "#666666", marginBottom: "2px" }}>
-            AMORTIZATION TRAJECTORY &amp; KNOCKOUT SIMULATION
-          </div>
-          <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900 }}>
-            {activeStrategy} Acceleration vs. Baseline Minimums
-          </div>
+    <div className="flight-deck-panel">
+      {/* ── Terminal Flight Rail ── */}
+      <div className="flight-deck-rail">
+        <div className="flight-deck-rail-left">
+          <span className="deck-dot dot-red" />
+          <span className="deck-dot dot-yellow" />
+          <span className="deck-dot dot-green" />
+          <span className="flight-deck-rail-title">// DEBT_AMORTIZATION_SIMULATOR</span>
         </div>
-
-        {/* Legend */}
-        <div style={{ display: "flex", gap: "16px", fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 700 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ width: "12px", height: "3px", background: "#DC2626", display: "inline-block" }} />
-            <span style={{ color: "#DC2626" }}>Minimums Only</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ width: "12px", height: "3px", background: "#16A34A", display: "inline-block" }} />
-            <span style={{ color: "#16A34A" }}>
-              Accelerated (+{formatCurrency(extraPayment, 0, currency)}/mo)
-            </span>
-          </div>
+        <div className="flight-deck-rail-right">
+          <span className="deck-count-pill" style={{ fontSize: "9.5px", padding: "1px 6px" }}>
+            {activeStrategy} ACCELERATION
+          </span>
         </div>
       </div>
+
+      <div className="flight-deck-content">
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
+          <div>
+            <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", color: "#666666", letterSpacing: "0.06em", marginBottom: "2px" }}>
+              AMORTIZATION TRAJECTORY &amp; KNOCKOUT HORIZON
+            </div>
+            <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900, letterSpacing: "-0.02em" }}>
+              {activeStrategy} Acceleration vs. Baseline Minimums
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div style={{ display: "flex", gap: "14px", fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 800 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: "12px", height: "4px", background: "#DC2626", border: "1px solid #000", display: "inline-block" }} />
+              <span style={{ color: "#DC2626" }}>Minimums Only</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: "12px", height: "4px", background: "#16A34A", border: "1px solid #000", display: "inline-block" }} />
+              <span style={{ color: "#16A34A" }}>
+                Accelerated (+{formatCurrency(extraPayment, 0, currency)}/mo)
+              </span>
+            </div>
+          </div>
+        </div>
 
       {/* SVG Chart */}
       <div style={{ width: "100%", overflowX: "auto" }}>
@@ -281,9 +286,10 @@ export const DebtAmortizationChart: React.FC<DebtAmortizationChartProps> = ({
       {/* ── Interactive Readout Bar ── */}
       <div
         style={{
-          background: "rgba(0, 0, 0, 0.025)",
-          border: "1px solid rgba(0, 0, 0, 0.1)",
-          padding: "10px 14px",
+          background: "#F8FAFC",
+          border: "2px solid var(--ink, #0A0A0A)",
+          boxShadow: "2.5px 2.5px 0 var(--ink, #0A0A0A)",
+          padding: "11px 16px",
           borderRadius: "2px",
           display: "flex",
           alignItems: "center",
@@ -295,19 +301,20 @@ export const DebtAmortizationChart: React.FC<DebtAmortizationChartProps> = ({
         }}
       >
         <div>
-          <span>INSPECTING: <b>MONTH {currentMonthIdx}</b></span>
+          <span>INSPECTING: <b style={{ background: "#0A0A0A", color: "#FFE600", padding: "1px 5px", borderRadius: "2px" }}>MONTH {currentMonthIdx}</b></span>
           {currentActiveData.targetDebt && (
-            <span style={{ color: "#166534", marginLeft: "10px" }}>
+            <span style={{ color: "#166534", marginLeft: "12px", fontWeight: 800 }}>
               Targeting: <b>{currentActiveData.targetDebt}</b>
             </span>
           )}
         </div>
-        <div style={{ display: "flex", gap: "16px" }}>
-          <span>Remaining Balance: <b>{formatCurrency(currentActiveData.balance, 0, currency)}</b></span>
-          <span style={{ color: "#16A34A" }}>
+        <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+          <span>Remaining Balance: <b style={{ color: "#DC2626" }}>{formatCurrency(currentActiveData.balance, 0, currency)}</b></span>
+          <span style={{ color: "#16A34A", fontWeight: 800 }}>
             Total Interest Saved vs Min: <b>{formatCurrency(activeSim.interestSavedVsMinimums, 0, currency)}</b>
           </span>
         </div>
+      </div>
       </div>
     </div>
   );

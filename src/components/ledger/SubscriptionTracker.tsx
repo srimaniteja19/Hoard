@@ -111,8 +111,9 @@ export const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({
       <div
         style={{
           background: "var(--card, #FFFFFF)",
-          border: "1.5px solid var(--ink, #0A0A0A)",
-          boxShadow: "3.5px 3.5px 0 var(--ink, #0A0A0A)",
+          border: "2.5px solid var(--ink, #0A0A0A)",
+          borderLeft: "6px solid #7C4DFF",
+          boxShadow: "4.5px 4.5px 0 var(--ink, #0A0A0A)",
           padding: "22px 26px",
           display: "flex",
           alignItems: "center",
