@@ -251,6 +251,7 @@ function TilPageContent() {
     codeLang?: string;
     linkUrl?: string;
     linkDensity?: "inline" | "card" | "quote" | "full";
+    imageUrl?: string;
     tags: string[];
     saveToHoardQueue: boolean;
     replacesEntryId?: string;

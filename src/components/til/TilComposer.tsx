@@ -15,8 +15,16 @@ import {
   CornerDownLeft,
   X,
   Tag,
+  Image as ImageIcon,
+  Loader2,
 } from "lucide-react";
 import { parseClipImport, type ClipLink, type ClipTilDraft } from "@/lib/til/clipImport";
+import {
+  uploadTilImage,
+  extractImagesFromClipboard,
+  extractImagesFromDragEvent,
+  formatTilImages,
+} from "@/lib/til/image";
 
 interface TilComposerProps {
   onCommit: (entry: {
@@ -26,6 +34,7 @@ interface TilComposerProps {
     codeLang?: string;
     linkUrl?: string;
     linkDensity?: "inline" | "card" | "quote" | "full";
+    imageUrl?: string;
     tags: string[];
     saveToHoardQueue: boolean;
     replacesEntryId?: string;
@@ -147,6 +156,12 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
   const [submitting, setSubmitting] = useState(false);
   const [clipBatch, setClipBatch] = useState<ClipLink[] | null>(null);
 
+  // Attached Images (supported across all categories)
+  const [attachedImages, setAttachedImages] = useState<string[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const activeFieldRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -165,13 +180,73 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
     setTags(tags.filter((item) => item !== t));
   };
 
+  const processImageFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    try {
+      setUploadingImage(true);
+      for (const file of files) {
+        const asset = await uploadTilImage(file);
+        setAttachedImages((prev) => [...prev, asset.url]);
+      }
+    } catch (err) {
+      console.error("Failed to upload image in TIL composer", err);
+    } finally {
+      setUploadingImage(false);
+      setIsDragOver(false);
+    }
+  };
+
   const handlePaste = (e: React.ClipboardEvent) => {
+    // 1. Check for pasted images first across every category
+    const images = extractImagesFromClipboard(e);
+    if (images.length > 0) {
+      e.preventDefault();
+      void processImageFiles(images);
+      return;
+    }
+
+    // 2. Otherwise check for clip batch import
     const text = e.clipboardData.getData("text/plain");
     const parsed = parseClipImport(text);
     if (!parsed) return;
     e.preventDefault();
     setClipBatch(parsed.items);
     setType("LINK");
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer?.types?.includes("Files")) {
+      e.preventDefault();
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    const images = extractImagesFromDragEvent(e);
+    if (images.length > 0) {
+      e.preventDefault();
+      void processImageFiles(images);
+    } else {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      void processImageFiles(Array.from(files));
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setAttachedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleCommit = async () => {
@@ -246,11 +321,13 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
         code,
         codeLang,
         linkUrl: targetLinkUrl,
+        imageUrl: formatTilImages(attachedImages) || undefined,
         tags,
         saveToHoardQueue,
       });
 
       // Clear fields
+      setAttachedImages([]);
       setFactClaim("");
       setFactSource("");
       setGotchaThought("");
@@ -290,7 +367,15 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
   const currentConfig = FORMS_CONFIG[type];
 
   return (
-    <div id="til-composer" className="comp" onPaste={handlePaste} onKeyDown={handleKeyDown}>
+    <div
+      id="til-composer"
+      className={`comp${isDragOver ? " comp--dragover" : ""}`}
+      onPaste={handlePaste}
+      onKeyDown={handleKeyDown}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {/* Morphing Kind Selector Bar */}
       <div className="kinds" style={{ ["--kc" as string]: currentConfig.colorVar }}>
         {KINDS.map((k) => {
@@ -634,6 +719,63 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
             </label>
           </div>
         )}
+
+        {/* Image Attachment Bar (In Every Category) */}
+        <div className="comp__img-section">
+          <div className="comp__img-header">
+            <button
+              type="button"
+              className="comp__img-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingImage}
+              title="Upload image attachment (or paste from clipboard / drag & drop)"
+            >
+              {uploadingImage ? (
+                <Loader2 size={12} className="comp__spin" />
+              ) : (
+                <ImageIcon size={12} strokeWidth={2.4} />
+              )}
+              <span>{uploadingImage ? "UPLOADING..." : "+ ATTACH IMAGE"}</span>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: "none" }}
+              onChange={handleFileInputChange}
+            />
+            <span className="comp__img-hint">
+              or paste ⌘V / drag &amp; drop image
+            </span>
+          </div>
+
+          {/* Attached Image Previews Strip */}
+          {attachedImages.length > 0 && (
+            <div className="comp__img-strip">
+              {attachedImages.map((imgUrl, idx) => (
+                <div key={idx} className="comp__img-thumb">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imgUrl} alt={`Attachment ${idx + 1}`} />
+                  <button
+                    type="button"
+                    className="comp__img-thumb-del"
+                    onClick={() => handleRemoveImage(idx)}
+                    title="Remove attached image"
+                  >
+                    <X size={10} strokeWidth={2.5} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {uploadingImage && (
+            <div className="comp__img-uploading">
+              <span>⏳ COMPRESSING &amp; UPLOADING IMAGE...</span>
+            </div>
+          )}
+        </div>
 
         {/* Tags Section with Quick Suggestions */}
         <div className="comp__tags-section">

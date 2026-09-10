@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { TilType, tilTypeValues, LinkPreview } from "@/db/schema";
 import { confidence } from "@/lib/til/confidence";
 import {
@@ -35,6 +35,9 @@ import {
   Play,
   Plus,
   Bookmark,
+  Image as ImageIcon,
+  Maximize2,
+  Loader2,
 } from "lucide-react";
 import { tilTypeColorVar } from "@/lib/til/typeColorTokens";
 import { TilMediaPreview } from "@/components/til/TilMediaPreview";
@@ -44,6 +47,7 @@ import { useYouTubeDigest } from "@/components/youtube/YouTubeDigestProvider";
 import { extractYouTubeVideoId } from "@/lib/cleanTitle";
 import { DigestJsonViewer } from "@/components/youtube/DigestJsonViewer";
 import { DigestJson } from "@/lib/youtube/digest";
+import { parseTilImages, formatTilImages, uploadTilImage } from "@/lib/til/image";
 
 const KIND_CONFIG: Record<
   TilType,
@@ -74,6 +78,7 @@ export interface TilItem {
   linkPreview: LinkPreview | null;
   linkDensity: string;
   dischargesBookmarkId: number | null;
+  imageUrl?: string | null;
   supersededById?: string | null;
   stability?: number;
   ease?: number;
@@ -120,6 +125,34 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+
+  // Attached Images & Lightbox
+  const attachedImages = parseTilImages(item.imageUrl);
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [editAttachedImages, setEditAttachedImages] = useState<string[]>(parseTilImages(item.imageUrl));
+  const [uploadingEditImage, setUploadingEditImage] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setEditAttachedImages(parseTilImages(item.imageUrl));
+  }, [item.imageUrl]);
+
+  const handleEditFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    try {
+      setUploadingEditImage(true);
+      for (const file of Array.from(files)) {
+        const asset = await uploadTilImage(file);
+        setEditAttachedImages((prev) => [...prev, asset.url]);
+      }
+    } catch (err) {
+      console.error("Failed to upload image in edit mode", err);
+    } finally {
+      setUploadingEditImage(false);
+      if (editFileInputRef.current) editFileInputRef.current.value = "";
+    }
+  };
 
   const { openYouTubeDigest, isDigestSaved } = useYouTubeDigest();
   const ytVideoId = item.linkUrl ? extractYouTubeVideoId(item.linkUrl) : null;
@@ -215,6 +248,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         code: editType === "SNIPPET" ? editCode : undefined,
         codeLang: editType === "SNIPPET" ? editCodeLang : undefined,
         linkUrl: editLinkUrl.trim() || null,
+        imageUrl: formatTilImages(editAttachedImages) || null,
         tags: editTags,
       });
       setIsEditing(false);
@@ -576,8 +610,9 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
   const cardClass = `e e--${item.type.toLowerCase()}`;
 
   return (
-    <article
-      id={`til-${item.shortHash}`}
+    <>
+      <article
+        id={`til-${item.shortHash}`}
       className={cardClass}
       data-s={decayState}
       style={{ ["--f" as string]: fVal }}
@@ -620,6 +655,30 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         {!isEditing ? (
           <>
             {renderCardContent()}
+
+            {/* Attached Images */}
+            {attachedImages.length > 0 && (
+              <div className="til-feed-item-images">
+                {attachedImages.map((imgUrl, i) => (
+                  <div
+                    key={i}
+                    className="til-feed-item-img-card"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxImg(imgUrl);
+                    }}
+                    title="Click to zoom image"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imgUrl} alt={`Attachment ${i + 1}`} loading="lazy" />
+                    <span className="til-feed-item-img-overlay">
+                      <Maximize2 size={12} strokeWidth={2.4} />
+                      <span>ZOOM</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Attached Note Preview or Inline Editor */}
             {isNoteOpen ? (
@@ -1012,6 +1071,62 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
               />
             )}
 
+            {/* Edit Mode Attached Images */}
+            <div style={{ margin: "10px 0" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                <span style={{ fontFamily: "var(--mono)", fontSize: "10px", fontWeight: 800, opacity: 0.7 }}>
+                  ATTACHED IMAGES
+                </span>
+                <button
+                  type="button"
+                  onClick={() => editFileInputRef.current?.click()}
+                  disabled={uploadingEditImage}
+                  style={{
+                    fontFamily: "var(--mono)",
+                    fontSize: "10px",
+                    fontWeight: 800,
+                    background: "var(--paper)",
+                    border: "1.5px solid var(--ink)",
+                    padding: "3px 8px",
+                    cursor: "pointer",
+                    boxShadow: "1.5px 1.5px 0 var(--ink)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                  }}
+                >
+                  {uploadingEditImage ? <Loader2 size={11} className="comp__spin" /> : <ImageIcon size={11} />}
+                  <span>{uploadingEditImage ? "UPLOADING..." : "+ ATTACH IMAGE"}</span>
+                </button>
+                <input
+                  ref={editFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  style={{ display: "none" }}
+                  onChange={handleEditFileInputChange}
+                />
+              </div>
+              {editAttachedImages.length > 0 && (
+                <div className="comp__img-strip" style={{ marginTop: "6px" }}>
+                  {editAttachedImages.map((imgUrl, idx) => (
+                    <div key={idx} className="comp__img-thumb">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={imgUrl} alt={`Attachment ${idx + 1}`} />
+                      <button
+                        type="button"
+                        className="comp__img-thumb-del"
+                        onClick={() => setEditAttachedImages((prev) => prev.filter((_, i) => i !== idx))}
+                        title="Remove image"
+                      >
+                        <X size={10} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
               {editTags.map((t) => (
                 <span
@@ -1397,5 +1512,38 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         )}
       </div>
     </article>
+
+    {/* Full-Screen Image Lightbox Modal */}
+    {lightboxImg && (
+      <div
+        className="til-image-lightbox"
+        onClick={() => setLightboxImg(null)}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="til-image-lightbox__content" onClick={(e) => e.stopPropagation()}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightboxImg} alt="Enlarged TIL attachment" />
+          <button
+            type="button"
+            className="til-image-lightbox__close"
+            onClick={() => setLightboxImg(null)}
+            title="Close"
+          >
+            <X size={16} strokeWidth={2.6} />
+          </button>
+          <a
+            href={lightboxImg}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="til-image-lightbox__link"
+          >
+            <ExternalLink size={12} />
+            <span>OPEN ORIGINAL</span>
+          </a>
+        </div>
+      </div>
+    )}
+  </>
   );
 };

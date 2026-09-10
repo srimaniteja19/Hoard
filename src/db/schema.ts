@@ -297,6 +297,7 @@ export const tilEntries = pgTable(
     linkUrl: text("link_url"),
     linkPreview: jsonb("link_preview").$type<LinkPreview>(),
     linkDensity: varchar("link_density", { length: 8 }).default("card"),
+    imageUrl: text("image_url"),
 
     dischargesBookmarkId: integer("discharges_bookmark_id").references(
       () => bookmarks.id,

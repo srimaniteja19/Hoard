@@ -11,6 +11,7 @@ export const createTilSchema = z.object({
   codeLang: z.string().max(24).optional().nullable(),
   linkUrl: z.string().url().optional().nullable().or(z.literal("")),
   linkDensity: z.enum(linkDensityValues).default("card"),
+  imageUrl: z.string().optional().nullable(),
   dischargesBookmarkId: z.number().int().positive().optional().nullable(),
   loggedFor: z
     .string()

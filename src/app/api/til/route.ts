@@ -135,6 +135,7 @@ export async function GET(req: Request) {
         supersededById: r.supersededById || null,
         confidence: confVal,
         linkDensity: r.linkDensity || "card",
+        imageUrl: r.imageUrl || null,
         tags: tagMap.get(r.id) || [],
         createdAt: r.createdAt.toISOString(),
         updatedAt: r.updatedAt.toISOString(),
@@ -273,6 +274,7 @@ export async function POST(req: Request) {
       linkUrl: data.linkUrl || null,
       linkPreview,
       linkDensity: data.linkDensity || "card",
+      imageUrl: data.imageUrl || null,
       dischargesBookmarkId: data.dischargesBookmarkId || null,
       loggedFor,
       lastReviewedAt: now,
@@ -349,6 +351,7 @@ export async function POST(req: Request) {
     const item = {
       ...inserted,
       linkDensity: inserted.linkDensity || "card",
+      imageUrl: inserted.imageUrl || null,
       tags: createdTagNames,
       createdAt: inserted.createdAt.toISOString(),
       updatedAt: inserted.updatedAt.toISOString(),

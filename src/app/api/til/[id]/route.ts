@@ -60,6 +60,7 @@ export async function PATCH(
     if (data.linkUrl !== undefined) updatePayload.linkUrl = data.linkUrl || null;
     if (data.linkDensity !== undefined) updatePayload.linkDensity = data.linkDensity || "card";
     if (data.dischargesBookmarkId !== undefined) updatePayload.dischargesBookmarkId = data.dischargesBookmarkId || null;
+    if (data.imageUrl !== undefined) updatePayload.imageUrl = data.imageUrl || null;
     if (data.supersededById !== undefined) updatePayload.supersededById = data.supersededById || null;
 
     const [updated] = await db

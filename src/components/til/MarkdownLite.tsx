@@ -38,13 +38,38 @@ export const MarkdownLite: React.FC<MarkdownLiteProps> = ({
 
   // Helper for inline text segments (links, bold, italic, cross-refs)
   const renderTextSegment = (text: string, keyPrefix: string): React.ReactNode[] => {
-    // Matches: [title](url), **bold**, *italic* (non-greedy, non-newline, not surrounded by spaces), #hash
+    // Matches: ![alt](url), [title](url), **bold**, *italic* (non-greedy, non-newline, not surrounded by spaces), #hash
     // Italic only matches when preceded by start of line or space or punctuation, and followed by space or punctuation or end
-    const combinedRegex = /(\[[^\]]+\]\(https?:\/\/[^\s\)]+\)|\*\*[^*\n]+\*\*|(?<=\s|^|\W)\*[^*\s\n][^*\n]*?[^*\s\n]\*(?=\s|\W|$)|(?<=\s|^|\W)\*[^*\s\n]\*(?=\s|\W|$)|#[0-9a-fA-F]{4}\b)/g;
+    const combinedRegex = /(!\[[^\]]*\]\((?:https?:\/\/[^\s\)]+|\/api\/[^\s\)]+)\)|\[[^\]]+\]\(https?:\/\/[^\s\)]+\)|\*\*[^*\n]+\*\*|(?<=\s|^|\W)\*[^*\s\n][^*\n]*?[^*\s\n]\*(?=\s|\W|$)|(?<=\s|^|\W)\*[^*\s\n]\*(?=\s|\W|$)|#[0-9a-fA-F]{4}\b)/g;
     const parts = text.split(combinedRegex);
 
     return parts.map((part, idx) => {
       const key = `${keyPrefix}-${idx}`;
+
+      // Image: ![alt](url)
+      const imageMatch = part.match(/^!\[([^\]]*)\]\(((?:https?:\/\/|\/api\/)[^\s\)]+)\)$/);
+      if (imageMatch) {
+        const [, alt, url] = imageMatch;
+        return (
+          <span key={key} className="til-md-img-wrap" style={{ display: "block", margin: "6px 0" }}>
+            <img
+              src={url}
+              alt={alt || "TIL image attachment"}
+              className="til-inline-img"
+              loading="lazy"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "360px",
+                border: "2px solid var(--ink)",
+                boxShadow: "2px 2px 0 var(--ink)",
+                display: "block",
+                objectFit: "contain",
+                background: "#000",
+              }}
+            />
+          </span>
+        );
+      }
 
       // Link: [title](url)
       const linkMatch = part.match(/^\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)$/);
