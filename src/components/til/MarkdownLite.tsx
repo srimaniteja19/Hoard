@@ -6,6 +6,7 @@ interface MarkdownLiteProps {
   style?: React.CSSProperties;
   validHashes?: Set<string> | string[];
   as?: "span" | "div";
+  onImageClick?: (url: string) => void;
 }
 
 /**
@@ -18,6 +19,7 @@ interface MarkdownLiteProps {
  * - Italic: *text* (word-bounded, does not greedily span across lines or bullet marks)
  * - Links: [title](url)
  * - Cross-references: #a3f9 (rendered as anchor links if hash is in validHashes, otherwise plain text)
+ * - Archival Exhibit Plate Images: ![alt](url)
  *
  * Sanitized by design: plain text is rendered as React children (no dangerouslySetInnerHTML).
  */
@@ -27,6 +29,7 @@ export const MarkdownLite: React.FC<MarkdownLiteProps> = ({
   style,
   validHashes,
   as,
+  onImageClick,
 }) => {
   const validHashSet = React.useMemo(() => {
     if (!validHashes) return new Set<string>();
@@ -46,28 +49,60 @@ export const MarkdownLite: React.FC<MarkdownLiteProps> = ({
     return parts.map((part, idx) => {
       const key = `${keyPrefix}-${idx}`;
 
-      // Image: ![alt](url)
+      // Image: ![alt](url) -> Render as Archival Exhibit Plate
       const imageMatch = part.match(/^!\[([^\]]*)\]\(((?:https?:\/\/|\/api\/)[^\s\)]+)\)$/);
       if (imageMatch) {
         const [, alt, url] = imageMatch;
         return (
-          <span key={key} className="til-md-img-wrap" style={{ display: "block", margin: "6px 0" }}>
-            <img
-              src={url}
-              alt={alt || "TIL image attachment"}
-              className="til-inline-img"
-              loading="lazy"
-              style={{
-                maxWidth: "100%",
-                maxHeight: "360px",
-                border: "2px solid var(--ink)",
-                boxShadow: "2px 2px 0 var(--ink)",
-                display: "block",
-                objectFit: "contain",
-                background: "#000",
-              }}
-            />
-          </span>
+          <figure
+            key={key}
+            className="til-plate til-plate--inline"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onImageClick) {
+                onImageClick(url);
+              }
+            }}
+            title={alt ? `${alt} — Click to inspect full resolution` : "Click to inspect visual intelligence full-screen"}
+          >
+            <div className="til-plate__header">
+              <div className="til-plate__header-left">
+                <span className="til-plate__badge">SPECIMEN</span>
+                <span className="til-plate__type">{alt || "VISUAL INTEL"}</span>
+              </div>
+              <div className="til-plate__header-right">
+                <span className="til-plate__zoom-action">
+                  <span>EXPAND ⤢</span>
+                </span>
+              </div>
+            </div>
+            <div className="til-plate__viewport">
+              <span className="til-plate__corner til-plate__corner--tl" aria-hidden="true" />
+              <span className="til-plate__corner til-plate__corner--tr" aria-hidden="true" />
+              <span className="til-plate__corner til-plate__corner--bl" aria-hidden="true" />
+              <span className="til-plate__corner til-plate__corner--br" aria-hidden="true" />
+              <div className="til-plate__scale" aria-hidden="true">
+                <span /><span /><span /><span /><span />
+              </div>
+              <img
+                src={url}
+                alt={alt || "TIL image attachment"}
+                className="til-plate__img"
+                loading="lazy"
+              />
+              <div className="til-plate__hud">
+                <span className="til-plate__hud-pill">
+                  <span>CLICK TO INSPECT FULL RESOLUTION</span>
+                </span>
+              </div>
+            </div>
+            <div className="til-plate__footer">
+              <span className="til-plate__footer-label">
+                {alt ? `EXHIBIT: ${alt.toUpperCase()}` : "STATUS: VERIFIED VISUAL EVIDENCE"}
+              </span>
+              <span className="til-plate__footer-key">[Z] ZOOM</span>
+            </div>
+          </figure>
         );
       }
 

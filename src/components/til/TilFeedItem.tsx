@@ -129,6 +129,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
   // Attached Images & Lightbox
   const attachedImages = parseTilImages(item.imageUrl);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [lightboxZoom, setLightboxZoom] = useState(false);
   const [editAttachedImages, setEditAttachedImages] = useState<string[]>(parseTilImages(item.imageUrl));
   const [uploadingEditImage, setUploadingEditImage] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -136,6 +137,21 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
   useEffect(() => {
     setEditAttachedImages(parseTilImages(item.imageUrl));
   }, [item.imageUrl]);
+
+  useEffect(() => {
+    if (!lightboxImg) {
+      setLightboxZoom(false);
+      return;
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setLightboxImg(null);
+        setLightboxZoom(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxImg]);
 
   const handleEditFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -279,6 +295,14 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
     setEditTags(editTags.filter((tag) => tag !== t));
   };
 
+  const renderMarkdown = (content: string) => (
+    <MarkdownLite
+      content={content}
+      validHashes={validHashes}
+      onImageClick={(url) => setLightboxImg(url)}
+    />
+  );
+
   // Render card based on 8 distinct architectural archetypes
   const renderCardContent = () => {
     switch (item.type) {
@@ -292,7 +316,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                 <span>I THOUGHT (ASSUMPTION)</span>
               </div>
               <ClampedText className="gt__panel-text wrong" as="div" lines={4}>
-                <MarkdownLite content={gotcha.thought} validHashes={validHashes} />
+                {renderMarkdown(gotcha.thought)}
               </ClampedText>
             </div>
             <div className="gt__panel truth">
@@ -301,13 +325,13 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                 <span>ACTUALLY (REALITY)</span>
               </div>
               <ClampedText className="gt__panel-text right" as="div" lines={4}>
-                <MarkdownLite content={gotcha.actually} validHashes={validHashes} />
+                {renderMarkdown(gotcha.actually)}
               </ClampedText>
             </div>
             {gotcha.cost && (
               <div className="gt__cost">
                 <b>WHAT IT COST</b>
-                <span><MarkdownLite content={gotcha.cost} validHashes={validHashes} /></span>
+                <span>{renderMarkdown(gotcha.cost)}</span>
               </div>
             )}
           </div>
@@ -319,7 +343,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         return (
           <>
             <ClampedText className="snip__why" as="div" lines={4}>
-              <MarkdownLite content={item.body || "Key code snippet"} validHashes={validHashes} />
+              {renderMarkdown(item.body || "Key code snippet")}
             </ClampedText>
             <pre className="code">
               {lines.map((line, idx) => (
@@ -338,7 +362,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         return (
           <>
             <ClampedText className="pat__n" as="div" lines={5}>
-              <MarkdownLite content={pattern.name || item.body || ""} validHashes={validHashes} />
+              {renderMarkdown(pattern.name || item.body || "")}
             </ClampedText>
             <div className="pat__seen">
               <div className="pat__seen-head">
@@ -349,7 +373,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                 pattern.instances.map((inst, idx) => (
                   <div key={idx} className="pat__instance-row">
                     <b>{inst.date}</b>
-                    <span><MarkdownLite content={inst.note} validHashes={validHashes} /></span>
+                    <span>{renderMarkdown(inst.note)}</span>
                   </div>
                 ))
               ) : (
@@ -366,26 +390,23 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
       case "QUOTE": {
         const parsed = parseQuote(item.body);
         const targetUrl = item.linkUrl || item.linkPreview?.url;
-        const isLong = (parsed.quote || "").length > 110;
 
         return (
-          <div className="qt-card">
-            <div className="qt-layout">
-              <div className="qt-content">
-                <div className="qt-quote-box">
-                  <span className="qt-mark" aria-hidden="true">“</span>
-                  <ClampedText
-                    className={`qt ${isLong ? "qt--long" : "qt--short"}`}
-                    as="blockquote"
-                    lines={isLong ? 8 : 5}
-                  >
-                    <MarkdownLite content={parsed.quote} validHashes={validHashes} />
+          <div className="qt">
+            <div className="qt-grid">
+              <div className="qt-main">
+                <div className="qt-lead">
+                  <span className="qt-glyph" aria-hidden="true">
+                    “
+                  </span>
+                  <ClampedText className="qt__body" as="blockquote" lines={5}>
+                    {renderMarkdown(parsed.quote)}
                   </ClampedText>
                 </div>
 
                 {(parsed.author || parsed.source || targetUrl) && (
-                  <div className="qt__attribution">
-                    <div className="qt__by">
+                  <div className="qt__meta">
+                    <div className="qt__identity">
                       {parsed.author && (
                         <span className="qt__author">
                           — {parsed.author.toUpperCase()}
@@ -435,7 +456,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
             <div style={{ flex: "1 1 260px", minWidth: 0 }}>
               {news.headline && (
                 <div className="news__headline">
-                  <MarkdownLite content={news.headline} validHashes={validHashes} />
+                  {renderMarkdown(news.headline)}
                 </div>
               )}
 
@@ -445,7 +466,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                     <li key={idx} className="til-bullet-item">
                       <span className="til-bullet-pip" aria-hidden="true" />
                       <span className="til-bullet-text">
-                        <MarkdownLite content={bullet} validHashes={validHashes} />
+                        {renderMarkdown(bullet)}
                       </span>
                     </li>
                   ))}
@@ -483,7 +504,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
               <ClampedText lines={6} as="div">
                 {bulletData.intro && (
                   <div className="news__headline" style={{ marginBottom: "10px" }}>
-                    <MarkdownLite content={bulletData.intro} validHashes={validHashes} />
+                    {renderMarkdown(bulletData.intro)}
                   </div>
                 )}
                 <ul className="til-bullet-list">
@@ -491,7 +512,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                     <li key={idx} className="til-bullet-item">
                       <span className="til-bullet-pip" aria-hidden="true" />
                       <span className="til-bullet-text">
-                        <MarkdownLite content={bullet} validHashes={validHashes} />
+                        {renderMarkdown(bullet)}
                       </span>
                     </li>
                   ))}
@@ -503,7 +524,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                 as="div"
                 lines={5}
               >
-                <MarkdownLite content={opinion.take} validHashes={validHashes} />
+                {renderMarkdown(opinion.take)}
               </ClampedText>
             )}
 
@@ -536,7 +557,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                   lines={4}
                   style={{ margin: "0 0 12px", border: "none", padding: 0 }}
                 >
-                  <MarkdownLite content={item.body} validHashes={validHashes} />
+                  {renderMarkdown(item.body)}
                 </ClampedText>
               )}
               {targetUrl && (
@@ -568,7 +589,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                 <ClampedText lines={6} as="div">
                   {bulletData.intro && (
                     <div style={{ fontWeight: 800, marginBottom: "8px", fontSize: "16px" }}>
-                      <MarkdownLite content={bulletData.intro} validHashes={validHashes} />
+                      {renderMarkdown(bulletData.intro)}
                     </div>
                   )}
                   <ul className="til-bullet-list">
@@ -576,7 +597,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                       <li key={idx} className="til-bullet-item">
                         <span className="til-bullet-pip" aria-hidden="true" />
                         <span className="til-bullet-text">
-                          <MarkdownLite content={b} validHashes={validHashes} />
+                          {renderMarkdown(b)}
                         </span>
                       </li>
                     ))}
@@ -584,7 +605,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                 </ClampedText>
               ) : (
                 <ClampedText lines={6} as="div" className="claim">
-                  <MarkdownLite content={cleanBody} validHashes={validHashes} />
+                  {renderMarkdown(cleanBody)}
                 </ClampedText>
               )}
               {targetUrl && (
@@ -625,10 +646,15 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
           style={{ cursor: "pointer" }}
           title={`Filter by ${item.type}`}
         >
+          <span className="e__pulse-dot" aria-hidden="true" />
           {React.createElement(KIND_CONFIG[item.type]?.icon || Lightbulb, { size: 12, strokeWidth: 2.5 })}
           <span>{item.type}</span>
         </div>
         <span className="e__id">#{item.shortHash}</span>
+
+        {item.type === "NEWS" && (
+          <span className="e__pill-badge e__pill-badge--live">INTEL WIRE</span>
+        )}
 
         {item.type === "SNIPPET" && item.codeLang && (
           <span className="e__pill-badge">{item.codeLang.toUpperCase()}</span>
@@ -638,14 +664,23 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
           <span className="e__pill-badge">SEEN {item.reviewCount ? item.reviewCount + 1 : 1}×</span>
         )}
 
+        {item.type === "GOTCHA" && (
+          <span className="e__pill-badge e__pill-badge--hazard">HAZARD TRAP</span>
+        )}
+
         <span className="e__sp" />
 
-        {/* Memory Holding Bar */}
+        {/* Memory Holding Telemetry Gauge */}
         <div className="hold" title={`Memory Retention: ${Math.round(fVal * 100)}%`}>
           <span className="hold__l">{decayLabel}</span>
-          <span className="hold__t">
-            <span className="hold__f" style={{ width: `${Math.round(fVal * 100)}%` }} />
-          </span>
+          <div className="hold__cells" aria-label={`Memory retention ${Math.round(fVal * 100)}%`}>
+            {[1, 2, 3, 4, 5].map((cell) => (
+              <span
+                key={cell}
+                className={`hold__cell ${cell <= Math.round(fVal * 5) ? "on" : ""}`}
+              />
+            ))}
+          </div>
           <span className="hold__pct">{Math.round(fVal * 100)}%</span>
         </div>
       </div>
@@ -656,26 +691,93 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
           <>
             {renderCardContent()}
 
-            {/* Attached Images */}
+            {/* ═══ ARCHIVAL VISUAL EXHIBIT GALLERY ═══ */}
             {attachedImages.length > 0 && (
-              <div className="til-feed-item-images">
+              <div
+                className={`til-gallery ${
+                  attachedImages.length === 1
+                    ? "til-gallery--hero"
+                    : attachedImages.length === 2
+                    ? "til-gallery--diptych"
+                    : "til-gallery--grid"
+                }`}
+              >
                 {attachedImages.map((imgUrl, i) => (
-                  <div
+                  <figure
                     key={i}
-                    className="til-feed-item-img-card"
+                    className="til-plate"
                     onClick={(e) => {
                       e.stopPropagation();
                       setLightboxImg(imgUrl);
                     }}
-                    title="Click to zoom image"
+                    title="Click to inspect visual intelligence full-screen"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imgUrl} alt={`Attachment ${i + 1}`} loading="lazy" />
-                    <span className="til-feed-item-img-overlay">
-                      <Maximize2 size={12} strokeWidth={2.4} />
-                      <span>ZOOM</span>
-                    </span>
-                  </div>
+                    {/* Top Technical Metadata Rail on the Plate */}
+                    <div className="til-plate__header">
+                      <div className="til-plate__header-left">
+                        <span className="til-plate__badge">
+                          PLATE {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <span className="til-plate__type">
+                          {item.type === "NEWS"
+                            ? "INTEL DISPATCH VISUAL"
+                            : item.type === "SNIPPET"
+                            ? "CODE RUNTIME / SPECIMEN"
+                            : item.type === "GOTCHA"
+                            ? "DEBUGGING EVIDENCE"
+                            : item.type === "PATTERN"
+                            ? "ARCHITECTURAL BLUEPRINT"
+                            : item.type === "FACT"
+                            ? "EMPIRICAL EVIDENCE"
+                            : "VISUAL ATTACHMENT"}
+                        </span>
+                      </div>
+                      <div className="til-plate__header-right">
+                        <span className="til-plate__hash">#{item.shortHash}</span>
+                        <span className="til-plate__zoom-action">
+                          <Maximize2 size={10} strokeWidth={2.6} />
+                          <span>EXPAND</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Viewport Frame with Blueprint Corner Reticles & Scale Ticks */}
+                    <div className="til-plate__viewport">
+                      <span className="til-plate__corner til-plate__corner--tl" aria-hidden="true" />
+                      <span className="til-plate__corner til-plate__corner--tr" aria-hidden="true" />
+                      <span className="til-plate__corner til-plate__corner--bl" aria-hidden="true" />
+                      <span className="til-plate__corner til-plate__corner--br" aria-hidden="true" />
+
+                      {/* Technical Scale Strip along the left */}
+                      <div className="til-plate__scale" aria-hidden="true">
+                        <span /><span /><span /><span /><span />
+                      </div>
+
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={imgUrl}
+                        alt={`Visual attachment ${i + 1} for TIL #${item.shortHash}`}
+                        loading="lazy"
+                        className="til-plate__img"
+                      />
+
+                      {/* Hover Overlay HUD */}
+                      <div className="til-plate__hud">
+                        <span className="til-plate__hud-pill">
+                          <Maximize2 size={12} strokeWidth={2.5} />
+                          <span>CLICK TO INSPECT FULL RESOLUTION</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Plate Caption Bar */}
+                    <div className="til-plate__footer">
+                      <span className="til-plate__footer-label">
+                        STATUS: VERIFIED VISUAL EVIDENCE
+                      </span>
+                      <span className="til-plate__footer-key">[Z] ZOOM</span>
+                    </div>
+                  </figure>
                 ))}
               </div>
             )}
@@ -1173,6 +1275,12 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
 
       {/* Action Footer per Type */}
       <div className="e__f">
+        {actionFeedback && (
+          <div className="e__feedback-hud">
+            <Check size={11} strokeWidth={3} />
+            <span>{actionFeedback}</span>
+          </div>
+        )}
         {!isEditing ? (
           <>
             {item.type === "GOTCHA" && (
@@ -1513,34 +1621,67 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
       </div>
     </article>
 
-    {/* Full-Screen Image Lightbox Modal */}
+    {/* Full-Screen Darkroom Image Lightbox Modal */}
     {lightboxImg && (
       <div
         className="til-image-lightbox"
-        onClick={() => setLightboxImg(null)}
+        onClick={() => {
+          setLightboxImg(null);
+          setLightboxZoom(false);
+        }}
         role="dialog"
         aria-modal="true"
       >
         <div className="til-image-lightbox__content" onClick={(e) => e.stopPropagation()}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightboxImg} alt="Enlarged TIL attachment" />
-          <button
-            type="button"
-            className="til-image-lightbox__close"
-            onClick={() => setLightboxImg(null)}
-            title="Close"
-          >
-            <X size={16} strokeWidth={2.6} />
-          </button>
-          <a
-            href={lightboxImg}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="til-image-lightbox__link"
-          >
-            <ExternalLink size={12} />
-            <span>OPEN ORIGINAL</span>
-          </a>
+          <div className="til-image-lightbox__topbar">
+            <div className="til-image-lightbox__title">
+              <span className="til-image-lightbox__type">[{item.type}]</span>
+              <span>#{item.shortHash} // ARCHIVAL SPECIMEN INSPECTION</span>
+            </div>
+            <div className="til-image-lightbox__actions">
+              <button
+                type="button"
+                className="til-image-lightbox__btn"
+                onClick={() => setLightboxZoom((z) => !z)}
+                title="Toggle 1:1 Scale vs Fit"
+              >
+                <Maximize2 size={12} strokeWidth={2.4} />
+                <span>{lightboxZoom ? "FIT VIEW" : "100% SCALE"}</span>
+              </button>
+              <a
+                href={lightboxImg}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="til-image-lightbox__btn"
+                title="Open raw image in new tab"
+              >
+                <ExternalLink size={12} strokeWidth={2.4} />
+                <span>ORIGINAL ↗</span>
+              </a>
+              <button
+                type="button"
+                className="til-image-lightbox__close-btn"
+                onClick={() => {
+                  setLightboxImg(null);
+                  setLightboxZoom(false);
+                }}
+                title="Close (ESC)"
+              >
+                <X size={14} strokeWidth={2.6} />
+                <span>CLOSE [ESC]</span>
+              </button>
+            </div>
+          </div>
+          <div className={`til-image-lightbox__stage ${lightboxZoom ? "til-image-lightbox__stage--zoomed" : ""}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={lightboxImg}
+              alt="Enlarged TIL visual intelligence attachment"
+              className="til-image-lightbox__img"
+              onClick={() => setLightboxZoom((z) => !z)}
+              title="Click to toggle 1:1 zoom / fit view"
+            />
+          </div>
         </div>
       </div>
     )}
