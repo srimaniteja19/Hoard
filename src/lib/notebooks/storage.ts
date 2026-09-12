@@ -12,6 +12,16 @@ const COURSES_STORAGE_KEY = "hoard_notebook_courses_v3";
 const COLLISIONS_STORAGE_KEY = "hoard_notebook_collisions_v2";
 
 /**
+ * Checks equality between two IDs, accommodating optional user scoping prefixes (e.g. userId_id vs id).
+ */
+export function isSameId(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.endsWith("_" + b) || b.endsWith("_" + a)) return true;
+  return false;
+}
+
+/**
  * Loads all courses from localStorage with fallback to empty array
  */
 export function getStoredCourses(): SeedCourse[] {
@@ -75,13 +85,13 @@ export function computeLessonBlocksUpdate(
   const nextMeta = wc > 0 ? `${wc.toLocaleString()} WORDS · EDITED JUST NOW` : "NO NOTES YET";
 
   return courses.map((course) => {
-    if (course.id !== courseId) return course;
+    if (!isSameId(course.id, courseId)) return course;
     return {
       ...course,
       modules: course.modules.map((mod) => ({
         ...mod,
         lessons: mod.lessons.map((les) =>
-          les.id === lessonId ? { ...les, blocks, meta: nextMeta } : les
+          isSameId(les.id, lessonId) ? { ...les, blocks, meta: nextMeta } : les
         ),
       })),
     };
@@ -104,12 +114,12 @@ export function saveLessonBlocks(courseId: string, lessonId: string, blocks: Blo
 export function toggleLessonWatched(courseId: string, lessonId: string): SeedCourse[] {
   const courses = getStoredCourses();
   const updated = courses.map((course) => {
-    if (course.id !== courseId) return course;
+    if (!isSameId(course.id, courseId)) return course;
     return {
       ...course,
       modules: course.modules.map((mod) => ({
         ...mod,
-        lessons: mod.lessons.map((les) => (les.id === lessonId ? { ...les, watched: !les.watched } : les)),
+        lessons: mod.lessons.map((les) => (isSameId(les.id, lessonId) ? { ...les, watched: !les.watched } : les)),
       })),
     };
   });
@@ -164,13 +174,13 @@ export function addLessonGapStub(
   // reference-equal to the input, which can silently fail to trigger a
   // re-render for callers that rely on reference-based change detection.
   const updated = courses.map((course) => {
-    if (course.id !== courseId) return course;
+    if (!isSameId(course.id, courseId)) return course;
     return {
       ...course,
       modules: course.modules.map((mod) => ({
         ...mod,
         lessons: mod.lessons.map((les) => {
-          if (les.id !== lessonId) return les;
+          if (!isSameId(les.id, lessonId)) return les;
           const currentBlocks = les.blocks || [];
           const newHeading: Block = {
             id: generateBlockId(),
@@ -203,18 +213,44 @@ export function addLessonGapStub(
 }
 
 /**
- * Deletes a lesson/page completely from a course module
+ * Deletes a lesson/page completely from a course module, cascading to descendant subpages
+ * and cleaning up inline subpage block links from parent notes.
  */
 export function deleteLesson(courseId: string, lessonId: string): SeedCourse[] {
   const courses = getStoredCourses();
   const updated = courses.map((course) => {
-    if (course.id !== courseId) return course;
+    if (!isSameId(course.id, courseId)) return course;
     return {
       ...course,
-      modules: course.modules.map((mod) => ({
-        ...mod,
-        lessons: mod.lessons.filter((l) => l.id !== lessonId),
-      })),
+      modules: course.modules.map((mod) => {
+        // Collect target lesson and all its recursive descendant subpages
+        const toDelete = new Set<string>();
+        for (const l of mod.lessons) {
+          if (isSameId(l.id, lessonId)) toDelete.add(l.id);
+        }
+        let added = true;
+        while (added) {
+          added = false;
+          for (const l of mod.lessons) {
+            if (l.parentId && [...toDelete].some((delId) => isSameId(delId, l.parentId)) && !toDelete.has(l.id)) {
+              toDelete.add(l.id);
+              added = true;
+            }
+          }
+        }
+
+        return {
+          ...mod,
+          lessons: mod.lessons
+            .filter((l) => ![...toDelete].some((delId) => isSameId(delId, l.id)))
+            .map((les) => ({
+              ...les,
+              blocks: (les.blocks || []).filter(
+                (b) => !(b.type === "subpage" && [...toDelete].some((delId) => isSameId(delId, b.pageId)))
+              ),
+            })),
+        };
+      }),
     };
   });
   saveStoredCourses(updated);
@@ -227,13 +263,13 @@ export function deleteLesson(courseId: string, lessonId: string): SeedCourse[] {
 export function clearLessonNotes(courseId: string, lessonId: string): SeedCourse[] {
   const courses = getStoredCourses();
   const updated = courses.map((course) => {
-    if (course.id !== courseId) return course;
+    if (!isSameId(course.id, courseId)) return course;
     return {
       ...course,
       modules: course.modules.map((mod) => ({
         ...mod,
         lessons: mod.lessons.map((les) =>
-          les.id === lessonId ? { ...les, blocks: [], meta: "NO NOTES YET" } : les
+          isSameId(les.id, lessonId) ? { ...les, blocks: [], meta: "NO NOTES YET" } : les
         ),
       })),
     };
@@ -659,37 +695,48 @@ export interface LessonTreeNode {
 
 /**
  * Builds a recursive tree structure from a list of lessons in a module.
+ * Promotes orphaned subpages to root lessons and prevents infinite loops with cycle protection.
  */
 export function buildLessonTree(lessons: SeedCourseLesson[]): LessonTreeNode[] {
-  const byParent = new Map<string | null, SeedCourseLesson[]>();
-  for (const les of lessons) {
-    const pId = les.parentId || null;
-    if (!byParent.has(pId)) byParent.set(pId, []);
-    byParent.get(pId)!.push(les);
-  }
+  // Check if a lesson has a parent that exists in this module/lesson list
+  const hasParentInList = (les: SeedCourseLesson) =>
+    Boolean(les.parentId && lessons.some((p) => isSameId(p.id, les.parentId)));
 
-  function buildSubtree(parentId: string | null, level: number): LessonTreeNode[] {
-    const list = byParent.get(parentId) || [];
-    return list.map((les) => ({
+  const getChildrenOf = (parentId: string) =>
+    lessons.filter((l) => l.parentId && isSameId(l.parentId, parentId));
+
+  const visited = new Set<string>();
+
+  function buildSubtree(les: SeedCourseLesson, level: number): LessonTreeNode {
+    visited.add(les.id);
+    const children = getChildrenOf(les.id)
+      .filter((c) => !visited.has(c.id))
+      .map((child) => buildSubtree(child, level + 1));
+    return {
       lesson: les,
       level,
-      children: buildSubtree(les.id, level + 1),
-    }));
+      children,
+    };
   }
 
-  return buildSubtree(null, 0);
+  // Root lessons are those without parentId, or orphaned lessons whose parent is missing from the list
+  const rootLessons = lessons.filter((l) => !hasParentInList(l));
+  return rootLessons.map((root) => buildSubtree(root, 0));
 }
 
 /**
  * Traverses upwards to get the breadcrumb path of ancestors for a given lesson.
  */
 export function getLessonAncestors(lessons: SeedCourseLesson[], lessonId: string): SeedCourseLesson[] {
-  const map = new Map(lessons.map((l) => [l.id, l]));
   const path: SeedCourseLesson[] = [];
-  let curr = map.get(lessonId);
-  while (curr) {
+  const visited = new Set<string>();
+  let curr = lessons.find((l) => isSameId(l.id, lessonId));
+
+  while (curr && !visited.has(curr.id)) {
+    visited.add(curr.id);
     path.unshift(curr);
-    curr = curr.parentId ? map.get(curr.parentId) : undefined;
+    if (!curr.parentId) break;
+    curr = lessons.find((l) => isSameId(l.id, curr!.parentId));
   }
   return path;
 }
@@ -698,7 +745,7 @@ export function getLessonAncestors(lessons: SeedCourseLesson[], lessonId: string
  * Gets direct child subpages for a given parent lesson.
  */
 export function getDirectChildLessons(lessons: SeedCourseLesson[], parentId: string): SeedCourseLesson[] {
-  return lessons.filter((l) => l.parentId === parentId);
+  return lessons.filter((l) => l.parentId && isSameId(l.parentId, parentId));
 }
 
 /**

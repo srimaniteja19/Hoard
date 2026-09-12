@@ -30,6 +30,7 @@ import {
   deleteModuleInDbApi,
   getLessonAncestors,
   getDirectChildLessons,
+  isSameId,
 } from "@/lib/notebooks/storage";
 import { SubpagesDirectory } from "@/components/notebooks/SubpagesDirectory";
 import {
@@ -237,7 +238,28 @@ export default function NotebooksPage() {
       if (!dbData || !Array.isArray(dbData.courses)) return false;
       if (pendingSaveRef.current || inFlightSaveRef.current) return false;
 
-      setCourses(dbData.courses);
+      // Keep active course, module, and lesson aligned with new data
+      setCourses((prevCourses) => {
+        const activeCourse = prevCourses[currentCourseIdx];
+        const activeLesson = activeCourse?.modules[currentModuleIdx]?.lessons[currentLessonIdx];
+        if (activeLesson) {
+          for (let cIdx = 0; cIdx < dbData.courses.length; cIdx++) {
+            if (isSameId(dbData.courses[cIdx].id, activeCourse.id)) {
+              for (let mIdx = 0; mIdx < dbData.courses[cIdx].modules.length; mIdx++) {
+                const lIdx = dbData.courses[cIdx].modules[mIdx].lessons.findIndex((l) => isSameId(l.id, activeLesson.id));
+                if (lIdx !== -1) {
+                  setCurrentCourseIdx(cIdx);
+                  setCurrentModuleIdx(mIdx);
+                  setCurrentLessonIdx(lIdx);
+                  break;
+                }
+              }
+            }
+          }
+        }
+        return dbData.courses;
+      });
+
       saveStoredCourses(dbData.courses);
       for (const course of dbData.courses) {
         for (const mod of course.modules) {
@@ -248,7 +270,7 @@ export default function NotebooksPage() {
       }
       return true;
     },
-    []
+    [currentCourseIdx, currentModuleIdx, currentLessonIdx]
   );
 
   // Load courses & restore active location on mount
@@ -281,10 +303,24 @@ export default function NotebooksPage() {
     let restored = false;
 
     if (paramCourse) {
-      const cIdx = loaded.findIndex((c) => c.id === paramCourse || c.title.toLowerCase() === paramCourse.toLowerCase());
+      const cIdx = loaded.findIndex((c) => isSameId(c.id, paramCourse) || c.title.toLowerCase() === paramCourse.toLowerCase());
       if (cIdx >= 0) {
-        const mIdx = paramMod ? Math.max(0, Math.min(parseInt(paramMod, 10) || 0, loaded[cIdx].modules.length - 1)) : 0;
-        const lIdx = paramLes ? Math.max(0, Math.min(parseInt(paramLes, 10) || 0, (loaded[cIdx].modules[mIdx]?.lessons.length || 1) - 1)) : 0;
+        let mIdx = paramMod ? Math.max(0, Math.min(parseInt(paramMod, 10) || 0, loaded[cIdx].modules.length - 1)) : 0;
+        let lIdx = -1;
+        if (paramLes) {
+          // Check if paramLes is a lessonId across modules
+          for (let mi = 0; mi < loaded[cIdx].modules.length; mi++) {
+            const found = loaded[cIdx].modules[mi].lessons.findIndex((l) => isSameId(l.id, paramLes));
+            if (found !== -1) {
+              mIdx = mi;
+              lIdx = found;
+              break;
+            }
+          }
+        }
+        if (lIdx === -1) {
+          lIdx = paramLes ? Math.max(0, Math.min(parseInt(paramLes, 10) || 0, (loaded[cIdx].modules[mIdx]?.lessons.length || 1) - 1)) : 0;
+        }
         setCurrentCourseIdx(cIdx);
         setCurrentModuleIdx(mIdx);
         setCurrentLessonIdx(lIdx);
@@ -299,10 +335,23 @@ export default function NotebooksPage() {
         if (savedLoc) {
           const parsed = JSON.parse(savedLoc);
           if (parsed.view === "course" && parsed.courseId) {
-            const cIdx = loaded.findIndex((c) => c.id === parsed.courseId);
+            const cIdx = loaded.findIndex((c) => isSameId(c.id, parsed.courseId));
             if (cIdx >= 0) {
-              const mIdx = Math.max(0, Math.min(parsed.m || 0, loaded[cIdx].modules.length - 1));
-              const lIdx = Math.max(0, Math.min(parsed.l || 0, (loaded[cIdx].modules[mIdx]?.lessons.length || 1) - 1));
+              let mIdx = Math.max(0, Math.min(parsed.m || 0, loaded[cIdx].modules.length - 1));
+              let lIdx = -1;
+              if (parsed.lessonId) {
+                for (let mi = 0; mi < loaded[cIdx].modules.length; mi++) {
+                  const found = loaded[cIdx].modules[mi].lessons.findIndex((l) => isSameId(l.id, parsed.lessonId));
+                  if (found !== -1) {
+                    mIdx = mi;
+                    lIdx = found;
+                    break;
+                  }
+                }
+              }
+              if (lIdx === -1) {
+                lIdx = Math.max(0, Math.min(parsed.l || 0, (loaded[cIdx].modules[mIdx]?.lessons.length || 1) - 1));
+              }
               setCurrentCourseIdx(cIdx);
               setCurrentModuleIdx(mIdx);
               setCurrentLessonIdx(lIdx);
@@ -323,10 +372,14 @@ export default function NotebooksPage() {
     const course = courses[currentCourseIdx] || courses[0];
 
     if (view === "course" && course) {
+      const activeLesson = course.modules[currentModuleIdx]?.lessons[currentLessonIdx];
       const url = new URL(window.location.href);
       url.searchParams.set("course", course.id);
       url.searchParams.set("m", currentModuleIdx.toString());
       url.searchParams.set("l", currentLessonIdx.toString());
+      if (activeLesson?.id) {
+        url.searchParams.set("lesson", activeLesson.id);
+      }
       window.history.replaceState({}, "", url.toString());
 
       localStorage.setItem(
@@ -336,6 +389,7 @@ export default function NotebooksPage() {
           courseId: course.id,
           m: currentModuleIdx,
           l: currentLessonIdx,
+          lessonId: activeLesson?.id,
         })
       );
     } else if (view === "index") {
@@ -344,6 +398,7 @@ export default function NotebooksPage() {
       url.searchParams.delete("c");
       url.searchParams.delete("m");
       url.searchParams.delete("l");
+      url.searchParams.delete("lesson");
       window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
 
       localStorage.setItem(
@@ -378,17 +433,21 @@ export default function NotebooksPage() {
   };
 
   // Seamless navigation to any lesson/subpage by ID
-  const navigateToLesson = (lessonId: string) => {
-    if (!currentCourse) return;
-    for (let mIdx = 0; mIdx < currentCourse.modules.length; mIdx++) {
-      const mod = currentCourse.modules[mIdx];
-      const lIdx = mod.lessons.findIndex((l) => isSameId(l.id, lessonId));
-      if (lIdx !== -1) {
-        playSound.click();
-        setCurrentModuleIdx(mIdx);
-        setCurrentLessonIdx(lIdx);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        return;
+  const navigateToLesson = (lessonId: string, coursesList?: SeedCourse[]) => {
+    const list = coursesList || courses;
+    for (let cIdx = 0; cIdx < list.length; cIdx++) {
+      const c = list[cIdx];
+      for (let mIdx = 0; mIdx < c.modules.length; mIdx++) {
+        const mod = c.modules[mIdx];
+        const lIdx = mod.lessons.findIndex((l) => isSameId(l.id, lessonId));
+        if (lIdx !== -1) {
+          playSound.click();
+          setCurrentCourseIdx(cIdx);
+          setCurrentModuleIdx(mIdx);
+          setCurrentLessonIdx(lIdx);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
       }
     }
   };
@@ -413,23 +472,17 @@ export default function NotebooksPage() {
 
     const targetMod = currentModule;
 
-    // 1. Add subpage to current module's lessons
-    const updated = courses.map((c) => {
-      if (c.id !== currentCourse.id) return c;
-      return {
-        ...c,
-        modules: c.modules.map((m) => {
-          if (m.id !== targetMod.id) return m;
-          return {
-            ...m,
-            lessons: [...m.lessons, newSubpage],
-          };
-        }),
-      };
-    });
+    // 1. Flush any pending debounced note save so it does not overwrite the new subpage with stale courses
+    if (pendingSaveRef.current) {
+      clearTimeout(pendingSaveRef.current.timer);
+      const { lessonId, blocks } = pendingSaveRef.current;
+      saveLessonBlocksToDbApi(lessonId, blocks);
+      pendingSaveRef.current = null;
+    }
 
-    // 2. If called from inside parent's BlockEditor, insert an inline SubpageBlock
-    if (typeof targetBlockIdx === "number" && currentLesson && currentLesson.id === parentId) {
+    // 2. Prepare parent note's blocks if called with targetBlockIdx (inline subpage block)
+    let updatedParentBlocks: Block[] | null = null;
+    if (typeof targetBlockIdx === "number" && currentLesson && isSameId(currentLesson.id, parentId)) {
       const subpageBlock: Block = {
         id: generateBlockId(),
         type: "subpage",
@@ -438,23 +491,66 @@ export default function NotebooksPage() {
         icon: newSubpage.icon,
         wordCount: 0,
       };
-      const updatedBlocks = [...currentBlocks];
-      updatedBlocks.splice(targetBlockIdx + 1, 0, subpageBlock);
-      handleUpdateBlocks(updatedBlocks);
+      updatedParentBlocks = [...currentBlocks];
+      const targetBlock = updatedParentBlocks[targetBlockIdx];
+      const isSlashBlock =
+        targetBlock &&
+        "text" in targetBlock &&
+        typeof (targetBlock as any).text === "string" &&
+        ((targetBlock as any).text.trim() === "" || (targetBlock as any).text.trim().startsWith("/"));
+      if (isSlashBlock) {
+        updatedParentBlocks.splice(targetBlockIdx, 1, subpageBlock);
+      } else {
+        updatedParentBlocks.splice(targetBlockIdx + 1, 0, subpageBlock);
+      }
     }
+
+    // 3. Atomically update courses with BOTH new subpage AND parent's updated blocks
+    const updated = courses.map((c) => {
+      if (!isSameId(c.id, currentCourse.id)) return c;
+      return {
+        ...c,
+        modules: c.modules.map((m) => {
+          if (!isSameId(m.id, targetMod.id)) return m;
+          let nextLessons = m.lessons;
+          if (updatedParentBlocks) {
+            nextLessons = nextLessons.map((les) =>
+              isSameId(les.id, parentId)
+                ? {
+                    ...les,
+                    blocks: updatedParentBlocks!,
+                    meta: `${computeWordCount(updatedParentBlocks!).toLocaleString()} WORDS · EDITED JUST NOW`,
+                  }
+                : les
+            );
+          }
+          return {
+            ...m,
+            lessons: [...nextLessons, newSubpage],
+          };
+        }),
+      };
+    });
 
     setCourses(updated);
     saveStoredCourses(updated);
 
-    // 3. Persist to DB API
-    createLessonInDbApi(targetMod.id, newSubpage.title, newSubpage.blocks, undefined, {
+    if (updatedParentBlocks) {
+      saveLessonBlocksToDbApi(parentId, updatedParentBlocks);
+    }
+
+    // 4. Persist to DB API and guard inFlightSaveRef so auto-refetch cannot clobber it
+    const createPromise = createLessonInDbApi(targetMod.id, newSubpage.title, newSubpage.blocks, undefined, {
       id: newSubpageId,
       parentId,
       icon: newSubpage.icon,
     });
+    inFlightSaveRef.current = createPromise.finally(() => {
+      if (inFlightSaveRef.current === createPromise) inFlightSaveRef.current = null;
+    });
 
-    // 4. Navigate into the new subpage
-    navigateToLesson(newSubpageId);
+    // 5. Navigate into the new subpage using the updated courses list immediately
+    navigateToLesson(newSubpageId, updated);
   };
 
   // ── Real-Time Cross-Tab Live Synchronization (BroadcastChannel) ──────────
@@ -711,11 +807,19 @@ export default function NotebooksPage() {
         modules: c.modules.map((m) => ({
           ...m,
           lessons: m.lessons.map((l) => {
-            if (l.id !== currentLesson.id) return l;
-            return {
-              ...l,
-              icon: icon || undefined,
-            };
+            const updatedL = isSameId(l.id, currentLesson.id) ? { ...l, icon: icon || undefined } : l;
+            // Also update any inline subpage block linking to this lesson
+            if (l.blocks && l.blocks.some((b) => b.type === "subpage" && isSameId(b.pageId, currentLesson.id))) {
+              return {
+                ...updatedL,
+                blocks: l.blocks.map((b) =>
+                  b.type === "subpage" && isSameId(b.pageId, currentLesson.id)
+                    ? { ...b, icon: icon || "📄" }
+                    : b
+                ),
+              };
+            }
+            return updatedL;
           }),
         })),
       };
@@ -1280,7 +1384,21 @@ export default function NotebooksPage() {
             if (mIdx === currentModuleIdx) {
               return {
                 ...m,
-                lessons: m.lessons.map((l, lIdx) => (lIdx === currentLessonIdx ? { ...l, title } : l)),
+                lessons: m.lessons.map((l, lIdx) => {
+                  const updatedL = lIdx === currentLessonIdx ? { ...l, title } : l;
+                  // Also update any inline subpage block linking to this lesson
+                  if (l.blocks && l.blocks.some((b) => b.type === "subpage" && isSameId(b.pageId, currentLesson.id))) {
+                    return {
+                      ...updatedL,
+                      blocks: l.blocks.map((b) =>
+                        b.type === "subpage" && isSameId(b.pageId, currentLesson.id)
+                          ? { ...b, title }
+                          : b
+                      ),
+                    };
+                  }
+                  return updatedL;
+                }),
               };
             }
             return m;

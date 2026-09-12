@@ -32,6 +32,9 @@ import crypto from "crypto";
 function toScopedId(userId: string, rawId: string | undefined): string {
   if (!rawId) return crypto.randomUUID();
   if (rawId.startsWith(userId + "_")) return rawId;
+  // If it is already a standard UUID, it is globally unique and doesn't need user scoping
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawId);
+  if (isUuid) return rawId;
   return `${userId}_${rawId}`;
 }
 
@@ -645,18 +648,32 @@ export async function createLesson(
 
   if (!mod) return null;
 
-  const parentId = extra?.parentId ? toScopedId(userId, extra.parentId) : null;
+  // Resolve parentId if provided: verify ownership and obtain the exact primary key stored in notebookLessons
+  let resolvedParentId: string | null = null;
+  if (extra?.parentId) {
+    const [parent] = await db
+      .select({ id: notebookLessons.id })
+      .from(notebookLessons)
+      .innerJoin(notebookModules, eq(notebookLessons.moduleId, notebookModules.id))
+      .innerJoin(notebookCourses, eq(notebookModules.courseId, notebookCourses.id))
+      .where(
+        and(
+          lessonIdFilter(userId, extra.parentId),
+          eq(notebookCourses.userId, userId)
+        )
+      )
+      .limit(1);
 
-  // Count existing sibling lessons (same parentId) to determine position
+    if (parent) {
+      resolvedParentId = parent.id;
+    }
+  }
+
+  // Count existing lessons across the module to determine position sequence
   const existing = await db
     .select({ id: notebookLessons.id, position: notebookLessons.position })
     .from(notebookLessons)
-    .where(
-      and(
-        eq(notebookLessons.moduleId, mod.moduleId),
-        parentId ? eq(notebookLessons.parentId, parentId) : isNull(notebookLessons.parentId)
-      )
-    )
+    .where(eq(notebookLessons.moduleId, mod.moduleId))
     .orderBy(asc(notebookLessons.position));
 
   let position = existing.length;
@@ -672,14 +689,14 @@ export async function createLesson(
     }
   }
 
-  const lessonId = extra?.id ? toScopedId(userId, extra.id) : crypto.randomUUID();
+  const lessonId = extra?.id || crypto.randomUUID();
   const initialBlocks = blocks || [{ id: generateBlockId(), type: "paragraph", text: "" }];
   const wordCount = computeWordCount(initialBlocks);
 
   await db.insert(notebookLessons).values({
     id: lessonId,
     moduleId: mod.moduleId,
-    parentId,
+    parentId: resolvedParentId,
     title: title.trim(),
     position,
     watchedAt: null,
@@ -701,7 +718,7 @@ export async function createLesson(
     id: lessonId,
     title: title.trim(),
     watched: false,
-    parentId: extra?.parentId || undefined,
+    parentId: resolvedParentId || undefined,
     coverUrl: extra?.coverUrl || undefined,
     icon: extra?.icon || undefined,
     lessonUrl: extra?.lessonUrl || undefined,
@@ -873,7 +890,27 @@ export async function updateLesson(
 
   const updateFields: any = {};
   if (data.title !== undefined) updateFields.title = data.title.trim();
-  if (data.parentId !== undefined) updateFields.parentId = data.parentId ? toScopedId(userId, data.parentId) : null;
+  if (data.parentId !== undefined) {
+    if (!data.parentId) {
+      updateFields.parentId = null;
+    } else {
+      const [parent] = await db
+        .select({ id: notebookLessons.id })
+        .from(notebookLessons)
+        .innerJoin(notebookModules, eq(notebookLessons.moduleId, notebookModules.id))
+        .innerJoin(notebookCourses, eq(notebookModules.courseId, notebookCourses.id))
+        .where(
+          and(
+            lessonIdFilter(userId, data.parentId),
+            eq(notebookCourses.userId, userId)
+          )
+        )
+        .limit(1);
+      if (parent) {
+        updateFields.parentId = parent.id;
+      }
+    }
+  }
   if (data.gap !== undefined) updateFields.gap = data.gap;
   if (data.lessonUrl !== undefined) updateFields.lessonUrl = data.lessonUrl || null;
   if (data.coverUrl !== undefined) updateFields.coverUrl = data.coverUrl || null;
@@ -1094,6 +1131,7 @@ export async function duplicateLesson(
     .select({
       id: notebookLessons.id,
       moduleId: notebookLessons.moduleId,
+      parentId: notebookLessons.parentId,
       title: notebookLessons.title,
       gap: notebookLessons.gap,
       lessonUrl: notebookLessons.lessonUrl,
@@ -1133,6 +1171,7 @@ export async function duplicateLesson(
   await db.insert(notebookLessons).values({
     id: newLessonId,
     moduleId: les.moduleId,
+    parentId: les.parentId || null,
     title,
     position: existing.length,
     watchedAt: null,
@@ -1154,6 +1193,7 @@ export async function duplicateLesson(
     id: newLessonId,
     title,
     watched: false,
+    parentId: les.parentId || undefined,
     lessonUrl: les.lessonUrl || undefined,
     coverUrl: les.coverUrl || undefined,
     icon: les.icon || undefined,

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { SeedCourse, SeedCourseLesson } from "@/lib/notebooks/seedData";
 import { lessonState, computeWordCount } from "@/lib/notebooks/blocks";
+import { isSameId } from "@/lib/notebooks/storage";
 import { playSound } from "@/lib/sound";
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 import {
@@ -595,13 +596,13 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                   {/* Recursive Tree Node Renderer */}
                   {(() => {
                     const renderLessonNode = (les: SeedCourseLesson, level: number = 0) => {
-                      const lesIdx = mod.lessons.findIndex((l) => l.id === les.id);
+                      const lesIdx = mod.lessons.findIndex((l) => isSameId(l.id, les.id));
                       const isSelected = modIdx === currentModuleIndex && lesIdx === currentLessonIndex;
                       const state = lessonState({ wordCount: computeWordCount(les.blocks || []) });
                       const isDraggingThis =
                         draggingInfo?.modIdx === modIdx && draggingInfo?.lesIdx === lesIdx;
                       const isRowHovered = hoveredLessonId === les.id;
-                      const directChildren = mod.lessons.filter((l) => l.parentId === les.id);
+                      const directChildren = mod.lessons.filter((l) => l.parentId && isSameId(l.parentId, les.id));
                       const hasChildren = directChildren.length > 0;
                       const isSubpagesCollapsed = Boolean(collapsedSubpages[les.id]);
 
@@ -916,8 +917,11 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                       return matchingLessons.map((les) => renderLessonNode(les, 0));
                     }
 
+                    const hasParentInMod = (l: SeedCourseLesson) =>
+                      Boolean(l.parentId && mod.lessons.some((p) => isSameId(p.id, l.parentId)));
+
                     return matchingLessons
-                      .filter((l) => !l.parentId)
+                      .filter((l) => !hasParentInMod(l))
                       .map((rootLes) => renderLessonNode(rootLes, 0));
                   })()}
                 </div>
