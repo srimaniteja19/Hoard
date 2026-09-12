@@ -3427,19 +3427,19 @@
   box-shadow: 7px 7px 0 var(--ink);
 }
 
-.dues-stat-card.card-today {
+.dues-stat-card.dues-stat-card--today {
   border-top: 6px solid var(--lime, #D2F800);
 }
 
-.dues-stat-card.card-week {
+.dues-stat-card.dues-stat-card--week {
   border-top: 6px solid #FF9E2C;
 }
 
-.dues-stat-card.card-month {
+.dues-stat-card.dues-stat-card--month {
   border-top: 6px solid #7FE9F7;
 }
 
-.dues-stat-card.card-year {
+.dues-stat-card.dues-stat-card--year {
   border-top: 6px solid #D8B4FE;
 }
 
@@ -3460,22 +3460,22 @@
   border: 1px solid var(--ink);
 }
 
-.dues-stat-tag.today {
+.dues-stat-tag--today {
   background: var(--lime, #D2F800);
   color: #0A0A0A;
 }
 
-.dues-stat-tag.week {
+.dues-stat-tag--week {
   background: #FF9E2C;
   color: #0A0A0A;
 }
 
-.dues-stat-tag.month {
+.dues-stat-tag--month {
   background: #7FE9F7;
   color: #0A0A0A;
 }
 
-.dues-stat-tag.year {
+.dues-stat-tag--year {
   background: #D8B4FE;
   color: #0A0A0A;
 }
@@ -3710,20 +3710,31 @@
   box-shadow: 2px 2px 0 var(--ink);
 }
 
-/* Category Multi-Segment Track */
+/* Category Multi-Segment Track & Legend */
+.dues-cat-multi-track-wrapper {
+  border: var(--b) solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 14px 16px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .dues-cat-multi-track {
-  height: 18px;
+  height: 22px;
   display: flex;
   border: 2px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--ink);
-  border-radius: 3px;
+  box-shadow: 2px 2px 0 var(--ink);
+  border-radius: 4px;
   overflow: hidden;
   background: #FAFAFA;
 }
 
 .dues-cat-multi-segment {
   height: 100%;
-  border-right: 1px solid var(--ink);
+  border-right: 1.5px solid var(--ink);
   transition: width 0.3s ease;
 }
 
@@ -3731,33 +3742,73 @@
   border-right: none;
 }
 
+.dues-cat-legend-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-top: 2px;
+}
+
+.dues-cat-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.dues-cat-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--ink);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.dues-cat-legend-name {
+  font-weight: 800;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.dues-cat-legend-val {
+  color: #666666;
+  font-weight: 700;
+}
+
 /* Category Cards Grid */
 .dues-cat-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  align-items: stretch;
 }
 
 .dues-cat-stat-card {
-  border: 2px solid var(--ink);
+  border: var(--b) solid var(--ink);
   background: #FFFFFF;
-  box-shadow: 3px 3px 0 var(--ink);
-  padding: 14px;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
   border-radius: 4px;
   transition: transform 0.08s ease, box-shadow 0.08s ease;
+  min-height: 154px;
+  box-sizing: border-box;
 }
 
 .dues-cat-stat-card:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
 }
 
-.dues-cat-stat-card.top {
-  background: #FAFFF0;
-  border-color: #0A0A0A;
+.dues-cat-stat-card.dues-cat-stat-card--top {
+  background: #FFFFFF;
+  border-top: 5px solid var(--lime, #D2F800);
 }
 
 .dues-cat-card-top {
@@ -3771,55 +3822,65 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .dues-cat-card-name {
   font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 900;
   color: var(--ink);
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .dues-cat-card-pct {
   font-family: var(--mono);
   font-size: 10px;
+  font-weight: 700;
   color: #777777;
+  letter-spacing: 0.02em;
 }
 
 .dues-top-cat-pill {
   font-family: var(--mono);
   font-size: 9px;
   font-weight: 900;
-  padding: 2px 6px;
+  padding: 3px 8px;
   background: var(--lime, #D2F800);
   color: #0A0A0A;
-  border: 1px solid var(--ink);
+  border: 1.5px solid var(--ink);
   border-radius: 3px;
+  box-shadow: 1.5px 1.5px 0 var(--ink);
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
+  white-space: nowrap;
 }
 
 .dues-cat-card-amount {
   font-family: var(--display);
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 900;
   color: var(--ink);
   letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 2px 0;
 }
 
 .dues-cat-micro-track {
-  height: 6px;
-  background: #E5E5E5;
-  border: 1px solid var(--ink);
-  border-radius: 3px;
+  height: 8px;
+  background: #EFEFEA;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
   overflow: hidden;
 }
 
 .dues-cat-micro-fill {
   height: 100%;
-  border-right: 1px solid var(--ink);
+  border-right: 1.5px solid var(--ink);
+  border-radius: 2px;
+  transition: width 0.3s ease;
 }
 
 .dues-cat-card-footer {
@@ -3827,8 +3888,18 @@
   align-items: center;
   justify-content: space-between;
   font-family: var(--mono);
-  font-size: 10px;
-  color: #777777;
+  font-size: 11px;
+  font-weight: 700;
+  color: #666666;
+  border-top: 1px dashed rgba(10, 10, 10, 0.18);
+  padding-top: 10px;
+  margin-top: 2px;
+}
+
+.dues-cat-card-footer-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .dues-analytics-empty-box {

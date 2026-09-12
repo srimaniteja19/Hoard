@@ -147,9 +147,9 @@ export const ExpenseAnalyticsView: React.FC<ExpenseAnalyticsViewProps> = ({
       {/* ── 2. THE 4 PRIMARY HORIZON COMMAND CARDS ── */}
       <div className="dues-cards-grid">
         {/* CARD 1: TODAY */}
-        <div className="dues-stat-card card-today">
+        <div className="dues-stat-card dues-stat-card--today">
           <div className="dues-stat-card-top">
-            <span className="dues-stat-tag today">TODAY</span>
+            <span className="dues-stat-tag dues-stat-tag--today">TODAY</span>
             <span
               className={`dues-stat-badge ${
                 dailyMetrics?.isOverBudgetToday ? "danger" : "safe"
@@ -189,9 +189,9 @@ export const ExpenseAnalyticsView: React.FC<ExpenseAnalyticsViewProps> = ({
         </div>
 
         {/* CARD 2: THIS WEEK */}
-        <div className="dues-stat-card card-week">
+        <div className="dues-stat-card dues-stat-card--week">
           <div className="dues-stat-card-top">
-            <span className="dues-stat-tag week">THIS WEEK</span>
+            <span className="dues-stat-tag dues-stat-tag--week">THIS WEEK</span>
             {analytics.thisWeek.percentageChange !== undefined ? (
               <span
                 className={`dues-stat-badge ${
@@ -228,9 +228,9 @@ export const ExpenseAnalyticsView: React.FC<ExpenseAnalyticsViewProps> = ({
         </div>
 
         {/* CARD 3: THIS MONTH */}
-        <div className="dues-stat-card card-month">
+        <div className="dues-stat-card dues-stat-card--month">
           <div className="dues-stat-card-top">
-            <span className="dues-stat-tag month">THIS MONTH</span>
+            <span className="dues-stat-tag dues-stat-tag--month">THIS MONTH</span>
             <span className="dues-stat-badge month">
               PROJECTED ~${analytics.thisMonth.projectedMonthEnd.toFixed(0)}
             </span>
@@ -251,9 +251,9 @@ export const ExpenseAnalyticsView: React.FC<ExpenseAnalyticsViewProps> = ({
         </div>
 
         {/* CARD 4: THIS YEAR */}
-        <div className="dues-stat-card card-year">
+        <div className="dues-stat-card dues-stat-card--year">
           <div className="dues-stat-card-top">
-            <span className="dues-stat-tag year">THIS YEAR</span>
+            <span className="dues-stat-tag dues-stat-tag--year">THIS YEAR</span>
             <span className="dues-stat-badge year">
               ~${analytics.thisYear.projectedYearEnd.toFixed(0)} ANNUAL
             </span>
@@ -351,27 +351,45 @@ export const ExpenseAnalyticsView: React.FC<ExpenseAnalyticsViewProps> = ({
         <div className="dues-analytics-sec-head">
           <div className="dues-sec-title">
             <PieChart size={16} />
-            <span>CATEGORY DISTRIBUTION // {horizon.replace("_", " ")}</span>
+            <span>CATEGORY ALLOCATION // {horizon.replace("_", " ")}</span>
           </div>
           <span className="dues-sec-meta">
             {horizonCategories.length} {horizonCategories.length === 1 ? "CATEGORY" : "CATEGORIES"} DETECTED
           </span>
         </div>
 
-        {/* Proportional Segmented Progress Track */}
+        {/* Proportional Segmented Progress Track with Framed Legend */}
         {horizonTotal > 0 && horizonCategories.length > 0 && (
-          <div className="dues-cat-multi-track" title="Proportional spending by category">
-            {horizonCategories.map((cat) => (
-              <div
-                key={cat.category}
-                className="dues-cat-multi-segment"
-                style={{
-                  width: `${Math.max(2, cat.percentage)}%`,
-                  backgroundColor: cat.bg,
-                }}
-                title={`${cat.name}: $${cat.totalSpent.toFixed(0)} (${cat.percentage}%)`}
-              />
-            ))}
+          <div className="dues-cat-multi-track-wrapper">
+            <div className="dues-cat-multi-track" title="Proportional spending by category">
+              {horizonCategories.map((cat) => (
+                <div
+                  key={cat.category}
+                  className="dues-cat-multi-segment"
+                  style={{
+                    width: `${Math.max(2, cat.percentage)}%`,
+                    backgroundColor: cat.bg,
+                  }}
+                  title={`${cat.name}: $${cat.totalSpent.toFixed(0)} (${cat.percentage}%)`}
+                />
+              ))}
+            </div>
+
+            {/* Visual Legend Row */}
+            <div className="dues-cat-legend-row">
+              {horizonCategories.map((cat) => (
+                <div key={cat.category} className="dues-cat-legend-item">
+                  <span
+                    className="dues-cat-legend-dot"
+                    style={{ backgroundColor: cat.bg }}
+                  />
+                  <span className="dues-cat-legend-name">{cat.name}:</span>
+                  <span className="dues-cat-legend-val">
+                    ${cat.totalSpent.toFixed(2)} ({cat.percentage}%)
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -387,13 +405,16 @@ export const ExpenseAnalyticsView: React.FC<ExpenseAnalyticsViewProps> = ({
               const IconComp = CATEGORY_ICONS[cat.category] || Receipt;
               const isTop = idx === 0;
               return (
-                <div key={cat.category} className={`dues-cat-stat-card ${isTop ? "top" : ""}`}>
+                <div
+                  key={cat.category}
+                  className={`dues-cat-stat-card ${isTop ? "dues-cat-stat-card--top" : ""}`}
+                >
                   <div className="dues-cat-card-top">
                     <div
                       className="dues-today-icon-badge"
                       style={{ backgroundColor: cat.bg }}
                     >
-                      <IconComp size={15} strokeWidth={2.4} />
+                      <IconComp size={16} strokeWidth={2.4} />
                     </div>
 
                     <div className="dues-cat-card-title-wrap">
@@ -417,15 +438,19 @@ export const ExpenseAnalyticsView: React.FC<ExpenseAnalyticsViewProps> = ({
                     <div
                       className="dues-cat-micro-fill"
                       style={{
-                        width: `${cat.percentage}%`,
+                        width: `${Math.max(3, cat.percentage)}%`,
                         backgroundColor: cat.bg,
                       }}
                     />
                   </div>
 
                   <div className="dues-cat-card-footer">
-                    <span>{cat.count} {cat.count === 1 ? "entry" : "entries"}</span>
-                    <span>avg ${cat.average.toFixed(0)}/entry</span>
+                    <span className="dues-cat-card-footer-item">
+                      {cat.count} {cat.count === 1 ? "entry" : "entries"}
+                    </span>
+                    <span className="dues-cat-card-footer-item">
+                      avg ${cat.average.toFixed(2)}/entry
+                    </span>
                   </div>
                 </div>
               );
