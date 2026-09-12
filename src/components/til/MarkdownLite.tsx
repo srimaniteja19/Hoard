@@ -1,4 +1,5 @@
 import React from "react";
+import { Maximize2 } from "lucide-react";
 
 interface MarkdownLiteProps {
   content: string;
@@ -67,23 +68,17 @@ export const MarkdownLite: React.FC<MarkdownLiteProps> = ({
           >
             <div className="til-plate__header">
               <div className="til-plate__header-left">
-                <span className="til-plate__badge">SPECIMEN</span>
-                <span className="til-plate__type">{alt || "VISUAL INTEL"}</span>
+                <span className="til-plate__badge">FIGURE</span>
+                <span className="til-plate__type">{alt || "Visual Reference"}</span>
               </div>
               <div className="til-plate__header-right">
                 <span className="til-plate__zoom-action">
-                  <span>EXPAND ⤢</span>
+                  <Maximize2 size={11} strokeWidth={2.4} />
+                  <span>EXPAND [Z]</span>
                 </span>
               </div>
             </div>
             <div className="til-plate__viewport">
-              <span className="til-plate__corner til-plate__corner--tl" aria-hidden="true" />
-              <span className="til-plate__corner til-plate__corner--tr" aria-hidden="true" />
-              <span className="til-plate__corner til-plate__corner--bl" aria-hidden="true" />
-              <span className="til-plate__corner til-plate__corner--br" aria-hidden="true" />
-              <div className="til-plate__scale" aria-hidden="true">
-                <span /><span /><span /><span /><span />
-              </div>
               <img
                 src={url}
                 alt={alt || "TIL image attachment"}
@@ -92,15 +87,10 @@ export const MarkdownLite: React.FC<MarkdownLiteProps> = ({
               />
               <div className="til-plate__hud">
                 <span className="til-plate__hud-pill">
-                  <span>CLICK TO INSPECT FULL RESOLUTION</span>
+                  <Maximize2 size={12} strokeWidth={2.4} />
+                  <span>CLICK TO INSPECT FULL SIZE</span>
                 </span>
               </div>
-            </div>
-            <div className="til-plate__footer">
-              <span className="til-plate__footer-label">
-                {alt ? `EXHIBIT: ${alt.toUpperCase()}` : "STATUS: VERIFIED VISUAL EVIDENCE"}
-              </span>
-              <span className="til-plate__footer-key">[Z] ZOOM</span>
             </div>
           </figure>
         );

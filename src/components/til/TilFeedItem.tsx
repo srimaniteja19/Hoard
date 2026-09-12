@@ -450,6 +450,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
       case "NEWS": {
         const news = parseNews(item.body);
         const targetUrl = item.linkUrl || item.linkPreview?.url;
+        const validBullets = (news.items || []).filter((b) => b && b.trim().length > 0);
 
         return (
           <div style={{ display: "flex", gap: "18px", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
@@ -460,28 +461,31 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                 </div>
               )}
 
-              <ClampedText lines={6} as="div">
-                <ul className="til-bullet-list">
-                  {news.items.map((bullet, idx) => (
-                    <li key={idx} className="til-bullet-item">
-                      <span className="til-bullet-pip" aria-hidden="true" />
-                      <span className="til-bullet-text">
-                        {renderMarkdown(bullet)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </ClampedText>
+              {validBullets.length > 0 && (
+                <ClampedText lines={6} as="div">
+                  <ul className="til-bullet-list">
+                    {validBullets.map((bullet, idx) => (
+                      <li key={idx} className="til-bullet-item">
+                        <span className="til-bullet-pip" aria-hidden="true" />
+                        <span className="til-bullet-text">
+                          {renderMarkdown(bullet)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </ClampedText>
+              )}
 
               {(news.source || targetUrl) && (
-                <div className="news__src">
-                  SOURCE ▸{" "}
+                <div className="src">
+                  <span className="src__lbl">SOURCE</span>
                   {targetUrl ? (
-                    <a href={targetUrl} target="_blank" rel="noopener noreferrer">
-                      {news.source || item.linkPreview?.host || targetUrl}
+                    <a href={targetUrl} target="_blank" rel="noopener noreferrer" className="src__link">
+                      <span>{news.source || item.linkPreview?.host || targetUrl.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]}</span>
+                      <ExternalLink size={10} />
                     </a>
                   ) : (
-                    <span>{news.source}</span>
+                    <span className="src__text">{news.source}</span>
                   )}
                 </div>
               )}
@@ -497,18 +501,19 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
       case "OPINION": {
         const opinion = parseOpinion(item.body, item.createdAt);
         const bulletData = extractBulletPoints(opinion.take);
+        const validOpinionBullets = bulletData ? bulletData.bullets.filter((b) => b && b.trim().length > 0) : [];
 
         return (
           <>
-            {bulletData ? (
+            {validOpinionBullets.length > 0 ? (
               <ClampedText lines={6} as="div">
-                {bulletData.intro && (
+                {bulletData?.intro && (
                   <div className="news__headline" style={{ marginBottom: "10px" }}>
                     {renderMarkdown(bulletData.intro)}
                   </div>
                 )}
                 <ul className="til-bullet-list">
-                  {bulletData.bullets.map((bullet, idx) => (
+                  {validOpinionBullets.map((bullet, idx) => (
                     <li key={idx} className="til-bullet-item">
                       <span className="til-bullet-pip" aria-hidden="true" />
                       <span className="til-bullet-text">
@@ -562,9 +567,10 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
               )}
               {targetUrl && (
                 <div className="src" style={{ marginTop: "8px", paddingTop: "8px" }}>
-                  SOURCE ▸{" "}
-                  <a href={targetUrl} target="_blank" rel="noopener noreferrer">
-                    {preview?.host || targetUrl}
+                  <span className="src__lbl">SOURCE</span>
+                  <a href={targetUrl} target="_blank" rel="noopener noreferrer" className="src__link">
+                    <span>{preview?.host || targetUrl.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]}</span>
+                    <ExternalLink size={10} />
                   </a>
                 </div>
               )}
@@ -580,20 +586,21 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
       case "FACT":
       default: {
         const bulletData = extractBulletPoints(item.body);
+        const validFactBullets = bulletData ? bulletData.bullets.filter((b) => b && b.trim().length > 0) : [];
         const cleanBody = (item.body || "").replace(/^["“](.*)["”]$/, "$1");
         const targetUrl = item.linkUrl || item.linkPreview?.url;
         return (
           <div style={{ display: "flex", gap: "20px", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
             <div style={{ flex: "1 1 280px", minWidth: 0 }}>
-              {bulletData ? (
+              {validFactBullets.length > 0 ? (
                 <ClampedText lines={6} as="div">
-                  {bulletData.intro && (
+                  {bulletData?.intro && (
                     <div style={{ fontWeight: 800, marginBottom: "8px", fontSize: "16px" }}>
                       {renderMarkdown(bulletData.intro)}
                     </div>
                   )}
                   <ul className="til-bullet-list">
-                    {bulletData.bullets.map((b, idx) => (
+                    {validFactBullets.map((b, idx) => (
                       <li key={idx} className="til-bullet-item">
                         <span className="til-bullet-pip" aria-hidden="true" />
                         <span className="til-bullet-text">
@@ -653,7 +660,10 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         <span className="e__id">#{item.shortHash}</span>
 
         {item.type === "NEWS" && (
-          <span className="e__pill-badge e__pill-badge--live">INTEL WIRE</span>
+          <span className="e__pill-badge e__pill-badge--live">
+            <span className="e__live-beacon" aria-hidden="true" />
+            LIVE PULSE
+          </span>
         )}
 
         {item.type === "SNIPPET" && item.codeLang && (
@@ -665,7 +675,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         )}
 
         {item.type === "GOTCHA" && (
-          <span className="e__pill-badge e__pill-badge--hazard">HAZARD TRAP</span>
+          <span className="e__pill-badge e__pill-badge--hazard">LESSON LEARNED</span>
         )}
 
         <span className="e__sp" />
@@ -673,13 +683,11 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
         {/* Memory Holding Telemetry Gauge */}
         <div className="hold" title={`Memory Retention: ${Math.round(fVal * 100)}%`}>
           <span className="hold__l">{decayLabel}</span>
-          <div className="hold__cells" aria-label={`Memory retention ${Math.round(fVal * 100)}%`}>
-            {[1, 2, 3, 4, 5].map((cell) => (
-              <span
-                key={cell}
-                className={`hold__cell ${cell <= Math.round(fVal * 5) ? "on" : ""}`}
-              />
-            ))}
+          <div className="hold__track" aria-label={`Memory retention ${Math.round(fVal * 100)}%`}>
+            <div
+              className={`hold__fill hold__fill--${decayState}`}
+              style={{ width: `${Math.round(fVal * 100)}%` }}
+            />
           </div>
           <span className="hold__pct">{Math.round(fVal * 100)}%</span>
         </div>
@@ -716,43 +724,32 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                     <div className="til-plate__header">
                       <div className="til-plate__header-left">
                         <span className="til-plate__badge">
-                          PLATE {String(i + 1).padStart(2, "0")}
+                          EXHIBIT {String(i + 1).padStart(2, "0")}
                         </span>
                         <span className="til-plate__type">
                           {item.type === "NEWS"
-                            ? "INTEL DISPATCH VISUAL"
+                            ? "Visual Intelligence Dispatch"
                             : item.type === "SNIPPET"
-                            ? "CODE RUNTIME / SPECIMEN"
+                            ? "Code Runtime Specimen"
                             : item.type === "GOTCHA"
-                            ? "DEBUGGING EVIDENCE"
+                            ? "Debug Evidence"
                             : item.type === "PATTERN"
-                            ? "ARCHITECTURAL BLUEPRINT"
+                            ? "Architecture Blueprint"
                             : item.type === "FACT"
-                            ? "EMPIRICAL EVIDENCE"
-                            : "VISUAL ATTACHMENT"}
+                            ? "Empirical Graph / Chart"
+                            : "Visual Attachment"}
                         </span>
                       </div>
                       <div className="til-plate__header-right">
-                        <span className="til-plate__hash">#{item.shortHash}</span>
                         <span className="til-plate__zoom-action">
-                          <Maximize2 size={10} strokeWidth={2.6} />
-                          <span>EXPAND</span>
+                          <Maximize2 size={11} strokeWidth={2.4} />
+                          <span>EXPAND [Z]</span>
                         </span>
                       </div>
                     </div>
 
-                    {/* Viewport Frame with Blueprint Corner Reticles & Scale Ticks */}
+                    {/* Viewport Frame */}
                     <div className="til-plate__viewport">
-                      <span className="til-plate__corner til-plate__corner--tl" aria-hidden="true" />
-                      <span className="til-plate__corner til-plate__corner--tr" aria-hidden="true" />
-                      <span className="til-plate__corner til-plate__corner--bl" aria-hidden="true" />
-                      <span className="til-plate__corner til-plate__corner--br" aria-hidden="true" />
-
-                      {/* Technical Scale Strip along the left */}
-                      <div className="til-plate__scale" aria-hidden="true">
-                        <span /><span /><span /><span /><span />
-                      </div>
-
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={imgUrl}
@@ -764,18 +761,10 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                       {/* Hover Overlay HUD */}
                       <div className="til-plate__hud">
                         <span className="til-plate__hud-pill">
-                          <Maximize2 size={12} strokeWidth={2.5} />
-                          <span>CLICK TO INSPECT FULL RESOLUTION</span>
+                          <Maximize2 size={12} strokeWidth={2.4} />
+                          <span>CLICK TO INSPECT FULL SIZE</span>
                         </span>
                       </div>
-                    </div>
-
-                    {/* Bottom Plate Caption Bar */}
-                    <div className="til-plate__footer">
-                      <span className="til-plate__footer-label">
-                        STATUS: VERIFIED VISUAL EVIDENCE
-                      </span>
-                      <span className="til-plate__footer-key">[Z] ZOOM</span>
                     </div>
                   </figure>
                 ))}

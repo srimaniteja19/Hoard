@@ -228,21 +228,25 @@ export function extractBulletPoints(text: string | null): BulletExtraction | nul
       const parts = line.split(/(?:^|\s)[*•-]\s+/).map((p) => p.trim()).filter(Boolean);
       bullets.push(...parts);
     } else if (isBulletLine) {
-      bullets.push(line.replace(/^[-*•]\s+/, "").trim());
+      const bulletContent = line.replace(/^[-*•]\s+/, "").trim();
+      if (bulletContent) {
+        bullets.push(bulletContent);
+      }
     } else if (bullets.length === 0 && !intro) {
       intro = line;
     } else {
       // Continuation line of previous bullet or new line
       if (bullets.length > 0) {
         bullets[bullets.length - 1] += " " + line;
-      } else {
+      } else if (line) {
         bullets.push(line);
       }
     }
   }
 
-  if (bullets.length === 0) return null;
-  return { intro, bullets };
+  const validBullets = bullets.map((b) => b.trim()).filter(Boolean);
+  if (validBullets.length === 0) return null;
+  return { intro, bullets: validBullets };
 }
 
 export interface ParsedNews {
@@ -281,7 +285,7 @@ export function parseNews(body: string | null): ParsedNews {
     }
     return {
       headline,
-      items: extracted.bullets,
+      items: extracted.bullets.map((b) => b.trim()).filter(Boolean),
       source,
     };
   }
@@ -292,14 +296,14 @@ export function parseNews(body: string | null): ParsedNews {
     headline = lines[0];
     return {
       headline,
-      items: lines.slice(1),
+      items: lines.slice(1).map((b) => b.trim()).filter(Boolean),
       source,
     };
   }
 
   return {
     headline,
-    items: lines.length > 0 ? lines : [text],
+    items: lines.length > 0 ? (headline ? [] : lines) : (text ? [text] : []),
     source,
   };
 }
