@@ -290,20 +290,36 @@ export function parseNews(body: string | null): ParsedNews {
     };
   }
 
-  // Fallback: split by newlines or treat as single item
+  // Fallback: split by newlines
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  if (!headline && lines.length > 1) {
-    headline = lines[0];
+  if (headline) {
+    // Headline was explicitly provided; all remaining lines are the news items/briefing
     return {
       headline,
-      items: lines.slice(1).map((b) => b.trim()).filter(Boolean),
+      items: lines,
+      source,
+    };
+  }
+
+  if (lines.length > 1) {
+    // First line serves as headline, rest are items
+    return {
+      headline: lines[0],
+      items: lines.slice(1),
+      source,
+    };
+  }
+
+  if (lines.length === 1) {
+    return {
+      headline: lines[0],
+      items: [],
       source,
     };
   }
 
   return {
-    headline,
-    items: lines.length > 0 ? (headline ? [] : lines) : (text ? [text] : []),
+    items: [],
     source,
   };
 }

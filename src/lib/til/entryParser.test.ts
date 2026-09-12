@@ -153,6 +153,13 @@ describe("entryParser", () => {
       expect(res.items[1]).toContain("Ukrainian forces");
       expect(res.items[2]).toContain("Russia escalates");
     });
+
+    it("handles headline with non-bulleted lines correctly without clearing items", () => {
+      const input = "HEADLINE: ⚽️ Want Referees Without Whistles\n\nThe Bite:\n\nAnthropic disclosed something interesting.";
+      const res = parseNews(input);
+      expect(res.headline).toBe("⚽️ Want Referees Without Whistles");
+      expect(res.items).toEqual(["The Bite:", "Anthropic disclosed something interesting."]);
+    });
   });
 });
 
