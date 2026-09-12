@@ -88,6 +88,7 @@ function LedgerContent() {
   const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false);
   const [editingIncome, setEditingIncome] = useState<FinancialIncomeRow | null>(null);
 
+  const [isAddDailyExpenseOpen, setIsAddDailyExpenseOpen] = useState(false);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [isFireWarRoomOpen, setIsFireWarRoomOpen] = useState(false);
   const [isSurplusSweeperOpen, setIsSurplusSweeperOpen] = useState(false);
@@ -164,6 +165,24 @@ function LedgerContent() {
   const handleDailyExpenseCreated = (expense: FinancialDailyExpenseRow) => {
     if (!overview) return;
     const newDaily = [expense, ...(overview.dailyExpenses || [])];
+    setOverview(
+      recomputeOverview(
+        overview.subscriptions,
+        overview.debts,
+        overview.assets,
+        overview.incomes,
+        overview.investments || [],
+        overview.latestAudit,
+        newDaily
+      )
+    );
+  };
+
+  const handleDailyExpenseUpdated = (expense: FinancialDailyExpenseRow) => {
+    if (!overview) return;
+    const newDaily = (overview.dailyExpenses || []).map((e) =>
+      e.id === expense.id ? expense : e
+    );
     setOverview(
       recomputeOverview(
         overview.subscriptions,
@@ -508,7 +527,9 @@ function LedgerContent() {
             className="btn-ledger btn-ledger-primary"
             onClick={() => {
               playSound.click();
-              if (activeTab === "SUBSCRIPTIONS") {
+              if (activeTab === "DAILY") {
+                setIsAddDailyExpenseOpen(true);
+              } else if (activeTab === "SUBSCRIPTIONS") {
                 setEditingSub(null);
                 setIsAddSubOpen(true);
               } else if (activeTab === "INVESTMENTS") {
@@ -643,8 +664,12 @@ function LedgerContent() {
             <DailyExpenseTracker
               overview={overview}
               onExpenseCreated={handleDailyExpenseCreated}
+              onExpenseUpdated={handleDailyExpenseUpdated}
               onExpenseDeleted={handleDailyExpenseDeleted}
               onRefresh={(silent) => fetchOverview(silent ?? true)}
+              isAddExpenseOpen={isAddDailyExpenseOpen}
+              onCloseAddExpense={() => setIsAddDailyExpenseOpen(false)}
+              onOpenAddExpense={() => setIsAddDailyExpenseOpen(true)}
             />
           )}
 

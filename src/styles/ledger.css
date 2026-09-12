@@ -2608,5 +2608,1471 @@
   }
 }
 
+/* ═════════════════════════════════════════════════════════════════════════════
+   7. DAILY EXPENSES: SUB-VIEW SWITCHBOARD & TELEMETRY TICKER
+═════════════════════════════════════════════════════════════════════════════ */
 
+.dues-subnav-deck {
+  border: var(--b) solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 4px 4px 0 var(--ink);
+  margin-bottom: 24px;
+}
 
+.dues-subnav-rail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0A0A0A;
+  color: #FFFFFF;
+  padding: 8px 16px;
+  border-bottom: 2px solid var(--ink);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.dues-subnav-rail-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dues-subnav-live-ticker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #888888;
+  flex-wrap: wrap;
+}
+
+.dues-ticker-item {
+  background: transparent;
+  border: none;
+  color: #DDDDDD;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: all 0.12s ease;
+}
+
+.dues-ticker-item b {
+  color: var(--lime, #D2F800);
+  margin-left: 2px;
+}
+
+.dues-ticker-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.dues-ticker-sep {
+  color: #555555;
+}
+
+.dues-subnav-tabs {
+  display: flex;
+  align-items: stretch;
+  background: #FAFAFA;
+  overflow-x: auto;
+}
+
+.dues-subnav-tab {
+  flex: 1;
+  min-width: 170px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 18px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #FFFFFF;
+  color: #666666;
+  border: none;
+  border-right: 2px solid var(--ink);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  position: relative;
+  white-space: nowrap;
+}
+
+.dues-subnav-tab:last-child {
+  border-right: none;
+}
+
+.dues-subnav-tab:hover:not(.active) {
+  background: var(--shade, #F4F4F0);
+  color: var(--ink);
+}
+
+.dues-subnav-tab.active {
+  background: var(--ink);
+  color: var(--lime, #D2F800);
+  box-shadow: inset 0 -3px 0 var(--lime, #D2F800);
+}
+
+.dues-subnav-count {
+  font-size: 10px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: rgba(10, 10, 10, 0.1);
+  color: var(--ink);
+}
+
+.dues-subnav-tab.active .dues-subnav-count {
+  background: var(--lime, #D2F800);
+  color: #0A0A0A;
+}
+
+.dues-today-edit {
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid var(--ink);
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #555555;
+  border-radius: 3px;
+  box-shadow: 1px 1px 0 var(--ink);
+  transition: all 0.08s ease;
+}
+
+.dues-today-edit:hover {
+  background: var(--lime, #D2F800);
+  color: #0A0A0A;
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   8. EXPENSE ARCHIVE VIEW (BROWSE BY ANY DAY)
+═════════════════════════════════════════════════════════════════════════════ */
+
+.dues-archive-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dues-archive-top-ribbon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: var(--b) solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 16px 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.dues-archive-top-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dues-archive-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #666666;
+  text-transform: uppercase;
+}
+
+.dues-archive-heading {
+  font-family: var(--display);
+  font-size: clamp(18px, 3vw, 24px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.dues-archive-top-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dues-archive-stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid var(--ink);
+  background: #FAFAFA;
+  padding: 6px 12px;
+  border-radius: 4px;
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.dues-archive-stat-pill.highlight {
+  background: var(--lime, #D2F800);
+  color: #0A0A0A;
+}
+
+.dues-archive-stat-label {
+  font-weight: 700;
+  color: #666666;
+}
+
+.dues-archive-stat-pill.highlight .dues-archive-stat-label {
+  color: #333333;
+}
+
+.dues-archive-stat-value {
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.dues-archive-add-btn {
+  font-size: 12px;
+  padding: 7px 16px;
+}
+
+/* Control Box */
+.dues-archive-control-box {
+  border: var(--b) solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dues-archive-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.dues-archive-presets-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dues-control-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #777777;
+  text-transform: uppercase;
+}
+
+.dues-preset-btn {
+  background: #FFFFFF;
+  border: 1.5px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  cursor: pointer;
+  color: var(--ink);
+  border-radius: 4px;
+  transition: all 0.08s ease;
+}
+
+.dues-preset-btn:hover {
+  background: var(--shade, #F4F4F0);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.dues-preset-btn.active {
+  background: #0A0A0A;
+  color: var(--lime, #D2F800);
+  box-shadow: 1px 1px 0 var(--ink);
+  transform: translate(1px, 1px);
+}
+
+/* Date Jump Input */
+.dues-date-jump-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #FAFAFA;
+  border: 1.5px solid var(--ink);
+  padding: 4px 8px;
+  border-radius: 4px;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.dues-date-step-btn {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--ink);
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.08s ease;
+}
+
+.dues-date-step-btn:hover {
+  background: var(--lime, #D2F800);
+  transform: translateY(-1px);
+}
+
+.dues-date-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFFFFF;
+  border: 1px solid var(--ink);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.dues-date-icon {
+  color: #777777;
+}
+
+.dues-date-picker-input {
+  border: none;
+  outline: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+}
+
+.dues-date-picker-input.has-value {
+  color: #0A0A0A;
+  font-weight: 800;
+}
+
+.dues-date-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  background: #FF2D8A;
+  color: #FFFFFF;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: all 0.08s ease;
+}
+
+.dues-date-clear-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* Sub-row: Search & Sort */
+.dues-archive-control-row.sub-row {
+  border-top: 1px dashed rgba(10, 10, 10, 0.15);
+  padding-top: 12px;
+}
+
+.dues-archive-search-wrap {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid var(--ink);
+  background: #FAFAFA;
+  padding: 6px 12px;
+  border-radius: 4px;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.dues-search-icon {
+  color: #777777;
+}
+
+.dues-archive-search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--body);
+  font-size: 14px;
+  color: var(--ink);
+  width: 100%;
+}
+
+.dues-search-clear {
+  border: none;
+  background: transparent;
+  color: #888888;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.dues-archive-sort-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dues-sort-icon {
+  color: #777777;
+}
+
+.dues-archive-sort-select {
+  border: 1.5px solid var(--ink);
+  background: #FFFFFF;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  cursor: pointer;
+  outline: none;
+}
+
+/* Category Chips */
+.dues-archive-categories-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px dashed rgba(10, 10, 10, 0.15);
+  padding-top: 12px;
+  flex-wrap: wrap;
+}
+
+.dues-archive-cat-chips-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dues-cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border: 1.5px solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--ink);
+  transition: all 0.08s ease;
+}
+
+.dues-cat-chip:hover {
+  background: var(--shade, #F4F4F0);
+  transform: translate(-1px, -1px);
+  box-shadow: 2.5px 2.5px 0 var(--ink);
+}
+
+.dues-cat-chip.active {
+  background: #0A0A0A;
+  color: var(--lime, #D2F800);
+  box-shadow: 1px 1px 0 var(--ink);
+  transform: translate(1px, 1px);
+}
+
+/* Day Grouped Feed */
+.dues-archive-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dues-day-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dues-day-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0A0A0A;
+  color: #FFFFFF;
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 8px 16px;
+  border-radius: 4px;
+}
+
+.dues-day-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dues-day-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--lime, #D2F800);
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dues-day-title {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dues-day-tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.dues-day-tag.today {
+  background: var(--lime, #D2F800);
+  color: #0A0A0A;
+}
+
+.dues-day-tag.yesterday {
+  background: #FF9E2C;
+  color: #0A0A0A;
+}
+
+.dues-day-banner-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dues-day-count-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #AAAAAA;
+}
+
+.dues-day-total-badge {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 900;
+  background: #FFFFFF;
+  color: #0A0A0A;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--ink);
+}
+
+.dues-day-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dues-archive-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 2px solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 10px 16px;
+  border-radius: 4px;
+  gap: 14px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.dues-archive-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.dues-archive-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dues-archive-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.dues-archive-card-note {
+  font-family: var(--body);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.dues-archive-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #777777;
+  flex-wrap: wrap;
+}
+
+.dues-cat-badge-tiny {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 800;
+  color: #0A0A0A;
+  border: 1px solid rgba(10, 10, 10, 0.2);
+}
+
+.dues-meta-sep {
+  color: #CCCCCC;
+}
+
+.dues-time-badge,
+.dues-date-badge {
+  font-weight: 600;
+}
+
+.dues-archive-card-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.dues-archive-card-amount {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.dues-archive-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dues-action-btn {
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid var(--ink);
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 3px;
+  box-shadow: 1px 1px 0 var(--ink);
+  transition: all 0.08s ease;
+  color: #555555;
+}
+
+.dues-action-btn.edit:hover {
+  background: var(--lime, #D2F800);
+  color: #0A0A0A;
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.dues-action-btn.delete:hover {
+  background: #FF2D8A;
+  color: #FFFFFF;
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.dues-archive-empty {
+  border: 2.5px dashed var(--ink);
+  background: #FFFFFF;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  border-radius: 4px;
+}
+
+.dues-archive-empty-icon {
+  color: #888888;
+}
+
+.dues-archive-empty-title {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.dues-archive-empty-desc {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #666666;
+  max-width: 420px;
+  margin: 0;
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   9. SPEND ANALYTICS WAR ROOM
+═════════════════════════════════════════════════════════════════════════════ */
+
+.dues-analytics-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.dues-analytics-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.dues-analytics-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dues-analytics-headline {
+  font-family: var(--display);
+  font-size: clamp(22px, 3.5vw, 32px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.dues-analytics-live-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: #666666;
+  text-transform: uppercase;
+}
+
+/* Horizon Command Cards Grid */
+.dues-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+}
+
+.dues-stat-card {
+  border: var(--b) solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 5px 5px 0 var(--ink);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: 4px;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.dues-stat-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--ink);
+}
+
+.dues-stat-card.card-today {
+  border-top: 6px solid var(--lime, #D2F800);
+}
+
+.dues-stat-card.card-week {
+  border-top: 6px solid #FF9E2C;
+}
+
+.dues-stat-card.card-month {
+  border-top: 6px solid #7FE9F7;
+}
+
+.dues-stat-card.card-year {
+  border-top: 6px solid #D8B4FE;
+}
+
+.dues-stat-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dues-stat-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--ink);
+}
+
+.dues-stat-tag.today {
+  background: var(--lime, #D2F800);
+  color: #0A0A0A;
+}
+
+.dues-stat-tag.week {
+  background: #FF9E2C;
+  color: #0A0A0A;
+}
+
+.dues-stat-tag.month {
+  background: #7FE9F7;
+  color: #0A0A0A;
+}
+
+.dues-stat-tag.year {
+  background: #D8B4FE;
+  color: #0A0A0A;
+}
+
+.dues-stat-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dues-stat-badge.safe {
+  color: #16A34A;
+}
+
+.dues-stat-badge.danger {
+  color: #DC2626;
+}
+
+.dues-stat-badge.positive {
+  color: #16A34A;
+}
+
+.dues-stat-badge.warning {
+  color: #EA580C;
+}
+
+.dues-stat-badge.month {
+  color: #0284C7;
+}
+
+.dues-stat-badge.year {
+  color: #7C3AED;
+}
+
+.dues-stat-main-num {
+  font-family: var(--display);
+  font-size: clamp(34px, 4.5vw, 44px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.dues-stat-curr {
+  font-size: 22px;
+  font-weight: 800;
+  color: #777777;
+}
+
+.dues-stat-sub-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #777777;
+  text-transform: uppercase;
+}
+
+.dues-stat-footer-bar {
+  border-top: 1px dashed rgba(10, 10, 10, 0.15);
+  padding-top: 8px;
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #555555;
+}
+
+.dues-stat-footer-bar b {
+  color: var(--ink);
+}
+
+/* All-time telemetry tape */
+.dues-alltime-strip {
+  border: var(--b) solid var(--ink);
+  background: #0A0A0A;
+  color: #FFFFFF;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.dues-alltime-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.dues-alltime-label {
+  color: #888888;
+  font-weight: 700;
+}
+
+.dues-alltime-value {
+  color: var(--lime, #D2F800);
+  font-weight: 900;
+}
+
+.dues-alltime-divider {
+  width: 1px;
+  height: 14px;
+  background: #333333;
+}
+
+/* Deep Dive Horizon Controls */
+.dues-deepdive-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: var(--b) solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 12px 18px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.dues-deepdive-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.dues-deepdive-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dues-deepdive-btn {
+  border: 1.5px solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 5px 12px;
+  cursor: pointer;
+  color: var(--ink);
+  border-radius: 4px;
+  transition: all 0.08s ease;
+}
+
+.dues-deepdive-btn:hover {
+  background: var(--shade, #F4F4F0);
+  transform: translate(-1px, -1px);
+}
+
+.dues-deepdive-btn.active {
+  background: #0A0A0A;
+  color: var(--lime, #D2F800);
+  box-shadow: 1px 1px 0 var(--ink);
+  transform: translate(1px, 1px);
+}
+
+.dues-deepdive-total-pill {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #555555;
+  background: #FAFAFA;
+  border: 1.5px solid var(--ink);
+  padding: 4px 10px;
+  border-radius: 4px;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.dues-deepdive-total-pill b {
+  color: var(--ink);
+}
+
+/* Analytics Sections */
+.dues-analytics-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dues-analytics-sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dues-sec-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.dues-sec-meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  color: #777777;
+  text-transform: uppercase;
+}
+
+.dues-peak-day-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 8px;
+  background: #FEE2E2;
+  color: #DC2626;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* Category Multi-Segment Track */
+.dues-cat-multi-track {
+  height: 18px;
+  display: flex;
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  border-radius: 3px;
+  overflow: hidden;
+  background: #FAFAFA;
+}
+
+.dues-cat-multi-segment {
+  height: 100%;
+  border-right: 1px solid var(--ink);
+  transition: width 0.3s ease;
+}
+
+.dues-cat-multi-segment:last-child {
+  border-right: none;
+}
+
+/* Category Cards Grid */
+.dues-cat-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.dues-cat-stat-card {
+  border: 2px solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: 4px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.dues-cat-stat-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.dues-cat-stat-card.top {
+  background: #FAFFF0;
+  border-color: #0A0A0A;
+}
+
+.dues-cat-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dues-cat-card-title-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dues-cat-card-name {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.dues-cat-card-pct {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #777777;
+}
+
+.dues-top-cat-pill {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 6px;
+  background: var(--lime, #D2F800);
+  color: #0A0A0A;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.dues-cat-card-amount {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.dues-cat-micro-track {
+  height: 6px;
+  background: #E5E5E5;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.dues-cat-micro-fill {
+  height: 100%;
+  border-right: 1px solid var(--ink);
+}
+
+.dues-cat-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #777777;
+}
+
+.dues-analytics-empty-box {
+  border: 2px dashed var(--ink);
+  background: #FFFFFF;
+  padding: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #777777;
+  text-transform: uppercase;
+}
+
+/* Day of Week Radar Chart Card */
+.dues-dow-chart-card {
+  border: var(--b) solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 20px 18px 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dues-dow-bars-container {
+  display: flex;
+  align-items: flex-end;
+  height: 160px;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.dues-dow-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.dues-dow-amount-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  color: #666666;
+}
+
+.dues-dow-col.peak .dues-dow-amount-label {
+  color: #DC2626;
+  font-weight: 900;
+}
+
+.dues-dow-bar-track {
+  width: 100%;
+  height: 110px;
+  background: #F4F4F0;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.dues-dow-bar-fill {
+  width: 100%;
+  background: #0A0A0A;
+  border-top: 2px solid var(--ink);
+  transition: height 0.3s ease;
+}
+
+.dues-dow-bar-fill.peak {
+  background: var(--lime, #D2F800);
+}
+
+.dues-dow-day-label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.dues-dow-peak-dot {
+  width: 5px;
+  height: 5px;
+  background: #DC2626;
+  border-radius: 50%;
+}
+
+.dues-dow-meta-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  color: #888888;
+}
+
+.dues-dow-footer-note {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #777777;
+  text-transform: uppercase;
+}
+
+/* Top Outflows Leaderboard */
+.dues-top-expenses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.dues-top-exp-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 2px solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 10px 14px;
+  border-radius: 4px;
+}
+
+.dues-top-rank-badge {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 900;
+  color: #777777;
+  min-width: 24px;
+}
+
+.dues-top-exp-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dues-top-exp-note {
+  font-family: var(--body);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.dues-top-exp-date {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #777777;
+}
+
+.dues-top-exp-amount {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   10. MODAL EXTENSIONS (CATEGORY CHIPS & QUICK INCREMENTS)
+═════════════════════════════════════════════════════════════════════════════ */
+
+.ledger-category-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.ledger-cat-choice-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border: 1.5px solid var(--ink);
+  background: #FFFFFF;
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  transition: all 0.08s ease;
+}
+
+.ledger-cat-choice-chip:hover {
+  background: var(--shade, #F4F4F0);
+  transform: translate(-1px, -1px);
+}
+
+.ledger-cat-choice-chip.selected {
+  border-width: 2px;
+  font-weight: 900;
+  box-shadow: 1px 1px 0 var(--ink);
+  transform: translate(1px, 1px);
+}
+
+.modal-quick-increments {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.modal-increments-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  color: #777777;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 768px) {
+  .dues-archive-top-ribbon {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dues-archive-control-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dues-date-jump-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dues-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dues-dow-bars-container {
+    gap: 6px;
+  }
+}

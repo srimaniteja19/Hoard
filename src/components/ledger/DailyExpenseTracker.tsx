@@ -8,6 +8,7 @@ import {
 } from "@/lib/ledger/types";
 import {
   calculateDailyMetrics,
+  calculateExpenseAnalytics,
   formatLocalDate,
   formatLocalTime,
   detectExpenseCategory,
@@ -16,6 +17,10 @@ import {
   DEFAULT_CATEGORY,
 } from "@/lib/ledger/dailyExpenses";
 import { playSound } from "@/lib/sound";
+import { ExpenseArchiveView } from "./ExpenseArchiveView";
+import { ExpenseAnalyticsView } from "./ExpenseAnalyticsView";
+import { EditExpenseModal } from "./EditExpenseModal";
+import { LogExpenseModal } from "./LogExpenseModal";
 import {
   ShoppingCart,
   Coffee,
@@ -32,13 +37,21 @@ import {
   LucideIcon,
   TrendingUp,
   ArrowRight,
+  CalendarDays,
+  BarChart3,
+  Edit2,
+  Sparkles,
 } from "lucide-react";
 
 interface DailyExpenseTrackerProps {
   overview: FinancialOverviewPayload;
   onRefresh?: (silent?: boolean) => void;
   onExpenseCreated?: (expense: FinancialDailyExpenseRow) => void;
+  onExpenseUpdated?: (expense: FinancialDailyExpenseRow) => void;
   onExpenseDeleted?: (id: string) => void;
+  isAddExpenseOpen?: boolean;
+  onCloseAddExpense?: () => void;
+  onOpenAddExpense?: () => void;
 }
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -72,8 +85,16 @@ export const DailyExpenseTracker: React.FC<DailyExpenseTrackerProps> = ({
   overview,
   onRefresh,
   onExpenseCreated,
+  onExpenseUpdated,
   onExpenseDeleted,
+  isAddExpenseOpen = false,
+  onCloseAddExpense,
+  onOpenAddExpense,
 }) => {
+  const [activeView, setActiveView] = useState<"PACING" | "ARCHIVE" | "ANALYTICS">("PACING");
+  const [editingExpense, setEditingExpense] = useState<FinancialDailyExpenseRow | null>(null);
+  const [isInternalLogOpen, setIsInternalLogOpen] = useState(false);
+
   const [localExpenses, setLocalExpenses] = useState<FinancialDailyExpenseRow[]>(
     overview.dailyExpenses || []
   );
@@ -97,6 +118,26 @@ export const DailyExpenseTracker: React.FC<DailyExpenseTrackerProps> = ({
       customFxInrRate: overview.fxSnapshot?.inrPerUsd,
     });
   }, [overview, localExpenses]);
+
+  // Compute full multi-horizon analytics
+  const analytics = useMemo(() => {
+    return calculateExpenseAnalytics(localExpenses);
+  }, [localExpenses]);
+
+  // Handle external or internal updates
+  const handleExpenseUpdated = (updated: FinancialDailyExpenseRow) => {
+    setLocalExpenses((prev) =>
+      prev.map((e) => (e.id === updated.id ? updated : e))
+    );
+    onExpenseUpdated?.(updated);
+    onRefresh?.(true);
+  };
+
+  const handleExpenseCreated = (created: FinancialDailyExpenseRow) => {
+    setLocalExpenses((prev) => [created, ...prev]);
+    onExpenseCreated?.(created);
+    onRefresh?.(true);
+  };
 
   // Speed Logger Form state
   const [amountInput, setAmountInput] = useState<string>("");
@@ -263,8 +304,115 @@ export const DailyExpenseTracker: React.FC<DailyExpenseTrackerProps> = ({
 
   return (
     <div className="dues-wrap">
-      {/* ── 1. HERO BOX ── */}
-      <div className="dues-hero-box">
+      {/* ── SUB-VIEW FLIGHT DECK (SWITCHBOARD) ── */}
+      <div className="dues-subnav-deck">
+        <div className="dues-subnav-rail">
+          <div className="dues-subnav-rail-left">
+            <span className="deck-dot dot-yellow" />
+            <span className="deck-rail-title">FISCAL_OS // DAILY_EXPENSES</span>
+          </div>
+          <div className="dues-subnav-live-ticker">
+            <button
+              type="button"
+              onClick={() => {
+                playSound.click();
+                setActiveView("ANALYTICS");
+              }}
+              className="dues-ticker-item"
+              title="View analytics for Today"
+            >
+              TODAY: <b>${analytics.today.total.toFixed(0)}</b>
+            </button>
+            <span className="dues-ticker-sep">/</span>
+            <button
+              type="button"
+              onClick={() => {
+                playSound.click();
+                setActiveView("ANALYTICS");
+              }}
+              className="dues-ticker-item"
+              title="View analytics for This Week"
+            >
+              WEEK: <b>${analytics.thisWeek.total.toFixed(0)}</b>
+            </button>
+            <span className="dues-ticker-sep">/</span>
+            <button
+              type="button"
+              onClick={() => {
+                playSound.click();
+                setActiveView("ANALYTICS");
+              }}
+              className="dues-ticker-item"
+              title="View analytics for This Month"
+            >
+              MONTH: <b>${analytics.thisMonth.total.toFixed(0)}</b>
+            </button>
+            <span className="dues-ticker-sep">/</span>
+            <button
+              type="button"
+              onClick={() => {
+                playSound.click();
+                setActiveView("ANALYTICS");
+              }}
+              className="dues-ticker-item"
+              title="View analytics for This Year"
+            >
+              YEAR: <b>${analytics.thisYear.total.toFixed(0)}</b>
+            </button>
+          </div>
+        </div>
+
+        <div className="dues-subnav-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeView === "PACING"}
+            onClick={() => {
+              playSound.click();
+              setActiveView("PACING");
+            }}
+            className={`dues-subnav-tab ${activeView === "PACING" ? "active" : ""}`}
+          >
+            <Zap size={13} strokeWidth={2.4} />
+            <span>[1] ⚡ TODAY&apos;S PACING</span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeView === "ARCHIVE"}
+            onClick={() => {
+              playSound.click();
+              setActiveView("ARCHIVE");
+            }}
+            className={`dues-subnav-tab ${activeView === "ARCHIVE" ? "active" : ""}`}
+          >
+            <CalendarDays size={13} strokeWidth={2.4} />
+            <span>[2] 📜 EXPENSE ARCHIVE</span>
+            <span className="dues-subnav-count">{localExpenses.length}</span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeView === "ANALYTICS"}
+            onClick={() => {
+              playSound.click();
+              setActiveView("ANALYTICS");
+            }}
+            className={`dues-subnav-tab ${activeView === "ANALYTICS" ? "active" : ""}`}
+          >
+            <BarChart3 size={13} strokeWidth={2.4} />
+            <span>[3] 📊 SPEND ANALYTICS</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── CONDITIONAL SUB-VIEWS ── */}
+      {activeView === "PACING" && (
+        <>
+          {/* ── 1. HERO BOX ── */}
+          <div className="dues-hero-box">
         <div className="dues-hero-topline">
           <div className="dues-hero-kicker-tag">
             <span className="dues-hero-dot" /> SAFE TO SPEND TODAY
@@ -539,6 +687,18 @@ export const DailyExpenseTracker: React.FC<DailyExpenseTrackerProps> = ({
                     </span>
                     <button
                       type="button"
+                      onClick={() => {
+                        playSound.click();
+                        setEditingExpense(exp);
+                      }}
+                      className="dues-today-edit"
+                      title="Edit entry"
+                      aria-label="Edit entry"
+                    >
+                      <Edit2 size={13} strokeWidth={2.2} />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleDeleteExpense(exp.id)}
                       className="dues-today-del"
                       title="Delete entry"
@@ -708,6 +868,58 @@ export const DailyExpenseTracker: React.FC<DailyExpenseTrackerProps> = ({
           THERE IS NO &quot;AVERAGE PERSON&quot; IN HERE AND NEVER WILL BE. THE ONLY USEFUL COMPARISON IS TO THE VERSION OF YOU THAT SPENT LAST WEEK.
         </div>
       </div>
+      </>
+      )}
+
+      {/* ── SUB-VIEW: ARCHIVE (EVERY LOGGED EXPENSE ON ANY DAY) ── */}
+      {activeView === "ARCHIVE" && (
+        <ExpenseArchiveView
+          expenses={localExpenses}
+          onExpenseCreated={handleExpenseCreated}
+          onExpenseUpdated={handleExpenseUpdated}
+          onExpenseDeleted={handleDeleteExpense}
+          isAddExpenseOpen={isAddExpenseOpen || isInternalLogOpen}
+          onCloseAddExpense={() => {
+            setIsInternalLogOpen(false);
+            onCloseAddExpense?.();
+          }}
+        />
+      )}
+
+      {/* ── SUB-VIEW: SPEND ANALYTICS (DAY, WEEK, MONTH, YEAR) ── */}
+      {activeView === "ANALYTICS" && (
+        <ExpenseAnalyticsView
+          expenses={localExpenses}
+          dailyMetrics={metrics}
+        />
+      )}
+
+      {/* Quick Edit Modal (when editing from today's feed) */}
+      {editingExpense && (
+        <EditExpenseModal
+          expense={editingExpense}
+          isOpen={Boolean(editingExpense)}
+          onClose={() => setEditingExpense(null)}
+          onSave={(updated) => {
+            handleExpenseUpdated(updated);
+            setEditingExpense(null);
+          }}
+        />
+      )}
+
+      {/* Log Expense Modal when opened from Header button or Pacing */}
+      <LogExpenseModal
+        isOpen={activeView === "PACING" && (isAddExpenseOpen || isInternalLogOpen)}
+        onClose={() => {
+          setIsInternalLogOpen(false);
+          onCloseAddExpense?.();
+        }}
+        onExpenseCreated={(newExp) => {
+          handleExpenseCreated(newExp);
+          setIsInternalLogOpen(false);
+          onCloseAddExpense?.();
+        }}
+      />
     </div>
   );
 };

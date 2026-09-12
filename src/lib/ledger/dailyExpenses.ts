@@ -9,6 +9,10 @@ import {
   DailyExpenseDayStat,
   DailyExpenseBenchmarks,
   PurchaseSimulationResult,
+  ExpenseAnalyticsPayload,
+  CategorySpendBreakdown,
+  DayOfWeekSpend,
+  PeriodSpendMetrics,
 } from "./types";
 import { calculateCashFlow } from "./cashFlow";
 
@@ -475,5 +479,234 @@ export function detectExpenseCategory(note: string, category?: string | null): E
   }
 
   return highestScore > 0 ? bestCategory : DEFAULT_CATEGORY;
+}
+
+export function getCategoryBreakdown(
+  expenses: FinancialDailyExpenseRow[] = []
+): CategorySpendBreakdown[] {
+  const validExpenses = expenses.filter(
+    (e) => !isNaN(Number(e.amount)) && Number(e.amount) > 0
+  );
+  const total = validExpenses.reduce((s, e) => s + Number(e.amount), 0);
+
+  const catMap = new Map<string, { total: number; count: number }>();
+  for (const exp of validExpenses) {
+    const detected = detectExpenseCategory(exp.note, exp.category);
+    const catKey = detected.key;
+    const curr = catMap.get(catKey) || { total: 0, count: 0 };
+    curr.total += Number(exp.amount) || 0;
+    curr.count += 1;
+    catMap.set(catKey, curr);
+  }
+
+  return Array.from(catMap.entries())
+    .map(([key, data]) => {
+      const cfg = EXPENSE_CATEGORIES.find((c) => c.key === key) || DEFAULT_CATEGORY;
+      const totalSpent = Math.round(data.total * 100) / 100;
+      const percentage = total > 0 ? Math.round((totalSpent / total) * 100) : 0;
+      const average = data.count > 0 ? Math.round((totalSpent / data.count) * 100) / 100 : 0;
+      return {
+        category: key,
+        name: cfg.name,
+        icon: cfg.icon,
+        color: cfg.color,
+        bg: cfg.bg,
+        totalSpent,
+        percentage,
+        count: data.count,
+        average,
+      };
+    })
+    .sort((a, b) => b.totalSpent - a.totalSpent);
+}
+
+export function calculateExpenseAnalytics(
+  expenses: FinancialDailyExpenseRow[] = [],
+  asOfDate?: string | Date
+): ExpenseAnalyticsPayload {
+  let targetDate: Date;
+  if (asOfDate instanceof Date) {
+    targetDate = asOfDate;
+  } else if (typeof asOfDate === "string" && asOfDate.trim()) {
+    const [y, m, d] = asOfDate.split("-").map(Number);
+    targetDate = new Date(y, (m || 1) - 1, d || 1);
+  } else {
+    targetDate = new Date();
+  }
+
+  const currentYear = targetDate.getFullYear();
+  const currentMonth = targetDate.getMonth(); // 0-indexed
+  const currentDay = targetDate.getDate();
+  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+
+  const todayStr = formatLocalDate(targetDate);
+  const monthPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}`;
+  const yearPrefix = `${currentYear}-`;
+
+  // Calendar week (Monday through Sunday)
+  const dayOfWeekIndex = targetDate.getDay(); // 0 (Sun) to 6 (Sat)
+  const daysFromMonday = (dayOfWeekIndex + 6) % 7;
+  const mondayDate = new Date(targetDate);
+  mondayDate.setDate(targetDate.getDate() - daysFromMonday);
+  const sundayDate = new Date(mondayDate);
+  sundayDate.setDate(mondayDate.getDate() + 6);
+
+  const mondayStr = formatLocalDate(mondayDate);
+  const sundayStr = formatLocalDate(sundayDate);
+
+  // Prior week (Monday through Sunday)
+  const priorMondayDate = new Date(mondayDate);
+  priorMondayDate.setDate(mondayDate.getDate() - 7);
+  const priorSundayDate = new Date(mondayDate);
+  priorSundayDate.setDate(mondayDate.getDate() - 1);
+  const priorMondayStr = formatLocalDate(priorMondayDate);
+  const priorSundayStr = formatLocalDate(priorSundayDate);
+
+  // Prior month
+  const priorMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  const priorMonthNum = currentMonth === 0 ? 12 : currentMonth;
+  const priorMonthPrefix = `${priorMonthYear}-${String(priorMonthNum).padStart(2, "0")}`;
+
+  // Filter groups
+  const validExpenses = (expenses || []).filter(
+    (e) => !isNaN(Number(e.amount)) && Number(e.amount) > 0
+  );
+
+  // Today
+  const todayItems = validExpenses.filter((e) => e.date === todayStr);
+  const todayTotal = Math.round(todayItems.reduce((s, e) => s + Number(e.amount), 0) * 100) / 100;
+  const todayLargest = todayItems.length > 0 ? Math.max(...todayItems.map((e) => Number(e.amount))) : 0;
+
+  // This Week
+  const weekItems = validExpenses.filter((e) => e.date >= mondayStr && e.date <= sundayStr);
+  const weekTotal = Math.round(weekItems.reduce((s, e) => s + Number(e.amount), 0) * 100) / 100;
+  const weekLargest = weekItems.length > 0 ? Math.max(...weekItems.map((e) => Number(e.amount))) : 0;
+  const priorWeekItems = validExpenses.filter((e) => e.date >= priorMondayStr && e.date <= priorSundayStr);
+  const priorWeekTotal = Math.round(priorWeekItems.reduce((s, e) => s + Number(e.amount), 0) * 100) / 100;
+  const weekElapsedDays = Math.max(1, daysFromMonday + 1);
+  const weekDailyAvg = Math.round((weekTotal / weekElapsedDays) * 100) / 100;
+  const weekPctChange = priorWeekTotal > 0
+    ? Math.round(((weekTotal - priorWeekTotal) / priorWeekTotal) * 100)
+    : undefined;
+
+  // This Month
+  const monthItems = validExpenses.filter((e) => e.date.startsWith(monthPrefix));
+  const monthTotal = Math.round(monthItems.reduce((s, e) => s + Number(e.amount), 0) * 100) / 100;
+  const monthLargest = monthItems.length > 0 ? Math.max(...monthItems.map((e) => Number(e.amount))) : 0;
+  const monthDailyAvg = currentDay > 0 ? Math.round((monthTotal / currentDay) * 100) / 100 : 0;
+  const projectedMonthEnd = Math.round(monthDailyAvg * daysInMonth * 100) / 100;
+
+  const priorMonthItems = validExpenses.filter((e) => e.date.startsWith(priorMonthPrefix));
+  const priorMonthTotal = Math.round(priorMonthItems.reduce((s, e) => s + Number(e.amount), 0) * 100) / 100;
+  const monthPctChange = priorMonthTotal > 0
+    ? Math.round(((monthTotal - priorMonthTotal) / priorMonthTotal) * 100)
+    : undefined;
+
+  // This Year
+  const yearItems = validExpenses.filter((e) => e.date.startsWith(yearPrefix));
+  const yearTotal = Math.round(yearItems.reduce((s, e) => s + Number(e.amount), 0) * 100) / 100;
+  const yearLargest = yearItems.length > 0 ? Math.max(...yearItems.map((e) => Number(e.amount))) : 0;
+  const activeMonths = currentMonth + 1;
+  const monthlyAverage = Math.round((yearTotal / activeMonths) * 100) / 100;
+  const projectedYearEnd = Math.round(monthlyAverage * 12 * 100) / 100;
+  const uniqueYearDays = new Set(yearItems.map((e) => e.date)).size;
+  const yearDailyAvg = uniqueYearDays > 0 ? Math.round((yearTotal / uniqueYearDays) * 100) / 100 : 0;
+
+  // All Time
+  const allTotal = Math.round(validExpenses.reduce((s, e) => s + Number(e.amount), 0) * 100) / 100;
+  const allLargest = validExpenses.length > 0 ? Math.max(...validExpenses.map((e) => Number(e.amount))) : 0;
+  const uniqueAllDays = new Set(validExpenses.map((e) => e.date)).size;
+  const allDailyAvg = uniqueAllDays > 0 ? Math.round((allTotal / uniqueAllDays) * 100) / 100 : 0;
+  const dates = validExpenses.map((e) => e.date).filter(Boolean).sort();
+  const earliestDate = dates[0];
+  const latestDate = dates[dates.length - 1];
+
+  // Category Breakdown for All Time
+  const categories = getCategoryBreakdown(validExpenses);
+
+  // Day of Week Spend
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dowTotals = [0, 0, 0, 0, 0, 0, 0];
+  const dowCounts = [0, 0, 0, 0, 0, 0, 0];
+
+  for (const exp of validExpenses) {
+    if (!exp.date) continue;
+    const [y, m, d] = exp.date.split("-").map(Number);
+    if (!y || !m || !d) continue;
+    const dObj = new Date(y, m - 1, d);
+    const dayIdx = dObj.getDay();
+    dowTotals[dayIdx] += Number(exp.amount) || 0;
+    dowCounts[dayIdx] += 1;
+  }
+
+  const maxDowSpend = Math.max(...dowTotals);
+  const dayOfWeek: DayOfWeekSpend[] = dayNames.map((name, idx) => {
+    const totalSpent = Math.round(dowTotals[idx] * 100) / 100;
+    const count = dowCounts[idx];
+    const averageSpent = count > 0 ? Math.round((totalSpent / count) * 100) / 100 : 0;
+    const percentage = allTotal > 0 ? Math.round((totalSpent / allTotal) * 100) : 0;
+    const isPeak = totalSpent > 0 && totalSpent === maxDowSpend;
+    return {
+      dayIndex: idx,
+      dayName: name,
+      totalSpent,
+      averageSpent,
+      count,
+      percentage,
+      isPeak,
+    };
+  });
+
+  // Top Expenses
+  const topExpenses = [...validExpenses]
+    .sort((a, b) => Number(b.amount) - Number(a.amount))
+    .slice(0, 10);
+
+  return {
+    today: {
+      total: todayTotal,
+      count: todayItems.length,
+      dailyAverage: todayTotal,
+      largestExpense: todayLargest,
+    },
+    thisWeek: {
+      total: weekTotal,
+      count: weekItems.length,
+      dailyAverage: weekDailyAvg,
+      largestExpense: weekLargest,
+      priorPeriodTotal: priorWeekTotal,
+      percentageChange: weekPctChange,
+    },
+    thisMonth: {
+      total: monthTotal,
+      count: monthItems.length,
+      dailyAverage: monthDailyAvg,
+      largestExpense: monthLargest,
+      priorPeriodTotal: priorMonthTotal,
+      percentageChange: monthPctChange,
+      projectedMonthEnd,
+    },
+    thisYear: {
+      total: yearTotal,
+      count: yearItems.length,
+      dailyAverage: yearDailyAvg,
+      largestExpense: yearLargest,
+      monthlyAverage,
+      projectedYearEnd,
+      activeDays: uniqueYearDays,
+    },
+    allTime: {
+      total: allTotal,
+      count: validExpenses.length,
+      dailyAverage: allDailyAvg,
+      largestExpense: allLargest,
+      activeDays: uniqueAllDays,
+      earliestDate,
+      latestDate,
+    },
+    categories,
+    dayOfWeek,
+    topExpenses,
+  };
 }
 

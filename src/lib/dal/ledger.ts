@@ -345,6 +345,19 @@ export async function createDailyExpense(
   return created;
 }
 
+export async function updateDailyExpense(
+  userId: string,
+  id: string,
+  data: Partial<Omit<NewFinancialDailyExpenseRow, "id" | "userId">>
+): Promise<FinancialDailyExpenseRow | null> {
+  const [updated] = await db
+    .update(financialDailyExpenses)
+    .set({ ...data, updatedAt: new Date() })
+    .where(and(eq(financialDailyExpenses.id, id), eq(financialDailyExpenses.userId, userId)))
+    .returning();
+  return updated || null;
+}
+
 export async function deleteDailyExpense(userId: string, id: string): Promise<boolean> {
   const res = await db
     .delete(financialDailyExpenses)

@@ -3,6 +3,7 @@ import { requireUserId, AuthError } from "@/lib/session";
 import {
   getUserDailyExpenses,
   createDailyExpense,
+  updateDailyExpense,
   deleteDailyExpense,
 } from "@/lib/dal/ledger";
 import { formatLocalDate, formatLocalTime } from "@/lib/ledger/dailyExpenses";
@@ -67,6 +68,71 @@ export async function POST(req: NextRequest) {
     }
     console.error("Error creating daily expense:", error);
     return NextResponse.json({ error: "Failed to create daily expense" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const userId = await requireUserId(req);
+    const body = await req.json();
+
+    const id = body.id ? String(body.id) : undefined;
+    if (!id) {
+      return NextResponse.json({ error: "Expense ID is required" }, { status: 400 });
+    }
+
+    const updates: Record<string, unknown> = {};
+
+    if (body.amount !== undefined) {
+      const amt = parseFloat(body.amount);
+      if (isNaN(amt) || amt <= 0) {
+        return NextResponse.json(
+          { error: "Amount must be a positive number" },
+          { status: 400 }
+        );
+      }
+      updates.amount = amt;
+    }
+
+    if (body.note !== undefined) {
+      const note = String(body.note).trim();
+      if (!note) {
+        return NextResponse.json(
+          { error: "Note cannot be empty" },
+          { status: 400 }
+        );
+      }
+      updates.note = note;
+    }
+
+    if (body.category !== undefined) {
+      updates.category = String(body.category).trim().toLowerCase() || "misc";
+    }
+
+    if (body.date !== undefined) {
+      updates.date = String(body.date).trim();
+    }
+
+    if (body.time !== undefined) {
+      updates.time = String(body.time).trim();
+    }
+
+    if (body.currency !== undefined) {
+      updates.currency = String(body.currency).toUpperCase();
+    }
+
+    const updated = await updateDailyExpense(userId, id, updates);
+    if (!updated) {
+      return NextResponse.json({ error: "Expense not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    console.error("Error updating daily expense:", error);
+    return NextResponse.json({ error: "Failed to update daily expense" }, { status: 500 });
   }
 }
 

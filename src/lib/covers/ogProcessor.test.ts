@@ -1,3 +1,5 @@
+import fs from "fs/promises";
+import path from "path";
 import { describe, it, expect } from "vitest";
 import sharp from "sharp";
 import { processOgImage, rgbToHex } from "./ogProcessor";
@@ -24,18 +26,27 @@ describe("processOgImage (§3.3 Processing & EXIF Strip)", () => {
       .jpeg()
       .toBuffer();
 
-    const res = await processOgImage(inputBuffer, `test_cover_${Date.now()}.webp`);
+    const testKey = `test_cover_${Date.now()}.webp`;
+    try {
+      const res = await processOgImage(inputBuffer, testKey);
 
-    expect(res.key).toBeDefined();
-    expect(res.width).toBeLessThanOrEqual(640);
-    expect(res.dominantColor).toMatch(/^#FF00/);
-    expect(res.lqip).toMatch(/^data:image\/webp;base64,/);
+      expect(res.key).toBeDefined();
+      expect(res.width).toBeLessThanOrEqual(640);
+      expect(res.dominantColor).toMatch(/^#FF00/);
+      expect(res.lqip).toMatch(/^data:image\/webp;base64,/);
 
-    // Verify metadata of processed buffer
-    const processedMetadata = await sharp(res.processedBuffer).metadata();
-    expect(processedMetadata.format).toBe("webp");
-    // Verify EXIF metadata is completely stripped
-    expect(processedMetadata.exif).toBeUndefined();
-    expect(processedMetadata.iptc).toBeUndefined();
+      // Verify metadata of processed buffer
+      const processedMetadata = await sharp(res.processedBuffer).metadata();
+      expect(processedMetadata.format).toBe("webp");
+      // Verify EXIF metadata is completely stripped
+      expect(processedMetadata.exif).toBeUndefined();
+      expect(processedMetadata.iptc).toBeUndefined();
+    } finally {
+      try {
+        await fs.unlink(path.join(process.cwd(), "public", "blobs", testKey));
+      } catch {
+        // Ignored if file was not created
+      }
+    }
   });
 });

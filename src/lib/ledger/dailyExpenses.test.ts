@@ -5,6 +5,8 @@ import {
   formatLocalDate,
   getDaysInMonth,
   detectExpenseCategory,
+  calculateExpenseAnalytics,
+  getCategoryBreakdown,
 } from "./dailyExpenses";
 import {
   FinancialIncomeRow,
@@ -262,6 +264,174 @@ describe("dailyExpenses", () => {
     const fallback = detectExpenseCategory("Something unknown");
     expect(fallback.key).toBe("misc");
     expect(fallback.icon).toBe("💸");
+  });
+
+  it("calculates comprehensive multi-horizon expense analytics (today, week, month, year, all-time)", () => {
+    // Reference date: Thursday, Sep 10, 2026
+    // Monday of this week: Sep 07, 2026; Sunday: Sep 13, 2026
+    // Prior week Monday: Aug 31, 2026; Sunday: Sep 06, 2026
+    const expenses: FinancialDailyExpenseRow[] = [
+      // Today (Sep 10)
+      {
+        id: "e1",
+        userId: "u1",
+        amount: 30,
+        currency: "USD",
+        note: "Starbucks latte & muffin",
+        category: "cafe",
+        date: "2026-09-10",
+        time: "08:15",
+        createdAt: new Date("2026-09-10T08:15:00Z"),
+        updatedAt: new Date("2026-09-10T08:15:00Z"),
+      },
+      {
+        id: "e2",
+        userId: "u1",
+        amount: 70,
+        currency: "USD",
+        note: "Whole Foods groceries",
+        category: "groceries",
+        date: "2026-09-10",
+        time: "17:30",
+        createdAt: new Date("2026-09-10T17:30:00Z"),
+        updatedAt: new Date("2026-09-10T17:30:00Z"),
+      },
+      // This week earlier (Sep 08 - Tuesday)
+      {
+        id: "e3",
+        userId: "u1",
+        amount: 50,
+        currency: "USD",
+        note: "Dinner with friends",
+        category: "dining",
+        date: "2026-09-08",
+        time: "19:00",
+        createdAt: new Date("2026-09-08T19:00:00Z"),
+        updatedAt: new Date("2026-09-08T19:00:00Z"),
+      },
+      // Prior week (Sep 02 - Wednesday)
+      {
+        id: "e4",
+        userId: "u1",
+        amount: 120,
+        currency: "USD",
+        note: "Costco haul",
+        category: "groceries",
+        date: "2026-09-02",
+        time: "11:00",
+        createdAt: new Date("2026-09-02T11:00:00Z"),
+        updatedAt: new Date("2026-09-02T11:00:00Z"),
+      },
+      // Earlier in the year (March 2026)
+      {
+        id: "e5",
+        userId: "u1",
+        amount: 250,
+        currency: "USD",
+        note: "Flight booking",
+        category: "transit",
+        date: "2026-03-15",
+        time: "14:00",
+        createdAt: new Date("2026-03-15T14:00:00Z"),
+        updatedAt: new Date("2026-03-15T14:00:00Z"),
+      },
+      // Previous year (Dec 2025)
+      {
+        id: "e6",
+        userId: "u1",
+        amount: 500,
+        currency: "USD",
+        note: "Holiday shopping",
+        category: "shopping",
+        date: "2025-12-20",
+        time: "16:00",
+        createdAt: new Date("2025-12-20T16:00:00Z"),
+        updatedAt: new Date("2025-12-20T16:00:00Z"),
+      },
+    ];
+
+    const analytics = calculateExpenseAnalytics(expenses, "2026-09-10");
+
+    // Today: e1 (30) + e2 (70) = 100
+    expect(analytics.today.total).toBe(100);
+    expect(analytics.today.count).toBe(2);
+    expect(analytics.today.largestExpense).toBe(70);
+
+    // This week: e1 (30) + e2 (70) + e3 (50) = 150
+    expect(analytics.thisWeek.total).toBe(150);
+    expect(analytics.thisWeek.count).toBe(3);
+    expect(analytics.thisWeek.largestExpense).toBe(70);
+    // Prior week: e4 (120)
+    expect(analytics.thisWeek.priorPeriodTotal).toBe(120);
+    expect(analytics.thisWeek.percentageChange).toBe(25); // (150-120)/120 = +25%
+
+    // This month (Sep 2026): e1 (30) + e2 (70) + e3 (50) + e4 (120) = 270
+    expect(analytics.thisMonth.total).toBe(270);
+    expect(analytics.thisMonth.count).toBe(4);
+    expect(analytics.thisMonth.dailyAverage).toBe(27); // 270 / 10 days
+    expect(analytics.thisMonth.projectedMonthEnd).toBe(810); // 27 * 30 days
+
+    // This year (2026): Sep (270) + March (250) = 520
+    expect(analytics.thisYear.total).toBe(520);
+    expect(analytics.thisYear.count).toBe(5);
+    expect(analytics.thisYear.monthlyAverage).toBeCloseTo(57.78, 1); // 520 / 9 months
+
+    // All-time: 520 (2026) + 500 (2025) = 1020
+    expect(analytics.allTime.total).toBe(1020);
+    expect(analytics.allTime.count).toBe(6);
+    expect(analytics.allTime.earliestDate).toBe("2025-12-20");
+    expect(analytics.allTime.latestDate).toBe("2026-09-10");
+
+    // Top expenses
+    expect(analytics.topExpenses[0].amount).toBe(500);
+    expect(analytics.topExpenses[1].amount).toBe(250);
+
+    // Category breakdown
+    expect(analytics.categories.length).toBeGreaterThan(0);
+    const groceryCat = analytics.categories.find((c) => c.category === "groceries");
+    expect(groceryCat?.totalSpent).toBe(190); // e2 (70) + e4 (120)
+
+    // Day of week
+    expect(analytics.dayOfWeek).toHaveLength(7);
+    const hasPeak = analytics.dayOfWeek.some((d) => d.isPeak);
+    expect(hasPeak).toBe(true);
+  });
+
+  it("calculates category breakdown for isolated lists", () => {
+    const expenses: FinancialDailyExpenseRow[] = [
+      {
+        id: "x1",
+        userId: "u1",
+        amount: 40,
+        currency: "USD",
+        note: "Espresso",
+        category: "cafe",
+        date: "2026-09-01",
+        time: "10:00",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: "x2",
+        userId: "u1",
+        amount: 60,
+        currency: "USD",
+        note: "Matcha Latte",
+        category: "cafe",
+        date: "2026-09-02",
+        time: "10:00",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    const breakdown = getCategoryBreakdown(expenses);
+    expect(breakdown).toHaveLength(1);
+    expect(breakdown[0].category).toBe("cafe");
+    expect(breakdown[0].totalSpent).toBe(100);
+    expect(breakdown[0].count).toBe(2);
+    expect(breakdown[0].percentage).toBe(100);
+    expect(breakdown[0].average).toBe(50);
   });
 });
 

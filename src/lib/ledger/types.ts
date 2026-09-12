@@ -612,3 +612,52 @@ export interface FinancialOverviewPayload {
   latestAudit: FinancialAuditRow | null;
 }
 
+export interface CategorySpendBreakdown {
+  category: string;
+  name: string;
+  icon: string;
+  color: string;
+  bg: string;
+  totalSpent: number;
+  percentage: number;
+  count: number;
+  average: number;
+}
+
+export interface DayOfWeekSpend {
+  dayIndex: number; // 0 (Sun) - 6 (Sat)
+  dayName: string; // Sun, Mon, etc.
+  totalSpent: number;
+  averageSpent: number;
+  count: number;
+  percentage: number;
+  isPeak: boolean;
+}
+
+export interface PeriodSpendMetrics {
+  total: number;
+  count: number;
+  dailyAverage: number;
+  largestExpense: number;
+  priorPeriodTotal?: number;
+  percentageChange?: number;
+}
+
+export interface ExpenseAnalyticsPayload {
+  today: PeriodSpendMetrics;
+  thisWeek: PeriodSpendMetrics;
+  thisMonth: PeriodSpendMetrics & { projectedMonthEnd: number };
+  thisYear: PeriodSpendMetrics & {
+    monthlyAverage: number;
+    projectedYearEnd: number;
+    activeDays: number;
+  };
+  allTime: PeriodSpendMetrics & {
+    activeDays: number;
+    earliestDate?: string;
+    latestDate?: string;
+  };
+  categories: CategorySpendBreakdown[];
+  dayOfWeek: DayOfWeekSpend[];
+  topExpenses: FinancialDailyExpenseRow[];
+}
