@@ -17,6 +17,7 @@ interface InspectorDrawerProps {
   onUpdateNote: (id: number, note: string) => void;
   onChangeCollection: (id: number, targetCollId: string) => void;
   onChangeKind?: (id: number, targetKind: KindType) => void;
+  onChangeTag?: (id: number, tag: string) => void;
   onAddChapter?: (parentId: number, chap: { t: string; mins: number; url: string; startTimeSec?: number }) => Promise<void>;
   onCheckDrift?: (id: number) => Promise<void>;
   onOpenDiff?: (b: Bookmark) => void;
@@ -35,6 +36,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
   onUpdateNote,
   onChangeCollection,
   onChangeKind,
+  onChangeTag,
   onAddChapter,
   onCheckDrift,
   onOpenDiff,
@@ -47,6 +49,48 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
   const [permCopy, setPermCopy] = useState(true);
   const [notifyBreak, setNotifyBreak] = useState(false);
   const [pinned, setPinned] = useState(false);
+
+  // Tag editing & Gist suggestions
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+  const [editingTag, setEditingTag] = useState(false);
+  const [customTagInput, setCustomTagInput] = useState("");
+
+  useEffect(() => {
+    if (!bookmark) {
+      setSuggestedTags([]);
+      setEditingTag(false);
+      setCustomTagInput("");
+      return;
+    }
+
+    const query = `${bookmark.t} ${bookmark.note || ""}`.trim();
+    if (!query) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/suggest-tags", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            title: bookmark.t,
+            content: bookmark.note,
+            topK: 4,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.tags)) setSuggestedTags(data.tags);
+        }
+      } catch {}
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [bookmark?.id, bookmark?.t, bookmark?.note]);
 
   // New chapter form state
   const [showAddChap, setShowAddChap] = useState(false);
@@ -511,14 +555,100 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
 
           <div className="fld">
             <span className="flbl">TAGS</span>
-            <div className="ctags">
+            <div className="ctags" style={{ flexWrap: "wrap", gap: "6px" }}>
               <span className="ctag" style={{ background: typeMeta.c, color: typeMeta.fg }}>
                 #{bookmark.tag}
               </span>
-              <span className="ctag" style={{ background: "var(--paper)", color: "var(--fg)" }}>
-                + ADD
-              </span>
+              {editingTag ? (
+                <div style={{ display: "inline-flex", gap: "4px", alignItems: "center" }}>
+                  <input
+                    type="text"
+                    value={customTagInput}
+                    onChange={(e) => setCustomTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && customTagInput.trim() && onChangeTag) {
+                        e.preventDefault();
+                        onChangeTag(bookmark.id, customTagInput.trim());
+                        setEditingTag(false);
+                        setCustomTagInput("");
+                      } else if (e.key === "Escape") {
+                        setEditingTag(false);
+                      }
+                    }}
+                    placeholder="tag + Enter"
+                    autoFocus
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "10px",
+                      padding: "2px 5px",
+                      border: "1.5px solid var(--ink)",
+                      width: "80px",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (customTagInput.trim() && onChangeTag) {
+                        onChangeTag(bookmark.id, customTagInput.trim());
+                      }
+                      setEditingTag(false);
+                      setCustomTagInput("");
+                    }}
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      padding: "2px 5px",
+                      border: "1.5px solid var(--ink)",
+                      background: "var(--ink)",
+                      color: "var(--paper)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ✓
+                  </button>
+                </div>
+              ) : (
+                <span
+                  className="ctag"
+                  onClick={() => setEditingTag(true)}
+                  style={{ background: "var(--paper)", color: "var(--fg)", cursor: "pointer" }}
+                >
+                  + EDIT
+                </span>
+              )}
             </div>
+
+            {suggestedTags.filter((st) => st.toLowerCase() !== bookmark.tag?.toLowerCase()).length > 0 && (
+              <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "6px", alignItems: "center" }}>
+                <span style={{ fontSize: "9px", fontFamily: "var(--mono)", fontWeight: 800, opacity: 0.65 }}>
+                  GIST SUGGESTIONS:
+                </span>
+                {suggestedTags
+                  .filter((st) => st.toLowerCase() !== bookmark.tag?.toLowerCase())
+                  .map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => onChangeTag?.(bookmark.id, st)}
+                      style={{
+                        fontFamily: "var(--mono)",
+                        fontSize: "9px",
+                        fontWeight: 800,
+                        padding: "1px 5px",
+                        border: "1px solid var(--ink)",
+                        background: "var(--paper)",
+                        color: "var(--ink)",
+                        cursor: "pointer",
+                        boxShadow: "1px 1px 0 var(--ink)",
+                      }}
+                      title="Set as bookmark tag"
+                    >
+                      + #{st}
+                    </button>
+                  ))}
+              </div>
+            )}
           </div>
 
           <div className="fld">

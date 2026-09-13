@@ -19,6 +19,8 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.77",
+    "@desert-ant-labs/gist": "^3.1.0",
+    "@litertjs/core": "^2.5.3",
     "@mozilla/readability": "^0.6.0",
     "@neondatabase/serverless": "^1.1.0",
     "@types/katex": "^0.16.8",

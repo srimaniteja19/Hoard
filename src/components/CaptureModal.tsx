@@ -95,6 +95,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
   const [fetchedMeta, setFetchedMeta] = useState<FetchedMeta | null>(null);
   const [isFetchingMeta, setIsFetchingMeta] = useState(false);
   const [tag, setTag] = useState("");
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
   const [itemType, setItemType] = useState<ItemType>("REFERENCE");
   const [summary, setSummary] = useState("");
   const [triageStatus, setTriageStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -115,6 +116,7 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
     setFetchedMeta(null);
     setManualKind(null);
     setTag("");
+    setSuggestedTags([]);
     setSummary("");
     setTriageStatus("idle");
   }
@@ -179,7 +181,13 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
         }),
       })
         .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
-        .then((data: { tags?: string[]; suggestedCollection?: string; itemType?: ItemType; summary?: string }) => {
+        .then((data: { tags?: string[]; gistTopics?: Array<{ slug: string; name: string; score: number; tag: string }>; suggestedCollection?: string; itemType?: ItemType; summary?: string }) => {
+          const combined = [
+            ...(data.tags || []),
+            ...(data.gistTopics ? data.gistTopics.map((t) => t.tag) : []),
+          ];
+          const unique = Array.from(new Set(combined)).filter(Boolean);
+          if (unique.length > 0) setSuggestedTags(unique);
           if (!touched.current.tag && data.tags) setTag(primaryTag(data.tags));
           if (!touched.current.coll && data.suggestedCollection) setSelectedColl(data.suggestedCollection);
           if (!touched.current.itemType && (data.itemType === "REFERENCE" || data.itemType === "QUEUED")) {
@@ -530,6 +538,39 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
                       width: "100%",
                     }}
                   />
+                  {suggestedTags.length > 0 && (
+                    <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginTop: "6px", alignItems: "center" }}>
+                      <span style={{ fontSize: "9px", fontFamily: "var(--mono)", fontWeight: 800, opacity: 0.65 }}>
+                        SUGGESTED:
+                      </span>
+                      {suggestedTags.map((sug) => {
+                        const isSelected = tag.toLowerCase().trim() === sug.toLowerCase().trim();
+                        return (
+                          <button
+                            key={sug}
+                            type="button"
+                            onClick={() => {
+                              touched.current.tag = true;
+                              setTag(sug);
+                            }}
+                            style={{
+                              fontFamily: "var(--mono)",
+                              fontSize: "10px",
+                              fontWeight: 800,
+                              padding: "2px 6px",
+                              border: "1.5px solid var(--ink)",
+                              background: isSelected ? "var(--ink)" : "var(--paper)",
+                              color: isSelected ? "var(--yel)" : "var(--ink)",
+                              cursor: "pointer",
+                              boxShadow: isSelected ? "none" : "1px 1px 0 var(--ink)",
+                            }}
+                          >
+                            #{sug}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </dd>
               </div>
               <div className="drow">

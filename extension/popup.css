@@ -403,6 +403,48 @@ button, input, select, textarea {
   background: var(--yel);
 }
 
+/* Suggested Tags */
+.suggested-tags-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.suggested-lbl {
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.suggested-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.suggested-chip {
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 700;
+  border: 1px solid #000;
+  background: var(--paper);
+  color: #000;
+  padding: 1px 4px;
+  cursor: pointer;
+}
+
+.suggested-chip:hover {
+  background: var(--yel);
+}
+
+.suggested-chip.selected {
+  background: var(--ink);
+  color: var(--yel);
+}
+
 /* Buttons */
 .btn-primary {
   width: 100%;

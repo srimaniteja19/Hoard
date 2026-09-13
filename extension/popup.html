@@ -94,6 +94,10 @@
             <button type="button" class="tag-chip" data-tag="paper">#paper</button>
           </div>
           <input type="text" id="customTag" class="input-field-sm" placeholder="Add custom #tag and press Enter..." />
+          <div id="suggestedTagsRow" class="suggested-tags-row" style="display: none; margin-top: 4px;">
+            <span class="suggested-lbl">⚡ GIST:</span>
+            <div id="suggestedTagsList" class="suggested-tags-list"></div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -159,6 +163,10 @@
         <div class="form-group">
           <label class="field-lbl">TAGS (COMMA SEPARATED)</label>
           <input type="text" id="tilTags" class="input-field-sm" placeholder="postgres, nextjs, vector, ai..." />
+          <div id="tilSuggestedTagsRow" class="suggested-tags-row" style="display: none; margin-top: 4px;">
+            <span class="suggested-lbl">⚡ GIST:</span>
+            <div id="tilSuggestedTagsList" class="suggested-tags-list"></div>
+          </div>
         </div>
 
         <div class="form-group-checkbox">
@@ -222,6 +230,12 @@
           <span class="parsed-pill pill-remind" id="pillRemind" style="display: none;">⏰ 3:00 PM</span>
           <span class="parsed-pill pill-urgent" id="pillUrgent" style="display: none;">🚨 URGENT</span>
           <span class="parsed-pill pill-recur" id="pillRecur" style="display: none;">🔁 RECUR</span>
+        </div>
+
+        <!-- Gist Suggested Task Tags -->
+        <div id="todoSuggestedTagsRow" class="suggested-tags-row" style="display: none; margin-top: 4px; margin-bottom: 6px;">
+          <span class="suggested-lbl">⚡ GIST:</span>
+          <div id="todoSuggestedTagsList" class="suggested-tags-list"></div>
         </div>
 
         <div class="todo-capture-actions">

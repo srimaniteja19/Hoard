@@ -4,6 +4,7 @@ import path from "path";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname),
+  serverExternalPackages: ["@desert-ant-labs/gist"],
   async headers() {
     return [
       {

@@ -1,22 +1,62 @@
 "use client";
 
-import React, { useState } from "react";
-import { Bookmark } from "@/types";
+import React, { useState, useEffect } from "react";
 import { TilType, tilTypeValues } from "@/db/schema";
+import { Bookmark } from "@/types";
 
 interface DischargeModalProps {
+  isOpen?: boolean;
   bookmark: Bookmark | null;
   onClose: () => void;
   onSubmit: (input: { type: TilType; body: string; tags: string[] }) => Promise<void>;
 }
 
-export const DischargeModal: React.FC<DischargeModalProps> = ({ bookmark, onClose, onSubmit }) => {
+export const DischargeModal: React.FC<DischargeModalProps> = ({
+  isOpen,
+  bookmark,
+  onClose,
+  onSubmit,
+}) => {
   const [type, setType] = useState<TilType>("FACT");
   const [body, setBody] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Debounced Gist suggestions based on bookmark title + discharge notes
+  useEffect(() => {
+    const query = `${bookmark?.t || ""} ${body}`.trim();
+    if (!query || query.length < 5) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/suggest-tags", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            title: bookmark?.t || null,
+            content: body || null,
+            topK: 4,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.tags)) {
+            setSuggestedTags(data.tags);
+          }
+        }
+      } catch {}
+    }, 350);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [bookmark?.t, body]);
 
   if (!bookmark) return null;
 
@@ -171,6 +211,35 @@ export const DischargeModal: React.FC<DischargeModalProps> = ({ bookmark, onClos
                 placeholder="Add tag + Enter"
               />
             </div>
+            {suggestedTags.filter((st) => !tags.includes(st)).length > 0 && (
+              <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginTop: "6px", alignItems: "center" }}>
+                <span style={{ fontSize: "9px", fontFamily: "var(--mono)", fontWeight: 800, opacity: 0.65 }}>
+                  GIST SUGGESTIONS:
+                </span>
+                {suggestedTags
+                  .filter((st) => !tags.includes(st))
+                  .map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setTags((prev) => [...prev, st])}
+                      style={{
+                        fontFamily: "var(--mono)",
+                        fontSize: "10px",
+                        fontWeight: 800,
+                        padding: "2px 6px",
+                        border: "1.5px solid var(--ink)",
+                        background: "var(--paper)",
+                        color: "var(--ink)",
+                        cursor: "pointer",
+                        boxShadow: "1px 1px 0 var(--ink)",
+                      }}
+                    >
+                      + #{st}
+                    </button>
+                  ))}
+              </div>
+            )}
           </div>
 
           {error && (

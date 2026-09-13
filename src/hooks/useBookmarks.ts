@@ -385,6 +385,22 @@ export function useBookmarks() {
     }
   }, []);
 
+  const changeBookmarkTag = useCallback(async (id: number, newTag: string) => {
+    const cleanTag = newTag.trim().toLowerCase().replace(/^#/, "");
+    setBookmarks((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, tag: cleanTag } : b))
+    );
+    try {
+      await apiFetch(`/api/bookmarks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: cleanTag }),
+      });
+    } catch (e) {
+      console.error("[changeBookmarkTag]", e);
+    }
+  }, []);
+
   const bulkMarkRead = useCallback(async () => {
     const ids = Array.from(selectedIds);
     setBookmarks((prev) =>
@@ -587,6 +603,7 @@ export function useBookmarks() {
     updateNote,
     changeBookmarkCollection,
     changeBookmarkKind,
+    changeBookmarkTag,
     bulkMarkRead,
     bulkDelete,
     addCollection,

@@ -465,6 +465,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!triageTouched.tags && Array.isArray(data.tags) && data.tags[0]) {
         setPrimaryTag(data.tags[0]);
       }
+      const combinedSuggestions = [
+        ...(Array.isArray(data.tags) ? data.tags : []),
+        ...(Array.isArray(data.gistTopics) ? data.gistTopics.map((t) => t.tag || t.slug) : []),
+      ];
+      renderBookmarkSuggestions(Array.from(new Set(combinedSuggestions)).filter(Boolean));
       if (!triageTouched.folder && data.suggestedCollection && folderSelect) {
         if (![...folderSelect.options].some((o) => o.value === data.suggestedCollection)) {
           const opt = document.createElement("option");
@@ -481,6 +486,45 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch {
       if (triageStatus) triageStatus.textContent = "TRIAGE IDLE";
     }
+  }
+
+  const bookmarkSuggestedRow = document.getElementById("suggestedTagsRow");
+  const bookmarkSuggestedList = document.getElementById("suggestedTagsList");
+
+  function renderBookmarkSuggestions(suggestedList) {
+    if (!bookmarkSuggestedRow || !bookmarkSuggestedList) return;
+    bookmarkSuggestedList.innerHTML = "";
+    if (!suggestedList || suggestedList.length === 0) {
+      bookmarkSuggestedRow.style.display = "none";
+      return;
+    }
+
+    suggestedList.forEach((raw) => {
+      const tag = (raw || "").replace(/^#/, "").trim();
+      if (!tag) return;
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = `suggested-chip ${activeTags.has(tag) ? "selected" : ""}`;
+      chip.textContent = `+#${tag}`;
+      chip.addEventListener("click", () => {
+        triageTouched.tags = true;
+        if (activeTags.has(tag)) {
+          activeTags.delete(tag);
+          chip.classList.remove("selected");
+        } else {
+          activeTags.add(tag);
+          chip.classList.add("selected");
+        }
+        tagChips.forEach((tc) => {
+          if (tc.getAttribute("data-tag") === tag) {
+            tc.classList.toggle("active", activeTags.has(tag));
+          }
+        });
+      });
+      bookmarkSuggestedList.appendChild(chip);
+    });
+
+    bookmarkSuggestedRow.style.display = bookmarkSuggestedList.children.length > 0 ? "flex" : "none";
   }
 
   function scheduleTriage() {
@@ -699,6 +743,71 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch {}
   }
 
+  const tilSuggestedRow = document.getElementById("tilSuggestedTagsRow");
+  const tilSuggestedList = document.getElementById("tilSuggestedTagsList");
+  let tilSuggestDebounce = null;
+
+  function fetchTilSuggestions() {
+    if (tilSuggestDebounce) clearTimeout(tilSuggestDebounce);
+    tilSuggestDebounce = setTimeout(async () => {
+      const text = `${tilBodyInput?.value || ""} ${tilLinkUrlInput?.value || ""}`.trim();
+      if (!text || text.length < 6) {
+        if (tilSuggestedRow) tilSuggestedRow.style.display = "none";
+        return;
+      }
+
+      try {
+        const res = await hoardFetch("/api/suggest-tags", {
+          method: "POST",
+          body: JSON.stringify({ text, topK: 4 }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        renderTilSuggestions(data.tags || []);
+      } catch {}
+    }, 400);
+  }
+
+  function renderTilSuggestions(tags) {
+    if (!tilSuggestedRow || !tilSuggestedList) return;
+    tilSuggestedList.innerHTML = "";
+    if (!tags || tags.length === 0) {
+      tilSuggestedRow.style.display = "none";
+      return;
+    }
+
+    const currentTags = (tilTagsInput?.value || "")
+      .split(",")
+      .map((t) => t.trim().toLowerCase().replace(/^#/, ""))
+      .filter(Boolean);
+
+    tags.forEach((tag) => {
+      if (currentTags.includes(tag)) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "suggested-chip";
+      btn.textContent = `+#${tag}`;
+      btn.addEventListener("click", () => {
+        const existing = (tilTagsInput?.value || "").trim();
+        if (!existing) {
+          if (tilTagsInput) tilTagsInput.value = tag;
+        } else {
+          if (tilTagsInput) tilTagsInput.value = `${existing}, ${tag}`;
+        }
+        btn.remove();
+        if (tilSuggestedList.children.length === 0) {
+          tilSuggestedRow.style.display = "none";
+        }
+      });
+      tilSuggestedList.appendChild(btn);
+    });
+
+    tilSuggestedRow.style.display = tilSuggestedList.children.length > 0 ? "flex" : "none";
+  }
+
+  tilBodyInput?.addEventListener("input", fetchTilSuggestions);
+  tilLinkUrlInput?.addEventListener("input", fetchTilSuggestions);
+
   commitTilBtn?.addEventListener("click", async () => {
     const bodyText = tilBodyInput.value.trim();
     const codeText = tilCodeInput ? tilCodeInput.value.trim() : "";
@@ -734,6 +843,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         tilBodyInput.value = "";
         if (tilCodeInput) tilCodeInput.value = "";
         if (tilTagsInput) tilTagsInput.value = "";
+        if (tilSuggestedRow) tilSuggestedRow.style.display = "none";
+        if (tilSuggestedList) tilSuggestedList.innerHTML = "";
         chrome.runtime?.sendMessage({ action: "til_saved" });
         return;
       }
@@ -920,6 +1031,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (res.ok) {
         showToast("✓ TASK CREATED");
         todoInput.value = "";
+        if (todoSuggestedRow) todoSuggestedRow.style.display = "none";
+        if (todoSuggestedList) todoSuggestedList.innerHTML = "";
         updateParsedPills(parseTodoInput(""));
         loadTodos();
         chrome.runtime?.sendMessage({ action: "todo_saved" });
@@ -934,11 +1047,71 @@ document.addEventListener("DOMContentLoaded", async () => {
       chrome.storage.local.set({ [PENDING_TODO_KEY]: queue }, () => {
         showToast("✓ TASK SAVED OFFLINE — will sync");
         todoInput.value = "";
+        if (todoSuggestedRow) todoSuggestedRow.style.display = "none";
+        if (todoSuggestedList) todoSuggestedList.innerHTML = "";
         updateParsedPills(parseTodoInput(""));
         chrome.runtime?.sendMessage({ action: "todo_saved" });
       });
     });
   }
+
+  const todoSuggestedRow = document.getElementById("todoSuggestedTagsRow");
+  const todoSuggestedList = document.getElementById("todoSuggestedTagsList");
+  let todoSuggestDebounce = null;
+
+  function fetchTodoSuggestions() {
+    if (todoSuggestDebounce) clearTimeout(todoSuggestDebounce);
+    todoSuggestDebounce = setTimeout(async () => {
+      const text = todoInput?.value?.trim() || "";
+      if (!text || text.length < 5) {
+        if (todoSuggestedRow) todoSuggestedRow.style.display = "none";
+        return;
+      }
+
+      try {
+        const res = await hoardFetch("/api/suggest-tags", {
+          method: "POST",
+          body: JSON.stringify({ text, topK: 4 }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        renderTodoSuggestions(data.tags || []);
+      } catch {}
+    }, 450);
+  }
+
+  function renderTodoSuggestions(tags) {
+    if (!todoSuggestedRow || !todoSuggestedList) return;
+    todoSuggestedList.innerHTML = "";
+    if (!tags || tags.length === 0) {
+      todoSuggestedRow.style.display = "none";
+      return;
+    }
+
+    const currentText = (todoInput?.value || "").toLowerCase();
+    tags.forEach((tag) => {
+      if (currentText.includes(`#${tag.toLowerCase()}`)) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "suggested-chip";
+      btn.textContent = `+#${tag}`;
+      btn.addEventListener("click", () => {
+        if (todoInput) {
+          todoInput.value = `${todoInput.value.trim()} #${tag}`;
+          updateParsedPills(parseTodoInput(todoInput.value));
+        }
+        btn.remove();
+        if (todoSuggestedList.children.length === 0) {
+          todoSuggestedRow.style.display = "none";
+        }
+      });
+      todoSuggestedList.appendChild(btn);
+    });
+
+    todoSuggestedRow.style.display = todoSuggestedList.children.length > 0 ? "flex" : "none";
+  }
+
+  todoInput?.addEventListener("input", fetchTodoSuggestions);
 
   addTabAsTodoBtn?.addEventListener("click", () => {
     if (currentActiveTab) {
@@ -947,6 +1120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       todoInput.value = `Read: ${cleanTitle} ~25m #reading`;
       updateParsedPills(parseTodoInput(todoInput.value));
       todoInput.focus();
+      fetchTodoSuggestions();
     }
   });
 

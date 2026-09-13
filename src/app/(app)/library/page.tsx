@@ -78,6 +78,7 @@ export default function Home() {
     updateNote,
     changeBookmarkCollection,
     changeBookmarkKind,
+    changeBookmarkTag,
     bulkMarkRead,
     bulkDelete,
     addCollection,
@@ -470,6 +471,7 @@ export default function Home() {
           onUpdateNote={updateNote}
           onChangeCollection={changeBookmarkCollection}
           onChangeKind={changeBookmarkKind}
+          onChangeTag={changeBookmarkTag}
           onAddChapter={addChapter}
           onCheckDrift={checkDrift}
           onOpenDiff={handleOpenDiffModal}

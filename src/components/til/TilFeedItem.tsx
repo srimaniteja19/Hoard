@@ -121,6 +121,7 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
   const [editLinkUrl, setEditLinkUrl] = useState(item.linkUrl || "");
   const [editType, setEditType] = useState<TilType>(item.type);
   const [editTags, setEditTags] = useState<string[]>(item.tags || []);
+  const [editSuggestedTags, setEditSuggestedTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -137,6 +138,34 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
   useEffect(() => {
     setEditAttachedImages(parseTilImages(item.imageUrl));
   }, [item.imageUrl]);
+
+  // Debounced Gist suggestions when editing TIL tags
+  useEffect(() => {
+    if (!isEditing) return;
+    const content = `${editBody} ${item.linkPreview?.title || ""}`.trim();
+    if (!content || content.length < 5) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/suggest-tags", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({ text: content, topK: 4 }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.tags)) setEditSuggestedTags(data.tags);
+        }
+      } catch {}
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [isEditing, editBody, item.linkPreview?.title]);
 
   useEffect(() => {
     if (!lightboxImg) {
@@ -1257,6 +1286,34 @@ export const TilFeedItem: React.FC<TilFeedItemProps> = ({
                   width: "80px",
                 }}
               />
+              {editSuggestedTags.filter((st) => !editTags.includes(st)).length > 0 && (
+                <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", alignItems: "center", width: "100%", marginTop: "4px" }}>
+                  <span style={{ fontSize: "9px", fontFamily: "var(--mono)", fontWeight: 800, opacity: 0.65 }}>
+                    SUGGESTED:
+                  </span>
+                  {editSuggestedTags
+                    .filter((st) => !editTags.includes(st))
+                    .map((st) => (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => setEditTags((prev) => [...prev, st])}
+                        style={{
+                          fontFamily: "var(--mono)",
+                          fontSize: "9px",
+                          fontWeight: 800,
+                          padding: "1px 5px",
+                          border: "1px solid var(--ink)",
+                          background: "var(--paper)",
+                          color: "var(--ink)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        + #{st}
+                      </button>
+                    ))}
+                </div>
+              )}
             </div>
           </div>
         )}

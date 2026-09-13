@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { TilType } from "@/db/schema";
 import {
   Lightbulb,
@@ -107,7 +107,7 @@ const KINDS: {
   { key: "NEWS", label: "NEWS", icon: Newspaper, tagline: "Intel dispatch & development notes" },
 ];
 
-const SUGGESTED_TAGS = ["hardware", "typescript", "architecture", "perf", "database", "security", "react"];
+const DEFAULT_TAGS = ["technology", "architecture", "typescript", "perf", "database", "security"];
 
 export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatch }) => {
   const [type, setType] = useState<TilType>("FACT");
@@ -153,8 +153,92 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
   // Global / Tags
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [clipBatch, setClipBatch] = useState<ClipLink[] | null>(null);
+
+  // Derive unified text across all categories for Gist topic classification
+  const draftText = useMemo(() => {
+    switch (type) {
+      case "FACT":
+        return `${factClaim} ${factSource}`.trim();
+      case "GOTCHA":
+        return `${gotchaThought} ${gotchaActually} ${gotchaCost}`.trim();
+      case "SNIPPET":
+        return `${snippetWhy} ${snippetCode}`.trim();
+      case "PATTERN":
+        return `${patternStatement} ${patternInstance}`.trim();
+      case "QUOTE":
+        return `${quoteText} ${quoteWho} ${quoteSource}`.trim();
+      case "OPINION":
+        return `${opinionTake}`.trim();
+      case "LINK":
+        return `${linkWhy} ${linkUrl}`.trim();
+      case "NEWS":
+        return `${newsHeadline} ${newsBullets} ${newsSource}`.trim();
+      default:
+        return "";
+    }
+  }, [
+    type,
+    factClaim,
+    factSource,
+    gotchaThought,
+    gotchaActually,
+    gotchaCost,
+    snippetWhy,
+    snippetCode,
+    patternStatement,
+    patternInstance,
+    quoteText,
+    quoteWho,
+    quoteSource,
+    opinionTake,
+    linkWhy,
+    linkUrl,
+    newsHeadline,
+    newsBullets,
+    newsSource,
+  ]);
+
+  // Debounced Gist topic tagging as user types
+  useEffect(() => {
+    if (!draftText || draftText.length < 8) {
+      setSuggestedTags([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        setLoadingSuggestions(true);
+        const res = await fetch("/api/suggest-tags", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({ text: draftText, topK: 4 }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.tags)) {
+            setSuggestedTags(data.tags);
+          }
+        }
+      } catch (e: any) {
+        if (e.name !== "AbortError") {
+          // Gracefully ignore network errors
+        }
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [draftText]);
 
   // Attached Images (supported across all categories)
   const [attachedImages, setAttachedImages] = useState<string[]>([]);
@@ -805,21 +889,29 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
             />
           </div>
 
-          {tags.length === 0 && (
-            <div className="comp__tag-suggestions">
-              <span className="comp__tag-sug-lbl">SUGGESTIONS:</span>
-              {SUGGESTED_TAGS.map((stag) => (
-                <button
-                  key={stag}
-                  type="button"
-                  onClick={() => handleAddTag(stag)}
-                  className="comp__tag-sug-btn"
-                >
-                  +{stag}
-                </button>
-              ))}
-            </div>
-          )}
+          {(() => {
+            const pool = suggestedTags.length > 0 ? suggestedTags : DEFAULT_TAGS;
+            const available = pool.filter((t) => !tags.includes(t));
+            if (available.length === 0) return null;
+
+            return (
+              <div className="comp__tag-suggestions">
+                <span className="comp__tag-sug-lbl">
+                  {loadingSuggestions ? "THINKING…" : suggestedTags.length > 0 ? "GIST TOPICS:" : "SUGGESTIONS:"}
+                </span>
+                {available.slice(0, 6).map((stag) => (
+                  <button
+                    key={stag}
+                    type="button"
+                    onClick={() => handleAddTag(stag)}
+                    className="comp__tag-sug-btn"
+                  >
+                    +{stag}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Composer Footer */}
