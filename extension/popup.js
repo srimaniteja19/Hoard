@@ -116,6 +116,73 @@ function detectUrlMeta(u) {
   return fallback;
 }
 
+// ─── Desert Ant Gist 36-Topic Taxonomy & Fallback Classifier ─────────────────
+
+const GIST_TAXONOMY_MAP = [
+  { slug: "technology", name: "Technology & Software", keywords: ["git", "worktree", "branch", "repo", "repository", "code", "coding", "software", "dev", "developer", "api", "web", "app", "javascript", "typescript", "python", "react", "nextjs", "node", "ai", "llm", "css", "html", "database", "sql", "postgres", "linux", "cloud", "aws", "docker", "kubernetes", "terminal", "algorithm", "compiler", "frontend", "backend", "fullstack", "server", "system", "tech", "computer", "programming", "bug", "cache", "deploy", "cli", "auth", "oauth", "jwt"] },
+  { slug: "education", name: "Education & Learning", keywords: ["learn", "learning", "tutorial", "explained", "explaining", "course", "guide", "lecture", "student", "study", "exam", "school", "university", "lesson", "how to", "how-to", "deep dive", "concept", "intro", "introduction", "basics", "fundamental", "fundamentals", "masterclass", "cheatsheet", "tip", "tips", "tricks"] },
+  { slug: "career", name: "Careers & Productivity", keywords: ["productivity", "workflow", "worktree", "career", "job", "interview", "resume", "remote work", "management", "leadership", "freelance", "salary", "hiring", "work", "efficient", "efficiency", "time management", "habits", "focus", "organize", "notes", "second brain", "tools", "automation"] },
+  { slug: "creator-economy", name: "Creator Economy", keywords: ["youtube", "creator", "content", "podcast", "video", "subscriber", "channel", "audience", "stream", "streaming", "twitch", "tiktok", "influencer", "monetize", "patreon", "newsletter", "media", "sponsor"] },
+  { slug: "self-improvement", name: "Self-Improvement", keywords: ["habits", "mindset", "goal", "goals", "motivation", "discipline", "psychology", "mental", "growth", "routine", "meditation", "stoic", "stoicism", "advice", "wisdom", "reflection", "journal"] },
+  { slug: "science", name: "Science & Mathematics", keywords: ["physics", "math", "mathematics", "biology", "chemistry", "neuroscience", "quantum", "astronomy", "research", "paper", "arxiv", "scientific", "experiment", "lab", "genetics", "space", "data science"] },
+  { slug: "business", name: "Business & Entrepreneurship", keywords: ["startup", "business", "founder", "saas", "venture", "revenue", "sales", "marketing", "customer", "strategy", "enterprise", "pricing", "b2b", "b2c", "market", "product", "growth", "launch", "scale"] },
+  { slug: "finance", name: "Personal Finance & Investing", keywords: ["money", "invest", "investing", "stock", "stocks", "crypto", "bitcoin", "ethereum", "budget", "wealth", "tax", "banking", "finance", "portfolio", "trading", "fund", "dividend"] },
+  { slug: "health-fitness", name: "Health & Fitness", keywords: ["health", "fitness", "workout", "gym", "diet", "nutrition", "exercise", "sleep", "wellness", "medical", "doctor", "muscle", "running", "training", "cardio", "lifting"] },
+  { slug: "crafts-hobbies", name: "Crafts & Hobbies", keywords: ["craft", "diy", "hobby", "woodworking", "knitting", "crochet", "sewing", "origami", "maker", "electronics", "arduino", "raspberry pi"] },
+  { slug: "gaming", name: "Gaming", keywords: ["game", "gaming", "playstation", "xbox", "nintendo", "steam", "gameplay", "esports", "fps", "rpg", "multiplayer", "speedrun", "mod", "videogame", "gamer"] },
+  { slug: "film-tv", name: "Film & TV", keywords: ["movie", "film", "cinema", "tv", "series", "episode", "actor", "director", "hollywood", "netflix", "trailer", "season", "show", "documentary"] },
+  { slug: "music", name: "Music & Audio", keywords: ["music", "song", "album", "artist", "guitar", "piano", "spotify", "sound", "audio", "track", "concert", "band", "synth", "beats", "composition"] },
+  { slug: "books-literature", name: "Books & Literature", keywords: ["book", "books", "novel", "author", "reading", "literature", "chapter", "writer", "poem", "poetry", "essay", "fiction", "nonfiction", "non-fiction"] },
+  { slug: "news-politics", name: "News & Politics", keywords: ["news", "politics", "election", "government", "policy", "congress", "senate", "president", "court", "democracy", "global", "crisis", "geopolitics"] },
+  { slug: "law", name: "Law & Legal", keywords: ["law", "legal", "court", "attorney", "lawyer", "contract", "license", "copyright", "patent", "rights", "statute", "liability", "regulation"] },
+  { slug: "arts-culture", name: "Arts & Culture", keywords: ["art", "artist", "museum", "gallery", "painting", "sculpture", "history", "culture", "cultural", "heritage", "theatre", "exhibit"] },
+  { slug: "travel", name: "Travel & Tourism", keywords: ["travel", "flight", "hotel", "destination", "trip", "vacation", "city", "tour", "explore", "journey", "itinerary", "backpacking", "airport"] },
+  { slug: "food-drink", name: "Food & Beverage", keywords: ["food", "recipe", "cooking", "cook", "restaurant", "baking", "coffee", "wine", "beer", "meal", "chef", "kitchen", "delicious", "barista"] },
+  { slug: "home-garden", name: "Home & Gardening", keywords: ["home", "garden", "plant", "interior", "furniture", "diy", "renovation", "decor", "tools", "repair", "homestead", "backyard"] },
+  { slug: "automotive", name: "Automotive", keywords: ["car", "cars", "vehicle", "electric vehicle", "ev", "engine", "driving", "tesla", "toyota", "porsche", "racing", "mechanic", "automotive"] },
+  { slug: "photography-video", name: "Photography & Video", keywords: ["photo", "photography", "camera", "lens", "shutter", "lighting", "videography", "editing", "premiere", "cinematic", "film"] },
+  { slug: "real-estate", name: "Real Estate", keywords: ["real estate", "property", "housing", "mortgage", "apartment", "rent", "tenant", "landlord", "homebuying", "realtor", "home"] },
+  { slug: "relationships", name: "Relationships", keywords: ["relationship", "dating", "marriage", "couple", "family", "friendship", "partner", "communication", "empathy", "love", "interpersonal"] },
+  { slug: "parenting-family", name: "Parenting & Family", keywords: ["parent", "parenting", "child", "children", "baby", "toddler", "kids", "family", "mother", "father", "schooling", "infant"] },
+  { slug: "pets-animals", name: "Pets & Animals", keywords: ["pet", "pets", "dog", "dogs", "cat", "cats", "puppy", "kitten", "vet", "animal", "wildlife", "rescue", "canine"] },
+  { slug: "sports", name: "Sports & Athletics", keywords: ["sport", "sports", "football", "soccer", "basketball", "nba", "nfl", "baseball", "tennis", "olympics", "championship", "athlete", "match"] },
+  { slug: "outdoors-nature", name: "Outdoors & Nature", keywords: ["nature", "outdoor", "hiking", "camping", "trail", "mountain", "climbing", "wild", "forest", "national park", "wilderness"] },
+  { slug: "beauty", name: "Beauty & Grooming", keywords: ["beauty", "skincare", "makeup", "cosmetics", "hair", "perfume", "grooming", "routine", "salon", "style"] },
+  { slug: "comedy", name: "Comedy & Humor", keywords: ["comedy", "funny", "humor", "joke", "meme", "standup", "hilarious", "parody", "satire", "sketch"] },
+  { slug: "shopping-deals", name: "Shopping & Deals", keywords: ["deal", "discount", "sale", "shopping", "coupon", "amazon", "bargain", "price", "store", "buy"] },
+  { slug: "society-culture", name: "Society & Social Issues", keywords: ["society", "community", "social", "activism", "equality", "ethics", "moral", "human rights", "public"] },
+  { slug: "spirituality-religion", name: "Spirituality & Religion", keywords: ["faith", "spirituality", "religion", "church", "prayer", "bible", "buddhism", "meditation", "soul", "god"] },
+  { slug: "lifestyle-fashion", name: "Lifestyle & Fashion", keywords: ["fashion", "outfit", "wardrobe", "style", "vintage", "clothing", "trend", "luxury", "aesthetic"] },
+  { slug: "true-crime", name: "True Crime", keywords: ["crime", "mystery", "detective", "investigation", "murder", "forensic", "case", "unsolved", "heist"] },
+  { slug: "history", name: "History", keywords: ["history", "historical", "war", "ancient", "century", "empire", "civilization", "archaeology", "medieval"] }
+];
+
+function getFallbackGistTopics(rawText, topK = 4) {
+  const text = (rawText || "").toLowerCase();
+  if (!text.trim()) return [];
+
+  const scores = GIST_TAXONOMY_MAP.map((topic) => {
+    let score = 0;
+    for (const kw of topic.keywords) {
+      if (kw.includes(" ")) {
+        if (text.includes(kw)) score += 3;
+      } else {
+        const regex = new RegExp(`\\b${kw}\\b`, "i");
+        if (regex.test(text)) score += 2;
+      }
+    }
+    return { slug: topic.slug, score };
+  });
+
+  scores.sort((a, b) => b.score - a.score);
+  const positive = scores.filter((s) => s.score > 0);
+  if (positive.length > 0) {
+    return positive.slice(0, topK).map((s) => s.slug);
+  }
+
+  return ["technology", "education", "career"].slice(0, topK);
+}
+
 // ─── Natural Language Todo Parser (Client-Side) ──────────────────────────────
 
 const WEEKDAY_FULL = {
@@ -447,6 +514,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const meta = detectUrlMeta(url);
     if (triageStatus) triageStatus.textContent = "TRIAGING…";
 
+    // Immediate client-side fallback tags while network call runs
+    const fallbackText = `${pageTitleInput?.value || ""} ${pageNoteInput?.value || ""} ${url}`;
+    const fallbackTags = getFallbackGistTopics(fallbackText, 4);
+    if (fallbackTags.length > 0) {
+      renderBookmarkSuggestions(fallbackTags);
+      if (!triageTouched.tags && fallbackTags[0] && activeTags.size === 0) {
+        setPrimaryTag(fallbackTags[0]);
+      }
+    }
+
     try {
       const res = await hoardFetch("/api/bookmarks/triage", {
         method: "POST",
@@ -468,6 +545,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const combinedSuggestions = [
         ...(Array.isArray(data.tags) ? data.tags : []),
         ...(Array.isArray(data.gistTopics) ? data.gistTopics.map((t) => t.tag || t.slug) : []),
+        ...fallbackTags,
       ];
       renderBookmarkSuggestions(Array.from(new Set(combinedSuggestions)).filter(Boolean));
       if (!triageTouched.folder && data.suggestedCollection && folderSelect) {
@@ -485,6 +563,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (triageStatus) triageStatus.textContent = "TRIAGED ✓";
     } catch {
       if (triageStatus) triageStatus.textContent = "TRIAGE IDLE";
+      if (fallbackTags.length > 0) {
+        renderBookmarkSuggestions(fallbackTags);
+      }
     }
   }
 
@@ -578,6 +659,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (saveLabel) saveLabel.textContent = "SAVE HIGHLIGHT";
           }
         } catch {}
+
+        fetchTilSuggestions(true);
       }
     } catch (err) {
       console.warn("Could not query active tab:", err);
@@ -747,31 +830,50 @@ document.addEventListener("DOMContentLoaded", async () => {
   const tilSuggestedList = document.getElementById("tilSuggestedTagsList");
   let tilSuggestDebounce = null;
 
-  function fetchTilSuggestions() {
+  function fetchTilSuggestions(immediate = false) {
     if (tilSuggestDebounce) clearTimeout(tilSuggestDebounce);
-    tilSuggestDebounce = setTimeout(async () => {
-      const text = `${tilBodyInput?.value || ""} ${tilLinkUrlInput?.value || ""}`.trim();
-      if (!text || text.length < 6) {
+
+    const run = async () => {
+      const text = `${tilBodyInput?.value || ""} ${tilLinkUrlInput?.value || ""} ${currentActiveTab?.title || ""}`.trim();
+      if (!text || text.length < 3) {
         if (tilSuggestedRow) tilSuggestedRow.style.display = "none";
         return;
       }
 
+      // 1. Instant local Gist classification across 36-topic taxonomy
+      const fallbackTags = getFallbackGistTopics(text, 4);
+      if (fallbackTags.length > 0) {
+        renderTilSuggestions(fallbackTags);
+      }
+
+      // 2. Query API / on-device Gist model for deeper server inferences
       try {
         const res = await hoardFetch("/api/suggest-tags", {
           method: "POST",
           body: JSON.stringify({ text, topK: 4 }),
         });
-        if (!res.ok) return;
-        const data = await res.json();
-        renderTilSuggestions(data.tags || []);
-      } catch {}
-    }, 400);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.tags) && data.tags.length > 0) {
+            renderTilSuggestions(data.tags);
+          }
+        }
+      } catch {
+        // Fallback is already displayed
+      }
+    };
+
+    if (immediate) {
+      run();
+    } else {
+      tilSuggestDebounce = setTimeout(run, 200);
+    }
   }
 
   function renderTilSuggestions(tags) {
     if (!tilSuggestedRow || !tilSuggestedList) return;
     tilSuggestedList.innerHTML = "";
-    if (!tags || tags.length === 0) {
+    if (!tags || !Array.isArray(tags) || tags.length === 0) {
       tilSuggestedRow.style.display = "none";
       return;
     }
@@ -781,8 +883,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       .map((t) => t.trim().toLowerCase().replace(/^#/, ""))
       .filter(Boolean);
 
-    tags.forEach((tag) => {
-      if (currentTags.includes(tag)) return;
+    let count = 0;
+    tags.forEach((rawTag) => {
+      const tag = (rawTag || "").trim().toLowerCase().replace(/^#/, "");
+      if (!tag || currentTags.includes(tag)) return;
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "suggested-chip";
@@ -792,7 +896,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!existing) {
           if (tilTagsInput) tilTagsInput.value = tag;
         } else {
-          if (tilTagsInput) tilTagsInput.value = `${existing}, ${tag}`;
+          const parts = existing.split(",").map((p) => p.trim()).filter(Boolean);
+          if (!parts.includes(tag)) {
+            parts.push(tag);
+            if (tilTagsInput) tilTagsInput.value = parts.join(", ");
+          }
         }
         btn.remove();
         if (tilSuggestedList.children.length === 0) {
@@ -800,13 +908,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       });
       tilSuggestedList.appendChild(btn);
+      count++;
     });
 
-    tilSuggestedRow.style.display = tilSuggestedList.children.length > 0 ? "flex" : "none";
+    tilSuggestedRow.style.display = count > 0 ? "flex" : "none";
   }
 
-  tilBodyInput?.addEventListener("input", fetchTilSuggestions);
-  tilLinkUrlInput?.addEventListener("input", fetchTilSuggestions);
+  tilBodyInput?.addEventListener("input", () => fetchTilSuggestions(false));
+  tilBodyInput?.addEventListener("change", () => fetchTilSuggestions(true));
+  tilBodyInput?.addEventListener("paste", () => setTimeout(() => fetchTilSuggestions(true), 50));
+  tilLinkUrlInput?.addEventListener("input", () => fetchTilSuggestions(false));
+  tilLinkUrlInput?.addEventListener("change", () => fetchTilSuggestions(true));
+  tilLinkUrlInput?.addEventListener("paste", () => setTimeout(() => fetchTilSuggestions(true), 50));
+  tilTagsInput?.addEventListener("input", () => fetchTilSuggestions(false));
+  tilDischargeSelect?.addEventListener("change", () => fetchTilSuggestions(true));
 
   commitTilBtn?.addEventListener("click", async () => {
     const bodyText = tilBodyInput.value.trim();
@@ -1059,38 +1174,57 @@ document.addEventListener("DOMContentLoaded", async () => {
   const todoSuggestedList = document.getElementById("todoSuggestedTagsList");
   let todoSuggestDebounce = null;
 
-  function fetchTodoSuggestions() {
+  function fetchTodoSuggestions(immediate = false) {
     if (todoSuggestDebounce) clearTimeout(todoSuggestDebounce);
-    todoSuggestDebounce = setTimeout(async () => {
+
+    const run = async () => {
       const text = todoInput?.value?.trim() || "";
-      if (!text || text.length < 5) {
+      if (!text || text.length < 3) {
         if (todoSuggestedRow) todoSuggestedRow.style.display = "none";
         return;
       }
 
+      // 1. Instant client-side fallback using Desert Ant Gist 36-topic taxonomy
+      const fallbackTags = getFallbackGistTopics(text, 4);
+      if (fallbackTags.length > 0) {
+        renderTodoSuggestions(fallbackTags);
+      }
+
+      // 2. Query API / on-device Gist model
       try {
         const res = await hoardFetch("/api/suggest-tags", {
           method: "POST",
           body: JSON.stringify({ text, topK: 4 }),
         });
-        if (!res.ok) return;
-        const data = await res.json();
-        renderTodoSuggestions(data.tags || []);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.tags) && data.tags.length > 0) {
+            renderTodoSuggestions(data.tags);
+          }
+        }
       } catch {}
-    }, 450);
+    };
+
+    if (immediate) {
+      run();
+    } else {
+      todoSuggestDebounce = setTimeout(run, 200);
+    }
   }
 
   function renderTodoSuggestions(tags) {
     if (!todoSuggestedRow || !todoSuggestedList) return;
     todoSuggestedList.innerHTML = "";
-    if (!tags || tags.length === 0) {
+    if (!tags || !Array.isArray(tags) || tags.length === 0) {
       todoSuggestedRow.style.display = "none";
       return;
     }
 
     const currentText = (todoInput?.value || "").toLowerCase();
-    tags.forEach((tag) => {
-      if (currentText.includes(`#${tag.toLowerCase()}`)) return;
+    let count = 0;
+    tags.forEach((rawTag) => {
+      const tag = (rawTag || "").trim().toLowerCase().replace(/^#/, "");
+      if (!tag || currentText.includes(`#${tag}`)) return;
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "suggested-chip";
@@ -1106,12 +1240,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       });
       todoSuggestedList.appendChild(btn);
+      count++;
     });
 
-    todoSuggestedRow.style.display = todoSuggestedList.children.length > 0 ? "flex" : "none";
+    todoSuggestedRow.style.display = count > 0 ? "flex" : "none";
   }
 
-  todoInput?.addEventListener("input", fetchTodoSuggestions);
+  todoInput?.addEventListener("input", () => fetchTodoSuggestions(false));
+  todoInput?.addEventListener("change", () => fetchTodoSuggestions(true));
+  todoInput?.addEventListener("paste", () => setTimeout(() => fetchTodoSuggestions(true), 50));
 
   addTabAsTodoBtn?.addEventListener("click", () => {
     if (currentActiveTab) {
@@ -1460,8 +1597,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderHoardList();
       } else if (targetTab === "til") {
         loadUnreadBookmarksForDischarge();
+        fetchTilSuggestions(true);
       } else if (targetTab === "todos") {
         loadTodos();
+        fetchTodoSuggestions(true);
       } else if (targetTab === "settings") {
         updateSyncStatusBadge();
       }
