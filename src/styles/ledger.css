@@ -1364,6 +1364,817 @@
   transition: width 0.3s ease;
 }
 
+/* ── 5B. DEBT CARRYING COST & OBLIGATION COMMAND BANNER ── */
+.debt-ob-banner {
+  background: #0D0E12;
+  border: 2.5px solid var(--ink, #0A0A0A);
+  box-shadow: 5px 5px 0 var(--ink, #0A0A0A);
+  border-radius: 4px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  border-top: 5px solid #FF2E93;
+}
+
+.debt-ob-banner--danger {
+  border-top-color: #DC2626;
+  box-shadow: 5px 5px 0 #DC2626;
+}
+
+.debt-ob-banner--free {
+  background: #F0FDF4;
+  border: 2.5px solid #16A34A;
+  box-shadow: 5px 5px 0 #16A34A;
+  border-top: 5px solid #16A34A;
+  color: #166534;
+}
+
+.debt-ob-free-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 4px;
+}
+
+.debt-ob-free-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11px;
+  font-weight: 900;
+  color: #15803D;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.debt-ob-sparkle {
+  color: #16A34A;
+}
+
+.debt-ob-free-title {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 20px;
+  font-weight: 900;
+  color: #0A0A0A;
+  margin: 0;
+}
+
+.debt-ob-free-desc {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11.5px;
+  color: #166534;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* 1. Header Telemetry Strip */
+.debt-ob-header-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.12);
+}
+
+.debt-ob-strip-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.debt-ob-pulse-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.debt-ob-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.debt-ob-pulse.danger {
+  background: #FF2E93;
+  box-shadow: 0 0 8px #FF2E93;
+  animation: debtPulseAnim 1.6s infinite ease-in-out;
+}
+
+.debt-ob-pulse.warning {
+  background: #FFE600;
+  box-shadow: 0 0 8px #FFE600;
+  animation: debtPulseAnim 1.6s infinite ease-in-out;
+}
+
+@keyframes debtPulseAnim {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+.debt-ob-strip-title {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11.5px;
+  font-weight: 900;
+  color: #FFFFFF;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.debt-ob-strip-sub {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #71717A;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+}
+
+.debt-ob-strip-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.debt-ob-chip {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 4px 9px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  background: #18181B;
+  color: #E4E4E7;
+}
+
+.debt-ob-chip.accent {
+  border-color: #00F0FF;
+  color: #00F0FF;
+  background: rgba(0, 240, 255, 0.08);
+}
+
+.debt-ob-chip.danger {
+  border-color: #FF2E93;
+  color: #FF2E93;
+  background: rgba(255, 46, 147, 0.12);
+}
+
+.debt-ob-chip.highlight {
+  border-color: #FFE600;
+  color: #FFE600;
+  background: rgba(255, 230, 0, 0.1);
+}
+
+.debt-ob-toggle-btn {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10.5px;
+  font-weight: 900;
+  padding: 4px 11px;
+  background: #27272A;
+  color: #FFFFFF;
+  border: 1.5px solid #3F3F46;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.12s ease;
+}
+
+.debt-ob-toggle-btn:hover {
+  background: #3F3F46;
+  border-color: #FFFFFF;
+}
+
+.debt-ob-toggle-btn.active {
+  background: #FFE600;
+  color: #0A0A0A;
+  border-color: #FFE600;
+  box-shadow: 2px 2px 0 #000000;
+  font-weight: 900;
+}
+
+/* 2. Negative Amortization Alert */
+.debt-ob-danger-alert {
+  background: #450A0A;
+  border: 2px solid #EF4444;
+  border-radius: 3px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #FCA5A5;
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.debt-ob-alert-icon {
+  color: #EF4444;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* 3. Core Cells Grid */
+.debt-ob-cells-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.debt-ob-cell {
+  background: #18181B;
+  border: 1.5px solid #27272A;
+  border-radius: 4px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  position: relative;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.debt-ob-cell:hover {
+  border-color: #52525B;
+  transform: translateY(-1px);
+}
+
+.debt-ob-cell--burn {
+  border-left: 4px solid #FF2E93;
+}
+
+.debt-ob-cell--min {
+  border-left: 4px solid #FFE600;
+}
+
+.debt-ob-cell--split {
+  border-left: 4px solid #00F0FF;
+}
+
+.debt-ob-cell--top {
+  border-left: 4px solid #F43F5E;
+}
+
+.debt-ob-cell-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.debt-ob-cell-label-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.debt-ob-cell-label {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10px;
+  font-weight: 900;
+  color: #A1A1AA;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.debt-ob-cell-icon.burn {
+  color: #FF2E93;
+}
+
+.debt-ob-cell-icon.min {
+  color: #FFE600;
+}
+
+.debt-ob-cell-icon.split {
+  color: #00F0FF;
+}
+
+.debt-ob-cell-icon.top-offender {
+  color: #F43F5E;
+}
+
+.debt-ob-tag {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.debt-ob-tag.burn {
+  background: rgba(255, 46, 147, 0.15);
+  color: #FF2E93;
+  border: 1px solid rgba(255, 46, 147, 0.3);
+}
+
+.debt-ob-tag.danger {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+.debt-ob-tag.min {
+  background: rgba(255, 230, 0, 0.15);
+  color: #FFE600;
+  border: 1px solid rgba(255, 230, 0, 0.3);
+}
+
+.debt-ob-tag.split {
+  background: rgba(0, 240, 255, 0.15);
+  color: #00F0FF;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+}
+
+.debt-ob-tag.offender {
+  background: rgba(244, 63, 94, 0.18);
+  color: #FDA4AF;
+  border: 1px solid #F43F5E;
+}
+
+.debt-ob-cell-value-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.debt-ob-currency {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 18px;
+  font-weight: 900;
+  color: #71717A;
+  margin-right: 1px;
+}
+
+.debt-ob-amount {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 26px;
+  font-weight: 900;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.debt-ob-cadence {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11px;
+  font-weight: 800;
+  color: #71717A;
+  margin-left: 2px;
+}
+
+.debt-ob-cell-telemetry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  padding-top: 8px;
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10px;
+  color: #A1A1AA;
+}
+
+.debt-ob-telem-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.debt-ob-telem-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.debt-ob-telem-dot.red {
+  background: #FF2E93;
+}
+
+.debt-ob-telem-dot.amber {
+  background: #FFE600;
+}
+
+.debt-ob-telem-dot.cyan {
+  background: #00F0FF;
+}
+
+.debt-ob-telem-dot.gray {
+  background: #52525B;
+}
+
+/* Bi-color Split Track */
+.debt-ob-split-track-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 2px 0;
+}
+
+.debt-ob-split-track {
+  height: 12px;
+  background: #27272A;
+  border-radius: 3px;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid #3F3F46;
+}
+
+.debt-ob-split-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.debt-ob-split-fill--principal {
+  background: #4ADE80;
+  border-right: 1px solid #18181B;
+}
+
+.debt-ob-split-fill--interest {
+  background: #FF2E93;
+}
+
+.debt-ob-split-legend {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 9.5px;
+  font-weight: 800;
+}
+
+.debt-ob-split-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.debt-ob-split-legend-item.green {
+  color: #4ADE80;
+}
+
+.debt-ob-split-legend-item.pink {
+  color: #FF2E93;
+}
+
+.debt-ob-split-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.debt-ob-split-dot.green {
+  background: #4ADE80;
+}
+
+.debt-ob-split-dot.pink {
+  background: #FF2E93;
+}
+
+/* Top Offender Body */
+.debt-ob-top-offender-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.debt-ob-offender-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.debt-ob-offender-name {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 16px;
+  font-weight: 900;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.debt-ob-offender-apr {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10.5px;
+  font-weight: 900;
+  color: #FDA4AF;
+  background: rgba(244, 63, 94, 0.2);
+  padding: 1px 6px;
+  border-radius: 2px;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.debt-ob-offender-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 4px;
+}
+
+.debt-ob-offender-cost {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 19px;
+  font-weight: 900;
+  color: #FF2E93;
+}
+
+.debt-ob-offender-cost small {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10px;
+  font-weight: 700;
+  color: #A1A1AA;
+  margin-left: 3px;
+}
+
+.debt-ob-offender-balance {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10px;
+  font-weight: 700;
+  color: #A1A1AA;
+}
+
+/* 4. Expandable Audit Drawer */
+.debt-ob-audit-drawer {
+  background: #121318;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.12);
+  padding-top: 16px;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: debtDrawerIn 0.18s ease-out;
+}
+
+@keyframes debtDrawerIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.debt-ob-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.debt-ob-drawer-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11px;
+  font-weight: 900;
+  color: #FFE600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.debt-ob-drawer-meta {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10px;
+  font-weight: 700;
+  color: #71717A;
+}
+
+.debt-ob-drawer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.debt-ob-account-card {
+  background: #18181B;
+  border: 1.5px solid #27272A;
+  border-radius: 3px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.12s ease;
+}
+
+.debt-ob-account-card:hover {
+  border-color: #52525B;
+}
+
+.debt-ob-account-card.is-worst {
+  border-color: #FF2E93;
+  background: #1C131A;
+}
+
+.debt-ob-acc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.debt-ob-acc-title-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.debt-ob-acc-rank {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 9px;
+  font-weight: 900;
+  padding: 1px 5px;
+  background: #27272A;
+  color: #FFE600;
+  border-radius: 2px;
+}
+
+.debt-ob-acc-name {
+  font-family: var(--display, "Bricolage Grotesque", sans-serif);
+  font-size: 14px;
+  font-weight: 900;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.debt-ob-acc-apr-badge {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 10px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.debt-ob-acc-apr-badge.high {
+  background: rgba(255, 46, 147, 0.2);
+  color: #FF2E93;
+  border: 1px solid #FF2E93;
+}
+
+.debt-ob-acc-apr-badge.normal {
+  background: rgba(0, 240, 255, 0.15);
+  color: #00F0FF;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+}
+
+.debt-ob-acc-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  font-family: var(--mono, "Space Mono", monospace);
+}
+
+.debt-ob-acc-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.debt-ob-acc-metric-label {
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #71717A;
+  letter-spacing: 0.04em;
+}
+
+.debt-ob-acc-metric-val {
+  font-size: 12.5px;
+  font-weight: 900;
+  color: #FFFFFF;
+}
+
+.debt-ob-acc-metric-val.red {
+  color: #FF2E93;
+}
+
+.debt-ob-acc-metric-val.amber {
+  color: #FFE600;
+}
+
+.debt-ob-acc-metric-val.green {
+  color: #4ADE80;
+}
+
+.debt-ob-acc-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.debt-ob-acc-bar {
+  height: 5px;
+  background: #27272A;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.debt-ob-acc-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.debt-ob-acc-bar-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 9px;
+  color: #71717A;
+}
+
+.debt-ob-acc-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  padding-top: 6px;
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 9.5px;
+  color: #71717A;
+}
+
+.debt-ob-acc-footer b {
+  color: #E4E4E7;
+}
+
+.debt-ob-drawer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-top: 1.5px dashed rgba(255, 255, 255, 0.12);
+  padding-top: 12px;
+}
+
+.debt-ob-drawer-hint {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11px;
+  color: #A1A1AA;
+  line-height: 1.4;
+  flex: 1;
+  min-width: 240px;
+}
+
+.debt-ob-drawer-hint b {
+  color: #FFE600;
+}
+
+.debt-ob-sim-jump-btn {
+  font-family: var(--mono, "Space Mono", monospace);
+  font-size: 11px;
+  font-weight: 900;
+  padding: 6px 12px;
+  background: #00F0FF;
+  color: #0A0A0A;
+  border: 2px solid #00F0FF;
+  border-radius: 2px;
+  box-shadow: 2px 2px 0 #000000;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.1s ease;
+}
+
+.debt-ob-sim-jump-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #000000;
+}
+
 /* ── 6. CASH FLOW & RUNWAY ── */
 .cashflow-dashboard {
   display: grid;
@@ -4145,5 +4956,23 @@
 
   .dues-dow-bars-container {
     gap: 6px;
+  }
+
+  .debt-ob-cells-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .debt-ob-header-strip {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .debt-ob-strip-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .debt-ob-drawer-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -317,6 +317,8 @@ export interface PayoffSimulationResult {
   baselineIsDivergent: boolean;
 }
 
+export type { DebtMonthlyObligationsSummary } from "./debtPayoff";
+
 export interface UpcomingRenewal {
   id: string;
   name: string;

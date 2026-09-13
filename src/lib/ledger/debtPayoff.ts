@@ -268,3 +268,165 @@ function runSimulation(
     isDivergent,
   };
 }
+
+export interface DebtMonthlyObligationsSummary {
+  activeCount: number;
+  totalBalance: number;
+  totalMinMonthly: number;
+  totalMonthlyInterest: number;
+  dailyInterestBurn: number;
+  annualInterestDrain: number;
+  annualMinCommitment: number;
+  weightedApr: number;
+  netPrincipalFromMinimums: number;
+  principalRatio: number;
+  interestRatio: number;
+  isNegativeAmortization: boolean;
+  topInterestBleeder: {
+    id: string;
+    name: string;
+    debtType: string;
+    monthlyInterest: number;
+    interestRate: number;
+    balance: number;
+    minPayment: number;
+    shareOfTotalInterest: number;
+    lender?: string | null;
+  } | null;
+  accounts: Array<{
+    id: string;
+    name: string;
+    debtType: string;
+    balance: number;
+    interestRate: number;
+    minPayment: number;
+    monthlyInterest: number;
+    principalPortion: number;
+    interestRatio: number;
+    dueDay?: number | null;
+    lender?: string | null;
+  }>;
+}
+
+/**
+ * Calculates current monthly debt obligations, accrued monthly interest,
+ * baseline minimums, daily burn rate, payment composition split, and identifies
+ * the highest interest bleeder.
+ */
+export function calculateDebtObligationsSummary(
+  debts: FinancialDebtRow[]
+): DebtMonthlyObligationsSummary {
+  const activeDebts = debts.filter((d) => !d.isPaidOff && d.balance > 0);
+
+  if (activeDebts.length === 0) {
+    return {
+      activeCount: 0,
+      totalBalance: 0,
+      totalMinMonthly: 0,
+      totalMonthlyInterest: 0,
+      dailyInterestBurn: 0,
+      annualInterestDrain: 0,
+      annualMinCommitment: 0,
+      weightedApr: 0,
+      netPrincipalFromMinimums: 0,
+      principalRatio: 0,
+      interestRatio: 0,
+      isNegativeAmortization: false,
+      topInterestBleeder: null,
+      accounts: [],
+    };
+  }
+
+  const accounts = activeDebts.map((d) => {
+    const monthlyRate = (d.interestRate || 0) / 100 / 12;
+    const monthlyInterest = Math.round(d.balance * monthlyRate * 100) / 100;
+    const minPayment = d.minPayment || 0;
+    const principalPortion = Math.max(0, Math.round((minPayment - monthlyInterest) * 100) / 100);
+    const interestRatio =
+      minPayment > 0
+        ? Math.min(100, Math.round((monthlyInterest / minPayment) * 100))
+        : 100;
+
+    return {
+      id: d.id,
+      name: d.name,
+      debtType: d.debtType,
+      balance: Math.round(d.balance * 100) / 100,
+      interestRate: d.interestRate,
+      minPayment: Math.round(minPayment * 100) / 100,
+      monthlyInterest,
+      principalPortion,
+      interestRatio,
+      dueDay: d.dueDay,
+      lender: d.lender,
+    };
+  });
+
+  const totalBalance = Math.round(accounts.reduce((sum, a) => sum + a.balance, 0) * 100) / 100;
+  const totalMinMonthly = Math.round(accounts.reduce((sum, a) => sum + a.minPayment, 0) * 100) / 100;
+  const totalMonthlyInterest = Math.round(accounts.reduce((sum, a) => sum + a.monthlyInterest, 0) * 100) / 100;
+  const dailyInterestBurn = Math.round((totalMonthlyInterest / 30) * 100) / 100;
+  const annualInterestDrain = Math.round(totalMonthlyInterest * 12 * 100) / 100;
+  const annualMinCommitment = Math.round(totalMinMonthly * 12 * 100) / 100;
+
+  const weightedApr =
+    totalBalance > 0
+      ? Math.round(
+          (accounts.reduce((sum, a) => sum + a.balance * a.interestRate, 0) / totalBalance) * 10
+        ) / 10
+      : 0;
+
+  const isNegativeAmortization = totalMonthlyInterest > totalMinMonthly;
+  const netPrincipalFromMinimums = Math.max(
+    0,
+    Math.round((totalMinMonthly - totalMonthlyInterest) * 100) / 100
+  );
+
+  const principalRatio =
+    totalMinMonthly > 0
+      ? Math.max(0, Math.min(100, Math.round((netPrincipalFromMinimums / totalMinMonthly) * 100)))
+      : 0;
+
+  const interestRatio =
+    totalMinMonthly > 0
+      ? Math.min(100, Math.round((Math.min(totalMonthlyInterest, totalMinMonthly) / totalMinMonthly) * 100))
+      : 100;
+
+  // Sort accounts by monthly interest descending to locate top bleeder
+  const sortedByInterest = [...accounts].sort((a, b) => b.monthlyInterest - a.monthlyInterest);
+  const top = sortedByInterest[0];
+  const topInterestBleeder = top
+    ? {
+        id: top.id,
+        name: top.name,
+        debtType: top.debtType,
+        monthlyInterest: top.monthlyInterest,
+        interestRate: top.interestRate,
+        balance: top.balance,
+        minPayment: top.minPayment,
+        shareOfTotalInterest:
+          totalMonthlyInterest > 0
+            ? Math.round((top.monthlyInterest / totalMonthlyInterest) * 100)
+            : 0,
+        lender: top.lender,
+      }
+    : null;
+
+  return {
+    activeCount: activeDebts.length,
+    totalBalance,
+    totalMinMonthly,
+    totalMonthlyInterest,
+    dailyInterestBurn,
+    annualInterestDrain,
+    annualMinCommitment,
+    weightedApr,
+    netPrincipalFromMinimums,
+    principalRatio,
+    interestRatio,
+    isNegativeAmortization,
+    topInterestBleeder,
+    accounts,
+  };
+}
+

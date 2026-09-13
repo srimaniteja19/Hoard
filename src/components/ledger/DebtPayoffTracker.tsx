@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   FinancialDebtRow,
   DebtPayoffStrategy,
@@ -11,6 +11,7 @@ import { calculateDebtPayoff } from "@/lib/ledger/debtPayoff";
 import { getDebtCycleRecord, recordCyclePayment, markCarriedOverInterestApplied } from "@/lib/ledger/debtCycleTracker";
 import { playSound } from "@/lib/sound";
 import { DebtAmortizationChart } from "./charts/DebtAmortizationChart";
+import { DebtObligationBanner } from "./DebtObligationBanner";
 import { CreditCard, DollarSign, CheckCircle, Plus, Minus, TrendingUp as TrendingUpIcon } from "lucide-react";
 
 const DEBT_THEMES: Record<DebtType, { icon: string; label: string }> = {
@@ -456,6 +457,11 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
   const [extraPayment, setExtraPayment] = useState<number>(150);
   const [lumpSum, setLumpSum] = useState<number>(0);
   const [activePaymentCardId, setActivePaymentCardId] = useState<string | null>(null);
+  const simulatorRef = useRef<HTMLDivElement>(null);
+
+  const scrollToSimulator = () => {
+    simulatorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const extraPaymentSliderMax = Math.max(5000, Math.ceil(((extraPayment || 0) * 1.5) / 500) * 500);
   const lumpSumSliderMax = Math.max(25000, Math.ceil(((lumpSum || 0) * 1.5) / 1000) * 1000);
@@ -538,8 +544,16 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
 
   return (
     <div className="debt-dashboard">
-      {/* ── INTERACTIVE "WHAT-IF" PAYOFF SIMULATOR ── */}
+      {/* ── 1. MONTHLY INTEREST & MINIMUM OBLIGATION COMMAND BANNER ── */}
+      <DebtObligationBanner
+        debts={debts}
+        currency={currency}
+        onScrollToSimulator={scrollToSimulator}
+      />
+
+      {/* ── 2. INTERACTIVE "WHAT-IF" PAYOFF SIMULATOR ── */}
       <div
+        ref={simulatorRef}
         style={{
           background: "#FFFFFF",
           border: "2.5px solid var(--ink, #0A0A0A)",

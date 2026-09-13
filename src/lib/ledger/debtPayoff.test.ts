@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateDebtPayoff } from "./debtPayoff";
+import { calculateDebtPayoff, calculateDebtObligationsSummary } from "./debtPayoff";
 import { FinancialDebtRow } from "./types";
 
 const mockDebts: FinancialDebtRow[] = [
@@ -120,3 +120,87 @@ describe("calculateDebtPayoff", () => {
     expect(result.totalPrincipalPaid).toBe(0);
   });
 });
+
+describe("calculateDebtObligationsSummary", () => {
+  it("should handle empty debt list gracefully", () => {
+    const summary = calculateDebtObligationsSummary([]);
+    expect(summary.activeCount).toBe(0);
+    expect(summary.totalBalance).toBe(0);
+    expect(summary.totalMinMonthly).toBe(0);
+    expect(summary.totalMonthlyInterest).toBe(0);
+    expect(summary.dailyInterestBurn).toBe(0);
+    expect(summary.annualInterestDrain).toBe(0);
+    expect(summary.weightedApr).toBe(0);
+    expect(summary.topInterestBleeder).toBeNull();
+    expect(summary.accounts).toEqual([]);
+  });
+
+  it("should accurately compute monthly interest, total minimums, and weighted APR", () => {
+    const summary = calculateDebtObligationsSummary(mockDebts);
+
+    expect(summary.activeCount).toBe(2);
+    expect(summary.totalBalance).toBe(13000);
+    expect(summary.totalMinMonthly).toBe(250); // 150 + 100
+    expect(summary.totalMonthlyInterest).toBe(130); // 100 + 30
+    expect(summary.dailyInterestBurn).toBe(4.33); // 130 / 30
+    expect(summary.annualInterestDrain).toBe(1560); // 130 * 12
+    expect(summary.annualMinCommitment).toBe(3000); // 250 * 12
+    expect(summary.weightedApr).toBe(12); // (5000*24 + 8000*4.5) / 13000 = 12.0%
+    expect(summary.netPrincipalFromMinimums).toBe(120); // 250 - 130
+    expect(summary.principalRatio).toBe(48); // 120 / 250 = 48%
+    expect(summary.interestRatio).toBe(52); // 130 / 250 = 52%
+    expect(summary.isNegativeAmortization).toBe(false);
+
+    // Verify top bleeder is the high APR card
+    expect(summary.topInterestBleeder).toBeDefined();
+    expect(summary.topInterestBleeder?.id).toBe("debt-1");
+    expect(summary.topInterestBleeder?.monthlyInterest).toBe(100);
+    expect(summary.topInterestBleeder?.shareOfTotalInterest).toBe(77); // 100/130 ~ 77%
+
+    // Verify account details
+    expect(summary.accounts.length).toBe(2);
+    const card = summary.accounts.find((a) => a.id === "debt-1");
+    expect(card?.monthlyInterest).toBe(100);
+    expect(card?.principalPortion).toBe(50);
+    expect(card?.interestRatio).toBe(67);
+  });
+
+  it("should detect negative amortization when interest exceeds minimum payments", () => {
+    const underwaterDebts: FinancialDebtRow[] = [
+      {
+        ...mockDebts[0],
+        balance: 10000,
+        interestRate: 24, // $200/mo interest
+        minPayment: 50, // $50/mo minimum
+      },
+    ];
+
+    const summary = calculateDebtObligationsSummary(underwaterDebts);
+    expect(summary.isNegativeAmortization).toBe(true);
+    expect(summary.totalMonthlyInterest).toBe(200);
+    expect(summary.totalMinMonthly).toBe(50);
+    expect(summary.netPrincipalFromMinimums).toBe(0);
+    expect(summary.interestRatio).toBe(100);
+    expect(summary.principalRatio).toBe(0);
+  });
+
+  it("should ignore paid off debts", () => {
+    const debtsWithPaid: FinancialDebtRow[] = [
+      ...mockDebts,
+      {
+        ...mockDebts[0],
+        id: "paid-debt",
+        name: "Old Paid Card",
+        balance: 0,
+        minPayment: 100,
+        isPaidOff: true,
+      },
+    ];
+
+    const summary = calculateDebtObligationsSummary(debtsWithPaid);
+    expect(summary.activeCount).toBe(2);
+    expect(summary.totalBalance).toBe(13000);
+    expect(summary.accounts.some((a) => a.id === "paid-debt")).toBe(false);
+  });
+});
+
