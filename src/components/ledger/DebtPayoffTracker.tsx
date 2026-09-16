@@ -104,7 +104,7 @@ const PaymentPanel: React.FC<{
       );
       setCycleRecord(updatedCycle);
 
-      const newBalance = Math.round(Math.max(0, debt.balance - calculation.principalReduction) * 100) / 100;
+      const newBalance = Math.round(Math.max(0, debt.balance - paymentAmount) * 100) / 100;
 
       const res = await fetch(`/api/financial/debts/${debt.id}`, {
         method: "PATCH",
