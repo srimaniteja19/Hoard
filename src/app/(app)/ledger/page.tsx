@@ -24,6 +24,7 @@ import {
   FinancialAuditRow,
   FinancialInvestmentRow,
   FinancialDailyExpenseRow,
+  FinancialDebtPaymentRow,
 } from "@/lib/ledger/types";
 import { LedgerOverview } from "@/components/ledger/LedgerOverview";
 import { DailyExpenseTracker } from "@/components/ledger/DailyExpenseTracker";
@@ -122,7 +123,8 @@ function LedgerContent() {
     incomes: FinancialIncomeRow[],
     investments: FinancialInvestmentRow[],
     latestAudit: FinancialAuditRow | null = overview?.latestAudit || null,
-    dailyExpenses: FinancialDailyExpenseRow[] = overview?.dailyExpenses || []
+    dailyExpenses: FinancialDailyExpenseRow[] = overview?.dailyExpenses || [],
+    debtPayments: FinancialDebtPaymentRow[] = overview?.debtPayments || []
   ): FinancialOverviewPayload => {
     const inrRate = overview?.fxSnapshot?.inrPerUsd;
     const subscriptionMetrics = calculateSubscriptionMetrics(subs);
@@ -147,6 +149,7 @@ function LedgerContent() {
       incomes,
       investments,
       dailyExpenses,
+      debtPayments,
       fxSnapshot: overview?.fxSnapshot,
       metrics: {
         subscriptionMetrics,
@@ -324,6 +327,49 @@ function LedgerContent() {
     setOverview(
       recomputeOverview(overview.subscriptions, newDebts, overview.assets, overview.incomes, overview.investments || [], overview.latestAudit)
     );
+  };
+
+  const handleDebtPaymentCreated = (payment: FinancialDebtPaymentRow, updatedDebt: FinancialDebtRow) => {
+    if (!overview) return;
+    const newPayments = [payment, ...(overview.debtPayments || [])];
+    const newDebts = overview.debts.map((d) => (d.id === updatedDebt.id ? updatedDebt : d));
+    setOverview(
+      recomputeOverview(
+        overview.subscriptions,
+        newDebts,
+        overview.assets,
+        overview.incomes,
+        overview.investments || [],
+        overview.latestAudit,
+        overview.dailyExpenses || [],
+        newPayments
+      )
+    );
+  };
+
+  const handleDebtPaymentDeleted = async (paymentId: string) => {
+    if (!overview) return;
+    try {
+      const res = await fetch(`/api/financial/debts/payments/${paymentId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete payment");
+      const newPayments = (overview.debtPayments || []).filter((p) => p.id !== paymentId);
+      setOverview(
+        recomputeOverview(
+          overview.subscriptions,
+          overview.debts,
+          overview.assets,
+          overview.incomes,
+          overview.investments || [],
+          overview.latestAudit,
+          overview.dailyExpenses || [],
+          newPayments
+        )
+      );
+    } catch (err) {
+      console.error("Error deleting debt payment:", err);
+    }
   };
 
   // Handlers for Assets
@@ -710,6 +756,7 @@ function LedgerContent() {
           {activeTab === "DEBTS" && (
             <DebtPayoffTracker
               debts={overview.debts}
+              payments={overview.debtPayments || []}
               currency={primaryCurrency}
               onAddDebt={() => {
                 setEditingDebt(null);
@@ -721,6 +768,8 @@ function LedgerContent() {
               }}
               onUpdateDebt={handleDebtUpdated}
               onDeleteDebt={handleDebtDeleted}
+              onPaymentCreated={handleDebtPaymentCreated}
+              onDeletePayment={handleDebtPaymentDeleted}
             />
           )}
 

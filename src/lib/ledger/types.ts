@@ -1,6 +1,9 @@
 import {
   FinancialSubscriptionRow,
   FinancialDebtRow,
+  NewFinancialDebtRow,
+  FinancialDebtPaymentRow,
+  NewFinancialDebtPaymentRow,
   FinancialAssetRow,
   FinancialIncomeRow,
   FinancialAuditRow,
@@ -21,6 +24,9 @@ import {
 export type {
   FinancialSubscriptionRow,
   FinancialDebtRow,
+  NewFinancialDebtRow,
+  FinancialDebtPaymentRow,
+  NewFinancialDebtPaymentRow,
   FinancialAssetRow,
   FinancialIncomeRow,
   FinancialAuditRow,
@@ -595,6 +601,7 @@ export interface FinancialOverviewPayload {
   incomes: FinancialIncomeRow[];
   investments: FinancialInvestmentRow[];
   dailyExpenses?: FinancialDailyExpenseRow[];
+  debtPayments?: FinancialDebtPaymentRow[];
   fxSnapshot?: {
     date: string;
     formattedDate: string;

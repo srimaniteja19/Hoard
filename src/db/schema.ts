@@ -1079,6 +1079,36 @@ export const financialDebts = pgTable(
 export type FinancialDebtRow = typeof financialDebts.$inferSelect;
 export type NewFinancialDebtRow = typeof financialDebts.$inferInsert;
 
+export const financialDebtPayments = pgTable(
+  "financial_debt_payments",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    debtId: text("debt_id")
+      .notNull()
+      .references(() => financialDebts.id, { onDelete: "cascade" }),
+    debtName: text("debt_name").notNull(),
+    amount: real("amount").notNull(),
+    interestPortion: real("interest_portion").notNull().default(0),
+    principalPortion: real("principal_portion").notNull().default(0),
+    remainingBalance: real("remaining_balance").notNull().default(0),
+    label: text("label"),
+    paymentDate: timestamp("payment_date").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("financial_debt_payments_user_date_idx").on(table.userId, table.paymentDate.desc()),
+    index("financial_debt_payments_user_debt_idx").on(table.userId, table.debtId, table.paymentDate.desc()),
+  ]
+);
+
+export type FinancialDebtPaymentRow = typeof financialDebtPayments.$inferSelect;
+export type NewFinancialDebtPaymentRow = typeof financialDebtPayments.$inferInsert;
+
 export const financialAssets = pgTable(
   "financial_assets",
   {

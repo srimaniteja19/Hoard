@@ -155,6 +155,13 @@
       "when": 1788090000000,
       "tag": "0029_add_til_image_url",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1788100000000,
+      "tag": "0030_add_debt_payments",
+      "breakpoints": true
     }
   ]
 }

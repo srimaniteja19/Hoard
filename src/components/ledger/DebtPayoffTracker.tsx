@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   FinancialDebtRow,
+  FinancialDebtPaymentRow,
   DebtPayoffStrategy,
   DebtType,
 } from "@/lib/ledger/types";
@@ -12,7 +13,8 @@ import { getDebtCycleRecord, recordCyclePayment, markCarriedOverInterestApplied 
 import { playSound } from "@/lib/sound";
 import { DebtAmortizationChart } from "./charts/DebtAmortizationChart";
 import { DebtObligationBanner } from "./DebtObligationBanner";
-import { CreditCard, DollarSign, CheckCircle, Plus, Minus, TrendingUp as TrendingUpIcon } from "lucide-react";
+import { DebtPaymentHistoryList } from "./DebtPaymentHistoryList";
+import { CreditCard, DollarSign, CheckCircle, Plus, Minus, TrendingUp as TrendingUpIcon, Receipt } from "lucide-react";
 
 const DEBT_THEMES: Record<DebtType, { icon: string; label: string }> = {
   CREDIT_CARD: { icon: "💳", label: "CREDIT CARD" },
@@ -29,10 +31,13 @@ const LUMP_SUM_PRESETS = [0, 1000, 2500, 5000, 10000, 25000, 50000];
 
 interface DebtPayoffTrackerProps {
   debts: FinancialDebtRow[];
+  payments?: FinancialDebtPaymentRow[];
   onAddDebt: () => void;
   onEditDebt: (debt: FinancialDebtRow) => void;
   onUpdateDebt: (debt: FinancialDebtRow) => void;
   onDeleteDebt: (id: string) => void;
+  onPaymentCreated?: (payment: FinancialDebtPaymentRow, updatedDebt: FinancialDebtRow) => void;
+  onDeletePayment?: (id: string) => Promise<void> | void;
   currency?: string;
 }
 
@@ -40,9 +45,10 @@ interface DebtPayoffTrackerProps {
 const PaymentPanel: React.FC<{
   debt: FinancialDebtRow;
   onUpdated: (updated: FinancialDebtRow) => void;
+  onPaymentCreated?: (payment: FinancialDebtPaymentRow, updated: FinancialDebtRow) => void;
   onClose: () => void;
   currency?: string;
-}> = ({ debt, onUpdated, onClose, currency = "USD" }) => {
+}> = ({ debt, onUpdated, onPaymentCreated, onClose, currency = "USD" }) => {
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
@@ -104,19 +110,25 @@ const PaymentPanel: React.FC<{
       );
       setCycleRecord(updatedCycle);
 
-      const newBalance = Math.round(Math.max(0, debt.balance - paymentAmount) * 100) / 100;
-
-      const res = await fetch(`/api/financial/debts/${debt.id}`, {
-        method: "PATCH",
+      // Persist payment to database & update debt balance
+      const res = await fetch("/api/financial/debts/payments", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          balance: newBalance,
-          isPaidOff: newBalance <= 0,
+          debtId: debt.id,
+          amount: paymentAmount,
+          interestPortion: calculation.interestPortion,
+          principalPortion: calculation.principalReduction,
+          label,
         }),
       });
-      if (!res.ok) throw new Error("Failed");
-      const updated = await res.json();
+      if (!res.ok) throw new Error("Payment recording failed");
+      const { payment: createdPayment, updatedDebt } = await res.json();
       playSound.fileIt();
+
+      if (onPaymentCreated) {
+        onPaymentCreated(createdPayment, updatedDebt);
+      }
 
       let interestNote = "";
       if (calculation.interestPortion > 0) {
@@ -129,12 +141,12 @@ const PaymentPanel: React.FC<{
       }
 
       setFlash(
-        `${label} of ${formatCurrency(paymentAmount, 2, currency)} applied!${interestNote} New balance: ${formatCurrency(newBalance, 2, currency)}`
+        `${label} of ${formatCurrency(paymentAmount, 2, currency)} recorded and applied!${interestNote} New balance: ${formatCurrency(updatedDebt.balance, 2, currency)}`
       );
       setTimeout(() => {
-        onUpdated(updated);
+        onUpdated(updatedDebt);
         onClose();
-      }, 2400);
+      }, 2200);
     } catch {
       setFlash("Payment failed — please try again.");
     } finally {
@@ -447,12 +459,16 @@ const PaymentPanel: React.FC<{
 
 export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
   debts,
+  payments = [],
   onAddDebt,
   onEditDebt,
   onUpdateDebt,
   onDeleteDebt,
+  onPaymentCreated,
+  onDeletePayment,
   currency = "USD",
 }) => {
+  const [activeView, setActiveView] = useState<"ACCOUNTS" | "HISTORY">("ACCOUNTS");
   const [strategy, setStrategy] = useState<DebtPayoffStrategy>("AVALANCHE");
   const [extraPayment, setExtraPayment] = useState<number>(150);
   const [lumpSum, setLumpSum] = useState<number>(0);
@@ -515,35 +531,116 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
   };
 
   const sym = getCurrencySymbol(currency);
-
-  if (debts.length === 0) {
-    return (
-      <div
-        style={{
-          background: "var(--card, #FFFFFF)",
-          border: "2.5px dashed var(--ink, #0A0A0A)",
-          boxShadow: "4px 4px 0 var(--ink, #0A0A0A)",
-          padding: "48px 24px",
-          textAlign: "center",
-          borderRadius: "4px",
-        }}
-      >
-        <div style={{ fontSize: "40px", marginBottom: "10px" }}>🎉</div>
-        <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "24px", fontWeight: 900, marginBottom: "8px" }}>
-          ZERO RECORDED DEBTS (100% DEBT FREE)
-        </div>
-        <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "12px", color: "#666666", marginBottom: "18px" }}>
-          Track credit cards, student loans, auto financing, or mortgages to optimize APR payoff with the What-If Simulator.
-        </div>
-        <button type="button" className="btn-ledger btn-ledger-primary" onClick={onAddDebt}>
-          + ADD DEBT OR LOAN ACCOUNT
-        </button>
-      </div>
-    );
-  }
+  const paymentsList = payments || [];
 
   return (
     <div className="debt-dashboard">
+      {/* ── TOP VIEW TOGGLE: ACCOUNTS & SIMULATOR vs PAYMENT HISTORY ── */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "10px",
+          marginBottom: "8px",
+        }}
+      >
+        <div
+          style={{
+            display: "inline-flex",
+            gap: "4px",
+            background: "#FFFFFF",
+            padding: "4px",
+            border: "2px solid var(--ink, #0A0A0A)",
+            borderRadius: "3px",
+            boxShadow: "3px 3px 0 var(--ink, #0A0A0A)",
+          }}
+        >
+          <button
+            type="button"
+            className={`debt-strategy-btn ${activeView === "ACCOUNTS" ? "active" : ""}`}
+            onClick={() => {
+              playSound.click();
+              setActiveView("ACCOUNTS");
+            }}
+            style={{
+              padding: "6px 14px",
+              fontSize: "11px",
+              fontWeight: 900,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              borderRadius: "2px",
+            }}
+          >
+            🏔️ ACCOUNTS &amp; SIMULATOR ({debts.length})
+          </button>
+          <button
+            type="button"
+            className={`debt-strategy-btn ${activeView === "HISTORY" ? "active" : ""}`}
+            onClick={() => {
+              playSound.click();
+              setActiveView("HISTORY");
+            }}
+            style={{
+              padding: "6px 14px",
+              fontSize: "11px",
+              fontWeight: 900,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              borderRadius: "2px",
+            }}
+          >
+            🧾 PAYMENT HISTORY ({paymentsList.length})
+          </button>
+        </div>
+
+        {activeView === "ACCOUNTS" && debts.length > 0 && (
+          <button
+            type="button"
+            className="btn-ledger btn-ledger-primary"
+            onClick={onAddDebt}
+            style={{ fontSize: "11px", padding: "6px 14px" }}
+          >
+            + ADD DEBT ACCOUNT
+          </button>
+        )}
+      </div>
+
+      {activeView === "HISTORY" ? (
+        <DebtPaymentHistoryList
+          payments={paymentsList}
+          debts={debts}
+          currency={currency}
+          onDeletePayment={onDeletePayment}
+          onSwitchToAccounts={() => setActiveView("ACCOUNTS")}
+        />
+      ) : debts.length === 0 ? (
+        <div
+          style={{
+            background: "var(--card, #FFFFFF)",
+            border: "2.5px dashed var(--ink, #0A0A0A)",
+            boxShadow: "4px 4px 0 var(--ink, #0A0A0A)",
+            padding: "48px 24px",
+            textAlign: "center",
+            borderRadius: "4px",
+          }}
+        >
+          <div style={{ fontSize: "40px", marginBottom: "10px" }}>🎉</div>
+          <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "24px", fontWeight: 900, marginBottom: "8px" }}>
+            ZERO RECORDED DEBTS (100% DEBT FREE)
+          </div>
+          <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "12px", color: "#666666", marginBottom: "18px" }}>
+            Track credit cards, student loans, auto financing, or mortgages to optimize APR payoff with the What-If Simulator.
+          </div>
+          <button type="button" className="btn-ledger btn-ledger-primary" onClick={onAddDebt}>
+            + ADD DEBT OR LOAN ACCOUNT
+          </button>
+        </div>
+      ) : (
+        <>
       {/* ── 1. MONTHLY INTEREST & MINIMUM OBLIGATION COMMAND BANNER ── */}
       <DebtObligationBanner
         debts={debts}
@@ -1118,6 +1215,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
                     onUpdated={(updated) => {
                       onUpdateDebt(updated);
                     }}
+                    onPaymentCreated={onPaymentCreated}
                     onClose={() => setActivePaymentCardId(null)}
                     currency={debtCurrency}
                   />
@@ -1175,6 +1273,8 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
           );
         })}
       </div>
+      </>
+      )}
     </div>
   );
 };

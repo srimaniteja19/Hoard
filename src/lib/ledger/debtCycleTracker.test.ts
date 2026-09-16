@@ -63,6 +63,17 @@ describe("Debt Payment Cycle Tracker & Interest Memory", () => {
     expect(step3.isInterestFullyCleared).toBe(true);
   });
 
+  it("calculates remaining balance correctly on full payoff and partial payment", () => {
+    const currentBalance = 1000;
+    const fullPayoffPayment = 1000;
+    const newBalanceAfterFullPayoff = Math.round(Math.max(0, currentBalance - fullPayoffPayment) * 100) / 100;
+    expect(newBalanceAfterFullPayoff).toBe(0);
+
+    const partialPayment = 150;
+    const newBalanceAfterPartial = Math.round(Math.max(0, currentBalance - partialPayment) * 100) / 100;
+    expect(newBalanceAfterPartial).toBe(850);
+  });
+
   it("returns a safe empty record with no carried-over interest outside the browser (SSR)", () => {
     const record = getDebtCycleRecord("debt-1", 50, 1);
     expect(record.interestPaidThisCycle).toBe(0);

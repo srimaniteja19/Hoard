@@ -7,10 +7,13 @@ import {
   financialAudits,
   financialInvestments,
   financialDailyExpenses,
+  financialDebtPayments,
   FinancialSubscriptionRow,
   NewFinancialSubscriptionRow,
   FinancialDebtRow,
   NewFinancialDebtRow,
+  FinancialDebtPaymentRow,
+  NewFinancialDebtPaymentRow,
   FinancialAssetRow,
   NewFinancialAssetRow,
   FinancialIncomeRow,
@@ -122,6 +125,51 @@ export async function deleteDebt(userId: string, id: string): Promise<boolean> {
     .delete(financialDebts)
     .where(and(eq(financialDebts.id, id), eq(financialDebts.userId, userId)))
     .returning({ id: financialDebts.id });
+  return res.length > 0;
+}
+
+// ─── DEBT PAYMENTS ───────────────────────────────────────────────────────────
+
+export async function getUserDebtPayments(
+  userId: string,
+  debtId?: string
+): Promise<FinancialDebtPaymentRow[]> {
+  if (debtId) {
+    return db
+      .select()
+      .from(financialDebtPayments)
+      .where(
+        and(
+          eq(financialDebtPayments.userId, userId),
+          eq(financialDebtPayments.debtId, debtId)
+        )
+      )
+      .orderBy(desc(financialDebtPayments.paymentDate), desc(financialDebtPayments.createdAt));
+  }
+  return db
+    .select()
+    .from(financialDebtPayments)
+    .where(eq(financialDebtPayments.userId, userId))
+    .orderBy(desc(financialDebtPayments.paymentDate), desc(financialDebtPayments.createdAt));
+}
+
+export async function createDebtPayment(
+  data: NewFinancialDebtPaymentRow
+): Promise<FinancialDebtPaymentRow> {
+  const [created] = await db.insert(financialDebtPayments).values(data).returning();
+  return created;
+}
+
+export async function deleteDebtPayment(userId: string, id: string): Promise<boolean> {
+  const res = await db
+    .delete(financialDebtPayments)
+    .where(
+      and(
+        eq(financialDebtPayments.id, id),
+        eq(financialDebtPayments.userId, userId)
+      )
+    )
+    .returning({ id: financialDebtPayments.id });
   return res.length > 0;
 }
 
@@ -372,7 +420,7 @@ export async function getFinancialOverview(
   userId: string,
   extraMonthlyPayment: number = 0
 ): Promise<FinancialOverviewPayload> {
-  const [subscriptions, debts, assets, incomes, investmentsResult, dailyExpensesResult, latestAudit, fxSnapshot] =
+  const [subscriptions, debts, assets, incomes, investmentsResult, dailyExpensesResult, debtPaymentsResult, latestAudit, fxSnapshot] =
     await Promise.all([
       getUserSubscriptions(userId),
       getUserDebts(userId),
@@ -386,6 +434,10 @@ export async function getFinancialOverview(
       getUserDailyExpenses(userId).catch((err: unknown) => {
         console.error('[ledger] getUserDailyExpenses failed:', err);
         return [] as FinancialDailyExpenseRow[];
+      }),
+      getUserDebtPayments(userId).catch((err: unknown) => {
+        console.error('[ledger] getUserDebtPayments failed:', err);
+        return [] as FinancialDebtPaymentRow[];
       }),
       getLatestFinancialAudit(userId),
       getLiveFxSnapshot(),
@@ -429,6 +481,7 @@ export async function getFinancialOverview(
     incomes,
     investments,
     dailyExpenses: dailyExpensesResult,
+    debtPayments: debtPaymentsResult,
     fxSnapshot: {
       date: fxSnapshot.date,
       formattedDate: fxSnapshot.formattedDate,
