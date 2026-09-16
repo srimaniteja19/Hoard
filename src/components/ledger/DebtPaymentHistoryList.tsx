@@ -415,7 +415,8 @@ export const DebtPaymentHistoryList: React.FC<DebtPaymentHistoryListProps> = ({
                 style={{
                   background: "#FFFFFF",
                   border: "1.5px solid var(--ink, #0A0A0A)",
-                  boxShadow: "2px 2px 0 var(--ink, #0A0A0A)",
+                  borderLeft: payment.remainingBalance <= 0 ? "5px solid #16A34A" : "5px solid var(--ink, #0A0A0A)",
+                  boxShadow: "2.5px 2.5px 0 var(--ink, #0A0A0A)",
                   padding: "10px 14px",
                   borderRadius: "3px",
                   display: "flex",
@@ -423,7 +424,7 @@ export const DebtPaymentHistoryList: React.FC<DebtPaymentHistoryListProps> = ({
                   justifyContent: "space-between",
                   flexWrap: "wrap",
                   gap: "12px",
-                  transition: "background 0.15s ease",
+                  transition: "all 0.15s ease",
                   opacity: isDeleting ? 0.4 : 1,
                 }}
               >

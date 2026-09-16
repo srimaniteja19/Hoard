@@ -15,10 +15,10 @@
 
 .ledger-container {
   width: 100%;
-  max-width: 100%;
+  max-width: 1560px;
   box-sizing: border-box;
-  margin: 0;
-  padding: 24px clamp(16px, 3vw, 40px) 96px clamp(16px, 3vw, 40px);
+  margin: 0 auto;
+  padding: 24px clamp(16px, 2.5vw, 36px) 96px clamp(16px, 2.5vw, 36px);
   font-family: var(--body, "Space Grotesk", system-ui, sans-serif);
   color: var(--ink, #0A0A0A);
 }
@@ -1011,6 +1011,14 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
   gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 480px) {
+  .sub-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
 
 @keyframes subCardPopIn {
@@ -2400,9 +2408,10 @@
   --body: "Space Grotesk", system-ui, sans-serif;
   --mono: "Space Mono", ui-monospace, monospace;
 
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 16px 12px 64px 12px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 0 64px 0;
   color: var(--ink);
   font-family: var(--body);
 }

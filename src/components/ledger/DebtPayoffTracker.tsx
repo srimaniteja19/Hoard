@@ -543,7 +543,6 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
           alignItems: "center",
           flexWrap: "wrap",
           gap: "10px",
-          marginBottom: "8px",
         }}
       >
         <div
@@ -920,13 +919,19 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
               boxShadow: `3.5px 3.5px 0 ${simulation.isDivergent ? "#DC2626" : "#16A34A"}`,
               padding: "16px",
               borderRadius: "3px",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              minHeight: "120px",
             }}
           >
-            <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 900, color: simulation.isDivergent ? "#991B1B" : "#166534", textTransform: "uppercase", marginBottom: "4px" }}>
-              {simulation.isDivergent ? "⚠ DEBT IS GROWING, NOT SHRINKING" : "🚀 ACCELERATED DEBT-FREE DATE"}
-            </div>
-            <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: simulation.isDivergent ? "16px" : "28px", fontWeight: 900, color: "#0A0A0A", lineHeight: 1.1 }}>
-              {simulation.debtFreeDate}
+            <div>
+              <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 900, color: simulation.isDivergent ? "#991B1B" : "#166534", textTransform: "uppercase", marginBottom: "4px" }}>
+                {simulation.isDivergent ? "⚠ DEBT IS GROWING, NOT SHRINKING" : "🚀 ACCELERATED DEBT-FREE DATE"}
+              </div>
+              <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: simulation.isDivergent ? "16px" : "28px", fontWeight: 900, color: "#0A0A0A", lineHeight: 1.1 }}>
+                {simulation.debtFreeDate}
+              </div>
             </div>
             <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 800, color: "#15803D", marginTop: "6px" }}>
               {simulation.monthsSavedVsMinimums > 0 ? (
@@ -945,13 +950,19 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
               boxShadow: "3.5px 3.5px 0 #CA8A04",
               padding: "16px",
               borderRadius: "3px",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              minHeight: "120px",
             }}
           >
-            <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 900, color: "#854D0E", textTransform: "uppercase", marginBottom: "4px" }}>
-              💰 TOTAL INTEREST SAVED
-            </div>
-            <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "28px", fontWeight: 900, color: "#16A34A", lineHeight: 1.1 }}>
-              {formatSignedCurrency(simulation.interestSavedVsMinimums, 2, currency)}
+            <div>
+              <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 900, color: "#854D0E", textTransform: "uppercase", marginBottom: "4px" }}>
+                💰 TOTAL INTEREST SAVED
+              </div>
+              <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "28px", fontWeight: 900, color: "#16A34A", lineHeight: 1.1 }}>
+                {formatSignedCurrency(simulation.interestSavedVsMinimums, 2, currency)}
+              </div>
             </div>
             <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 700, color: "#854D0E", marginTop: "6px" }}>
               Paid Interest: <b>{formatCurrency(simulation.totalInterestPaid, 2, currency)}</b> (vs {formatCurrency(simulation.baselineTotalInterestPaid, 2, currency)} baseline)
@@ -966,13 +977,19 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
               boxShadow: "3.5px 3.5px 0 var(--ink, #0A0A0A)",
               padding: "16px",
               borderRadius: "3px",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              minHeight: "120px",
             }}
           >
-            <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 900, color: "#475569", textTransform: "uppercase", marginBottom: "4px" }}>
-              🛡️ TOTAL LIFETIME REPAYMENT
-            </div>
-            <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "28px", fontWeight: 900, color: "#0A0A0A", lineHeight: 1.1 }}>
-              {formatCurrency(simulation.totalPrincipalPaid + simulation.totalInterestPaid, 2, currency)}
+            <div>
+              <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 900, color: "#475569", textTransform: "uppercase", marginBottom: "4px" }}>
+                🛡️ TOTAL LIFETIME REPAYMENT
+              </div>
+              <div style={{ fontFamily: "var(--display, sans-serif)", fontSize: "28px", fontWeight: 900, color: "#0A0A0A", lineHeight: 1.1 }}>
+                {formatCurrency(simulation.totalPrincipalPaid + simulation.totalInterestPaid, 2, currency)}
+              </div>
             </div>
             <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 700, color: "#64748B", marginTop: "6px" }}>
               Principal: {formatCurrency(simulation.totalPrincipalPaid, 0, currency)} + Interest: {formatCurrency(simulation.totalInterestPaid, 0, currency)}
@@ -1063,40 +1080,55 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
         </div>
       )}
 
-      {/* ── DEBT ACCOUNTS GRID ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", marginTop: "4px" }}>
-        <h3 style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900, margin: 0 }}>
-          ACTIVE LIABILITIES ({debts.length})
-        </h3>
-        <button type="button" className="btn-ledger btn-ledger-primary" onClick={onAddDebt}>
-          + ADD DEBT ACCOUNT
-        </button>
-      </div>
+      {/* ── DEBT ACCOUNTS SECTION (HEADER + AGGREGATE TRACKER + GRID) ── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <h3 style={{ fontFamily: "var(--display, sans-serif)", fontSize: "20px", fontWeight: 900, margin: 0 }}>
+              ACTIVE LIABILITIES
+            </h3>
+            <span
+              style={{
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "11px",
+                fontWeight: 900,
+                background: "#0A0A0A",
+                color: "#FFFFFF",
+                padding: "2px 8px",
+                borderRadius: "2px",
+              }}
+            >
+              {debts.length} {debts.length === 1 ? "ACCOUNT" : "ACCOUNTS"}
+            </span>
+          </div>
+          <button type="button" className="btn-ledger btn-ledger-primary" onClick={onAddDebt}>
+            + ADD DEBT ACCOUNT
+          </button>
+        </div>
 
-      {/* ── AGGREGATE DEBT PROGRESS TRACKER ── */}
-      {debts.filter((d) => !d.isPaidOff).length > 0 && (() => {
-        const activeDebts = debts.filter((d) => !d.isPaidOff);
-        const totalOriginal = activeDebts.reduce((s, d) => s + (d.originalPrincipal || d.balance), 0);
-        const totalRemaining = activeDebts.reduce((s, d) => s + d.balance, 0);
-        const totalPaid = totalOriginal - totalRemaining;
-        const paidPct = totalOriginal > 0 ? Math.min(100, Math.round((totalPaid / totalOriginal) * 100)) : 0;
-        const sym = getCurrencySymbol(currency);
+        {/* ── AGGREGATE DEBT PROGRESS TRACKER ── */}
+        {debts.filter((d) => !d.isPaidOff).length > 0 && (() => {
+          const activeDebts = debts.filter((d) => !d.isPaidOff);
+          const totalOriginal = activeDebts.reduce((s, d) => s + (d.originalPrincipal || d.balance), 0);
+          const totalRemaining = activeDebts.reduce((s, d) => s + d.balance, 0);
+          const totalPaid = totalOriginal - totalRemaining;
+          const paidPct = totalOriginal > 0 ? Math.min(100, Math.round((totalPaid / totalOriginal) * 100)) : 0;
+          const sym = getCurrencySymbol(currency);
 
-        return (
-          <div
-            style={{
-              marginTop: "14px",
-              padding: "16px 20px",
-              background: "#0A0A0A",
-              border: "2.5px solid #000000",
-              boxShadow: "4px 4px 0 #000000",
-              borderRadius: "3px",
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "18px",
-              alignItems: "center",
-            }}
-          >
+          return (
+            <div
+              style={{
+                padding: "16px 20px",
+                background: "#0A0A0A",
+                border: "2.5px solid #000000",
+                boxShadow: "4px 4px 0 #000000",
+                borderRadius: "3px",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "18px",
+                alignItems: "center",
+              }}
+            >
             {/* Stats row */}
             <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", flex: 1, minWidth: "0" }}>
               {[
@@ -1272,6 +1304,7 @@ export const DebtPayoffTracker: React.FC<DebtPayoffTrackerProps> = ({
             </div>
           );
         })}
+      </div>
       </div>
       </>
       )}
