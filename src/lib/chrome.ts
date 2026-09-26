@@ -12,6 +12,7 @@ export function pageLabelFromPath(pathname: string): string {
   if (path === "/atlas" || path.startsWith("/atlas/")) return "ATLAS";
   if (path === "/til" || path.startsWith("/til/")) return "TIL";
   if (path === "/ledger" || path.startsWith("/ledger/")) return "LEDGER";
+  if (path === "/channel100" || path.startsWith("/channel100/") || path === "/ch100") return "CH·100";
   if (path === "/stats" || path.startsWith("/stats/")) return "STATS";
   if (path === "/settings" || path.startsWith("/settings/")) return "SETTINGS";
   return "HOARD";

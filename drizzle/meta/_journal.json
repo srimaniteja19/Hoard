@@ -162,6 +162,13 @@
       "when": 1788100000000,
       "tag": "0030_add_debt_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1790397426556,
+      "tag": "0031_add_channel100_entries",
+      "breakpoints": true
     }
   ]
 }

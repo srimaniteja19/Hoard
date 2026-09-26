@@ -1512,7 +1512,27 @@ export const readerKeeps = pgTable(
 export type ReaderKeepRow = typeof readerKeeps.$inferSelect;
 export type NewReaderKeepRow = typeof readerKeeps.$inferInsert;
 
+export const channel100Entries = pgTable(
+  "channel100_entries",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    mediaId: varchar("media_id", { length: 16 }).notNull(), // e.g. "s1".."s100", "f1".."f100"
+    status: varchar("status", { length: 16 }).notNull().default(""), // "seen" | "watching" | "want" | ""
+    rating: integer("rating").notNull().default(0), // 0 to 5
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("channel100_entries_user_media_idx").on(table.userId, table.mediaId),
+    index("channel100_entries_user_status_idx").on(table.userId, table.status),
+  ]
+);
 
-
-
-
+export type Channel100EntryRow = typeof channel100Entries.$inferSelect;
+export type NewChannel100EntryRow = typeof channel100Entries.$inferInsert;
