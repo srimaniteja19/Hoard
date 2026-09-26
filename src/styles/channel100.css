@@ -2549,4 +2549,447 @@ h1 .hl,
   background: var(--ch-bg);
 }
 
+/* ==========================================================================
+   MOBILE & RESPONSIVE DESIGN ENHANCEMENTS
+   Fluid layouts, touch-friendly tap targets, zero iOS zoom, no horizontal scroll
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  /* Header / Top Navigation */
+  .ch100-top,
+  .ch100-root .top {
+    padding-block: 12px 10px;
+    gap: 10px;
+  }
+
+  .ch100-switch,
+  .ch100-root .switch {
+    width: 100%;
+    order: 3;
+    display: flex;
+  }
+
+  .ch100-switch button,
+  .ch100-root .switch button {
+    flex: 1;
+    padding: 9px 8px;
+    font-size: 15px;
+    justify-content: center;
+  }
+
+  .ch100-nav,
+  .ch100-root .nav {
+    margin-left: auto;
+  }
+
+  /* Minimal Tracker Hero on Tablets/Phones */
+  .ch100-tracker-hero {
+    padding-block: 16px 12px;
+  }
+
+  .ch100-th-inner {
+    padding: 18px 18px 16px;
+    gap: 14px;
+  }
+
+  .ch100-th-top {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .ch100-th-actions-primary {
+    width: 100%;
+  }
+
+  .ch100-th-log-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+
+  .ch100-th-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .ch100-th-stats {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .ch100-th-pill {
+    flex: 1;
+    justify-content: center;
+    padding: 7px 8px;
+    font-size: 12.5px;
+  }
+
+  .ch100-th-time {
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  .ch100-th-secondary-tools {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .ch100-th-btn {
+    flex: 1 1 calc(25% - 6px);
+    justify-content: center;
+    padding: 7px 6px;
+    font-size: 11.5px;
+  }
+
+  /* Controls Bar on Mobile */
+  .ch100-controls,
+  .ch100-root .controls {
+    padding-block: 10px;
+  }
+
+  .ch100-ctl-row,
+  .ch100-root .ctl-row {
+    gap: 8px;
+  }
+
+  .ch100-search,
+  .ch100-root .search {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .ch100-chips,
+  .ch100-root .chips {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .ch100-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ch100-chip,
+  .ch100-root .chip {
+    padding: 7px 12px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .ch100-sel,
+  .ch100-root .sel {
+    flex: 1 1 calc(50% - 6px);
+    font-size: 16px; /* Prevents iOS Safari input auto-zoom */
+    padding: 9px 10px;
+  }
+
+  .ch100-btn-ctl-log {
+    width: 100%;
+    justify-content: center;
+    padding: 10px;
+  }
+
+  /* Cards Grid */
+  .ch100-cards,
+  .ch100-root .cards {
+    gap: 16px;
+  }
+
+  /* Stats Panels */
+  .ch100-panels,
+  .ch100-root .panels {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Tighter phone viewports (iPhone SE, 13/14/15, Android) */
+  .ch100-wrap,
+  .ch100-root .wrap {
+    padding-inline: 12px;
+  }
+
+  .ch100-logo b,
+  .ch100-root .logo b {
+    font-size: 19px;
+    padding: 2px 8px;
+  }
+
+  .ch100-logo span,
+  .ch100-root .logo span {
+    display: none; /* Keep header compact on small screens */
+  }
+
+  .ch100-switch button,
+  .ch100-root .switch button {
+    font-size: 13.5px;
+    padding: 7px 4px;
+    gap: 4px;
+  }
+
+  .ch100-switch small,
+  .ch100-root .switch small {
+    display: none;
+  }
+
+  .ch100-nav a,
+  .ch100-root .nav a,
+  .ch100-nav button,
+  .ch100-root .nav button {
+    font-size: 11.5px;
+    padding: 5px 8px;
+  }
+
+  /* Tracker Hero on small phones */
+  .ch100-th-inner {
+    padding: 14px 12px;
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 var(--ch-shadow);
+  }
+
+  .ch100-th-title {
+    font-size: 23px;
+    line-height: 1.15;
+  }
+
+  .ch100-th-lede {
+    font-size: 13px;
+  }
+
+  .ch100-th-stats {
+    gap: 5px;
+  }
+
+  .ch100-th-pill {
+    padding: 6px 4px;
+    font-size: 11.5px;
+    gap: 4px;
+  }
+
+  .ch100-th-pill-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .ch100-th-time {
+    flex-wrap: wrap;
+    font-size: 11px;
+    gap: 4px 8px;
+  }
+
+  .ch100-th-secondary-tools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .ch100-th-btn {
+    width: 100%;
+    padding: 7px;
+    font-size: 11px;
+    justify-content: center;
+  }
+
+  /* Cards Grid: 1 Column on mobile */
+  .ch100-cards,
+  .ch100-root .cards {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .ch100-card,
+  .ch100-root .card {
+    border-radius: 10px;
+    box-shadow: 4px 4px 0 var(--ch-shadow);
+  }
+
+  .ch100-cbody,
+  .ch100-root .cbody {
+    padding: 14px 12px 12px;
+  }
+
+  .ch100-titlebox h3,
+  .ch100-root .titlebox h3 {
+    font-size: 18px;
+  }
+
+  .ch100-rt b,
+  .ch100-root .rt b {
+    font-size: 15px;
+  }
+
+  .ch100-rt span,
+  .ch100-root .rt span {
+    font-size: 9px;
+  }
+
+  .ch100-acts,
+  .ch100-root .acts {
+    gap: 5px;
+  }
+
+  .ch100-act,
+  .ch100-root .act {
+    padding: 9px 2px;
+    font-size: 12px;
+    min-height: 40px; /* Thumb-friendly touch target */
+  }
+
+  /* List view on small screens */
+  .ch100-cards.list .ch100-card,
+  .ch100-root .cards.list .card {
+    flex-direction: column;
+  }
+
+  .ch100-cards.list .ch100-art,
+  .ch100-root .cards.list .art {
+    width: 100%;
+    min-height: 120px;
+    border-right: 0;
+    border-bottom: var(--ch-b) solid var(--ch-line);
+  }
+
+  .ch100-cards.list .ch100-acts,
+  .ch100-root .cards.list .acts,
+  .ch100-cards.list .ch100-rt,
+  .ch100-root .cards.list .rt {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  /* Detail Modal on small phones */
+  .ch100-overlay,
+  .ch100-root .overlay {
+    padding: 8px;
+  }
+
+  .ch100-modal,
+  .ch100-root .modal {
+    border-radius: 10px;
+    max-height: 96vh;
+    box-shadow: 4px 4px 0 #000;
+  }
+
+  .ch100-mbody,
+  .ch100-root .mbody {
+    padding: 14px 12px;
+    gap: 12px;
+  }
+
+  .ch100-mbody h2,
+  .ch100-root .mbody h2 {
+    font-size: 22px;
+    padding-right: 36px;
+  }
+
+  .ch100-x,
+  .ch100-root .x {
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .ch100-facts,
+  .ch100-root .facts {
+    grid-template-columns: 82px 1fr;
+    font-size: 13px;
+    gap: 4px 8px;
+  }
+
+  .ch100-note,
+  .ch100-root .note {
+    font-size: 16px; /* Prevents auto-zoom */
+  }
+
+  /* Minimal Log Modal on small phones */
+  .ch100-log-dialog {
+    max-height: 96vh;
+    border-radius: 10px;
+    box-shadow: 4px 4px 0 var(--ch-shadow);
+    margin: 6px;
+    width: calc(100% - 12px);
+  }
+
+  .ch100-log-dheader {
+    padding: 12px 14px 10px;
+  }
+
+  .ch100-log-dheader h2 {
+    font-size: 17px;
+  }
+
+  .ch100-log-dform {
+    padding: 12px 14px;
+    gap: 12px;
+    max-height: calc(96vh - 80px);
+  }
+
+  .ch100-dinput,
+  .ch100-dtextarea {
+    font-size: 16px; /* Prevents auto-zoom on iOS */
+    padding: 9px 10px;
+  }
+
+  .ch100-dpill {
+    padding: 6px 9px;
+    font-size: 12px;
+  }
+
+  .ch100-drow {
+    gap: 6px;
+  }
+
+  .ch100-dstepper {
+    height: 38px;
+  }
+
+  .ch100-dstepper button {
+    width: 32px;
+    font-size: 16px;
+  }
+
+  .ch100-dstars .ch100-dstar {
+    font-size: 30px;
+    padding: 0 4px;
+  }
+
+  .ch100-dactions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ch100-dbtn-primary {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+
+  .ch100-dbtn-secondary {
+    width: 100%;
+    padding: 10px 16px;
+    text-align: center;
+  }
+
+  /* By the Numbers Stats section */
+  .ch100-brow,
+  .ch100-root .brow {
+    grid-template-columns: 88px 1fr 48px;
+    font-size: 12.5px;
+    gap: 6px;
+  }
+}
+
+
 
