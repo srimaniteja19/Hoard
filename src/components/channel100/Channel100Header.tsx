@@ -31,7 +31,7 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
   return (
     <>
       {/* 7-stripe SMPTE Broadcast Color Bars */}
-      <div className="ch100-bars bars" aria-hidden="true">
+      <div className="ch100-bars" aria-hidden="true">
         <i />
         <i />
         <i />
@@ -41,14 +41,14 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
         <i />
       </div>
 
-      <header className="ch100-wrap wrap ch100-top top">
-        <a className="ch100-logo logo" href="#top" id="top">
+      <header className="ch100-wrap ch100-top">
+        <a className="ch100-logo" href="#top" id="top">
           <b>CH·100</b>
           <span>21st-century TV &amp; film tracker</span>
         </a>
 
         {/* Triple Catalog Switch: TV vs Film vs Tracker */}
-        <div className="ch100-switch switch" role="tablist" aria-label="Choose a list">
+        <div className="ch100-switch" role="tablist" aria-label="Choose a list">
           <button
             type="button"
             role="tab"
@@ -83,7 +83,7 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
           </button>
         </div>
 
-        <nav className="ch100-nav nav" aria-label="TV guide navigation">
+        <nav className="ch100-nav" aria-label="TV guide navigation">
           {onOpenLogModal && (
             <button
               type="button"

@@ -51,7 +51,7 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
   // Dedicated Minimal Tracker Hero for Personal Watch Diary
   if (cat === "tracker") {
     return (
-      <section className="ch100-wrap wrap ch100-tracker-hero">
+      <section className="ch100-wrap ch100-tracker-hero">
         <div className="ch100-th-inner">
           <div className="ch100-th-top">
             <div className="ch100-th-info">
@@ -185,7 +185,7 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
   }
 
   return (
-    <section className="ch100-wrap wrap ch100-hero hero">
+    <section className="ch100-wrap ch100-hero">
       {/* Left Column: Stats, Copy & Controls */}
       <div>
         <span className="ch100-eyebrow eyebrow" id="eyebrow">
