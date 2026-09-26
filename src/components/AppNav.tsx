@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useRef, useEffect } from "react";
 import Link from "next/link";
 import { useHydratedPathname } from "@/hooks/useHydratedPathname";
 
@@ -21,9 +22,18 @@ const LINKS = [
 
 export function AppNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useHydratedPathname();
+  const navRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!navRef.current) return;
+    const activeEl = navRef.current.querySelector<HTMLElement>("a.on");
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [pathname]);
 
   return (
-    <nav className="app-nav" aria-label="Primary" suppressHydrationWarning>
+    <nav ref={navRef} className="app-nav" aria-label="Primary" suppressHydrationWarning>
       {LINKS.map((link) => {
         const current = pathname ? link.match(pathname) : false;
         return (

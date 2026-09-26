@@ -2580,6 +2580,30 @@ h1 .hl,
   .ch100-nav,
   .ch100-root .nav {
     margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    max-width: 100%;
+    min-width: 0;
+    touch-action: pan-x;
+  }
+
+  .ch100-nav::-webkit-scrollbar,
+  .ch100-root .nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ch100-nav a,
+  .ch100-root .nav a,
+  .ch100-nav button,
+  .ch100-root .nav button {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   /* Minimal Tracker Hero on Tablets/Phones */
@@ -2646,31 +2670,44 @@ h1 .hl,
     font-size: 11.5px;
   }
 
-  /* Controls Bar on Mobile */
+  /* Controls Bar on Mobile: Not sticky so page scrolls naturally */
   .ch100-controls,
   .ch100-root .controls {
+    position: relative !important;
+    top: auto !important;
+    box-shadow: none !important;
     padding-block: 10px;
+    z-index: 5;
   }
 
   .ch100-ctl-row,
   .ch100-root .ctl-row {
     gap: 8px;
+    min-width: 0;
+    width: 100%;
   }
 
   .ch100-search,
   .ch100-root .search {
     flex: 1 1 100%;
     width: 100%;
+    min-width: 0;
   }
 
   .ch100-chips,
   .ch100-root .chips {
     width: 100%;
+    max-width: 100%;
+    min-width: 0; /* CRITICAL: Enables horizontal scrolling on flex item */
+    flex: 1 1 100%;
+    display: flex;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
     white-space: nowrap;
     padding-bottom: 4px;
     scrollbar-width: none;
+    touch-action: pan-x;
   }
 
   .ch100-chips::-webkit-scrollbar {

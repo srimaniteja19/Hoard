@@ -675,7 +675,7 @@ export default function Channel100Page() {
       <div
         className={`ch100-root ${crtMode ? "crt-mode" : ""}`}
         data-cat={filters.cat}
-        style={{ height: "100%", overflowY: "auto", overflowX: "hidden" }}
+        style={{ height: "100%", overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch" }}
       >
         {/* Header with SMPTE 7-bar test pattern, brand & catalog switcher */}
         <Channel100Header
