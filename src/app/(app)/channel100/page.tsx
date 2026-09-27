@@ -48,6 +48,7 @@ import { Channel100Footer } from "@/components/channel100/Channel100Footer";
 import { Channel100Modal } from "@/components/channel100/Channel100Modal";
 import { Channel100Toast } from "@/components/channel100/Channel100Toast";
 import { Channel100LogModal } from "@/components/channel100/Channel100LogModal";
+import { Channel100TriageModal } from "@/components/channel100/Channel100TriageModal";
 
 const DEFAULT_STORE: Channel100Store = { shows: {}, custom: {}, updated: 0 };
 
@@ -665,10 +666,47 @@ export default function Channel100Page() {
     ? getMediaRecord(store, activeModalId)
     : {};
 
+  const [isTriageModalOpen, setIsTriageModalOpen] = useState(false);
+
   const openNewLogModal = useCallback(() => {
     setEditingCustomItem(null);
     setIsLogModalOpen(true);
   }, []);
+
+  const openTriageModal = useCallback(() => {
+    playSound.pop();
+    setIsTriageModalOpen(true);
+  }, []);
+
+  const handleLogPrescription = useCallback((item: Partial<CustomMediaItem>) => {
+    setEditingCustomItem(item as CustomMediaItem);
+    setIsLogModalOpen(true);
+  }, []);
+
+  // Compute watchlist titles for Triage prioritisation
+  const userWatchlistTitles = useMemo(() => {
+    const list: string[] = [];
+    const customList = Object.values(store.custom || {});
+    customList.forEach((it) => {
+      if (it.status === "want" || it.status === "watching") {
+        list.push(it.title);
+      }
+    });
+    const showsRecord = store.shows || {};
+    SHOWS.forEach((s) => {
+      const rec = showsRecord[s.id];
+      if (rec?.s === "want" || rec?.s === "watching") {
+        list.push(s.title);
+      }
+    });
+    FILMS.forEach((f) => {
+      const rec = showsRecord[f.id];
+      if (rec?.s === "want" || rec?.s === "watching") {
+        list.push(f.title);
+      }
+    });
+    return list;
+  }, [store.custom, store.shows]);
 
   return (
     <AppPage variant="flush">
@@ -689,6 +727,7 @@ export default function Channel100Page() {
           sfxEnabled={sfxEnabled}
           onToggleSfx={handleToggleSfx}
           onOpenLogModal={openNewLogModal}
+          onOpenTriageModal={openTriageModal}
         />
 
         <main>
@@ -709,6 +748,7 @@ export default function Channel100Page() {
             onImport={handleImport}
             onSelectStatusFilter={handleSelectStatusFilter}
             onOpenLogModal={openNewLogModal}
+            onOpenTriageModal={openTriageModal}
           />
 
           {/* Sticky Filter Controls */}
@@ -721,6 +761,7 @@ export default function Channel100Page() {
             resultCount={filteredItems.length}
             cat={filters.cat}
             onOpenLogModal={openNewLogModal}
+            onOpenTriageModal={openTriageModal}
           />
 
           {/* Media Grid / List View */}
@@ -776,6 +817,15 @@ export default function Channel100Page() {
           }}
           onSave={handleSaveCustomItem}
           initialData={editingCustomItem || undefined}
+        />
+
+        {/* Watchlist Decision Matrix (Triage Mode) Modal */}
+        <Channel100TriageModal
+          isOpen={isTriageModalOpen}
+          onClose={() => setIsTriageModalOpen(false)}
+          watchlistTitles={userWatchlistTitles}
+          onLogPrescription={handleLogPrescription}
+          sfxEnabled={sfxEnabled}
         />
 
         {/* Toast Alerts */}

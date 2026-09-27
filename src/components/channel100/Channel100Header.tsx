@@ -14,6 +14,7 @@ interface Channel100HeaderProps {
   sfxEnabled: boolean;
   onToggleSfx: () => void;
   onOpenLogModal?: () => void;
+  onOpenTriageModal?: () => void;
 }
 
 export const Channel100Header: React.FC<Channel100HeaderProps> = ({
@@ -27,6 +28,7 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
   sfxEnabled,
   onToggleSfx,
   onOpenLogModal,
+  onOpenTriageModal,
 }) => {
   return (
     <>
@@ -84,6 +86,18 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
         </div>
 
         <nav className="ch100-nav" aria-label="TV guide navigation">
+          {onOpenTriageModal && (
+            <button
+              type="button"
+              className="ch100-triage-cta-btn"
+              onClick={onOpenTriageModal}
+              title="Watchlist Decision Matrix: Cure decision paralysis"
+            >
+              <span className="ch100-triage-cta-pulse" />
+              <span>🎯 Decision Matrix</span>
+            </button>
+          )}
+
           {onOpenLogModal && (
             <button
               type="button"

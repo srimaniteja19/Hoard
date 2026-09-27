@@ -3096,5 +3096,811 @@ h1 .hl,
   }
 }
 
+/* ==========================================================================
+   CHANNEL 100 — WATCHLIST DECISION MATRIX (TRIAGE MODE)
+   Tactile Broadcast Console & Diagnostic Triage Experience
+   ========================================================================== */
+
+/* Trigger CTA Button */
+.ch100-triage-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ch-card);
+  color: var(--ch-text);
+  border: 2px solid var(--ch-line);
+  box-shadow: 3px 3px 0 var(--ch-shadow);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-family: var(--ch-mono);
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.1s ease;
+  user-select: none;
+}
+
+.ch100-triage-cta-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ch-shadow);
+  background: rgba(245, 197, 24, 0.15);
+}
+
+.ch100-triage-cta-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ch-shadow);
+}
+
+.ch100-triage-cta-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3DBE6A;
+  box-shadow: 0 0 8px #3DBE6A;
+  animation: ch100-pulse 1.8s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes ch100-pulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+/* Decision Matrix Hero Prompt Banner */
+.ch100-triage-hero-banner {
+  margin-top: 14px;
+  background: var(--ch-bg);
+  border: 2px dashed var(--ch-line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ch100-triage-hero-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ch100-triage-hero-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.ch100-triage-hero-text strong {
+  display: block;
+  font-family: var(--ch-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.ch100-triage-hero-text span {
+  font-size: 12px;
+  color: var(--ch-muted);
+}
+
+/* Triage Modal Container */
+.ch100-triage-modal {
+  background: var(--ch-card);
+  color: var(--ch-text);
+  border: 2px solid var(--ch-line);
+  box-shadow: 6px 6px 0 var(--ch-shadow);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 760px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  animation: ch100-dialog-pop 0.16s ease-out;
+}
+
+.ch100-triage-header {
+  padding: 18px 20px 14px;
+  border-bottom: 2px solid var(--ch-line);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  background: var(--ch-bg);
+  gap: 14px;
+}
+
+.ch100-triage-tagline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ch-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ch-muted);
+}
+
+.ch100-triage-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #F5C518;
+  box-shadow: 0 0 6px #F5C518;
+}
+
+.ch100-triage-freq {
+  background: var(--ch-ink);
+  color: var(--ch-bg);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.ch100-triage-title {
+  font-size: 21px;
+  font-weight: 900;
+  margin: 4px 0 2px;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.ch100-triage-sub {
+  font-size: 13px;
+  color: var(--ch-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Steps Bar */
+.ch100-triage-steps-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--ch-card);
+  border-bottom: 1.5px solid var(--ch-line);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.ch100-tstep-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  font-family: var(--ch-mono);
+  font-size: 12px;
+  color: var(--ch-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.1s ease;
+}
+
+.ch100-tstep-btn .step-num {
+  font-weight: 900;
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(128, 128, 128, 0.15);
+}
+
+.ch100-tstep-btn.active {
+  color: var(--ch-text);
+  font-weight: 800;
+  background: rgba(245, 197, 24, 0.15);
+}
+
+.ch100-tstep-btn.active .step-num {
+  background: #F5C518;
+  color: #0E0E10;
+}
+
+.ch100-tstep-btn.done {
+  color: var(--ch-text);
+}
+
+.ch100-tstep-btn.done .step-num {
+  background: #3DBE6A;
+  color: #FFFFFF;
+}
+
+.ch100-tstep-arrow {
+  color: var(--ch-muted);
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+/* Modal Body */
+.ch100-triage-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.ch100-triage-prompt {
+  margin-bottom: 16px;
+}
+
+.ch100-triage-qbadge {
+  display: inline-block;
+  font-family: var(--ch-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  background: var(--ch-ink);
+  color: var(--ch-bg);
+  padding: 2px 7px;
+  border-radius: 3px;
+  margin-bottom: 6px;
+}
+
+.ch100-triage-prompt h3 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  line-height: 1.3;
+}
+
+.ch100-triage-prompt p {
+  font-size: 13px;
+  color: var(--ch-muted);
+  margin: 0;
+}
+
+/* Triage Card Selection Grid */
+.ch100-triage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.ch100-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.ch100-tcard {
+  background: var(--ch-field);
+  color: var(--ch-text);
+  border: 2px solid var(--ch-line);
+  box-shadow: 3px 3px 0 var(--ch-shadow);
+  border-radius: 8px;
+  padding: 14px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.1s ease, border-color 0.1s ease;
+  position: relative;
+}
+
+.ch100-tcard:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--ch-shadow);
+  background: var(--ch-card);
+}
+
+.ch100-tcard:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ch-shadow);
+}
+
+.ch100-tcard.selected {
+  border-color: #F5C518;
+  background: rgba(245, 197, 24, 0.1);
+}
+
+.ch100-tcard-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ch100-tcard-icon {
+  font-size: 24px;
+}
+
+.ch100-tcard-badge {
+  font-family: var(--ch-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--ch-line);
+  background: var(--ch-card);
+  color: var(--ch-muted);
+}
+
+.ch100-tcard-title {
+  font-family: var(--ch-mono);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.ch100-tcard-desc {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--ch-muted);
+  margin: 0;
+  flex: 1;
+}
+
+.ch100-tcard-action {
+  font-family: var(--ch-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ch-text);
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
+.ch100-tcard:hover .ch100-tcard-action {
+  color: #F5C518;
+  opacity: 1;
+}
+
+.ch100-triage-back-btn {
+  margin-top: 16px;
+  background: transparent;
+  border: none;
+  font-family: var(--ch-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ch-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.1s ease;
+}
+
+.ch100-triage-back-btn:hover {
+  color: var(--ch-text);
+}
+
+/* Scanning Frequency Animation */
+.ch100-triage-scanning {
+  padding: 48px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  text-align: center;
+}
+
+.ch100-tscan-radar {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 2px solid var(--ch-line);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ch-field);
+  box-shadow: 4px 4px 0 var(--ch-shadow);
+  overflow: hidden;
+}
+
+.ch100-tscan-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px dashed var(--ch-line);
+  opacity: 0.3;
+}
+
+.ch100-tscan-ring.r1 { width: 40px; height: 40px; }
+.ch100-tscan-ring.r2 { width: 75px; height: 75px; }
+.ch100-tscan-ring.r3 { width: 100px; height: 100px; }
+
+.ch100-tscan-sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(245, 197, 24, 0.4) 300deg, #F5C518 360deg);
+  animation: ch100-radar-spin 1.5s linear infinite;
+}
+
+@keyframes ch100-radar-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ch100-tscan-center {
+  font-size: 28px;
+  position: relative;
+  z-index: 2;
+  animation: ch100-pulse 1s infinite alternate;
+}
+
+.ch100-tscan-prompt {
+  font-family: var(--ch-mono);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--ch-muted);
+}
+
+.ch100-tscan-live {
+  font-family: var(--ch-mono);
+  font-size: 16px;
+  font-weight: 900;
+  margin: 6px 0 10px;
+  letter-spacing: 0.04em;
+  color: var(--ch-text);
+}
+
+.ch100-tscan-tags {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.ch100-tscan-tags span {
+  font-family: var(--ch-mono);
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--ch-field);
+  border: 1.5px solid var(--ch-line);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* Result Showcase */
+.ch100-tresult-card {
+  background: var(--ch-card);
+  border: 2px solid var(--ch-line);
+  box-shadow: 4px 4px 0 var(--ch-shadow);
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ch100-tresult-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ch100-tresult-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ch100-tresult-rx {
+  background: #F5C518;
+  color: #0E0E10 !important;
+  font-family: var(--ch-mono);
+  font-size: 11.5px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border: 1.5px solid #0E0E10;
+  border-radius: 4px;
+  box-shadow: 2px 2px 0 #000000;
+}
+
+.ch100-tresult-match {
+  background: #3DBE6A;
+  color: #FFFFFF !important;
+  font-family: var(--ch-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border: 1.5px solid var(--ch-line);
+  border-radius: 4px;
+}
+
+.ch100-tresult-meta-pill {
+  font-family: var(--ch-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  background: var(--ch-field);
+  border: 1.5px solid var(--ch-line);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.ch100-tresult-score {
+  font-family: var(--ch-mono);
+  font-size: 13px;
+  font-weight: 800;
+  background: var(--ch-field);
+  border: 1.5px solid var(--ch-line);
+  padding: 3px 9px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.ch100-tresult-headline h3 {
+  font-family: var(--ch-display);
+  font-size: 26px;
+  font-weight: 400;
+  margin: 0 0 4px;
+  line-height: 1.15;
+}
+
+.ch100-tresult-headline small {
+  font-family: var(--ch-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ch-muted);
+}
+
+.ch100-tresult-tagline {
+  font-size: 13.5px;
+  font-style: italic;
+  color: var(--ch-muted);
+  margin: 0;
+}
+
+.ch100-tresult-why {
+  background: var(--ch-field);
+  border: 2px solid var(--ch-line);
+  border-left: 5px solid #F5C518;
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ch100-twhy-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ch-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--ch-text);
+}
+
+.ch100-twhy-params {
+  color: var(--ch-muted);
+  font-weight: 600;
+  font-size: 10.5px;
+}
+
+.ch100-twhy-text {
+  font-size: 13.5px;
+  line-height: 1.45;
+  margin: 0;
+  font-weight: 500;
+}
+
+.ch100-tresult-hook {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ch-text);
+  margin: 0;
+}
+
+.ch100-tresult-info-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--ch-bg);
+  border: 1.5px solid var(--ch-line);
+  border-radius: 6px;
+}
+
+.ch100-tinfo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ch100-tinfo-item .lbl {
+  font-family: var(--ch-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ch-muted);
+  letter-spacing: 0.04em;
+}
+
+.ch100-tinfo-item strong {
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ch100-tresult-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.ch100-tbtn-log {
+  flex: 1 1 240px;
+  background: #F5C518 !important;
+  color: #0E0E12 !important;
+  font-family: var(--ch-mono);
+  font-weight: 800;
+  font-size: 14px;
+  padding: 11px 18px;
+  border: 2px solid #0E0E12 !important;
+  box-shadow: 3px 3px 0 #000000 !important;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.1s ease;
+}
+
+.ch100-tbtn-log:hover {
+  background: #FFD53D !important;
+  color: #000000 !important;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 #000000 !important;
+}
+
+.ch100-tbtn-log:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #000000 !important;
+}
+
+.ch100-tbtn-restart {
+  background: var(--ch-field);
+  color: var(--ch-text) !important;
+  font-family: var(--ch-mono);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 11px 16px;
+  border: 2px solid var(--ch-line);
+  box-shadow: 2px 2px 0 var(--ch-shadow);
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.ch100-tbtn-restart:hover {
+  background: var(--ch-card);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ch-shadow);
+}
+
+/* Alternatives Backup Grid */
+.ch100-talts-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1.5px dashed var(--ch-line);
+}
+
+.ch100-talts-header {
+  margin-bottom: 10px;
+}
+
+.ch100-talts-header h4 {
+  font-family: var(--ch-mono);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  margin: 0 0 2px;
+}
+
+.ch100-talts-header span {
+  font-size: 12px;
+  color: var(--ch-muted);
+}
+
+.ch100-talts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.ch100-talt-card {
+  background: var(--ch-field);
+  color: var(--ch-text);
+  border: 2px solid var(--ch-line);
+  box-shadow: 2px 2px 0 var(--ch-shadow);
+  border-radius: 6px;
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, border-color 0.1s ease;
+}
+
+.ch100-talt-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ch-shadow);
+  border-color: #F5C518;
+}
+
+.ch100-talt-card.active {
+  border-color: #F5C518;
+  background: rgba(245, 197, 24, 0.15);
+}
+
+.ch100-talt-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ch100-talt-num {
+  font-family: var(--ch-mono);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--ch-muted);
+}
+
+.ch100-talt-card strong {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ch100-talt-sub {
+  font-family: var(--ch-mono);
+  font-size: 11px;
+  color: var(--ch-muted);
+}
+
+/* Mobile Responsiveness for Triage */
+@media (max-width: 680px) {
+  .ch100-triage-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ch100-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .ch100-tresult-info-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .ch100-talts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ch100-tresult-headline h3 {
+    font-size: 21px;
+  }
+
+  .ch100-triage-modal {
+    max-height: 94vh;
+  }
+}
+
+
 
 

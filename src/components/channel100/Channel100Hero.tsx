@@ -25,6 +25,7 @@ interface Channel100HeroProps {
   onImport: (file: File) => void;
   onSelectStatusFilter: (status: StatusFilter) => void;
   onOpenLogModal?: () => void;
+  onOpenTriageModal?: () => void;
 }
 
 export const Channel100Hero: React.FC<Channel100HeroProps> = ({
@@ -40,6 +41,7 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
   onImport,
   onSelectStatusFilter,
   onOpenLogModal,
+  onOpenTriageModal,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -68,6 +70,18 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             </div>
 
             <div className="ch100-th-actions-primary">
+              {onOpenTriageModal && (
+                <button
+                  type="button"
+                  className="ch100-triage-cta-btn"
+                  onClick={onOpenTriageModal}
+                  title="Cure decision paralysis: Let the Decision Matrix pick what to watch tonight"
+                >
+                  <span className="ch100-triage-cta-pulse" />
+                  <span>🎯 Decision Matrix</span>
+                </button>
+              )}
+
               {onOpenLogModal && (
                 <button
                   type="button"
@@ -311,6 +325,27 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             }}
           />
         </div>
+
+        {/* Watchlist Decision Matrix Prompt Banner */}
+        {onOpenTriageModal && (
+          <div className="ch100-triage-hero-banner">
+            <div className="ch100-triage-hero-info">
+              <span className="ch100-triage-hero-icon">🎯</span>
+              <div className="ch100-triage-hero-text">
+                <strong>Decision Paralysis? Run the Triage Matrix</strong>
+                <span>Filter by time, energy &amp; context across world cinema &amp; your backlog</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="ch100-triage-cta-btn"
+              onClick={onOpenTriageModal}
+            >
+              <span className="ch100-triage-cta-pulse" />
+              <span>Diagnose What to Watch →</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Right Column: 10x10 Test Card (TV/Film) */}

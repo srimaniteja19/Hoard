@@ -21,6 +21,7 @@ interface Channel100ControlsProps {
   resultCount: number;
   cat?: MediaKind;
   onOpenLogModal?: () => void;
+  onOpenTriageModal?: () => void;
 }
 
 export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
@@ -32,6 +33,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
   resultCount,
   cat = "tv",
   onOpenLogModal,
+  onOpenTriageModal,
 }) => {
   // Counts by status for the current catalog
   const counts = useMemo(() => {
@@ -119,6 +121,18 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
               </button>
             ))}
           </div>
+
+          {onOpenTriageModal && (
+            <button
+              type="button"
+              className="ch100-triage-cta-btn"
+              onClick={onOpenTriageModal}
+              title="Watchlist Decision Matrix: Cure decision paralysis"
+            >
+              <span className="ch100-triage-cta-pulse" />
+              <span>🎯 Decision Matrix</span>
+            </button>
+          )}
 
           {onOpenLogModal && (
             <button
