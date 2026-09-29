@@ -1536,3 +1536,86 @@ export const channel100Entries = pgTable(
 
 export type Channel100EntryRow = typeof channel100Entries.$inferSelect;
 export type NewChannel100EntryRow = typeof channel100Entries.$inferInsert;
+
+/* ── Studio: content pipeline for OddlyInteresting (ideas, series, pieces) ── */
+
+export interface StudioScene {
+  text: string;
+  /** Optional on-screen title card per sentence, kept for the production brief. */
+  cards?: string[];
+}
+
+export interface StudioSource {
+  title: string;
+  url?: string;
+}
+
+export interface StudioPart {
+  n: number;
+  title: string;
+  summary?: string;
+  pieceId?: string | null;
+}
+
+export const studioSeries = pgTable(
+  "studio_series",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    theme: text("theme").notNull().default(""),
+    pillar: varchar("pillar", { length: 24 }).notNull().default("finance"),
+    parts: jsonb("parts").$type<StudioPart[]>().notNull().default(sql`'[]'::jsonb`),
+    nextPart: integer("next_part").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("studio_series_user_idx").on(table.userId, table.createdAt)]
+);
+
+export type StudioSeriesRow = typeof studioSeries.$inferSelect;
+
+export const studioPieces = pgTable(
+  "studio_pieces",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default("Untitled piece"),
+    status: varchar("status", { length: 16 }).notNull().default("writing"), // writing | recording | making | ready | posted
+    format: varchar("format", { length: 16 }).notNull().default("reel"), // reel | carousel | youtube | short
+    pillar: varchar("pillar", { length: 24 }).notNull().default("finance"),
+    seriesId: text("series_id").references(() => studioSeries.id, { onDelete: "set null" }),
+    part: integer("part"),
+    script: jsonb("script").$type<StudioScene[]>().notNull().default(sql`'[]'::jsonb`),
+    caption: text("caption").notNull().default(""),
+    hashtags: text("hashtags").notNull().default(""),
+    sources: jsonb("sources").$type<StudioSource[]>().notNull().default(sql`'[]'::jsonb`),
+    notes: text("notes").notNull().default(""),
+    coverUrl: text("cover_url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("studio_pieces_user_status_idx").on(table.userId, table.status),
+    index("studio_pieces_series_idx").on(table.seriesId),
+  ]
+);
+
+export type StudioPieceRow = typeof studioPieces.$inferSelect;
+
+export const studioIdeas = pgTable(
+  "studio_ideas",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    hook: text("hook").notNull().default(""),
+    pillar: varchar("pillar", { length: 24 }).notNull().default("finance"),
+    format: varchar("format", { length: 16 }).notNull().default("reel"),
+    status: varchar("status", { length: 16 }).notNull().default("new"), // new | started
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("studio_ideas_user_status_idx").on(table.userId, table.status)]
+);
+
+export type StudioIdeaRow = typeof studioIdeas.$inferSelect;

@@ -1,0 +1,353 @@
+{
+ "series": [
+  {
+   "key": "pm",
+   "title": "Prediction Markets",
+   "theme": "paper / notebook",
+   "pillar": "finance",
+   "nextPart": 3,
+   "parts": [
+    {
+     "n": 1,
+     "title": "A weird idea with nerdy roots",
+     "summary": "Contracts pay $1 or $0, so the price is the odds. Iowa markets beat polls. The US gray zone.",
+     "pieceKey": "pm1"
+    },
+    {
+     "n": 2,
+     "title": "The slow road vs the fast road",
+     "summary": "Kalshi asks permission, Polymarket moves fast on crypto. A fine, a lawsuit, $3B+ on the 2024 race.",
+     "pieceKey": "pm2"
+    },
+    {
+     "n": 3,
+     "title": "How sports turned it into a money machine",
+     "summary": "Sports contracts in all 50 states, the Robinhood hub, the volume surge, states push back.",
+     "pieceKey": "pm3"
+    },
+    {
+     "n": 4,
+     "title": "The business model",
+     "summary": "Exchange fees, not betting against you. How that differs from a sportsbook.",
+     "pieceKey": null
+    },
+    {
+     "n": 5,
+     "title": "The valuations",
+     "summary": "Kalshi and Polymarket funding rounds, and the ICE investment.",
+     "pieceKey": null
+    },
+    {
+     "n": 6,
+     "title": "The dark side",
+     "summary": "Insider trading worries, the FBI raid on Polymarket's founder, the dropped probe.",
+     "pieceKey": null
+    }
+   ]
+  }
+ ],
+ "pieces": [
+  {
+   "key": "pm1",
+   "title": "PM Part 1: a weird idea with nerdy roots",
+   "status": "recording",
+   "format": "reel",
+   "pillar": "finance",
+   "seriesKey": "pm",
+   "part": 1,
+   "script": [
+    {
+     "text": "What if you could buy a ticket that says it will snow in New York on Christmas? It costs 30 cents, and that price is secretly a forecast.",
+     "cards": [
+      "A TICKET ON SNOW",
+      "30¢ = A FORECAST"
+     ]
+    },
+    {
+     "text": "This is a prediction market. Instead of betting on a team, you trade a contract on whether something will happen. Will the Fed cut rates? If you're right, it pays one dollar. If you're wrong, it pays zero.",
+     "cards": [
+      "PREDICTION MARKETS",
+      "TRADE THE FUTURE",
+      "WILL THE FED CUT?",
+      "RIGHT = $1",
+      "WRONG = $0"
+     ]
+    },
+    {
+     "text": "Pause and guess: if yes costs 30 cents, what is the crowd saying? About a 30 percent chance. The price is the probability.",
+     "cards": [
+      "PAUSE & GUESS",
+      "~30% CHANCE",
+      "PRICE = ODDS"
+     ]
+    },
+    {
+     "text": "Economists loved this for decades. Since 1988, the University of Iowa has run small real-money election markets. In one long study, they beat the polls about three times out of four. Money on the line makes people think harder.",
+     "cards": [
+      "ECONOMISTS LOVED IT",
+      "IOWA, SINCE 1988",
+      "BEAT POLLS 3 IN 4",
+      "SKIN IN THE GAME"
+     ]
+    },
+    {
+     "text": "But in America, it sat in a legal gray zone. Was it gambling, or financial trading? And the fight over that question is where this story explodes.",
+     "cards": [
+      "A LEGAL GRAY ZONE",
+      "GAMBLING OR TRADING?",
+      "THE FIGHT BEGINS"
+     ]
+    },
+    {
+     "text": "So next time you see a price on the future, read it as a percentage. Please follow and share for more interesting, random content like this.",
+     "cards": [
+      "READ IT AS %",
+      "FOLLOW & SHARE"
+     ]
+    }
+   ],
+   "caption": "A 30¢ ticket that's secretly a weather forecast.\n\nPrediction markets let you trade on whether something will happen: a Fed rate cut, snow on Christmas, an election. Each contract pays $1 if you're right and $0 if you're wrong, so the price is the crowd's guess at the odds. 30¢ is about 30%.\n\nEconomists loved the idea for decades. The University of Iowa's small real-money election markets beat the polls about 3 times out of 4. But in the US, nobody could agree if it was gambling or trading. Part 2: how that fight turned into billions.\n\nDid you guess B? Please follow and share for interesting and random content like this.",
+   "hashtags": "#predictionmarkets #kalshi #polymarket #finance #oddlyinteresting",
+   "sources": [
+    {
+     "title": "Iowa Electronic Markets (Wikipedia)",
+     "url": "https://en.wikipedia.org/wiki/Iowa_Electronic_Markets"
+    },
+    {
+     "title": "Berg, Nelson & Rietz, Prediction Market Accuracy in the Long Run (2008)",
+     "url": "https://www.sciencedirect.com/science/article/abs/pii/S0169207008000320"
+    },
+    {
+     "title": "University of Iowa: Buying into the election",
+     "url": "https://now.uiowa.edu/news/2016/09/buying-election"
+    },
+    {
+     "title": "Tower Research Capital: From Experiments to Exchanges",
+     "url": "https://tower-research.com/the-prediction-markets-opportunity-part-1-from-experiments-to-exchanges/"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "key": "pm2",
+   "title": "PM Part 2: the slow road vs the fast road",
+   "status": "recording",
+   "format": "reel",
+   "pillar": "finance",
+   "seriesKey": "pm",
+   "part": 2,
+   "script": [
+    {
+     "text": "Two founders stared at the same legal gray zone and made opposite bets.",
+     "cards": [
+      "OPPOSITE BETS"
+     ]
+    },
+    {
+     "text": "Kalshi's founders met at MIT and took the slow road. They spent years asking for permission, and in 2020, the CFTC approved Kalshi as a regulated exchange.",
+     "cards": [
+      "THE SLOW ROAD",
+      "YEARS OF PAPERWORK"
+     ]
+    },
+    {
+     "text": "Polymarket's Shayne Coplan took the fast road: crypto, no license. Pause and guess: what happened in 2022? Regulators fined Polymarket 1.4 million dollars and made it block American users.",
+     "cards": [
+      "THE FAST ROAD",
+      "PAUSE & GUESS",
+      "FINED + BLOCKED"
+     ]
+    },
+    {
+     "text": "Then Kalshi wanted election markets. The regulator said no, so Kalshi sued, and won, about a month before the 2024 election.",
+     "cards": [
+      "ELECTION MARKETS?",
+      "KALSHI SUED + WON"
+     ]
+    },
+    {
+     "text": "Meanwhile, over 3 billion dollars was bet on Polymarket's presidential race, and one trader walked away with about 85 million. Both roads led to the same place: the mainstream.",
+     "cards": [
+      "$3 BILLION+",
+      "BOTH ROADS WON"
+     ]
+    },
+    {
+     "text": "Slow road or fast road, which would you pick? Please follow and share for more interesting, random content like this.",
+     "cards": [
+      "SLOW OR FAST?",
+      "FOLLOW & SHARE"
+     ]
+    }
+   ],
+   "caption": "Two startups. Same legal gray zone. Opposite bets.\n\nKalshi spent years getting permission and became a regulated US exchange in 2020. Polymarket launched on crypto with no license, got fined $1.4M in 2022, and had to block American users. Then Kalshi sued its own regulator over election markets and won just before the 2024 election, while over $3B was bet on Polymarket's presidential race.\n\nSlow road or fast road? Tell me below. Please follow and share for interesting and random content like this.",
+   "hashtags": "#predictionmarkets #kalshi #polymarket #finance #oddlyinteresting",
+   "sources": [
+    {
+     "title": "Kalshi (Wikipedia)",
+     "url": "https://en.wikipedia.org/wiki/Kalshi"
+    },
+    {
+     "title": "Contrary Research: Kalshi",
+     "url": "https://research.contrary.com/company/kalshi"
+    },
+    {
+     "title": "Polymarket (Wikipedia)",
+     "url": "https://en.wikipedia.org/wiki/Polymarket"
+    },
+    {
+     "title": "Blockworks: CFTC fines Polymarket $1.4 million",
+     "url": "https://blockworks.com/news/cftc-fines-crypto-betting-service-polymarket-1-4-million-orders-shutdown"
+    },
+    {
+     "title": "CoinDesk: Kalshi cleared to offer congressional markets",
+     "url": "https://www.coindesk.com/policy/2024/09/06/kalshi-cleared-to-offer-congressional-prediction-markets-in-victory-against-cftc"
+    },
+    {
+     "title": "CNN: Appeals court allows Kalshi election betting",
+     "url": "https://www.cnn.com/2024/10/02/business/appeals-court-allows-kalshi-election-betting"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "key": "pm3",
+   "title": "PM Part 3: how sports turned it into a money machine",
+   "status": "writing",
+   "format": "reel",
+   "pillar": "finance",
+   "seriesKey": "pm",
+   "part": 3,
+   "script": [
+    {
+     "text": "",
+     "cards": []
+    }
+   ],
+   "caption": "",
+   "hashtags": "",
+   "sources": [],
+   "notes": "Angle: Kalshi sports contracts in all 50 states (Jan 2025), the Robinhood hub (Mar 2025), the volume surge that is mostly sports, and states like Nevada and Arizona pushing back."
+  },
+  {
+   "key": "tontine",
+   "title": "The tontine",
+   "status": "ready",
+   "format": "reel",
+   "pillar": "finance",
+   "seriesKey": null,
+   "part": null,
+   "script": [
+    {
+     "text": "",
+     "cards": []
+    }
+   ],
+   "caption": "",
+   "hashtags": "",
+   "sources": [],
+   "notes": ""
+  },
+  {
+   "key": "hotspot",
+   "title": "Hot Spot vs Snicko",
+   "status": "ready",
+   "format": "reel",
+   "pillar": "sports",
+   "seriesKey": null,
+   "part": null,
+   "script": [
+    {
+     "text": "",
+     "cards": []
+    }
+   ],
+   "caption": "",
+   "hashtags": "",
+   "sources": [],
+   "notes": ""
+  },
+  {
+   "key": "swing",
+   "title": "Reverse swing",
+   "status": "ready",
+   "format": "reel",
+   "pillar": "sports",
+   "seriesKey": null,
+   "part": null,
+   "script": [
+    {
+     "text": "",
+     "cards": []
+    }
+   ],
+   "caption": "",
+   "hashtags": "",
+   "sources": [],
+   "notes": ""
+  },
+  {
+   "key": "drs",
+   "title": "DRS tech stack",
+   "status": "ready",
+   "format": "youtube",
+   "pillar": "sports",
+   "seriesKey": null,
+   "part": null,
+   "script": [
+    {
+     "text": "",
+     "cards": []
+    }
+   ],
+   "caption": "",
+   "hashtags": "",
+   "sources": [],
+   "notes": "Voice-only audio (no music or ambience)."
+  }
+ ],
+ "ideas": [
+  {
+   "title": "Why prices end in .99",
+   "hook": "Your brain reads $9.99 as $9. Stores know.",
+   "pillar": "finance",
+   "format": "reel"
+  },
+  {
+   "title": "Airlines overbook flights on purpose",
+   "hook": "Selling the same seat twice is a math problem, not a mistake.",
+   "pillar": "finance",
+   "format": "reel"
+  },
+  {
+   "title": "Why cricket balls come in red, white and pink",
+   "hook": "It comes down to what the batter can see under lights.",
+   "pillar": "sports",
+   "format": "reel"
+  },
+  {
+   "title": "The penalty kick is a game theory problem",
+   "hook": "Why the best move is to be unpredictable, on purpose.",
+   "pillar": "sports",
+   "format": "reel"
+  },
+  {
+   "title": "Why your phone battery lies at 1%",
+   "hook": "The percentage is an estimate, and your phone knows it.",
+   "pillar": "tech",
+   "format": "carousel"
+  },
+  {
+   "title": "Casinos are built so you lose track of time",
+   "hook": "No clocks, no windows, and the carpet is doing work too.",
+   "pillar": "psych",
+   "format": "reel"
+  },
+  {
+   "title": "DRS tech stack in 60 seconds",
+   "hook": "Cut the YouTube deep dive into a Reel.",
+   "pillar": "sports",
+   "format": "short"
+  }
+ ]
+}

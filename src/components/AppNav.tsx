@@ -16,6 +16,7 @@ const LINKS = [
   { href: "/atlas", label: "Atlas", match: (path: string) => path.startsWith("/atlas") },
   { href: "/til", label: "TIL", match: (path: string) => path.startsWith("/til") },
   { href: "/ledger", label: "Ledger", match: (path: string) => path.startsWith("/ledger") },
+  { href: "/studio", label: "Studio", match: (path: string) => path.startsWith("/studio") },
   { href: "/channel100", label: "CH·100", match: (path: string) => path.startsWith("/channel100") || path.startsWith("/ch100") },
   { href: "/stats", label: "Stats", match: (path: string) => path.startsWith("/stats") },
 ] as const;

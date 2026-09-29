@@ -5,6 +5,7 @@
 @import "../styles/notebooks.css";
 @import "../styles/reader.css";
 @import "../styles/channel100.css";
+@import "../styles/studio.css";
 
 :root, [data-theme="default"] {
   --cream: #F4F0EA;
