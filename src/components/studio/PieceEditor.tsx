@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { bufferText, captionChecks, productionBrief, scriptChecks, voiceScript } from "@/lib/studio/checks";
+import { bufferText, captionChecks, longText, parseHashtags, productionBrief, scriptChecks, voiceScript } from "@/lib/studio/checks";
+import { toStudioBlock } from "@/lib/studio/paste";
 import {
   FORMAT_LABEL,
   PILLAR_LABEL,
@@ -19,13 +20,14 @@ type Props = {
   series: StudioSeries[];
   onChange: (patch: Partial<StudioPiece>, debounce?: boolean) => void;
   onSeries: (seriesId: string | null) => void;
+  onPaste: () => void;
   onPartPosition: (to: number) => void;
   onDelete: () => void;
   onBack: () => void;
   copy: (text: string, label: string) => void;
 };
 
-export function PieceEditor({ piece, series, onChange, onSeries, onPartPosition, onDelete, onBack, copy }: Props) {
+export function PieceEditor({ piece, series, onChange, onSeries, onPaste, onPartPosition, onDelete, onBack, copy }: Props) {
   const [confirming, setConfirming] = useState(false);
   const [src, setSrc] = useState({ title: "", url: "" });
   const current = piece.seriesId ? series.find((s) => s.id === piece.seriesId) ?? null : null;
@@ -38,9 +40,19 @@ export function PieceEditor({ piece, series, onChange, onSeries, onPartPosition,
 
   return (
     <article className="studio-editor">
-      <button type="button" className="studio-btn studio-btn-plain" onClick={onBack}>
-        ← Pieces
-      </button>
+      <div className="studio-row studio-ed-bar">
+        <button type="button" className="studio-btn studio-btn-plain" onClick={onBack}>
+          ← Pieces
+        </button>
+        <span className="studio-row studio-row-start">
+          <button type="button" className="studio-btn studio-btn-plain" onClick={() => copy(toStudioBlock(piece, current?.title), "Studio block")}>
+            Copy as block
+          </button>
+          <button type="button" className="studio-btn" onClick={onPaste}>
+            Paste into piece
+          </button>
+        </span>
+      </div>
 
       <header className="studio-ed-head">
         <div className="studio-cover">
@@ -161,16 +173,21 @@ export function PieceEditor({ piece, series, onChange, onSeries, onPartPosition,
       <section className="studio-sec" aria-labelledby="studio-caption-h">
         <div className="studio-sec-h">
           <h2 id="studio-caption-h">Caption</h2>
-          <button type="button" className="studio-btn" onClick={() => copy(bufferText(piece), "Caption")}>
-            Copy for Buffer
-          </button>
+          <div className="studio-row studio-row-start">
+            <button type="button" className="studio-btn" onClick={() => copy(bufferText(piece), "Instagram caption")}>
+              Copy for Instagram
+            </button>
+            <button type="button" className="studio-btn studio-btn-plain" onClick={() => copy(longText(piece), "TikTok / YouTube caption")}>
+              Copy for TikTok / YouTube
+            </button>
+          </div>
         </div>
         <label className="studio-sr" htmlFor="studio-caption">
           Caption
         </label>
         <textarea id="studio-caption" className="studio-textarea" rows={8} value={piece.caption} onChange={(e) => onChange({ caption: e.target.value }, true)} />
         <label className="studio-label studio-gap" htmlFor="studio-tags">
-          Hashtags
+          Instagram hashtags (up to 5)
         </label>
         <input
           id="studio-tags"
@@ -178,6 +195,16 @@ export function PieceEditor({ piece, series, onChange, onSeries, onPartPosition,
           placeholder="#predictionmarkets #finance"
           value={piece.hashtags}
           onChange={(e) => onChange({ hashtags: e.target.value }, true)}
+        />
+        <label className="studio-label studio-gap" htmlFor="studio-tags-long">
+          TikTok / YouTube hashtags{piece.extraHashtags ? ` · ${parseHashtags(piece.extraHashtags).length}` : ""}
+        </label>
+        <input
+          id="studio-tags-long"
+          className="studio-input studio-mono"
+          placeholder="The longer set for TikTok and YouTube"
+          value={piece.extraHashtags}
+          onChange={(e) => onChange({ extraHashtags: e.target.value }, true)}
         />
         <CheckList checks={captionChecks(piece)} />
       </section>

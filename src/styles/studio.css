@@ -18,7 +18,7 @@
 .studio-tab { font-family: var(--mono); font-size: 13px; font-weight: 700; min-height: 44px; padding: 8px 12px; border: 2px solid transparent; background: none; color: var(--fg); cursor: pointer; }
 .studio-tab[aria-current="page"] { border-color: var(--ink); background: var(--paper); }
 .studio-state { font-family: var(--mono); font-size: 11px; color: color-mix(in srgb, var(--fg) 62%, transparent); }
-.studio-top > .studio-btn { margin-left: auto; }
+.studio-top > .studio-btn, .studio-top > .studio-top-acts { margin-left: auto; }
 .studio-error { margin: 0; padding: 10px 12px; border: 2px solid var(--ink); background: color-mix(in srgb, var(--orange) 25%, var(--paper)); font-weight: 600; }
 
 /* buttons & fields */
@@ -115,6 +115,7 @@
 /* editor */
 .studio-editor { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
 .studio-editor > .studio-btn:first-child { align-self: flex-start; margin-bottom: 14px; }
+.studio-ed-bar { margin-bottom: 14px; }
 .studio-ed-head { display: flex; gap: 16px; align-items: flex-start; }
 .studio-ed-main { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .studio-cover { width: 72px; height: 128px; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px solid var(--ink); background: var(--paper); }
@@ -146,3 +147,26 @@
 .studio-confirm-text { margin: 0; font-weight: 600; }
 .studio-toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 90; padding: 10px 16px; background: var(--ink); color: var(--paper); font-family: var(--mono); font-size: 12px; font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { .studio-btn:active { transform: none; } }
+
+/* paste everything */
+.studio-paste { width: min(1040px, 100%); }
+.studio-paste-h { margin: 0; font-family: var(--mono); font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.studio-paste-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 760px) { .studio-paste-grid { grid-template-columns: minmax(0, 1fr); } }
+.studio-paste-in, .studio-paste-out { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.studio-paste-box { min-height: 320px; font-size: 12px; }
+.studio-paste-format { margin: 0; padding: 10px 12px; max-height: 220px; overflow: auto; border: 1.5px dashed var(--ink); background: var(--cream); color: #000; font-size: 11px; line-height: 1.5; white-space: pre-wrap; }
+.studio-paste-target { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.studio-paste-target p { margin: 0; }
+.studio-paste-choice, .studio-paste-check, .studio-paste-inline { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.studio-paste-choice { min-height: 36px; }
+.studio-paste-choice input, .studio-paste-check input, .studio-paste-inline input { width: 18px; height: 18px; accent-color: var(--ink); flex-shrink: 0; }
+.studio-paste-inline { font-family: var(--mono); font-size: 11px; font-weight: 700; margin-left: 6px; }
+.studio-paste-fields { list-style: none; margin: 0; padding: 0; border: 2px solid var(--ink); background: var(--paper); }
+.studio-paste-fields li { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; }
+.studio-paste-fields li + li { border-top: 1.5px solid color-mix(in srgb, var(--fg) 15%, transparent); }
+.studio-paste-fields li.is-off .studio-paste-val { opacity: 0.4; text-decoration: line-through; }
+.studio-paste-val { font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; padding-left: 26px; }
+.studio-paste-quote { display: block; margin-top: 2px; color: color-mix(in srgb, var(--fg) 62%, transparent); font-size: 12px; white-space: pre-line; }
+.studio-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.studio-top-acts { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }

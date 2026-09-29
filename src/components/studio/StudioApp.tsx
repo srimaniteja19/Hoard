@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useStudio } from "@/hooks/useStudio";
-import { addPart, attachPiece, detachPiece, movePart, movePieceTo, removePart, sortParts } from "@/lib/studio/series";
+import { matchSeries, pastePatch } from "@/lib/studio/paste";
+import { addPart, attachPiece, detachPiece, movePart, movePieceTo, placePiece, removePart, sortParts } from "@/lib/studio/series";
 import {
   FORMAT_LABEL,
   PILLAR_LABEL,
@@ -14,6 +15,7 @@ import {
   type StudioPillar,
   type StudioSeries,
 } from "@/lib/studio/types";
+import { PasteImport, type PasteResult } from "./PasteImport";
 import { PieceEditor } from "./PieceEditor";
 import { SeriesView } from "./SeriesView";
 import { PillarDot, useCopy } from "./StudioShared";
@@ -27,6 +29,7 @@ export function StudioApp() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [idea, setIdea] = useState<{ title: string; pillar: StudioPillar }>({ title: "", pillar: "finance" });
+  const [pasting, setPasting] = useState<"new" | "piece" | null>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -83,6 +86,41 @@ export function StudioApp() {
     update("pieces", piece.id, { seriesId, part });
   };
 
+  /** Paste everything: update or create the piece, then put it in its series part. */
+  const applyPaste = async ({ pasted, fields, targetId, createSeries }: PasteResult) => {
+    setPasting(null);
+    const patch = pastePatch(pasted, fields);
+    let piece: StudioPiece | null = targetId ? data.pieces.find((p) => p.id === targetId) ?? null : null;
+    let seriesList = data.series;
+    let target: StudioSeries | null = null;
+    if (fields.includes("seriesTitle") && pasted.seriesTitle) {
+      target = matchSeries(seriesList, pasted.seriesTitle);
+      if (!target && createSeries) {
+        target = await create("series", { title: pasted.seriesTitle, theme: "", pillar: patch.pillar ?? piece?.pillar ?? "finance", parts: [], nextPart: 1 });
+        if (target) seriesList = [...seriesList, target];
+      }
+    }
+    if (piece) {
+      update("pieces", piece.id, patch);
+      piece = { ...piece, ...patch };
+    } else {
+      const title = patch.title ?? (target && pasted.part ? `${target.title} P${pasted.part}` : pasted.caption?.split("\n")[0].slice(0, 80) || "Pasted piece");
+      piece = await create("pieces", { script: [{ text: "", cards: [] }], ...patch, title });
+      if (!piece) return;
+    }
+    if (target) {
+      const old = piece.seriesId && piece.seriesId !== target.id ? seriesList.find((s) => s.id === piece!.seriesId) : null;
+      if (old) update("series", old.id, { parts: detachPiece(old.parts, piece.id) });
+      const done = piece.status === "ready" || piece.status === "posted";
+      const r = placePiece(target.parts, piece, pasted.part, target.nextPart, done);
+      update("series", target.id, { parts: r.parts, nextPart: r.nextPart });
+      update("pieces", piece.id, { seriesId: target.id, part: r.part });
+    }
+    setOpenId(piece.id);
+    window.scrollTo({ top: 0 });
+    setToast(targetId ? "Piece updated" : "Piece created");
+  };
+
   const tabs: { id: View; label: string }[] = [
     { id: "pieces", label: "Pieces" },
     { id: "series", label: "Series" },
@@ -112,9 +150,14 @@ export function StudioApp() {
         <span className="studio-state" aria-live="polite">
           {studio.saving ? "Saving…" : loading ? "Loading…" : "Saved"}
         </span>
-        <button type="button" className="studio-btn" onClick={() => void newPiece()}>
-          + New piece
-        </button>
+        <div className="studio-top-acts">
+          <button type="button" className="studio-btn studio-btn-plain" onClick={() => setPasting("new")}>
+            Paste everything
+          </button>
+          <button type="button" className="studio-btn" onClick={() => void newPiece()}>
+            + New piece
+          </button>
+        </div>
       </header>
 
       {studio.error ? (
@@ -131,6 +174,7 @@ export function StudioApp() {
           onBack={() => setOpenId(null)}
           onChange={(patch, debounce) => update("pieces", open.id, patch, { debounce })}
           onSeries={(sid) => setPieceSeries(open, sid)}
+          onPaste={() => setPasting("piece")}
           onPartPosition={(to) => {
             const s = data.series.find((x) => x.id === open.seriesId);
             if (!s) return;
@@ -247,6 +291,15 @@ export function StudioApp() {
         </div>
       )}
 
+      {pasting ? (
+        <PasteImport
+          pieces={data.pieces}
+          series={data.series}
+          lockTarget={pasting === "piece" ? open : null}
+          onApply={(r) => void applyPaste(r)}
+          onClose={() => setPasting(null)}
+        />
+      ) : null}
       {dialog}
       {toast ? (
         <div className="studio-toast" role="status">
