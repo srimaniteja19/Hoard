@@ -169,6 +169,13 @@
       "when": 1790397426556,
       "tag": "0031_add_channel100_entries",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790720788188,
+      "tag": "0032_add_studio",
+      "breakpoints": true
     }
   ]
 }
