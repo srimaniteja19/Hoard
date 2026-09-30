@@ -22,6 +22,7 @@ import {
   type StudioStatus,
 } from "@/lib/studio/types";
 import { FormatBadge, PillarDot } from "./StudioShared";
+import { StudioCardThumbnail } from "./StudioCardThumbnail";
 
 interface Props {
   pieces: StudioPiece[];
@@ -134,7 +135,16 @@ export function KanbanBoard({
                       </span>
                     ) : null}
 
-                    <h4 className="studio-kanban-card-title">{p.title}</h4>
+                    <div className="studio-kanban-card-main">
+                      {p.coverUrl ? (
+                        <div className="studio-kanban-card-thumb">
+                          <StudioCardThumbnail coverUrl={p.coverUrl} size="list" />
+                        </div>
+                      ) : null}
+                      <div className="studio-kanban-card-text">
+                        <h4 className="studio-kanban-card-title">{p.title}</h4>
+                      </div>
+                    </div>
 
                     <div className="studio-kanban-card-foot">
                       <span className="studio-mono studio-small studio-muted">

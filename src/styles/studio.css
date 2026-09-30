@@ -1873,6 +1873,224 @@
   font-size: 11px;
 }
 
+/* ── EMBEDDED MEDIA (YOUTUBE / INSTAGRAM / TIKTOK) ── */
+.studio-cover-frame.is-embed {
+  background: #0f1117;
+  flex-direction: column;
+  box-shadow: var(--sh, 5px 5px 0 var(--ink));
+  transition: width 0.2s ease, height 0.2s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 9:16 Vertical ratio (Shorts, Reels, TikTok) */
+.studio-cover-frame.is-embed.ratio-vertical {
+  width: 230px;
+  height: 409px;
+}
+.studio-cover-frame.is-embed.ratio-vertical.is-expanded {
+  width: 290px;
+  height: 516px;
+}
+
+/* 16:9 Horizontal ratio (Standard YouTube videos) */
+.studio-cover-frame.is-embed.ratio-wide {
+  width: 330px;
+  height: 186px;
+}
+.studio-cover-frame.is-embed.ratio-wide.is-expanded {
+  width: 440px;
+  height: 248px;
+}
+
+/* Instagram specific container */
+.studio-cover-frame.is-embed.is-instagram {
+  width: 280px;
+  height: 480px;
+}
+.studio-cover-frame.is-embed.is-instagram.is-expanded {
+  width: 340px;
+  height: 580px;
+}
+
+.studio-embed-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.studio-embed-iframe.studio-ig-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  overflow: hidden;
+}
+
+/* Instant Poster / Skeleton overlay while iframe initializes (prevents black screen) */
+.studio-embed-poster-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  background: #11141c;
+  pointer-events: none;
+}
+
+.studio-embed-poster-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.72);
+}
+
+.studio-embed-poster-overlay {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #ffffff;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
+}
+
+.studio-embed-play-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.92);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.studio-embed-ig-poster {
+  background: linear-gradient(135deg, #405de6, #5851db, #833ab4, #c13584, #e1306c, #fd1d1d);
+  color: #ffffff;
+}
+
+.studio-embed-ig-fallback {
+  background: #181920;
+  pointer-events: auto;
+}
+
+.studio-cover-embed-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(4px);
+  z-index: 5;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.studio-cover-embed-bar .studio-cover-badge {
+  position: static;
+  margin: 0;
+}
+
+.studio-badge-yt {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+.studio-badge-ig {
+  background: #E1306C;
+  color: #FFFFFF;
+}
+
+.studio-badge-tt {
+  background: #00F2FE;
+  color: #000000;
+}
+
+.studio-embed-bar-acts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.studio-embed-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.studio-embed-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.studio-embed-pill-btn {
+  width: auto;
+  padding: 0 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ── THUMBNAIL BADGES & MEDIA CONTAINERS (CARD & LIST) ── */
+.studio-thumb-container {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.studio-thumb-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.studio-thumb-ig {
+  background: linear-gradient(135deg, #405de6, #833ab4, #e1306c, #fd1d1d);
+  color: #ffffff;
+  flex-direction: column;
+}
+
+.studio-thumb-tt {
+  background: #010101;
+  color: #00f2fe;
+}
+
+.studio-thumb-mini-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 2px;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
 .studio-cover-modal {
   width: min(880px, 100%);
 }
@@ -2059,6 +2277,38 @@
   align-items: center;
   justify-content: space-between;
   gap: 6px;
+}
+
+.studio-kanban-card-main {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.studio-kanban-card-thumb {
+  width: 34px;
+  height: 48px;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid var(--ink);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+.studio-kanban-card-thumb .studio-thumb,
+.studio-kanban-card-thumb .studio-thumb-container,
+.studio-kanban-card-thumb .studio-thumb-media {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.studio-kanban-card-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .studio-kanban-card-title {

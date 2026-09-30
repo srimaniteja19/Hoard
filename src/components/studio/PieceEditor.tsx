@@ -44,6 +44,8 @@ import {
   type StudioSeries,
 } from "@/lib/studio/types";
 import { CoverGeneratorModal } from "./CoverGeneratorModal";
+import { StudioCoverEmbed } from "./StudioCoverEmbed";
+import { extractUrlFromEmbedCode } from "@/lib/studio/mediaEmbed";
 import { CheckList, Confirm, FormatBadge, PillarBadge, StatusBadge } from "./StudioShared";
 
 type Props = {
@@ -138,23 +140,10 @@ export function PieceEditor({
       {/* Hero Production Card */}
       <header className="studio-ed-hero">
         <div className="studio-cover-col">
-          <div
-            className="studio-cover-frame"
-            onClick={() => setShowCoverGen(true)}
-            style={{ cursor: "pointer" }}
-            title="Click to edit or generate cover card"
-          >
-            {piece.coverUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={piece.coverUrl} alt="Cover" />
-            ) : (
-              <div className="studio-cover-placeholder">
-                <Clapperboard size={26} aria-hidden="true" />
-                <span className="studio-mono studio-small">NO COVER</span>
-              </div>
-            )}
-            <span className="studio-cover-badge">9:16</span>
-          </div>
+          <StudioCoverEmbed
+            coverUrl={piece.coverUrl}
+            onOpenCoverGen={() => setShowCoverGen(true)}
+          />
           <button
             type="button"
             className="studio-btn studio-btn-plain studio-btn-sm studio-cover-gen-btn"
@@ -255,10 +244,31 @@ export function PieceEditor({
             <div className="studio-cover-url-input">
               <Link size={13} className="studio-muted" aria-hidden="true" />
               <input
-                placeholder="Cover image URL (optional)"
+                placeholder="Cover URL (image, YouTube, Instagram Reel/post…)"
                 value={piece.coverUrl ?? ""}
-                onChange={(e) => onChange({ coverUrl: e.target.value.trim() || null }, true)}
+                onChange={(e) => {
+                  const cleaned = extractUrlFromEmbedCode(e.target.value).trim();
+                  onChange({ coverUrl: cleaned || null }, true);
+                }}
               />
+              {piece.coverUrl ? (
+                <button
+                  type="button"
+                  onClick={() => onChange({ coverUrl: null })}
+                  title="Clear cover URL"
+                  style={{
+                    padding: "2px",
+                    border: 0,
+                    background: "transparent",
+                    cursor: "pointer",
+                    color: "var(--muted)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <X size={12} aria-hidden="true" />
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

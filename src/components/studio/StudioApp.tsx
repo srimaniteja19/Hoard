@@ -46,6 +46,7 @@ import { PasteImport, type PasteResult } from "./PasteImport";
 import { PieceEditor } from "./PieceEditor";
 import { SeriesRoadmap } from "./SeriesRoadmap";
 import { SeriesView } from "./SeriesView";
+import { StudioCardThumbnail } from "./StudioCardThumbnail";
 import { FormatBadge, PillarBadge, PillarDot, useCopy } from "./StudioShared";
 
 type View = "pieces" | "series" | "ideas";
@@ -756,20 +757,7 @@ function PiecesView({
 
                           <div className="studio-card-body">
                             <div className="studio-card-thumb-wrap">
-                              {p.coverUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img className="studio-card-thumb" src={p.coverUrl} alt="" />
-                              ) : (
-                                <div className="studio-card-thumb-mock">
-                                  <Clapperboard size={20} aria-hidden="true" />
-                                  <span
-                                    className="studio-mono studio-small"
-                                    style={{ fontSize: "9px" }}
-                                  >
-                                    9:16
-                                  </span>
-                                </div>
-                              )}
+                              <StudioCardThumbnail coverUrl={p.coverUrl} size="card" />
                             </div>
 
                             <div className="studio-card-content">
@@ -809,18 +797,7 @@ function PiecesView({
                             className="studio-item"
                             onClick={() => onOpen(p.id)}
                           >
-                            {p.coverUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img className="studio-thumb" src={p.coverUrl} alt="" />
-                            ) : (
-                              <span className="studio-thumb studio-thumb-none">
-                                <Clapperboard
-                                  size={14}
-                                  className="studio-muted"
-                                  aria-hidden="true"
-                                />
-                              </span>
-                            )}
+                            <StudioCardThumbnail coverUrl={p.coverUrl} size="list" />
                             <div className="studio-item-t">
                               <span>{p.title}</span>
                               {s ? (
