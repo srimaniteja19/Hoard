@@ -1,17 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import {
   ArrowRight,
   Check,
+  ChevronLeft,
   ChevronRight,
+  Clock,
   Film,
   Flame,
-  Layers,
-  Play,
+  Send,
   Sparkles,
 } from "lucide-react";
-import { sortParts, type PartState } from "@/lib/studio/series";
+import { sortParts } from "@/lib/studio/series";
 import {
   STATUS_LABEL,
   STUDIO_STATUSES,
@@ -35,6 +36,7 @@ export function SeriesRoadmap({
   onOpenPart,
   onUpdateStatus,
 }: Props) {
+  const trackRef = useRef<HTMLDivElement>(null);
   const parts = useMemo(() => sortParts(series.parts), [series.parts]);
 
   const pieceMap = useMemo(() => {
@@ -56,102 +58,210 @@ export function SeriesRoadmap({
     }
   };
 
-  const completedCount = parts.filter((p) => {
-    const piece = pieceMap.get(p.n);
-    return piece && (piece.status === "ready" || piece.status === "posted");
-  }).length;
+  const scrollTrack = (direction: "left" | "right") => {
+    if (!trackRef.current) return;
+    const offset = direction === "left" ? -280 : 280;
+    trackRef.current.scrollBy({ left: offset, behavior: "smooth" });
+  };
 
+  // Detailed breakdown
+  const postedCount = parts.filter((p) => pieceMap.get(p.n)?.status === "posted").length;
+  const readyCount = parts.filter((p) => pieceMap.get(p.n)?.status === "ready").length;
+  const inProgressCount = parts.filter((p) => {
+    const st = pieceMap.get(p.n)?.status;
+    return st === "writing" || st === "recording" || st === "making";
+  }).length;
+  const plannedCount = parts.length - (postedCount + readyCount + inProgressCount);
+
+  const completedCount = postedCount + readyCount;
   const pct = Math.round((completedCount / (parts.length || 1)) * 100);
 
   return (
-    <div className="studio-roadmap">
+    <section className="studio-roadmap" aria-label={`${series.title} Episode Roadmap`}>
+      {/* Editorial Broadcast Header */}
       <div className="studio-roadmap-head">
-        <div className="studio-roadmap-title">
-          <Film size={15} aria-hidden="true" />
-          <strong>{series.title} — Episode Roadmap</strong>
-          {series.theme ? <span className="studio-theme-tag">{series.theme}</span> : null}
+        <div className="studio-roadmap-title-group">
+          <div className="studio-roadmap-badge-icon" aria-hidden="true">
+            <Film size={15} />
+          </div>
+          <div className="studio-roadmap-meta">
+            <div className="studio-roadmap-title-row">
+              <h3 className="studio-roadmap-h3">{series.title}</h3>
+              <span className="studio-roadmap-chip">{parts.length}-Episode Series</span>
+              {series.theme ? (
+                <span className="studio-roadmap-theme-chip" title="Series visual & editorial theme">
+                  <Sparkles size={10} aria-hidden="true" />
+                  <span>{series.theme}</span>
+                </span>
+              ) : null}
+            </div>
+            <p className="studio-roadmap-sub">
+              {postedCount} posted · {readyCount} ready for buffer · {inProgressCount} in progress · {plannedCount} planned
+            </p>
+          </div>
         </div>
-        <div className="studio-roadmap-stat">
-          <span>{completedCount} of {parts.length} episodes complete ({pct}%)</span>
-          <div className="studio-roadmap-bar">
-            <div className="studio-roadmap-fill" style={{ width: `${pct}%` }} />
+
+        {/* Progress bar & navigation controls */}
+        <div className="studio-roadmap-controls">
+          <div className="studio-roadmap-stat-box">
+            <div className="studio-roadmap-stat-labels">
+              <span className="studio-roadmap-pct">{pct}%</span>
+              <span className="studio-roadmap-count">
+                {completedCount} of {parts.length} Ready
+              </span>
+            </div>
+            <div className="studio-roadmap-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+              <div className="studio-roadmap-fill" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+
+          <div className="studio-roadmap-nav-btns">
+            <button
+              type="button"
+              className="studio-roadmap-nav-btn"
+              onClick={() => scrollTrack("left")}
+              title="Scroll left"
+              aria-label="Scroll episodes left"
+            >
+              <ChevronLeft size={13} />
+            </button>
+            <button
+              type="button"
+              className="studio-roadmap-nav-btn"
+              onClick={() => scrollTrack("right")}
+              title="Scroll right"
+              aria-label="Scroll episodes right"
+            >
+              <ChevronRight size={13} />
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="studio-roadmap-track">
+      {/* Episode Timeline Track */}
+      <div className="studio-roadmap-track" ref={trackRef}>
         {parts.map((p, idx) => {
           const piece = pieceMap.get(p.n);
-          const isNext = p.n === series.nextPart;
+          const isNext = p.n === series.nextPart && (!piece || piece.status !== "posted");
           const status = piece ? piece.status : "planned";
-          const isDone = status === "ready" || status === "posted";
+
+          // Unambiguous card state
+          let cardState: "posted" | "ready" | "active" | "next" | "planned" = "planned";
+          if (status === "posted") {
+            cardState = "posted";
+          } else if (status === "ready") {
+            cardState = "ready";
+          } else if (piece && (status === "writing" || status === "recording" || status === "making")) {
+            cardState = "active";
+          } else if (isNext) {
+            cardState = "next";
+          }
 
           return (
             <div
               key={p.n}
-              className={`studio-roadmap-node ${isNext ? "is-next" : ""} ${isDone ? "is-done" : ""}`}
+              className={`studio-roadmap-card state-${cardState} ${isNext ? "is-next" : ""}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpenPart(series.id, p.n)}
+              onKeyDown={(e) => e.key === "Enter" && onOpenPart(series.id, p.n)}
             >
-              {idx > 0 ? (
-                <div
-                  className={`studio-roadmap-connector ${
-                    parts[idx - 1] &&
-                    (pieceMap.get(parts[idx - 1].n)?.status === "ready" ||
-                      pieceMap.get(parts[idx - 1].n)?.status === "posted")
-                      ? "is-active"
-                      : ""
-                  }`}
-                />
-              ) : null}
-
-              <div
-                className="studio-roadmap-card"
-                role="button"
-                tabIndex={0}
-                onClick={() => onOpenPart(series.id, p.n)}
-                onKeyDown={(e) => e.key === "Enter" && onOpenPart(series.id, p.n)}
-              >
-                <div className="studio-roadmap-card-top">
+              {/* Stepper Rail Node & Badge */}
+              <div className="studio-roadmap-card-top">
+                <div className="studio-roadmap-num-wrap">
                   <span className="studio-roadmap-part-num">P{String(p.n).padStart(2, "0")}</span>
-                  {isNext ? (
-                    <span className="studio-pill studio-pill-next">NEXT UP</span>
-                  ) : isDone ? (
-                    <span className="studio-pill is-done">
-                      <Check size={11} aria-hidden="true" /> Done
-                    </span>
-                  ) : null}
+                  {cardState === "posted" && <Check size={11} className="studio-step-icon is-posted" aria-hidden="true" />}
+                  {cardState === "ready" && <Send size={11} className="studio-step-icon is-ready" aria-hidden="true" />}
+                  {cardState === "active" && <Flame size={11} className="studio-step-icon is-active" aria-hidden="true" />}
+                  {cardState === "next" && <Sparkles size={11} className="studio-step-icon is-next" aria-hidden="true" />}
                 </div>
 
-                <h4 className="studio-roadmap-card-title">{p.title}</h4>
-
-                <div className="studio-roadmap-card-foot">
-                  <span className={`studio-pill studio-status-${status}`}>
-                    {STATUS_LABEL[status as StudioStatus] || "Planned"}
+                {/* Exactly ONE status badge */}
+                {cardState === "posted" && (
+                  <span className="studio-rm-badge is-posted">
+                    <Check size={10} aria-hidden="true" />
+                    <span>Posted</span>
                   </span>
+                )}
+                {cardState === "ready" && (
+                  <span className="studio-rm-badge is-ready">
+                    <Send size={10} aria-hidden="true" />
+                    <span>Ready</span>
+                  </span>
+                )}
+                {cardState === "active" && (
+                  <span className="studio-rm-badge is-active">
+                    <Clock size={10} aria-hidden="true" />
+                    <span>{STATUS_LABEL[piece?.status as StudioStatus] || "Active"}</span>
+                  </span>
+                )}
+                {cardState === "next" && (
+                  <span className="studio-rm-badge is-next">
+                    <span>NEXT UP</span>
+                  </span>
+                )}
+                {cardState === "planned" && (
+                  <span className="studio-rm-badge is-planned">
+                    <span>Planned</span>
+                  </span>
+                )}
+              </div>
 
-                  {piece && piece.status !== "posted" && onUpdateStatus ? (
-                    <button
-                      type="button"
-                      className="studio-roadmap-advance-btn"
-                      title="Advance to next production stage"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        advancePiece(piece);
-                      }}
-                    >
-                      <span>Advance</span>
-                      <ArrowRight size={11} aria-hidden="true" />
-                    </button>
-                  ) : (
-                    <span className="studio-muted studio-mono studio-small">
-                      {piece ? "View →" : "Start →"}
-                    </span>
-                  )}
-                </div>
+              {/* Episode Title */}
+              <h4 className="studio-roadmap-card-title" title={p.title}>
+                {p.title}
+              </h4>
+
+              {/* Clean Contextual Footer */}
+              <div className="studio-roadmap-card-foot">
+                <span className="studio-roadmap-stage-text">
+                  {cardState === "posted"
+                    ? "Published"
+                    : cardState === "ready"
+                    ? "Buffer Queue"
+                    : cardState === "active"
+                    ? "In Studio"
+                    : cardState === "next"
+                    ? "Priority Episode"
+                    : "Not Started"}
+                </span>
+
+                {cardState === "ready" && onUpdateStatus && piece ? (
+                  <button
+                    type="button"
+                    className="studio-roadmap-action-btn is-advance"
+                    title="Mark this episode as posted"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      advancePiece(piece);
+                    }}
+                  >
+                    <span>Mark Posted</span>
+                    <Check size={10} aria-hidden="true" />
+                  </button>
+                ) : cardState === "active" && onUpdateStatus && piece ? (
+                  <button
+                    type="button"
+                    className="studio-roadmap-action-btn is-advance"
+                    title="Advance to next production stage"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      advancePiece(piece);
+                    }}
+                  >
+                    <span>Advance</span>
+                    <ArrowRight size={10} aria-hidden="true" />
+                  </button>
+                ) : (
+                  <span className="studio-roadmap-action-link">
+                    {piece ? "Open →" : "Draft →"}
+                  </span>
+                )}
               </div>
             </div>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }
