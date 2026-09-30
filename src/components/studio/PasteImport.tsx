@@ -1,9 +1,32 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  AlertCircle,
+  Check,
+  ClipboardPaste,
+  Code,
+  Copy,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { estimateSeconds, parseHashtags } from "@/lib/studio/checks";
-import { matchPiece, matchSeries, parseStudioPaste, PASTE_FIELDS, STUDIO_BLOCK_TEMPLATE, type PasteField, type PastedPiece } from "@/lib/studio/paste";
-import { FORMAT_LABEL, PILLAR_LABEL, STATUS_LABEL, type StudioPiece, type StudioSeries } from "@/lib/studio/types";
+import {
+  matchPiece,
+  matchSeries,
+  parseStudioPaste,
+  PASTE_FIELDS,
+  STUDIO_BLOCK_TEMPLATE,
+  type PasteField,
+  type PastedPiece,
+} from "@/lib/studio/paste";
+import {
+  FORMAT_LABEL,
+  PILLAR_LABEL,
+  STATUS_LABEL,
+  type StudioPiece,
+  type StudioSeries,
+} from "@/lib/studio/types";
 
 export type PasteResult = {
   pasted: PastedPiece;
@@ -56,11 +79,16 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const pasted = useMemo(() => parseStudioPaste(text, { seriesTitles: series.map((s) => s.title) }), [text, series]);
+  const pasted = useMemo(
+    () => parseStudioPaste(text, { seriesTitles: series.map((s) => s.title) }),
+    [text, series]
+  );
   const seriesMatch = matchSeries(series, pasted.seriesTitle);
   const found = lockTarget ?? matchPiece(pieces, seriesMatch, pasted);
   const target = lockTarget ?? (asNew ? null : found);
-  const present = PASTE_FIELDS.filter((f) => pasted[f] !== undefined && !(Array.isArray(pasted[f]) && !(pasted[f] as unknown[]).length));
+  const present = PASTE_FIELDS.filter(
+    (f) => pasted[f] !== undefined && !(Array.isArray(pasted[f]) && !(pasted[f] as unknown[]).length)
+  );
   const fields = present.filter((f) => !off.has(f));
 
   const toggle = (f: PasteField) =>
@@ -75,7 +103,10 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
     if (!target) return false;
     if (f === "seriesTitle") return Boolean(target.seriesId) && target.seriesId !== seriesMatch?.id;
     const cur = target[f as keyof StudioPiece];
-    if (Array.isArray(cur)) return cur.some((x) => (typeof x === "object" && x && "text" in x ? String((x as { text: string }).text).trim() : true));
+    if (Array.isArray(cur))
+      return cur.some((x) =>
+        typeof x === "object" && x && "text" in x ? String((x as { text: string }).text).trim() : true
+      );
     return typeof cur === "string" ? cur.trim() !== "" && cur !== pasted[f] : false;
   };
 
@@ -89,7 +120,12 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
             {pasted.seriesTitle}
             {part}{" "}
             <label className="studio-paste-inline">
-              <input type="checkbox" checked={createSeries} onChange={(e) => setCreateSeries(e.target.checked)} /> create this series
+              <input
+                type="checkbox"
+                checked={createSeries}
+                onChange={(e) => setCreateSeries(e.target.checked)}
+              />{" "}
+              create this series
             </label>
           </>
         );
@@ -105,7 +141,8 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
         const cards = pasted.script!.reduce((n, s) => n + (s.cards?.length ?? 0), 0);
         return (
           <>
-            {pasted.script!.length} scenes · {words} words · about {Math.round(seconds)}s{cards ? ` · ${cards} title cards` : ""}
+            {pasted.script!.length} scenes · {words} words · about {Math.round(seconds)}s
+            {cards ? ` · ${cards} title cards` : ""}
             <span className="studio-paste-quote">{clip(pasted.script![0].text, 110)}</span>
           </>
         );
@@ -117,7 +154,10 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
         const tags = parseHashtags(pasted[f]!);
         return (
           <>
-            {tags.length} tags{f === "hashtags" && tags.length > 5 ? " (Instagram allows 5; the first 5 are copied)" : ""}
+            {tags.length} tags
+            {f === "hashtags" && tags.length > 5
+              ? " (Instagram allows 5; first 5 will be copied)"
+              : ""}
             <span className="studio-paste-quote studio-mono">{clip(tags.join(" "), 160)}</span>
           </>
         );
@@ -126,7 +166,9 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
         return (
           <>
             {pasted.sources!.length} sources
-            <span className="studio-paste-quote">{clip(pasted.sources!.map((s) => s.title).join(" · "), 160)}</span>
+            <span className="studio-paste-quote">
+              {clip(pasted.sources!.map((s) => s.title).join(" · "), 160)}
+            </span>
           </>
         );
       case "notes":
@@ -146,40 +188,76 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
     }
   };
 
-  const canApply = fields.length > 0 && (Boolean(target) || Boolean(pasted.title || pasted.script || pasted.caption));
+  const canApply =
+    fields.length > 0 &&
+    (Boolean(target) || Boolean(pasted.title || pasted.script || pasted.caption));
 
   return (
     <div className="studio-scrim" onClick={onClose}>
-      <div className="studio-modal studio-paste" role="dialog" aria-modal="true" aria-labelledby="studio-paste-h" onClick={(e) => e.stopPropagation()}>
-        <div className="studio-row">
+      <div
+        className="studio-modal studio-paste"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="studio-paste-h"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="studio-modal-head">
           <h2 id="studio-paste-h" className="studio-paste-h">
-            {lockTarget ? "Paste into this piece" : "Paste everything"}
+            <ClipboardPaste size={18} aria-hidden="true" />
+            <span>{lockTarget ? "Paste Into This Piece" : "Paste Everything (Claude / Block)"}</span>
           </h2>
-          <button type="button" className="studio-btn studio-btn-plain studio-btn-sm" onClick={onClose}>
-            Close
+          <button
+            type="button"
+            className="studio-btn studio-btn-plain studio-btn-sm"
+            onClick={onClose}
+            aria-label="Close dialog"
+          >
+            <X size={14} aria-hidden="true" />
+            <span>Close</span>
           </button>
         </div>
+
         <p className="studio-muted studio-small">
-          Paste Claude&apos;s whole reply or a Studio block. Script, title cards, caption, both hashtag sets, sources, notes, series and part are sorted into place.
+          Paste Claude&apos;s entire response or a Studio block below. Script, title cards, caption, hashtags, sources, notes, series, and part are automatically routed into place.
         </p>
 
         <div className="studio-paste-grid">
           <div className="studio-paste-in">
             <div className="studio-row">
               <label className="studio-label" htmlFor="studio-paste-box">
-                Paste here
+                Input Text
               </label>
               <span className="studio-row studio-row-start">
-                <button type="button" className="studio-btn studio-btn-plain studio-btn-sm" onClick={() => void fromClipboard()}>
-                  From clipboard
+                <button
+                  type="button"
+                  className="studio-btn studio-btn-plain studio-btn-sm"
+                  onClick={() => void fromClipboard()}
+                >
+                  <Copy size={12} aria-hidden="true" />
+                  <span>From clipboard</span>
                 </button>
-                <button type="button" className="studio-btn studio-btn-quiet studio-btn-sm" aria-expanded={showFormat} onClick={() => setShowFormat((v) => !v)}>
-                  {showFormat ? "Hide format" : "Format"}
+                <button
+                  type="button"
+                  className="studio-btn studio-btn-quiet studio-btn-sm"
+                  aria-expanded={showFormat}
+                  onClick={() => setShowFormat((v) => !v)}
+                >
+                  <Code size={12} aria-hidden="true" />
+                  <span>{showFormat ? "Hide format" : "Show template"}</span>
                 </button>
               </span>
             </div>
-            {clipErr ? <p className="studio-muted studio-small">The browser blocked clipboard access. Press Ctrl+V or ⌘V in the box.</p> : null}
-            {showFormat ? <pre className="studio-paste-format studio-mono">{STUDIO_BLOCK_TEMPLATE}</pre> : null}
+
+            {clipErr ? (
+              <p className="studio-muted studio-small">
+                Clipboard access was blocked by the browser. Please press ⌘V or Ctrl+V inside the box.
+              </p>
+            ) : null}
+
+            {showFormat ? (
+              <pre className="studio-paste-format studio-mono">{STUDIO_BLOCK_TEMPLATE}</pre>
+            ) : null}
+
             <textarea
               id="studio-paste-box"
               ref={box}
@@ -187,12 +265,14 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
               rows={16}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder={"=== STUDIO ===\nTitle: …\nSeries: …\nPart: …\n\n## Script\n…"}
+              placeholder={
+                "Paste Claude's response or Studio block:\n\n=== STUDIO ===\nTitle: Why prediction markets work\nSeries: Prediction Markets\nPart: 2\nFormat: reel\nTopic: finance\n\n## Script\nWhat if you could buy a ticket...\n[cards: TITLE CARD]\n\n## Caption\n..."
+              }
             />
           </div>
 
           <div className="studio-paste-out" aria-live="polite">
-            <span className="studio-label">Goes to</span>
+            <span className="studio-label">Destination & Detected Fields</span>
             {lockTarget ? (
               <p className="studio-paste-target">
                 <strong>{lockTarget.title}</strong>
@@ -202,24 +282,34 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
                 {found ? (
                   <>
                     <label className="studio-paste-choice">
-                      <input type="radio" name="studio-paste-target" checked={!asNew} onChange={() => setAsNew(false)} />
+                      <input
+                        type="radio"
+                        name="studio-paste-target"
+                        checked={!asNew}
+                        onChange={() => setAsNew(false)}
+                      />
                       <span>
                         Update <strong>{found.title}</strong>
                       </span>
                     </label>
                     <label className="studio-paste-choice">
-                      <input type="radio" name="studio-paste-target" checked={asNew} onChange={() => setAsNew(true)} />
+                      <input
+                        type="radio"
+                        name="studio-paste-target"
+                        checked={asNew}
+                        onChange={() => setAsNew(true)}
+                      />
                       <span>Create a new piece</span>
                     </label>
                   </>
                 ) : (
                   <p>
-                    <strong>A new piece</strong>
+                    <strong>A new piece will be created</strong>
                   </p>
                 )}
               </div>
             ) : (
-              <p className="studio-muted">Nothing pasted yet.</p>
+              <p className="studio-muted studio-small">Nothing pasted yet. Paste text on the left.</p>
             )}
 
             {present.length ? (
@@ -227,21 +317,31 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
                 {present.map((f) => (
                   <li key={f} className={off.has(f) ? "is-off" : ""}>
                     <label className="studio-paste-check">
-                      <input type="checkbox" checked={!off.has(f)} onChange={() => toggle(f)} />
+                      <input
+                        type="checkbox"
+                        checked={!off.has(f)}
+                        onChange={() => toggle(f)}
+                      />
                       <span className="studio-label">{LABEL[f]}</span>
-                      {replaces(f) && !off.has(f) ? <span className="studio-pill">replaces</span> : null}
+                      {replaces(f) && !off.has(f) ? (
+                        <span className="studio-pill studio-btn-danger studio-btn-sm">
+                          replaces
+                        </span>
+                      ) : null}
                     </label>
                     <div className="studio-paste-val">{summary(f)}</div>
                   </li>
                 ))}
               </ul>
             ) : text.trim() ? (
-              <p className="studio-muted">Couldn&apos;t find any fields. Use headings like “Script”, “Caption”, “Instagram hashtags” and “Sources”, or the Studio block format.</p>
+              <p className="studio-muted studio-small">
+                No matching fields found yet. Include section headers like “Script”, “Caption”, “Instagram hashtags” or the Studio block template.
+              </p>
             ) : null}
           </div>
         </div>
 
-        <div className="studio-row">
+        <div className="studio-row studio-gap">
           <span className="studio-muted studio-small">
             {fields.length ? `${fields.length} of ${present.length} fields selected` : ""}
           </span>
@@ -249,9 +349,17 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
             type="button"
             className="studio-btn"
             disabled={!canApply}
-            onClick={() => onApply({ pasted, fields, targetId: target?.id ?? null, createSeries })}
+            onClick={() =>
+              onApply({
+                pasted,
+                fields,
+                targetId: target?.id ?? null,
+                createSeries,
+              })
+            }
           >
-            {target ? "Update piece" : "Create piece"}
+            <Sparkles size={14} aria-hidden="true" />
+            <span>{target ? "Apply & update piece" : "Create piece"}</span>
           </button>
         </div>
       </div>

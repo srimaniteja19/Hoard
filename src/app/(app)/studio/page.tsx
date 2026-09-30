@@ -11,7 +11,7 @@ export default async function StudioPage() {
     throw e;
   }
   return (
-    <AppPage width="md">
+    <AppPage width="xl">
       <StudioApp />
     </AppPage>
   );
