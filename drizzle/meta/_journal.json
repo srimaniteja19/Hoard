@@ -176,6 +176,13 @@
       "when": 1790720788188,
       "tag": "0032_add_studio",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1790725239902,
+      "tag": "0033_add_studio_extra_hashtags",
+      "breakpoints": true
     }
   ]
 }

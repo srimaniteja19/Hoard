@@ -1,0 +1,1 @@
+ALTER TABLE "studio_pieces" ADD COLUMN "extra_hashtags" text DEFAULT '' NOT NULL;

@@ -48,7 +48,10 @@ export interface StudioPiece {
   part: number | null;
   script: StudioScene[];
   caption: string;
+  /** Instagram hashtags (up to 5). */
   hashtags: string;
+  /** The longer TikTok and YouTube set. */
+  extraHashtags: string;
   sources: StudioSource[];
   notes: string;
   coverUrl: string | null;

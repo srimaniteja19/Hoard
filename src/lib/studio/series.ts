@@ -66,3 +66,28 @@ export function movePieceTo(parts: StudioPart[], pieceId: string, to: number, ne
   list.splice(Math.max(0, Math.min(list.length, to - 1)), 0, moved);
   return renumber(list, nextPart);
 }
+
+/**
+ * Put a piece at part `n` when that part is free (or already this piece's); otherwise fall back to
+ * `attachPiece`. With `advance` (the piece is ready or posted), "next" moves past the placed part.
+ */
+export function placePiece(
+  parts: StudioPart[],
+  piece: { id: string; title: string },
+  n: number | undefined,
+  nextPart: number,
+  advance = true
+): { parts: StudioPart[]; part: number; nextPart: number } {
+  const list = detachPiece(sortParts(parts), piece.id).map((p) => ({ ...p }));
+  const slot = n ? list.find((p) => p.n === n) : undefined;
+  let placed: { parts: StudioPart[]; part: number };
+  if (slot && !slot.pieceId) {
+    slot.pieceId = piece.id;
+    placed = { parts: list, part: slot.n };
+  } else if (n && !slot && n === list.length + 1) {
+    placed = { parts: [...list, { n, title: piece.title, summary: "", pieceId: piece.id }], part: n };
+  } else {
+    placed = attachPiece(list, piece);
+  }
+  return { ...placed, nextPart: advance && nextPart <= placed.part ? placed.part + 1 : nextPart };
+}

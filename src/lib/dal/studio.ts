@@ -19,6 +19,7 @@ export function serializePiece(row: StudioPieceRow): StudioPiece {
     script: row.script ?? [],
     caption: row.caption,
     hashtags: row.hashtags,
+    extraHashtags: row.extraHashtags,
     sources: row.sources ?? [],
     notes: row.notes,
     coverUrl: row.coverUrl,

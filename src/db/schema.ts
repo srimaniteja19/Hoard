@@ -1588,7 +1588,8 @@ export const studioPieces = pgTable(
     part: integer("part"),
     script: jsonb("script").$type<StudioScene[]>().notNull().default(sql`'[]'::jsonb`),
     caption: text("caption").notNull().default(""),
-    hashtags: text("hashtags").notNull().default(""),
+    hashtags: text("hashtags").notNull().default(""), // Instagram (up to 5)
+    extraHashtags: text("extra_hashtags").notNull().default(""), // TikTok and YouTube
     sources: jsonb("sources").$type<StudioSource[]>().notNull().default(sql`'[]'::jsonb`),
     notes: text("notes").notNull().default(""),
     coverUrl: text("cover_url"),

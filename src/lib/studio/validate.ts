@@ -23,6 +23,7 @@ export const pieceFields = z.object({
   script: z.array(scene).max(100),
   caption: z.string().max(10_000),
   hashtags: z.string().max(2_000),
+  extraHashtags: z.string().max(4_000),
   sources: z.array(source).max(100),
   notes: z.string().max(50_000),
   coverUrl: z.string().max(2_000).nullable(),

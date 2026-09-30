@@ -1,5 +1,6 @@
 import type { StudioPiece, StudioScene } from "./types";
 import { FORMAT_LABEL, HOUSE_RULES } from "./types";
+import { STUDIO_BLOCK_TEMPLATE } from "./paste";
 
 export type CheckLevel = "ok" | "warn" | "info";
 export interface Check {
@@ -67,9 +68,15 @@ export function captionChecks(piece: Pick<StudioPiece, "caption" | "hashtags">):
   return out;
 }
 
-/** Caption plus up to five hashtags, ready to paste into Buffer. */
+/** Caption plus up to five hashtags, ready to paste into Buffer for Instagram. */
 export function bufferText(piece: Pick<StudioPiece, "caption" | "hashtags">): string {
   const tags = parseHashtags(piece.hashtags).slice(0, 5).join(" ");
+  return [piece.caption.trim(), tags].filter(Boolean).join("\n\n");
+}
+
+/** Caption plus the longer TikTok and YouTube set (falls back to the Instagram tags). */
+export function longText(piece: Pick<StudioPiece, "caption" | "hashtags" | "extraHashtags">): string {
+  const tags = parseHashtags(piece.extraHashtags || piece.hashtags).join(" ");
   return [piece.caption.trim(), tags].filter(Boolean).join("\n\n");
 }
 
@@ -110,5 +117,6 @@ export function productionBrief(
   if (piece.sources.length) lines.push("", "## Sources", ...piece.sources.map((s) => `- ${s.title}${s.url ? `: ${s.url}` : ""}`));
   if (piece.notes.trim()) lines.push("", "## Notes", piece.notes.trim());
   lines.push("", "Deliver: the video with the cover inside plus the cover separately, a caption with up to 5 hashtags, sources, and the voice script.");
+  lines.push("", "Finish with a Studio block in exactly this shape so it can be pasted into Studio in one go:", "", STUDIO_BLOCK_TEMPLATE);
   return lines.join("\n");
 }
