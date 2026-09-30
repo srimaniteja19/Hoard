@@ -19,6 +19,7 @@ import {
   Sparkles,
   Trash2,
   Tv,
+  Wand2,
   X,
 } from "lucide-react";
 import {
@@ -42,6 +43,7 @@ import {
   type StudioPiece,
   type StudioSeries,
 } from "@/lib/studio/types";
+import { CoverGeneratorModal } from "./CoverGeneratorModal";
 import { CheckList, Confirm, FormatBadge, PillarBadge, StatusBadge } from "./StudioShared";
 
 type Props = {
@@ -68,6 +70,7 @@ export function PieceEditor({
   copy,
 }: Props) {
   const [confirming, setConfirming] = useState(false);
+  const [showCoverGen, setShowCoverGen] = useState(false);
   const [src, setSrc] = useState({ title: "", url: "" });
   const current = piece.seriesId ? series.find((s) => s.id === piece.seriesId) ?? null : null;
   const scenes = piece.script.length ? piece.script : [{ text: "" }];
@@ -134,17 +137,33 @@ export function PieceEditor({
 
       {/* Hero Production Card */}
       <header className="studio-ed-hero">
-        <div className="studio-cover-frame">
-          {piece.coverUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={piece.coverUrl} alt="Cover" />
-          ) : (
-            <div className="studio-cover-placeholder">
-              <Clapperboard size={26} aria-hidden="true" />
-              <span className="studio-mono studio-small">NO COVER</span>
-            </div>
-          )}
-          <span className="studio-cover-badge">9:16</span>
+        <div className="studio-cover-col">
+          <div
+            className="studio-cover-frame"
+            onClick={() => setShowCoverGen(true)}
+            style={{ cursor: "pointer" }}
+            title="Click to edit or generate cover card"
+          >
+            {piece.coverUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={piece.coverUrl} alt="Cover" />
+            ) : (
+              <div className="studio-cover-placeholder">
+                <Clapperboard size={26} aria-hidden="true" />
+                <span className="studio-mono studio-small">NO COVER</span>
+              </div>
+            )}
+            <span className="studio-cover-badge">9:16</span>
+          </div>
+          <button
+            type="button"
+            className="studio-btn studio-btn-plain studio-btn-sm studio-cover-gen-btn"
+            onClick={() => setShowCoverGen(true)}
+            title="Auto-generate 9:16 vertical cover SVG"
+          >
+            <Wand2 size={12} aria-hidden="true" />
+            <span>Generate Cover</span>
+          </button>
         </div>
 
         <div className="studio-ed-main">
@@ -579,6 +598,15 @@ export function PieceEditor({
             onDelete();
           }}
           onCancel={() => setConfirming(false)}
+        />
+      ) : null}
+
+      {showCoverGen ? (
+        <CoverGeneratorModal
+          piece={piece}
+          series={current}
+          onApply={(url) => onChange({ coverUrl: url })}
+          onClose={() => setShowCoverGen(false)}
         />
       ) : null}
     </article>

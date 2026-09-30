@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { sortParts, type PartState } from "@/lib/studio/series";
 import type { StudioPiece, StudioSeries } from "@/lib/studio/types";
+import { SeriesRoadmap } from "./SeriesRoadmap";
 import { Confirm } from "./StudioShared";
 
 const STATE_LABEL: Record<PartState, string> = {
@@ -144,6 +145,18 @@ export function SeriesView(props: Props) {
             <p className="studio-muted studio-mono studio-small">
               {parts.length} parts · {posted} posted · {ready} ready · {active} in progress · {planned} planned
             </p>
+
+            <div style={{ margin: "14px 0" }}>
+              <SeriesRoadmap
+                series={s}
+                pieces={pieces}
+                onOpenPiece={(id) => {
+                  const part = s.parts.find((p) => p.pieceId === id);
+                  if (part) props.onOpenPart(s.id, part.n);
+                }}
+                onOpenPart={(sid, n) => props.onOpenPart(sid, n)}
+              />
+            </div>
 
             {/* Parts Timeline */}
             <ol className="studio-parts">

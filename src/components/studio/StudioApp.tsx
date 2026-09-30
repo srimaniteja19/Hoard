@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Clapperboard,
   ClipboardPaste,
+  Columns3,
   Film,
   Flame,
   Layers,
@@ -13,6 +14,7 @@ import {
   Search,
   Sparkles,
   Video,
+  Wand2,
 } from "lucide-react";
 import { useStudio } from "@/hooks/useStudio";
 import { estimateSeconds } from "@/lib/studio/checks";
@@ -39,13 +41,15 @@ import {
   type StudioSeries,
   type StudioStatus,
 } from "@/lib/studio/types";
+import { KanbanBoard } from "./KanbanBoard";
 import { PasteImport, type PasteResult } from "./PasteImport";
 import { PieceEditor } from "./PieceEditor";
+import { SeriesRoadmap } from "./SeriesRoadmap";
 import { SeriesView } from "./SeriesView";
 import { FormatBadge, PillarBadge, PillarDot, useCopy } from "./StudioShared";
 
 type View = "pieces" | "series" | "ideas";
-type LayoutMode = "cards" | "list";
+type LayoutMode = "cards" | "kanban" | "list";
 
 export function StudioApp() {
   const studio = useStudio();
@@ -58,6 +62,7 @@ export function StudioApp() {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>("cards");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPillar, setSelectedPillar] = useState<StudioPillar | "all">("all");
+  const [draftingId, setDraftingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -176,6 +181,56 @@ export function StudioApp() {
     setToast(targetId ? "Piece updated" : "Piece created");
   };
 
+  /** Instant Idea Expansion: Generate full script, caption, hashtags via AI */
+  const draftIdeaWithAi = async (targetIdea: {
+    id: string;
+    title: string;
+    hook: string;
+    pillar: StudioPillar;
+    format: StudioPiece["format"];
+  }) => {
+    setDraftingId(targetIdea.id);
+    setToast("Drafting video script with AI…");
+    try {
+      const res = await fetch("/api/studio/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: targetIdea.title,
+          hook: targetIdea.hook,
+          pillar: targetIdea.pillar,
+          format: targetIdea.format || "reel",
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to draft script");
+      const dataJson = await res.json();
+      const draft = dataJson.draft;
+
+      const piece = await create("pieces", {
+        title: draft.title || targetIdea.title,
+        format: draft.format || targetIdea.format || "reel",
+        pillar: draft.pillar || targetIdea.pillar || "finance",
+        script: draft.script,
+        caption: draft.caption,
+        hashtags: draft.hashtags,
+        extraHashtags: draft.extraHashtags,
+        sources: draft.sources || [],
+        notes: draft.notes || targetIdea.hook,
+        status: "writing",
+      });
+
+      update("ideas", targetIdea.id, { status: "started" });
+      if (piece) openPiece(piece.id);
+      setToast("AI script drafted!");
+    } catch (err) {
+      console.error(err);
+      setToast("Could not draft script with AI");
+    } finally {
+      setDraftingId(null);
+    }
+  };
+
   const tabs: { id: View; label: string; icon: typeof Clapperboard; count?: number }[] = [
     { id: "pieces", label: "Pieces", icon: Clapperboard, count: data.pieces.length },
     { id: "series", label: "Series", icon: Film, count: data.series.length },
@@ -184,7 +239,10 @@ export function StudioApp() {
 
   // Pipeline metrics
   const inProductionCount = useMemo(
-    () => data.pieces.filter((p) => p.status === "writing" || p.status === "recording" || p.status === "making").length,
+    () =>
+      data.pieces.filter(
+        (p) => p.status === "writing" || p.status === "recording" || p.status === "making"
+      ).length,
     [data.pieces]
   );
   const readyCount = useMemo(
@@ -377,6 +435,15 @@ export function StudioApp() {
               </button>
               <button
                 type="button"
+                className={`studio-view-btn ${layoutMode === "kanban" ? "is-active" : ""}`}
+                onClick={() => setLayoutMode("kanban")}
+                title="Interactive Kanban drag-and-drop board"
+              >
+                <Columns3 size={14} aria-hidden="true" />
+                <span>Kanban</span>
+              </button>
+              <button
+                type="button"
                 className={`studio-view-btn ${layoutMode === "list" ? "is-active" : ""}`}
                 onClick={() => setLayoutMode("list")}
                 title="Compact list view"
@@ -395,6 +462,11 @@ export function StudioApp() {
             layoutMode={layoutMode}
             onOpen={openPiece}
             onOpenPart={(s, n) => void openPart(s, n)}
+            onUpdateStatus={(pieceId, status) => {
+              update("pieces", pieceId, { status });
+              setToast(`Moved to ${STATUS_LABEL[status]}`);
+            }}
+            onNewPiece={(v) => void newPiece(v)}
           />
         </>
       ) : view === "series" ? (
@@ -506,30 +578,49 @@ export function StudioApp() {
                       <strong>{i.title}</strong>
                       {i.hook ? <span>{i.hook}</span> : null}
                     </div>
-                    <button
-                      type="button"
-                      className="studio-btn studio-btn-plain studio-btn-sm"
-                      onClick={() => {
-                        update("ideas", i.id, { status: "started" });
-                        void newPiece({
-                          title: i.title,
-                          pillar: i.pillar,
-                          format: i.format,
-                          notes: i.hook,
-                        });
-                      }}
-                    >
-                      <Plus size={13} aria-hidden="true" />
-                      <span>Start piece</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="studio-btn studio-btn-quiet studio-btn-sm"
-                      aria-label={`Delete idea: ${i.title}`}
-                      onClick={() => void remove("ideas", i.id)}
-                    >
-                      Delete
-                    </button>
+
+                    <div className="studio-row studio-row-start" style={{ gap: "6px" }}>
+                      <button
+                        type="button"
+                        className="studio-btn studio-btn-plain studio-btn-sm"
+                        disabled={draftingId === i.id}
+                        onClick={() => void draftIdeaWithAi(i)}
+                        title="Use AI to generate script scenes, title cards, caption, and hashtags from this idea"
+                      >
+                        <Sparkles
+                          size={13}
+                          className={draftingId === i.id ? "studio-spin" : ""}
+                          aria-hidden="true"
+                        />
+                        <span>{draftingId === i.id ? "Drafting…" : "Draft Script (AI)"}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="studio-btn studio-btn-plain studio-btn-sm"
+                        onClick={() => {
+                          update("ideas", i.id, { status: "started" });
+                          void newPiece({
+                            title: i.title,
+                            pillar: i.pillar,
+                            format: i.format,
+                            notes: i.hook,
+                          });
+                        }}
+                      >
+                        <Plus size={13} aria-hidden="true" />
+                        <span>Start manual</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="studio-btn studio-btn-quiet studio-btn-sm"
+                        aria-label={`Delete idea: ${i.title}`}
+                        onClick={() => void remove("ideas", i.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -573,6 +664,8 @@ function PiecesView({
   layoutMode,
   onOpen,
   onOpenPart,
+  onUpdateStatus,
+  onNewPiece,
 }: {
   pieces: StudioPiece[];
   allPieces: StudioPiece[];
@@ -581,200 +674,184 @@ function PiecesView({
   layoutMode: LayoutMode;
   onOpen: (id: string) => void;
   onOpenPart: (seriesId: string, n: number) => void;
+  onUpdateStatus: (pieceId: string, status: StudioStatus) => void;
+  onNewPiece: (v?: Partial<StudioPiece>) => void;
 }) {
   if (loading) return <p className="studio-muted">Loading your production pieces…</p>;
 
   return (
     <div className="studio-pieces">
-      {/* Series Master Strips */}
-      {series.map((s) => {
-        const sorted = sortParts(s.parts);
-        const readyOrPostedCount = sorted.filter((p) => {
-          const piece = p.pieceId ? allPieces.find((x) => x.id === p.pieceId) : null;
-          return piece && (piece.status === "ready" || piece.status === "posted");
-        }).length;
-
-        return (
-          <section className="studio-strip" key={s.id} aria-label={`Series: ${s.title}`}>
-            <div className="studio-strip-head">
-              <div className="studio-strip-title-wrap">
-                <span className="studio-label">
-                  <Film size={12} aria-hidden="true" /> Series Deck
-                </span>
-                <h2 className="studio-strip-title">{s.title}</h2>
-                {s.theme ? <span className="studio-theme-tag">{s.theme}</span> : null}
-              </div>
-              <span className="studio-muted studio-mono studio-small">
-                {readyOrPostedCount} of {sorted.length} parts ready
-              </span>
-            </div>
-
-            <div className="studio-strip-parts">
-              {sorted.map((p) => {
-                const piece = p.pieceId ? allPieces.find((x) => x.id === p.pieceId) : null;
-                const isNext = p.n === s.nextPart;
-                const isDone = piece && (piece.status === "posted" || piece.status === "ready");
-                const cls = isNext
-                  ? "is-next"
-                  : isDone
-                  ? "is-done"
-                  : piece
-                  ? "is-active"
-                  : "is-planned";
-
-                return (
-                  <button
-                    key={p.n}
-                    type="button"
-                    className={`studio-chip-part ${cls}`}
-                    title={p.summary || undefined}
-                    onClick={() => onOpenPart(s.id, p.n)}
-                  >
-                    <b>{p.n}</b>
-                    <span>{p.title}</span>
-                    {isNext ? <span className="studio-pill studio-pill-next">NEXT</span> : null}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })}
+      {/* Series Episode Roadmaps */}
+      {series.map((s) => (
+        <SeriesRoadmap
+          key={s.id}
+          series={s}
+          pieces={allPieces}
+          onOpenPiece={onOpen}
+          onOpenPart={onOpenPart}
+          onUpdateStatus={onUpdateStatus}
+        />
+      ))}
 
       {!allPieces.length ? (
         <div className="studio-empty">
-          No pieces created yet. Click “+ New piece” above, or paste from Claude using “Paste everything”.
+          No pieces created yet. Click “+ New piece” above, draft with AI in Ideas, or paste from Claude using “Paste everything”.
         </div>
       ) : null}
 
-      {/* Production Stages */}
-      {STUDIO_STATUSES.map((st) => {
-        const list = pieces
-          .filter((p) => p.status === st)
-          .sort(
-            (a, b) =>
-              (a.seriesId ?? "~").localeCompare(b.seriesId ?? "~") ||
-              (a.part ?? 0) - (b.part ?? 0) ||
-              a.title.localeCompare(b.title)
-          );
+      {/* Kanban Board View */}
+      {layoutMode === "kanban" ? (
+        <KanbanBoard
+          pieces={pieces}
+          series={series}
+          onOpenPiece={onOpen}
+          onMovePiece={onUpdateStatus}
+          onNewPiece={onNewPiece}
+        />
+      ) : (
+        /* Card Grid or List View */
+        STUDIO_STATUSES.map((st) => {
+          const list = pieces
+            .filter((p) => p.status === st)
+            .sort(
+              (a, b) =>
+                (a.seriesId ?? "~").localeCompare(b.seriesId ?? "~") ||
+                (a.part ?? 0) - (b.part ?? 0) ||
+                a.title.localeCompare(b.title)
+            );
 
-        if (!allPieces.length || (!list.length && st === "posted")) return null;
+          if (!allPieces.length || (!list.length && st === "posted")) return null;
 
-        return (
-          <section className="studio-group" key={st} aria-labelledby={`studio-g-${st}`}>
-            <div className="studio-group-h">
-              <div className="studio-group-title">
-                <h2 id={`studio-g-${st}`}>{STATUS_LABEL[st]}</h2>
-                <span className="studio-muted studio-small">· {STAGE_HINT[st]}</span>
+          return (
+            <section className="studio-group" key={st} aria-labelledby={`studio-g-${st}`}>
+              <div className="studio-group-h">
+                <div className="studio-group-title">
+                  <h2 id={`studio-g-${st}`}>{STATUS_LABEL[st]}</h2>
+                  <span className="studio-muted studio-small">· {STAGE_HINT[st]}</span>
+                </div>
+                <span className="studio-group-badge">{list.length}</span>
               </div>
-              <span className="studio-group-badge">{list.length}</span>
-            </div>
 
-            {list.length ? (
-              layoutMode === "cards" ? (
-                <div className="studio-grid">
-                  {list.map((p) => {
-                    const s = p.seriesId ? series.find((x) => x.id === p.seriesId) : null;
-                    const { words, seconds } = estimateSeconds(p.script);
-                    const sceneCount = p.script.length;
+              {list.length ? (
+                layoutMode === "cards" ? (
+                  <div className="studio-grid">
+                    {list.map((p) => {
+                      const s = p.seriesId ? series.find((x) => x.id === p.seriesId) : null;
+                      const { words, seconds } = estimateSeconds(p.script);
+                      const sceneCount = p.script.length;
 
-                    return (
-                      <article
-                        key={p.id}
-                        className="studio-card"
-                        tabIndex={0}
-                        role="button"
-                        onClick={() => onOpen(p.id)}
-                        onKeyDown={(e) => e.key === "Enter" && onOpen(p.id)}
-                      >
-                        <div className="studio-card-head">
-                          <FormatBadge format={p.format} />
-                          <PillarBadge pillar={p.pillar} />
-                        </div>
+                      return (
+                        <article
+                          key={p.id}
+                          className="studio-card"
+                          tabIndex={0}
+                          role="button"
+                          onClick={() => onOpen(p.id)}
+                          onKeyDown={(e) => e.key === "Enter" && onOpen(p.id)}
+                        >
+                          <div className="studio-card-head">
+                            <FormatBadge format={p.format} />
+                            <PillarBadge pillar={p.pillar} />
+                          </div>
 
-                        <div className="studio-card-body">
-                          <div className="studio-card-thumb-wrap">
+                          <div className="studio-card-body">
+                            <div className="studio-card-thumb-wrap">
+                              {p.coverUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img className="studio-card-thumb" src={p.coverUrl} alt="" />
+                              ) : (
+                                <div className="studio-card-thumb-mock">
+                                  <Clapperboard size={20} aria-hidden="true" />
+                                  <span
+                                    className="studio-mono studio-small"
+                                    style={{ fontSize: "9px" }}
+                                  >
+                                    9:16
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="studio-card-content">
+                              {s ? (
+                                <span className="studio-card-series-tag">
+                                  {s.title} · P{p.part}
+                                </span>
+                              ) : null}
+                              <h3 className="studio-card-title">{p.title}</h3>
+                            </div>
+                          </div>
+
+                          <div className="studio-card-foot">
+                            <div className="studio-card-stats">
+                              <span>⏱ ~{Math.round(seconds)}s</span>
+                              <span>·</span>
+                              <span>{words}w</span>
+                              <span>·</span>
+                              <span>{sceneCount} scenes</span>
+                            </div>
+                            <span className="studio-pill studio-btn-sm">Edit →</span>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <ul className="studio-list">
+                    {list.map((p) => {
+                      const s = p.seriesId ? series.find((x) => x.id === p.seriesId) : null;
+                      const { seconds } = estimateSeconds(p.script);
+
+                      return (
+                        <li key={p.id}>
+                          <button
+                            type="button"
+                            className="studio-item"
+                            onClick={() => onOpen(p.id)}
+                          >
                             {p.coverUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img className="studio-card-thumb" src={p.coverUrl} alt="" />
+                              <img className="studio-thumb" src={p.coverUrl} alt="" />
                             ) : (
-                              <div className="studio-card-thumb-mock">
-                                <Clapperboard size={20} aria-hidden="true" />
-                                <span className="studio-mono studio-small" style={{ fontSize: "9px" }}>
-                                  9:16
-                                </span>
-                              </div>
+                              <span className="studio-thumb studio-thumb-none">
+                                <Clapperboard
+                                  size={14}
+                                  className="studio-muted"
+                                  aria-hidden="true"
+                                />
+                              </span>
                             )}
-                          </div>
-
-                          <div className="studio-card-content">
-                            {s ? (
-                              <span className="studio-card-series-tag">
-                                {s.title} · P{p.part}
+                            <div className="studio-item-t">
+                              <span>{p.title}</span>
+                              {s ? (
+                                <span
+                                  className="studio-muted studio-small studio-mono"
+                                  style={{ marginLeft: "8px" }}
+                                >
+                                  ({s.title} P{p.part})
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className="studio-item-m">
+                              <span className="studio-muted studio-mono studio-small">
+                                ~{Math.round(seconds)}s
                               </span>
-                            ) : null}
-                            <h3 className="studio-card-title">{p.title}</h3>
-                          </div>
-                        </div>
-
-                        <div className="studio-card-foot">
-                          <div className="studio-card-stats">
-                            <span>⏱ ~{Math.round(seconds)}s</span>
-                            <span>·</span>
-                            <span>{words}w</span>
-                            <span>·</span>
-                            <span>{sceneCount} scenes</span>
-                          </div>
-                          <span className="studio-pill studio-btn-sm">Edit →</span>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
+                              <FormatBadge format={p.format} />
+                              <PillarDot pillar={p.pillar} />
+                            </div>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )
               ) : (
-                <ul className="studio-list">
-                  {list.map((p) => {
-                    const s = p.seriesId ? series.find((x) => x.id === p.seriesId) : null;
-                    const { seconds } = estimateSeconds(p.script);
-
-                    return (
-                      <li key={p.id}>
-                        <button type="button" className="studio-item" onClick={() => onOpen(p.id)}>
-                          {p.coverUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img className="studio-thumb" src={p.coverUrl} alt="" />
-                          ) : (
-                            <span className="studio-thumb studio-thumb-none">
-                              <Clapperboard size={14} className="studio-muted" aria-hidden="true" />
-                            </span>
-                          )}
-                          <div className="studio-item-t">
-                            <span>{p.title}</span>
-                            {s ? (
-                              <span className="studio-muted studio-small studio-mono" style={{ marginLeft: "8px" }}>
-                                ({s.title} P{p.part})
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="studio-item-m">
-                            <span className="studio-muted studio-mono studio-small">
-                              ~{Math.round(seconds)}s
-                            </span>
-                            <FormatBadge format={p.format} />
-                            <PillarDot pillar={p.pillar} />
-                          </div>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )
-            ) : (
-              <div className="studio-empty">No pieces in this stage.</div>
-            )}
-          </section>
-        );
-      })}
+                <div className="studio-empty">No pieces in this stage.</div>
+              )}
+            </section>
+          );
+        })
+      )}
     </div>
   );
 }
