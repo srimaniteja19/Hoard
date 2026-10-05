@@ -1,15 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowUp,
-  Film,
-  Layers,
-  Palette,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  ChevronsDownUp,
+  ChevronsUpDown,
   Play,
   Plus,
+  RotateCcw,
   Sparkles,
   Trash2,
+  Unlink,
   X,
 } from "lucide-react";
 import { sortParts, type PartState } from "@/lib/studio/series";
@@ -38,7 +42,11 @@ type Props = {
   onRemovePart: (id: string, n: number) => void;
   onSetNext: (id: string, n: number) => void;
   onOpenPart: (id: string, n: number) => void;
+  onToggleStatus: (id: string, status: "active" | "completed") => void;
+  onDisband: (id: string) => void;
   onDelete: (id: string) => void;
+  onBatchExpandParts?: (id: string) => void;
+  onAddMultipleParts?: (id: string, count: number) => void;
 };
 
 export function SeriesView(props: Props) {
@@ -46,11 +54,48 @@ export function SeriesView(props: Props) {
   const [draft, setDraft] = useState({ title: "", theme: "" });
   const [adding, setAdding] = useState<Record<string, string>>({});
   const [confirm, setConfirm] = useState<null | { message: string; label: string; run: () => void }>(null);
+  const [filter, setFilter] = useState<"all" | "active" | "completed">("all");
+  const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
 
   const stateOf = (pieceId?: string | null): PartState => {
     const p = pieceId ? pieces.find((x) => x.id === pieceId) : undefined;
     return p ? p.status : "planned";
   };
+
+  const isCollapsed = (s: StudioSeries) => {
+    if (collapsedMap[s.id] !== undefined) {
+      return collapsedMap[s.id];
+    }
+    // Completed series start collapsed by default; active ones start expanded
+    return s.status === "completed";
+  };
+
+  const toggleCollapse = (id: string) => {
+    setCollapsedMap((prev) => {
+      const s = series.find((x) => x.id === id);
+      const currently = prev[id] !== undefined ? prev[id] : s?.status === "completed";
+      return { ...prev, [id]: !currently };
+    });
+  };
+
+  const setAllCollapsed = (collapsed: boolean) => {
+    const next: Record<string, boolean> = {};
+    series.forEach((s) => {
+      next[s.id] = collapsed;
+    });
+    setCollapsedMap(next);
+  };
+
+  const activeCount = useMemo(() => series.filter((s) => s.status !== "completed").length, [series]);
+  const completedCount = useMemo(() => series.filter((s) => s.status === "completed").length, [series]);
+
+  const displayedSeries = useMemo(() => {
+    return series.filter((s) => {
+      if (filter === "active") return s.status !== "completed";
+      if (filter === "completed") return s.status === "completed";
+      return true;
+    });
+  }, [series, filter]);
 
   return (
     <div className="studio-series-view">
@@ -89,6 +134,56 @@ export function SeriesView(props: Props) {
         </button>
       </form>
 
+      {/* Series View Toolbar: Filters & Expand/Collapse All */}
+      {series.length > 0 ? (
+        <div className="studio-series-toolbar">
+          <div className="studio-series-filters" role="tablist" aria-label="Filter series by status">
+            <button
+              type="button"
+              className={`studio-filter-chip ${filter === "all" ? "is-active" : ""}`}
+              onClick={() => setFilter("all")}
+            >
+              All Series ({series.length})
+            </button>
+            <button
+              type="button"
+              className={`studio-filter-chip ${filter === "active" ? "is-active" : ""}`}
+              onClick={() => setFilter("active")}
+            >
+              Active ({activeCount})
+            </button>
+            <button
+              type="button"
+              className={`studio-filter-chip ${filter === "completed" ? "is-active" : ""}`}
+              onClick={() => setFilter("completed")}
+            >
+              Completed ({completedCount})
+            </button>
+          </div>
+
+          <div className="studio-scard-btn-group">
+            <button
+              type="button"
+              className="studio-btn studio-btn-plain studio-btn-sm"
+              onClick={() => setAllCollapsed(false)}
+              title="Expand all series cards"
+            >
+              <ChevronsUpDown size={13} aria-hidden="true" />
+              <span>Expand all</span>
+            </button>
+            <button
+              type="button"
+              className="studio-btn studio-btn-quiet studio-btn-sm"
+              onClick={() => setAllCollapsed(true)}
+              title="Collapse all series cards"
+            >
+              <ChevronsDownUp size={13} aria-hidden="true" />
+              <span>Collapse all</span>
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {loading ? <p className="studio-muted">Loading series…</p> : null}
       {!loading && !series.length ? (
         <div className="studio-empty">
@@ -96,8 +191,14 @@ export function SeriesView(props: Props) {
         </div>
       ) : null}
 
+      {!loading && series.length > 0 && !displayedSeries.length ? (
+        <div className="studio-empty">
+          No {filter} series found. Switch to “All Series” or create one above.
+        </div>
+      ) : null}
+
       {/* Series Cards */}
-      {series.map((s) => {
+      {displayedSeries.map((s) => {
         const parts = sortParts(s.parts);
         const count = (st: PartState) => parts.filter((p) => stateOf(p.pieceId) === st).length;
         const posted = count("posted");
@@ -105,30 +206,106 @@ export function SeriesView(props: Props) {
         const planned = count("planned");
         const active = parts.length - posted - ready - planned;
         const total = parts.length || 1;
+        const isCompleted = s.status === "completed";
+        const collapsed = isCollapsed(s);
+        const allReadyOrPosted = parts.length > 0 && posted + ready === parts.length;
 
         return (
-          <section className="studio-scard" key={s.id} aria-label={s.title}>
-            <div className="studio-scard-h">
-              <label className="studio-sr" htmlFor={`studio-sn-${s.id}`}>
-                Series name
-              </label>
-              <input
-                id={`studio-sn-${s.id}`}
-                className="studio-s-title"
-                value={s.title}
-                onChange={(e) => props.onRename(s.id, { title: e.target.value })}
-              />
+          <section
+            className={`studio-scard ${isCompleted ? "is-completed" : ""} ${collapsed ? "is-collapsed" : ""}`}
+            key={s.id}
+            aria-label={s.title}
+          >
+            {/* Header: Title, Theme, Status & Main Action Buttons */}
+            <div className="studio-scard-top-bar">
+              <div className="studio-scard-titles">
+                <label className="studio-sr" htmlFor={`studio-sn-${s.id}`}>
+                  Series name
+                </label>
+                <input
+                  id={`studio-sn-${s.id}`}
+                  className="studio-s-title"
+                  value={s.title}
+                  onChange={(e) => props.onRename(s.id, { title: e.target.value })}
+                />
 
-              <label className="studio-sr" htmlFor={`studio-st-${s.id}`}>
-                Theme
-              </label>
-              <input
-                id={`studio-st-${s.id}`}
-                className="studio-s-theme"
-                placeholder="Visual theme (e.g. vintage print)"
-                value={s.theme}
-                onChange={(e) => props.onRename(s.id, { theme: e.target.value })}
-              />
+                {isCompleted ? (
+                  <span className="studio-pill studio-pill-completed" title="Series is completed and closed">
+                    <CheckCircle2 size={12} aria-hidden="true" />
+                    <span>COMPLETED</span>
+                  </span>
+                ) : allReadyOrPosted ? (
+                  <span className="studio-pill studio-pill-ready" title="All episodes are posted or ready for buffer">
+                    <Sparkles size={11} aria-hidden="true" />
+                    <span>100% READY</span>
+                  </span>
+                ) : null}
+
+                <label className="studio-sr" htmlFor={`studio-st-${s.id}`}>
+                  Theme
+                </label>
+                <input
+                  id={`studio-st-${s.id}`}
+                  className="studio-s-theme"
+                  placeholder="Visual theme (e.g. vintage print)"
+                  value={s.theme}
+                  onChange={(e) => props.onRename(s.id, { theme: e.target.value })}
+                />
+              </div>
+
+              <div className="studio-scard-btn-group">
+                {/* Complete / Reopen Button */}
+                {isCompleted ? (
+                  <button
+                    type="button"
+                    className="studio-btn studio-btn-plain studio-btn-sm"
+                    onClick={() => {
+                      props.onToggleStatus(s.id, "active");
+                      setCollapsedMap((prev) => ({ ...prev, [s.id]: false }));
+                    }}
+                    title="Reopen series as active production"
+                  >
+                    <RotateCcw size={13} aria-hidden="true" />
+                    <span>Reopen series</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="studio-btn studio-btn-plain studio-btn-sm studio-btn-complete"
+                    onClick={() => {
+                      if (!allReadyOrPosted && (active > 0 || planned > 0)) {
+                        setConfirm({
+                          message: `Close & complete series “${s.title}”? ${posted + ready} of ${parts.length} episodes are finished (${active + planned} remain unfinished). You can reopen it at any time.`,
+                          label: "Complete Series",
+                          run: () => {
+                            props.onToggleStatus(s.id, "completed");
+                            setCollapsedMap((prev) => ({ ...prev, [s.id]: true }));
+                          },
+                        });
+                      } else {
+                        props.onToggleStatus(s.id, "completed");
+                        setCollapsedMap((prev) => ({ ...prev, [s.id]: true }));
+                      }
+                    }}
+                    title="Mark series as completed and close it"
+                  >
+                    <CheckCircle2 size={13} aria-hidden="true" />
+                    <span>Complete series</span>
+                  </button>
+                )}
+
+                {/* Expand / Collapse Toggle Button */}
+                <button
+                  type="button"
+                  className="studio-btn studio-btn-plain studio-btn-sm"
+                  onClick={() => toggleCollapse(s.id)}
+                  title={collapsed ? "Expand series episodes & roadmap" : "Collapse series view"}
+                  aria-expanded={!collapsed}
+                >
+                  {collapsed ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronUp size={14} aria-hidden="true" />}
+                  <span>{collapsed ? "Expand" : "Collapse"}</span>
+                </button>
+              </div>
             </div>
 
             {/* Segmented Progress Bar */}
@@ -146,138 +323,232 @@ export function SeriesView(props: Props) {
               {parts.length} parts · {posted} posted · {ready} ready · {active} in progress · {planned} planned
             </p>
 
-            <div style={{ margin: "14px 0" }}>
-              <SeriesRoadmap
-                series={s}
-                pieces={pieces}
-                onOpenPiece={(id) => {
-                  const part = s.parts.find((p) => p.pieceId === id);
-                  if (part) props.onOpenPart(s.id, part.n);
+            {/* Collapsed State Prompt Row */}
+            {collapsed ? (
+              <div
+                className="studio-scard-collapsed-row"
+                onClick={() => toggleCollapse(s.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggleCollapse(s.id);
+                  }
                 }}
-                onOpenPart={(sid, n) => props.onOpenPart(sid, n)}
-              />
-            </div>
+              >
+                <span className="studio-mono studio-small studio-muted">
+                  {isCompleted ? "✓ Series completed & closed." : "Series collapsed."} Click to expand {parts.length} episodes, roadmap & production brief
+                </span>
+                <div className="studio-scard-btn-group" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="studio-btn studio-btn-quiet studio-btn-xs"
+                    onClick={() =>
+                      setConfirm({
+                        message: `Disband series “${s.title}”? This dissolves the series structure. All ${parts.length} pieces will remain safe in Pieces as standalone content.`,
+                        label: "Disband Series",
+                        run: () => props.onDisband(s.id),
+                      })
+                    }
+                    title="Dissolve this series container while keeping all pieces safe"
+                  >
+                    <Unlink size={11} aria-hidden="true" />
+                    <span>Disband</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="studio-btn studio-btn-plain studio-btn-xs"
+                    onClick={() => toggleCollapse(s.id)}
+                  >
+                    Expand series ↓
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Expanded: SeriesRoadmap Horizontal Carousel */}
+                <div style={{ margin: "14px 0" }}>
+                  <SeriesRoadmap
+                    series={s}
+                    pieces={pieces}
+                    onOpenPiece={(id) => {
+                      const part = s.parts.find((p) => p.pieceId === id);
+                      if (part) props.onOpenPart(s.id, part.n);
+                    }}
+                    onOpenPart={(sid, n) => props.onOpenPart(sid, n)}
+                  />
+                </div>
 
-            {/* Parts Timeline */}
-            <ol className="studio-parts">
-              {parts.map((p, i) => {
-                const st = stateOf(p.pieceId);
-                const isNext = p.n === s.nextPart;
+                {/* Expanded: Parts Timeline */}
+                <ol className="studio-parts">
+                  {parts.map((p, i) => {
+                    const st = stateOf(p.pieceId);
+                    const isNext = p.n === s.nextPart;
 
-                return (
-                  <li key={`${p.n}-${p.pieceId ?? p.title}`} className={isNext ? "is-next" : undefined}>
-                    <span className="studio-part-n">{p.n}</span>
-                    <label className="studio-sr" htmlFor={`studio-pt-${s.id}-${p.n}`}>
-                      Part {p.n} title
-                    </label>
-                    <input
-                      id={`studio-pt-${s.id}-${p.n}`}
-                      className="studio-part-title"
-                      value={p.title}
-                      onChange={(e) => props.onPartTitle(s.id, p.n, e.target.value)}
-                    />
+                    return (
+                      <li key={`${p.n}-${p.pieceId ?? p.title}`} className={isNext ? "is-next" : undefined}>
+                        <span className="studio-part-n">{p.n}</span>
+                        <label className="studio-sr" htmlFor={`studio-pt-${s.id}-${p.n}`}>
+                          Part {p.n} title
+                        </label>
+                        <input
+                          id={`studio-pt-${s.id}-${p.n}`}
+                          className="studio-part-title"
+                          value={p.title}
+                          onChange={(e) => props.onPartTitle(s.id, p.n, e.target.value)}
+                        />
 
-                    <span className="studio-part-acts">
-                      {isNext ? (
-                        <span className="studio-pill studio-pill-next">NEXT UP</span>
-                      ) : (
-                        <button
-                          type="button"
-                          className="studio-btn studio-btn-quiet studio-btn-sm"
-                          onClick={() => props.onSetNext(s.id, p.n)}
-                        >
-                          Set next
-                        </button>
-                      )}
+                        <span className="studio-part-acts">
+                          {isNext ? (
+                            <span className="studio-pill studio-pill-next">NEXT UP</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="studio-btn studio-btn-quiet studio-btn-sm"
+                              onClick={() => props.onSetNext(s.id, p.n)}
+                            >
+                              Set next
+                            </button>
+                          )}
 
-                      <span className={`studio-pill studio-status-${st}`}>
-                        {STATE_LABEL[st]}
-                      </span>
+                          <span className={`studio-pill studio-status-${st}`}>
+                            {STATE_LABEL[st]}
+                          </span>
 
+                          <button
+                            type="button"
+                            className="studio-btn studio-btn-plain studio-btn-sm"
+                            onClick={() => props.onOpenPart(s.id, p.n)}
+                          >
+                            <Play size={11} aria-hidden="true" />
+                            <span>{p.pieceId && st !== "planned" ? "Open" : "Start"}</span>
+                          </button>
+
+                          {i > 0 ? (
+                            <button
+                              type="button"
+                              className="studio-btn studio-btn-quiet studio-btn-sm"
+                              aria-label={`Move part ${p.n} up`}
+                              onClick={() => props.onMovePart(s.id, p.n)}
+                            >
+                              <ArrowUp size={13} aria-hidden="true" />
+                            </button>
+                          ) : null}
+
+                          <button
+                            type="button"
+                            className="studio-btn studio-btn-quiet studio-btn-sm"
+                            aria-label={`Remove part ${p.n}`}
+                            onClick={() =>
+                              setConfirm({
+                                message: `Remove part ${p.n}, “${p.title}”?${
+                                  p.pieceId ? " Its piece stays safe in Pieces." : ""
+                                }`,
+                                label: "Remove Part",
+                                run: () => props.onRemovePart(s.id, p.n),
+                              })
+                            }
+                          >
+                            <X size={13} aria-hidden="true" />
+                          </button>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+
+                {/* Quick Add Part */}
+                <form
+                  className="studio-addpart"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const t = (adding[s.id] ?? "").trim();
+                    if (!t) return;
+                    props.onAddPart(s.id, t);
+                    setAdding({ ...adding, [s.id]: "" });
+                  }}
+                >
+                  <label className="studio-sr" htmlFor={`studio-ap-${s.id}`}>
+                    New part title
+                  </label>
+                  <input
+                    id={`studio-ap-${s.id}`}
+                    placeholder={`Add part ${parts.length + 1}…`}
+                    value={adding[s.id] ?? ""}
+                    onChange={(e) => setAdding({ ...adding, [s.id]: e.target.value })}
+                  />
+                  <button type="submit" className="studio-btn studio-btn-plain">
+                    <Plus size={14} aria-hidden="true" />
+                    <span>Add part</span>
+                  </button>
+                </form>
+
+                {/* Expanded: Series Footer Actions (Batch Expand, Disband, Delete) */}
+                <div className="studio-scard-footer">
+                  <div className="studio-scard-btn-group">
+                    {planned > 0 && props.onBatchExpandParts ? (
                       <button
                         type="button"
                         className="studio-btn studio-btn-plain studio-btn-sm"
-                        onClick={() => props.onOpenPart(s.id, p.n)}
+                        onClick={() => props.onBatchExpandParts?.(s.id)}
+                        title="Create draft pieces for all planned parts in this series"
                       >
-                        <Play size={11} aria-hidden="true" />
-                        <span>{p.pieceId && st !== "planned" ? "Open" : "Start"}</span>
+                        <Sparkles size={12} aria-hidden="true" />
+                        <span>Draft all planned ({planned})</span>
                       </button>
-
-                      {i > 0 ? (
-                        <button
-                          type="button"
-                          className="studio-btn studio-btn-quiet studio-btn-sm"
-                          aria-label={`Move part ${p.n} up`}
-                          onClick={() => props.onMovePart(s.id, p.n)}
-                        >
-                          <ArrowUp size={13} aria-hidden="true" />
-                        </button>
-                      ) : null}
-
+                    ) : null}
+                    {props.onAddMultipleParts ? (
                       <button
                         type="button"
                         className="studio-btn studio-btn-quiet studio-btn-sm"
-                        aria-label={`Remove part ${p.n}`}
-                        onClick={() =>
-                          setConfirm({
-                            message: `Remove part ${p.n}, “${p.title}”?${
-                              p.pieceId ? " Its piece stays safe in Pieces." : ""
-                            }`,
-                            label: "Remove Part",
-                            run: () => props.onRemovePart(s.id, p.n),
-                          })
-                        }
+                        onClick={() => props.onAddMultipleParts?.(s.id, 3)}
+                        title="Expand series with 3 new episode slots"
                       >
-                        <X size={13} aria-hidden="true" />
+                        <Plus size={12} aria-hidden="true" />
+                        <span>Expand series (+3 parts)</span>
                       </button>
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
+                    ) : null}
+                  </div>
 
-            {/* Quick Add Part */}
-            <form
-              className="studio-addpart"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const t = (adding[s.id] ?? "").trim();
-                if (!t) return;
-                props.onAddPart(s.id, t);
-                setAdding({ ...adding, [s.id]: "" });
-              }}
-            >
-              <label className="studio-sr" htmlFor={`studio-ap-${s.id}`}>
-                New part title
-              </label>
-              <input
-                id={`studio-ap-${s.id}`}
-                placeholder={`Add part ${parts.length + 1}…`}
-                value={adding[s.id] ?? ""}
-                onChange={(e) => setAdding({ ...adding, [s.id]: e.target.value })}
-              />
-              <button type="submit" className="studio-btn studio-btn-plain">
-                <Plus size={14} aria-hidden="true" />
-                <span>Add part</span>
-              </button>
-            </form>
+                  <div className="studio-scard-btn-group">
+                    {/* Disband series button */}
+                    <button
+                      type="button"
+                      className="studio-btn studio-btn-quiet studio-btn-sm"
+                      onClick={() =>
+                        setConfirm({
+                          message: `Disband series “${s.title}”? This dissolves the series structure. All ${parts.length} pieces will remain safe in Pieces as standalone content.`,
+                          label: "Disband Series",
+                          run: () => props.onDisband(s.id),
+                        })
+                      }
+                      title="Dissolve the series container while keeping all pieces safe"
+                    >
+                      <Unlink size={12} aria-hidden="true" />
+                      <span>Disband series</span>
+                    </button>
 
-            <div className="studio-right">
-              <button
-                type="button"
-                className="studio-btn studio-btn-danger studio-btn-sm"
-                onClick={() =>
-                  setConfirm({
-                    message: `Delete the entire series “${s.title}”? Its pieces will stay safe in Pieces.`,
-                    label: "Delete Series",
-                    run: () => props.onDelete(s.id),
-                  })
-                }
-              >
-                <Trash2 size={12} aria-hidden="true" />
-                <span>Delete series</span>
-              </button>
-            </div>
+                    {/* Delete series button */}
+                    <button
+                      type="button"
+                      className="studio-btn studio-btn-danger studio-btn-sm"
+                      onClick={() =>
+                        setConfirm({
+                          message: `Delete the series “${s.title}”? Its pieces will stay safe in Pieces.`,
+                          label: "Delete Series",
+                          run: () => props.onDelete(s.id),
+                        })
+                      }
+                      title="Permanently remove series container"
+                    >
+                      <Trash2 size={12} aria-hidden="true" />
+                      <span>Delete series</span>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </section>
         );
       })}

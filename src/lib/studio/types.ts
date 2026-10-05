@@ -59,6 +59,8 @@ export interface StudioPiece {
   updatedAt: string;
 }
 
+export type StudioSeriesStatus = "active" | "completed";
+
 export interface StudioSeries {
   id: string;
   title: string;
@@ -66,6 +68,7 @@ export interface StudioSeries {
   pillar: StudioPillar;
   parts: StudioPart[];
   nextPart: number;
+  status: StudioSeriesStatus;
   createdAt: string;
   updatedAt: string;
 }

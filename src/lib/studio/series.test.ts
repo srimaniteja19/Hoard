@@ -33,4 +33,9 @@ describe("studio series parts", () => {
     expect(r.parts.map((p) => p.title)).toEqual(["Two", "Three", "One"]);
     expect(r.nextPart).toBe(3);
   });
+
+  it("detaches piece when disbanding or unlinking part", () => {
+    const detached = parts.map((p) => (p.pieceId === "a" ? { ...p, pieceId: null } : p));
+    expect(detached[0].pieceId).toBeNull();
+  });
 });

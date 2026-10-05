@@ -219,7 +219,7 @@ export function PieceEditor({
               <option value="">No series</option>
               {series.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.title}
+                  {s.title} {s.status === "completed" ? "(Completed)" : ""}
                 </option>
               ))}
             </Select>

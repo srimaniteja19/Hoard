@@ -35,6 +35,7 @@ export const seriesFields = z.object({
   pillar: z.enum(STUDIO_PILLARS),
   parts: z.array(part).max(200),
   nextPart: z.number().int().min(1).max(500),
+  status: z.enum(["active", "completed"]).optional(),
 });
 
 export const ideaFields = z.object({

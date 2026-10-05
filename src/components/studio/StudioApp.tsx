@@ -250,6 +250,14 @@ export function StudioApp() {
     () => data.pieces.filter((p) => p.status === "ready").length,
     [data.pieces]
   );
+  const activeSeriesCount = useMemo(
+    () => data.series.filter((s) => s.status !== "completed").length,
+    [data.series]
+  );
+  const completedSeriesCount = useMemo(
+    () => data.series.filter((s) => s.status === "completed").length,
+    [data.series]
+  );
 
   // Filtered pieces
   const filteredPieces = useMemo(() => {
@@ -390,8 +398,10 @@ export function StudioApp() {
                 <Layers size={20} aria-hidden="true" />
               </div>
               <div className="studio-stat-info">
-                <span className="studio-stat-val">{data.series.length}</span>
-                <span className="studio-stat-lbl">Active Series</span>
+                <span className="studio-stat-val">{activeSeriesCount}</span>
+                <span className="studio-stat-lbl">
+                  {completedSeriesCount > 0 ? `Active (${completedSeriesCount} done)` : "Active Series"}
+                </span>
               </div>
             </div>
           </div>
@@ -476,7 +486,7 @@ export function StudioApp() {
           pieces={data.pieces}
           loading={loading}
           onCreate={(title, theme) =>
-            void create("series", { title, theme, parts: [], nextPart: 1 }).then(
+            void create("series", { title, theme, parts: [], nextPart: 1, status: "active" }).then(
               (s) => s && setToast("Series created")
             )
           }
@@ -511,6 +521,26 @@ export function StudioApp() {
           }}
           onSetNext={(id, n) => update("series", id, { nextPart: n })}
           onOpenPart={(id, n) => void openPart(id, n)}
+          onToggleStatus={(id, status) => {
+            update("series", id, { status });
+            const s = data.series.find((x) => x.id === id);
+            if (status === "completed") {
+              setToast(`Series “${s?.title || "Series"}” completed`);
+            } else {
+              setToast(`Series “${s?.title || "Series"}” reopened as active`);
+            }
+          }}
+          onDisband={(id) => {
+            const s = data.series.find((x) => x.id === id);
+            studio.setData((d) => ({
+              ...d,
+              pieces: d.pieces.map((p) =>
+                p.seriesId === id ? { ...p, seriesId: null, part: null } : p
+              ),
+            }));
+            void remove("series", id);
+            setToast(`Series “${s?.title || "Series"}” disbanded — pieces kept safe`);
+          }}
           onDelete={(id) => {
             studio.setData((d) => ({
               ...d,
@@ -520,6 +550,41 @@ export function StudioApp() {
             }));
             void remove("series", id);
             setToast("Series deleted");
+          }}
+          onBatchExpandParts={async (id) => {
+            const s = data.series.find((x) => x.id === id);
+            if (!s) return;
+            const planned = s.parts.filter((p) => !p.pieceId);
+            if (!planned.length) return;
+            let currentParts = [...s.parts];
+            for (const p of planned) {
+              const piece = await create("pieces", {
+                title: `${s.title} P${p.n}: ${p.title}`,
+                pillar: s.pillar,
+                seriesId: s.id,
+                part: p.n,
+                notes: p.summary ?? "",
+                script: [{ text: "", cards: [] }],
+                status: "writing",
+              });
+              if (piece) {
+                currentParts = currentParts.map((item) =>
+                  item.n === p.n ? { ...item, pieceId: piece.id } : item
+                );
+              }
+            }
+            update("series", s.id, { parts: currentParts });
+            setToast(`Draft pieces created for ${planned.length} planned parts`);
+          }}
+          onAddMultipleParts={(id, count) => {
+            const s = data.series.find((x) => x.id === id);
+            if (!s) return;
+            let newParts = [...s.parts];
+            for (let i = 0; i < count; i++) {
+              newParts = addPart(newParts, `Part ${newParts.length + 1}`);
+            }
+            update("series", s.id, { parts: newParts });
+            setToast(`Expanded series with ${count} parts`);
           }}
         />
       ) : (
@@ -682,17 +747,19 @@ function PiecesView({
 
   return (
     <div className="studio-pieces">
-      {/* Series Episode Roadmaps */}
-      {series.map((s) => (
-        <SeriesRoadmap
-          key={s.id}
-          series={s}
-          pieces={allPieces}
-          onOpenPiece={onOpen}
-          onOpenPart={onOpenPart}
-          onUpdateStatus={onUpdateStatus}
-        />
-      ))}
+      {/* Series Episode Roadmaps (Active only) */}
+      {series
+        .filter((s) => s.status !== "completed")
+        .map((s) => (
+          <SeriesRoadmap
+            key={s.id}
+            series={s}
+            pieces={allPieces}
+            onOpenPiece={onOpen}
+            onOpenPart={onOpenPart}
+            onUpdateStatus={onUpdateStatus}
+          />
+        ))}
 
       {!allPieces.length ? (
         <div className="studio-empty">

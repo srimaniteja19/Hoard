@@ -88,6 +88,12 @@ export function SeriesRoadmap({
             <div className="studio-roadmap-title-row">
               <h3 className="studio-roadmap-h3">{series.title}</h3>
               <span className="studio-roadmap-chip">{parts.length}-Episode Series</span>
+              {series.status === "completed" ? (
+                <span className="studio-roadmap-chip is-completed" title="Series marked as completed">
+                  <Check size={11} aria-hidden="true" />
+                  <span>Completed</span>
+                </span>
+              ) : null}
               {series.theme ? (
                 <span className="studio-roadmap-theme-chip" title="Series visual & editorial theme">
                   <Sparkles size={10} aria-hidden="true" />

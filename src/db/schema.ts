@@ -1567,6 +1567,7 @@ export const studioSeries = pgTable(
     pillar: varchar("pillar", { length: 24 }).notNull().default("finance"),
     parts: jsonb("parts").$type<StudioPart[]>().notNull().default(sql`'[]'::jsonb`),
     nextPart: integer("next_part").notNull().default(1),
+    status: varchar("status", { length: 16 }).notNull().default("active"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

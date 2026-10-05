@@ -183,6 +183,13 @@
       "when": 1790725239902,
       "tag": "0033_add_studio_extra_hashtags",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1790730000000,
+      "tag": "0034_add_studio_series_status",
+      "breakpoints": true
     }
   ]
 }

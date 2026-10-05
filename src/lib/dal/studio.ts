@@ -36,6 +36,7 @@ export function serializeSeries(row: StudioSeriesRow): StudioSeries {
     pillar: row.pillar as StudioSeries["pillar"],
     parts: row.parts ?? [],
     nextPart: row.nextPart,
+    status: (row.status as StudioSeries["status"]) || "active",
     createdAt: iso(row.createdAt),
     updatedAt: iso(row.updatedAt),
   };
