@@ -66,14 +66,13 @@ export function SeriesView(props: Props) {
     if (collapsedMap[s.id] !== undefined) {
       return collapsedMap[s.id];
     }
-    // Completed series start collapsed by default; active ones start expanded
-    return s.status === "completed";
+    // Default is collapsed for all series
+    return true;
   };
 
   const toggleCollapse = (id: string) => {
     setCollapsedMap((prev) => {
-      const s = series.find((x) => x.id === id);
-      const currently = prev[id] !== undefined ? prev[id] : s?.status === "completed";
+      const currently = prev[id] !== undefined ? prev[id] : true;
       return { ...prev, [id]: !currently };
     });
   };
