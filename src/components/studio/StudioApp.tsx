@@ -9,12 +9,14 @@ import {
   Flame,
   Layers,
   LayoutGrid,
+  Lightbulb,
   List,
   Plus,
   Search,
   Sparkles,
   Video,
   Wand2,
+  X,
 } from "lucide-react";
 import { useStudio } from "@/hooks/useStudio";
 import { estimateSeconds } from "@/lib/studio/checks";
@@ -47,6 +49,8 @@ import { PieceEditor } from "./PieceEditor";
 import { SeriesRoadmap } from "./SeriesRoadmap";
 import { SeriesView } from "./SeriesView";
 import { StudioCardThumbnail } from "./StudioCardThumbnail";
+import { StudioOmnibar } from "./StudioOmnibar";
+import { QuickIdeaModal } from "./QuickIdeaModal";
 import { FormatBadge, PillarBadge, PillarDot, useCopy } from "./StudioShared";
 
 type View = "pieces" | "series" | "ideas";
@@ -64,12 +68,63 @@ export function StudioApp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPillar, setSelectedPillar] = useState<StudioPillar | "all">("all");
   const [draftingId, setDraftingId] = useState<string | null>(null);
+  const [omnibarOpen, setOmnibarOpen] = useState(false);
+  const [quickIdeaOpen, setQuickIdeaOpen] = useState(false);
+  const [ideaSearchQuery, setIdeaSearchQuery] = useState("");
+  const [ideaPillarFilter, setIdeaPillarFilter] = useState<StudioPillar | "all">("all");
 
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 2000);
     return () => clearTimeout(t);
   }, [toast]);
+
+  // Global Studio Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle Omnibar with Cmd+K or Ctrl+K
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setOmnibarOpen((prev) => !prev);
+        return;
+      }
+
+      // Check if user is typing in an input/textarea/select/editable
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+
+      if (isInput) return;
+
+      // Single-key global shortcuts when NOT typing in an input
+      if (e.key === "/") {
+        e.preventDefault();
+        setOmnibarOpen(true);
+      } else if (e.key === "i" || e.key === "I") {
+        e.preventDefault();
+        setQuickIdeaOpen(true);
+      } else if (e.key === "1") {
+        e.preventDefault();
+        setView("pieces");
+        setOpenId(null);
+      } else if (e.key === "2") {
+        e.preventDefault();
+        setView("series");
+        setOpenId(null);
+      } else if (e.key === "3") {
+        e.preventDefault();
+        setView("ideas");
+        setOpenId(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const { copy, dialog } = useCopy(setToast);
   const open = data.pieces.find((p) => p.id === openId) ?? null;
@@ -268,7 +323,12 @@ export function StudioApp() {
         const matchesTitle = p.title.toLowerCase().includes(q);
         const matchesNotes = p.notes?.toLowerCase().includes(q);
         const matchesCaption = p.caption?.toLowerCase().includes(q);
-        if (!matchesTitle && !matchesNotes && !matchesCaption) return false;
+        const matchesScript = p.script?.some(
+          (s) =>
+            s.text?.toLowerCase().includes(q) ||
+            s.cards?.some((c) => c.toLowerCase().includes(q))
+        );
+        if (!matchesTitle && !matchesNotes && !matchesCaption && !matchesScript) return false;
       }
       return true;
     });
@@ -308,12 +368,35 @@ export function StudioApp() {
           })}
         </nav>
 
+        <button
+          type="button"
+          className="studio-omni-trigger-btn"
+          onClick={() => setOmnibarOpen(true)}
+          title="Quick search pieces, series, ideas, actions (⌘K or /)"
+          aria-label="Search studio"
+        >
+          <Search size={14} aria-hidden="true" />
+          <span className="studio-omni-trigger-label">Search Studio…</span>
+          <span className="studio-omni-trigger-keys">
+            <kbd className="studio-kbd">⌘K</kbd>
+          </span>
+        </button>
+
         <span className="studio-state" aria-live="polite">
           <span className={`studio-state-dot ${studio.saving ? "is-saving" : ""}`} />
           {studio.saving ? "Saving…" : loading ? "Loading…" : "Synced"}
         </span>
 
         <div className="studio-top-acts">
+          <button
+            type="button"
+            className="studio-btn studio-btn-plain"
+            onClick={() => setQuickIdeaOpen(true)}
+            title="Quick-capture video idea or hook from anywhere (Shortcut: i)"
+          >
+            <Sparkles size={14} aria-hidden="true" />
+            <span>+ Idea</span>
+          </button>
           <button
             type="button"
             className="studio-btn studio-btn-plain"
@@ -340,6 +423,9 @@ export function StudioApp() {
         <PieceEditor
           piece={open}
           series={data.series}
+          allPieces={data.pieces}
+          onOpenPiece={openPiece}
+          onOpenPart={(sid, n) => void openPart(sid, n)}
           copy={(text, label) => void copy(text, label)}
           onBack={() => setOpenId(null)}
           onChange={(patch, debounce) => update("pieces", open.id, patch, { debounce })}
@@ -586,6 +672,16 @@ export function StudioApp() {
             update("series", s.id, { parts: newParts });
             setToast(`Expanded series with ${count} parts`);
           }}
+          onBatchAddTitles={(id, titles) => {
+            const s = data.series.find((x) => x.id === id);
+            if (!s) return;
+            let newParts = [...s.parts];
+            for (const t of titles) {
+              newParts = addPart(newParts, t);
+            }
+            update("series", s.id, { parts: newParts });
+            setToast(`Added ${titles.length} episode${titles.length > 1 ? "s" : ""} to “${s.title}”`);
+          }}
         />
       ) : (
         <div className="studio-ideas">
@@ -625,14 +721,83 @@ export function StudioApp() {
               <Plus size={14} aria-hidden="true" />
               <span>Add idea</span>
             </button>
+            <button
+              type="button"
+              className="studio-btn studio-btn-plain"
+              onClick={() => setQuickIdeaOpen(true)}
+              title="Open full quick capture modal"
+            >
+              <Lightbulb size={14} aria-hidden="true" />
+              <span>Quick modal</span>
+            </button>
           </form>
+
+          {data.ideas.length > 0 ? (
+            <div className="studio-series-toolbar" style={{ marginTop: "12px" }}>
+              <div className="studio-series-filters" role="tablist" aria-label="Filter ideas by pillar">
+                <button
+                  type="button"
+                  className={`studio-filter-chip ${ideaPillarFilter === "all" ? "is-active" : ""}`}
+                  onClick={() => setIdeaPillarFilter("all")}
+                >
+                  All ({data.ideas.filter((i) => i.status === "new").length})
+                </button>
+                {STUDIO_PILLARS.map((p) => {
+                  const count = data.ideas.filter((i) => i.status === "new" && i.pillar === p).length;
+                  if (count === 0 && ideaPillarFilter !== p) return null;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`studio-filter-chip ${ideaPillarFilter === p ? "is-active" : ""}`}
+                      onClick={() => setIdeaPillarFilter(p)}
+                    >
+                      {PILLAR_LABEL[p]} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="studio-search-box studio-series-search">
+                <Search size={14} className="studio-muted" aria-hidden="true" />
+                <input
+                  placeholder="Search ideas by hook or topic…"
+                  value={ideaSearchQuery}
+                  onChange={(e) => setIdeaSearchQuery(e.target.value)}
+                />
+                {ideaSearchQuery ? (
+                  <button
+                    type="button"
+                    className="studio-omni-clear"
+                    onClick={() => setIdeaSearchQuery("")}
+                    title="Clear ideas search"
+                  >
+                    <X size={13} aria-hidden="true" />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
           {(() => {
-            const list = data.ideas.filter((i) => i.status === "new");
+            const list = data.ideas.filter((i) => {
+              if (i.status !== "new") return false;
+              if (ideaPillarFilter !== "all" && i.pillar !== ideaPillarFilter) return false;
+              if (ideaSearchQuery.trim()) {
+                const q = ideaSearchQuery.toLowerCase();
+                const matchesTitle = i.title.toLowerCase().includes(q);
+                const matchesHook = i.hook?.toLowerCase().includes(q);
+                if (!matchesTitle && !matchesHook) return false;
+              }
+              return true;
+            });
             if (loading) return <p className="studio-muted">Loading ideas…</p>;
             if (!list.length)
               return (
                 <div className="studio-empty">
-                  No ideas in the hopper. Quick-capture one above to start a concept!
+                  {ideaSearchQuery || ideaPillarFilter !== "all"
+                    ? "No matching ideas found in hopper. Try adjusting your search or filters."
+                    : "No ideas in the hopper. Quick-capture one above to start a concept!"}
                 </div>
               );
             return (
@@ -704,6 +869,56 @@ export function StudioApp() {
           onClose={() => setPasting(null)}
         />
       ) : null}
+
+      <StudioOmnibar
+        isOpen={omnibarOpen}
+        onClose={() => setOmnibarOpen(false)}
+        data={data}
+        onOpenPiece={(id) => {
+          openPiece(id);
+          setOmnibarOpen(false);
+        }}
+        onOpenSeries={(id) => {
+          setView("series");
+          setOmnibarOpen(false);
+        }}
+        onSelectView={(v) => {
+          setView(v);
+          setOpenId(null);
+          setOmnibarOpen(false);
+        }}
+        onNewPiece={() => {
+          void newPiece();
+          setOmnibarOpen(false);
+        }}
+        onNewSeries={() => {
+          setView("series");
+          setOmnibarOpen(false);
+        }}
+        onQuickIdea={() => {
+          setOmnibarOpen(false);
+          setQuickIdeaOpen(true);
+        }}
+        onPaste={() => {
+          setPasting("new");
+          setOmnibarOpen(false);
+        }}
+      />
+
+      <QuickIdeaModal
+        isOpen={quickIdeaOpen}
+        onClose={() => setQuickIdeaOpen(false)}
+        onSubmit={(newIdea) => {
+          void create("ideas", {
+            title: newIdea.title,
+            hook: newIdea.hook,
+            pillar: newIdea.pillar,
+            format: newIdea.format,
+          });
+          setToast("Idea captured into hopper!");
+        }}
+      />
+
       {dialog}
       {toast ? (
         <div className="studio-toast" role="status">

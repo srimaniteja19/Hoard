@@ -8,9 +8,11 @@ import {
   ChevronUp,
   ChevronsDownUp,
   ChevronsUpDown,
+  ListPlus,
   Play,
   Plus,
   RotateCcw,
+  Search,
   Sparkles,
   Trash2,
   Unlink,
@@ -18,6 +20,7 @@ import {
 } from "lucide-react";
 import { sortParts, type PartState } from "@/lib/studio/series";
 import type { StudioPiece, StudioSeries } from "@/lib/studio/types";
+import { BatchEpisodesModal } from "./BatchEpisodesModal";
 import { SeriesRoadmap } from "./SeriesRoadmap";
 import { Confirm } from "./StudioShared";
 
@@ -47,6 +50,7 @@ type Props = {
   onDelete: (id: string) => void;
   onBatchExpandParts?: (id: string) => void;
   onAddMultipleParts?: (id: string, count: number) => void;
+  onBatchAddTitles?: (seriesId: string, titles: string[]) => void;
 };
 
 export function SeriesView(props: Props) {
@@ -55,7 +59,9 @@ export function SeriesView(props: Props) {
   const [adding, setAdding] = useState<Record<string, string>>({});
   const [confirm, setConfirm] = useState<null | { message: string; label: string; run: () => void }>(null);
   const [filter, setFilter] = useState<"all" | "active" | "completed">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
+  const [batchSeries, setBatchSeries] = useState<StudioSeries | null>(null);
 
   const stateOf = (pieceId?: string | null): PartState => {
     const p = pieceId ? pieces.find((x) => x.id === pieceId) : undefined;
@@ -63,6 +69,7 @@ export function SeriesView(props: Props) {
   };
 
   const isCollapsed = (s: StudioSeries) => {
+    if (searchQuery.trim()) return false;
     if (collapsedMap[s.id] !== undefined) {
       return collapsedMap[s.id];
     }
@@ -89,12 +96,19 @@ export function SeriesView(props: Props) {
   const completedCount = useMemo(() => series.filter((s) => s.status === "completed").length, [series]);
 
   const displayedSeries = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return series.filter((s) => {
-      if (filter === "active") return s.status !== "completed";
-      if (filter === "completed") return s.status === "completed";
+      if (filter === "active" && s.status === "completed") return false;
+      if (filter === "completed" && s.status !== "completed") return false;
+      if (q) {
+        const matchesTitle = s.title.toLowerCase().includes(q);
+        const matchesTheme = s.theme.toLowerCase().includes(q);
+        const matchesPart = s.parts.some((p) => p.title.toLowerCase().includes(q));
+        if (!matchesTitle && !matchesTheme && !matchesPart) return false;
+      }
       return true;
     });
-  }, [series, filter]);
+  }, [series, filter, searchQuery]);
 
   return (
     <div className="studio-series-view">
@@ -158,6 +172,25 @@ export function SeriesView(props: Props) {
             >
               Completed ({completedCount})
             </button>
+          </div>
+
+          <div className="studio-search-box studio-series-search">
+            <Search size={14} className="studio-muted" aria-hidden="true" />
+            <input
+              placeholder="Search series by title, theme, or episode…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                className="studio-omni-clear"
+                onClick={() => setSearchQuery("")}
+                title="Clear series search"
+              >
+                <X size={13} aria-hidden="true" />
+              </button>
+            ) : null}
           </div>
 
           <div className="studio-scard-btn-group">
@@ -505,7 +538,18 @@ export function SeriesView(props: Props) {
                         title="Expand series with 3 new episode slots"
                       >
                         <Plus size={12} aria-hidden="true" />
-                        <span>Expand series (+3 parts)</span>
+                        <span>Expand (+3)</span>
+                      </button>
+                    ) : null}
+                    {props.onBatchAddTitles ? (
+                      <button
+                        type="button"
+                        className="studio-btn studio-btn-plain studio-btn-sm"
+                        onClick={() => setBatchSeries(s)}
+                        title="Paste multiple episode titles at once"
+                      >
+                        <ListPlus size={12} aria-hidden="true" />
+                        <span>Batch add…</span>
                       </button>
                     ) : null}
                   </div>
@@ -563,6 +607,15 @@ export function SeriesView(props: Props) {
           onCancel={() => setConfirm(null)}
         />
       ) : null}
+
+      <BatchEpisodesModal
+        series={batchSeries}
+        isOpen={Boolean(batchSeries)}
+        onClose={() => setBatchSeries(null)}
+        onSubmit={(sid, titles) => {
+          props.onBatchAddTitles?.(sid, titles);
+        }}
+      />
     </div>
   );
 }
