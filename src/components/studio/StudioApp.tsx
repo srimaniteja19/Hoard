@@ -47,7 +47,7 @@ import {
   type StudioStatus,
 } from "@/lib/studio/types";
 import { KanbanBoard } from "./KanbanBoard";
-import { PasteImport, type PasteResult } from "./PasteImport";
+import { PasteImport, type PasteResult, type PasteSeriesResult } from "./PasteImport";
 import { PieceEditor } from "./PieceEditor";
 import { SeriesRoadmap } from "./SeriesRoadmap";
 import { SeriesView } from "./SeriesView";
@@ -238,6 +238,94 @@ export function StudioApp() {
     setOpenId(piece.id);
     window.scrollTo({ top: 0 });
     setToast(targetId ? "Piece updated" : "Piece created");
+  };
+
+  /** Paste multi-part series: automatically create series and pieces for all parts */
+  const applySeriesPaste = async ({
+    seriesTitle,
+    theme,
+    pillar,
+    format,
+    parts,
+    createPieces,
+    targetSeriesId,
+  }: PasteSeriesResult) => {
+    setPasting(null);
+    setToast("Importing series…");
+
+    let targetSeries: StudioSeries | null = targetSeriesId
+      ? data.series.find((s) => s.id === targetSeriesId) ?? null
+      : null;
+
+    if (!targetSeries) {
+      targetSeries = await create("series", {
+        title: seriesTitle,
+        theme: theme || "",
+        pillar,
+        parts: [],
+        nextPart: 1,
+        status: "active",
+      });
+      if (!targetSeries) {
+        setToast("Could not create series");
+        return;
+      }
+    }
+
+    const startN = targetSeries.parts.length
+      ? Math.max(...targetSeries.parts.map((p) => p.n), 0) + 1
+      : 1;
+    const newParts: StudioPart[] = [];
+    let firstCreatedPieceId: string | null = null;
+
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
+      const partNum = targetSeriesId ? startN + i : p.n;
+      let pieceId: string | null = null;
+
+      if (createPieces) {
+        const piece = await create("pieces", {
+          title: `${p.title}`,
+          format,
+          pillar,
+          status: "writing",
+          seriesId: targetSeries.id,
+          part: partNum,
+          script: p.script && p.script.length > 0 ? p.script : [{ text: p.rawText, cards: [] }],
+          caption: p.hook ? `${p.title}\n\n${p.hook}` : p.title,
+          notes: p.hook ? `Hook: ${p.hook}` : "",
+          hashtags: "",
+          extraHashtags: "",
+          sources: [],
+        });
+        if (piece) {
+          pieceId = piece.id;
+          if (!firstCreatedPieceId) firstCreatedPieceId = piece.id;
+        }
+      }
+
+      newParts.push({
+        n: partNum,
+        title: p.title,
+        summary: p.hook || p.summary || "",
+        pieceId,
+      });
+    }
+
+    const allParts = targetSeriesId ? [...targetSeries.parts, ...newParts] : newParts;
+    update("series", targetSeries.id, {
+      parts: allParts,
+      nextPart: allParts.length > 0 ? allParts[0].n : 1,
+    });
+
+    if (firstCreatedPieceId) {
+      openPiece(firstCreatedPieceId);
+    } else {
+      setView("series");
+      setOpenId(null);
+    }
+
+    setToast(`Series “${seriesTitle}” imported with ${parts.length} parts!`);
   };
 
   /** Instant Idea Expansion: Generate full script, caption, hashtags via AI */
@@ -659,6 +747,7 @@ export function StudioApp() {
           series={data.series}
           pieces={data.pieces}
           loading={loading}
+          onPasteSeries={() => setPasting("new")}
           onCreate={(title, theme) =>
             void create("series", { title, theme, parts: [], nextPart: 1, status: "active" }).then(
               (s) => s && setToast("Series created")
@@ -954,6 +1043,7 @@ export function StudioApp() {
           series={data.series}
           lockTarget={pasting === "piece" ? open : null}
           onApply={(r) => void applyPaste(r)}
+          onApplySeries={(r) => void applySeriesPaste(r)}
           onClose={() => setPasting(null)}
         />
       ) : null}

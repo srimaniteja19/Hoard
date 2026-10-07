@@ -2051,6 +2051,127 @@
   border-radius: 2px;
 }
 
+/* ── MULTI-PART SERIES PASTE & AUTO-DETECTION ── */
+.studio-paste-mode-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--fg) 5%, var(--paper));
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+}
+
+.studio-paste-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--fg) 70%, transparent);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.12s ease;
+}
+
+.studio-paste-mode-btn:hover {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
+}
+
+.studio-paste-mode-btn.is-active {
+  background: var(--card, var(--paper));
+  border-color: var(--ink);
+  color: var(--fg);
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+}
+
+.studio-badge-pill {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--yel);
+  color: #000;
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--ink);
+}
+
+.studio-series-import-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.studio-paste-episodes-preview {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.studio-paste-episodes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1.5px solid var(--ink);
+  background: var(--card, var(--paper));
+  border-radius: 3px;
+}
+
+.studio-paste-episode-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+.studio-paste-episode-item:last-child {
+  border-bottom: none;
+}
+
+.studio-paste-ep-badge {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10px;
+  font-weight: 800;
+  background: var(--yel);
+  color: #000;
+  padding: 2px 6px;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.studio-paste-ep-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.studio-paste-ep-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.studio-paste-ep-title {
+  font-size: 13px;
+  color: var(--fg);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ── COVER CARD GENERATOR ── */
 .studio-cover-col {
   display: flex;

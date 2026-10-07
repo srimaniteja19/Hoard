@@ -8,6 +8,7 @@ import {
   ChevronUp,
   ChevronsDownUp,
   ChevronsUpDown,
+  ClipboardPaste,
   ListPlus,
   Play,
   Plus,
@@ -48,6 +49,7 @@ type Props = {
   onToggleStatus: (id: string, status: "active" | "completed") => void;
   onDisband: (id: string) => void;
   onDelete: (id: string) => void;
+  onPasteSeries?: () => void;
   onBatchExpandParts?: (id: string) => void;
   onAddMultipleParts?: (id: string, count: number) => void;
   onBatchAddTitles?: (seriesId: string, titles: string[]) => void;
@@ -145,6 +147,17 @@ export function SeriesView(props: Props) {
           <Plus size={14} aria-hidden="true" />
           <span>New series</span>
         </button>
+        {props.onPasteSeries ? (
+          <button
+            type="button"
+            className="studio-btn studio-btn-plain"
+            onClick={props.onPasteSeries}
+            title="Paste & auto-convert series outline or multi-part scripts"
+          >
+            <ClipboardPaste size={14} aria-hidden="true" />
+            <span>Paste series</span>
+          </button>
+        ) : null}
       </form>
 
       {/* Series View Toolbar: Filters & Expand/Collapse All */}

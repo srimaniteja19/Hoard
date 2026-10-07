@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchPiece, matchSeries, parseStudioPaste, pastePatch, PASTE_FIELDS, toStudioBlock } from "./paste";
+import { matchPiece, matchSeries, parseSeriesPaste, parseStudioPaste, pastePatch, PASTE_FIELDS, toStudioBlock } from "./paste";
 import { placePiece } from "./series";
 
 const BLOCK = `Here you go.
@@ -192,5 +192,168 @@ describe("routing", () => {
     expect(same).toMatchObject({ part: 3, nextPart: 4 });
     const taken = placePiece(series[0].parts, { id: "new", title: "zz" }, 2, 3, false);
     expect(taken).toMatchObject({ part: 5, nextPart: 3 });
+  });
+});
+
+describe("parseSeriesPaste", () => {
+  const USER_PASTE = `Series:
+### 1. 👽 Ben 10
+
+“Remember when one watch could turn you into TEN different aliens? 👽”
+
+Yep… **Ben 10.**
+
+The original series premiered in 2005 and became one of Cartoon Network’s biggest shows.
+
+Ben had the Omnitrix, Grandpa Max, Gwen… and somehow managed to save the world while still being a complete menace. 😂
+
+---
+
+### 2. ⚡ Power Rangers
+
+“If you grew up watching Power Rangers, you probably wanted to yell this at least once…”
+
+**“IT'S MORPHIN TIME!” ⚡**
+
+Power Rangers became a massive childhood phenomenon with colorful suits, ridiculous monsters, and the ultimate childhood toy…
+
+---
+
+### 3. 🐉 Dragon Ball Z
+
+“Forget homework. We had something much more important to do…”
+
+**WATCH GOKU TURN SUPER SAIYAN.** 🔥
+
+---
+
+### 4. ⚡ Pokémon
+
+“This is probably the most painful Pokémon news for an entire generation…”
+
+After **25 YEARS**, Ash Ketchum finally became a Pokémon World Champion.
+
+---
+
+### 5. 👻 Danny Phantom
+
+“Danny Phantom was basically every kid's dream…”
+
+---
+
+### 6. 🦸 Teen Titans
+
+“This wasn't just a cartoon. This was peak childhood.”
+
+---
+
+### 7. 🐕 Courage the Cowardly Dog
+
+“Who thought giving children existential horror was a good idea?” 💀
+
+---
+
+### 8. 🥷 Ninja Hattori
+
+“If you grew up in India, you probably heard this name before you even knew what a ninja was…”
+
+---
+
+### 9. 😈 Shinchan
+
+“Here's a childhood show you probably thought was gone…”
+
+---
+
+### 10. 🔵 Doraemon
+
+“Imagine having a robot from the future who could solve literally every problem…”
+
+Doraemon. 🔵`;
+
+  it("detects and parses 10 parts from the user's markdown format", () => {
+    const s = parseSeriesPaste(USER_PASTE);
+    expect(s).not.toBeNull();
+    expect(s!.parts).toHaveLength(10);
+    expect(s!.parts[0].n).toBe(1);
+    expect(s!.parts[0].title).toBe("👽 Ben 10");
+    expect(s!.parts[0].hook).toContain("Remember when one watch could turn you into TEN different aliens?");
+    expect(s!.parts[0].script!.length).toBeGreaterThan(2);
+
+    expect(s!.parts[1].n).toBe(2);
+    expect(s!.parts[1].title).toBe("⚡ Power Rangers");
+
+    expect(s!.parts[9].n).toBe(10);
+    expect(s!.parts[9].title).toBe("🔵 Doraemon");
+    expect(s!.pillar).toBe("world");
+  });
+
+  it("parses series with explicit series title", () => {
+    const text = `Series: 90s Cartoon Nostalgia
+
+Part 1: Ben 10
+Alien watch story.
+
+Part 2: Power Rangers
+Morphin time.`;
+    const s = parseSeriesPaste(text);
+    expect(s).not.toBeNull();
+    expect(s!.title).toBe("90s Cartoon Nostalgia");
+    expect(s!.parts).toHaveLength(2);
+    expect(s!.parts[0].title).toBe("Ben 10");
+    expect(s!.parts[1].title).toBe("Power Rangers");
+  });
+
+  it("parses simple numbered list with paragraphs", () => {
+    const text = `1. The Hook
+Capture attention in 3 seconds.
+
+2. The Story
+Tell the conflict and transformation.
+
+3. The Call to Action
+Ask them to follow.`;
+    const s = parseSeriesPaste(text);
+    expect(s).not.toBeNull();
+    expect(s!.parts).toHaveLength(3);
+    expect(s!.parts[0].title).toBe("The Hook");
+    expect(s!.parts[1].title).toBe("The Story");
+    expect(s!.parts[2].title).toBe("The Call to Action");
+  });
+
+  it("parses bold episode headers", () => {
+    const text = `**Episode 1: The Matrix**
+Red pill or blue pill.
+
+**Episode 2: Inception**
+Dream within a dream.`;
+    const s = parseSeriesPaste(text);
+    expect(s).not.toBeNull();
+    expect(s!.parts).toHaveLength(2);
+    expect(s!.parts[0].title).toBe("The Matrix");
+    expect(s!.parts[1].title).toBe("Inception");
+  });
+
+  it("parses JSON series array", () => {
+    const json = JSON.stringify([
+      { part: 1, title: "Ep 1", script: "Scene one.\n\nScene two." },
+      { part: 2, title: "Ep 2", script: "Another scene." },
+    ]);
+    const s = parseSeriesPaste(json);
+    expect(s).not.toBeNull();
+    expect(s!.parts).toHaveLength(2);
+    expect(s!.parts[0].title).toBe("Ep 1");
+    expect(s!.parts[0].script).toHaveLength(2);
+  });
+
+  it("returns null for a regular single piece paste", () => {
+    const singlePiece = `=== STUDIO ===
+Title: Single piece
+Format: reel
+Topic: finance
+
+## Script
+Just one script here.`;
+    expect(parseSeriesPaste(singlePiece)).toBeNull();
   });
 });

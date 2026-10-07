@@ -4,9 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   Check,
+  Clapperboard,
   ClipboardPaste,
   Code,
   Copy,
+  Film,
+  Layers,
   Sparkles,
   X,
 } from "lucide-react";
@@ -14,17 +17,24 @@ import { estimateSeconds, parseHashtags } from "@/lib/studio/checks";
 import {
   matchPiece,
   matchSeries,
+  parseSeriesPaste,
   parseStudioPaste,
   PASTE_FIELDS,
   STUDIO_BLOCK_TEMPLATE,
   type PasteField,
   type PastedPiece,
+  type PastedSeries,
+  type PastedSeriesPart,
 } from "@/lib/studio/paste";
 import {
   FORMAT_LABEL,
   PILLAR_LABEL,
   STATUS_LABEL,
+  STUDIO_FORMATS,
+  STUDIO_PILLARS,
+  type StudioFormat,
   type StudioPiece,
+  type StudioPillar,
   type StudioSeries,
 } from "@/lib/studio/types";
 
@@ -35,6 +45,16 @@ export type PasteResult = {
   targetId: string | null;
   /** Create the series when no series with that name exists. */
   createSeries: boolean;
+};
+
+export type PasteSeriesResult = {
+  seriesTitle: string;
+  theme?: string;
+  pillar: StudioPillar;
+  format: StudioFormat;
+  parts: PastedSeriesPart[];
+  createPieces: boolean;
+  targetSeriesId?: string | null;
 };
 
 const LABEL: Record<PasteField, string> = {
@@ -60,10 +80,18 @@ type Props = {
   /** When opened from a piece, the paste always goes into that piece. */
   lockTarget?: StudioPiece | null;
   onApply: (result: PasteResult) => void;
+  onApplySeries?: (result: PasteSeriesResult) => void;
   onClose: () => void;
 };
 
-export function PasteImport({ pieces, series, lockTarget = null, onApply, onClose }: Props) {
+export function PasteImport({
+  pieces,
+  series,
+  lockTarget = null,
+  onApply,
+  onApplySeries,
+  onClose,
+}: Props) {
   const [text, setText] = useState("");
   const [off, setOff] = useState<Set<PasteField>>(new Set());
   const [asNew, setAsNew] = useState(false);
@@ -72,12 +100,35 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
   const [clipErr, setClipErr] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
 
+  // Series mode states
+  const [mode, setMode] = useState<"auto" | "series" | "piece">("auto");
+  const [customSeriesTitle, setCustomSeriesTitle] = useState("");
+  const [customPillar, setCustomPillar] = useState<StudioPillar>("world");
+  const [customFormat, setCustomFormat] = useState<StudioFormat>("reel");
+  const [createPieces, setCreatePieces] = useState(true);
+  const [targetSeriesId, setTargetSeriesId] = useState<string>("new");
+
   useEffect(() => {
     box.current?.focus();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose]);  const seriesPasted = useMemo(() => parseSeriesPaste(text), [text]);
+
+  const isSeries = Boolean(
+    !lockTarget &&
+      seriesPasted &&
+      seriesPasted.parts.length >= 2 &&
+      (mode === "series" || mode === "auto")
+  );
+
+  useEffect(() => {
+    if (seriesPasted) {
+      setCustomSeriesTitle(seriesPasted.title || "");
+      if (seriesPasted.pillar) setCustomPillar(seriesPasted.pillar);
+      if (seriesPasted.format) setCustomFormat(seriesPasted.format);
+    }
+  }, [seriesPasted]);
 
   const pasted = useMemo(
     () => parseStudioPaste(text, { seriesTitles: series.map((s) => s.title) }),
@@ -188,7 +239,7 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
     }
   };
 
-  const canApply =
+  const canApplyPiece =
     fields.length > 0 &&
     (Boolean(target) || Boolean(pasted.title || pasted.script || pasted.caption));
 
@@ -203,8 +254,17 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
       >
         <div className="studio-modal-head">
           <h2 id="studio-paste-h" className="studio-paste-h">
-            <ClipboardPaste size={18} aria-hidden="true" />
-            <span>{lockTarget ? "Paste Into This Piece" : "Paste Everything (Claude / Block)"}</span>
+            {isSeries ? (
+              <>
+                <Film size={18} aria-hidden="true" />
+                <span>Multi-Part Series Detected ({seriesPasted!.parts.length} Episodes)</span>
+              </>
+            ) : (
+              <>
+                <ClipboardPaste size={18} aria-hidden="true" />
+                <span>{lockTarget ? "Paste Into This Piece" : "Paste Everything (Claude / Block)"}</span>
+              </>
+            )}
           </h2>
           <button
             type="button"
@@ -218,8 +278,32 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
         </div>
 
         <p className="studio-muted studio-small">
-          Paste Claude&apos;s entire response or a Studio block below. Script, title cards, caption, hashtags, sources, notes, series, and part are automatically routed into place.
+          {isSeries
+            ? `Detected ${seriesPasted!.parts.length} distinct episodes. We can automatically create the series and all corresponding video pieces with full scripts in one click.`
+            : "Paste Claude's entire response or a Studio block below. Script, title cards, caption, hashtags, sources, notes, series, and part are automatically routed into place."}
         </p>
+
+        {seriesPasted && seriesPasted.parts.length >= 2 && !lockTarget ? (
+          <div className="studio-paste-mode-bar">
+            <button
+              type="button"
+              className={`studio-paste-mode-btn ${isSeries ? "is-active" : ""}`}
+              onClick={() => setMode("series")}
+            >
+              <Film size={13} aria-hidden="true" />
+              <span>Convert to Series ({seriesPasted.parts.length} Parts)</span>
+              <span className="studio-badge-pill">Detected</span>
+            </button>
+            <button
+              type="button"
+              className={`studio-paste-mode-btn ${!isSeries ? "is-active" : ""}`}
+              onClick={() => setMode("piece")}
+            >
+              <Clapperboard size={13} aria-hidden="true" />
+              <span>Import as Single Piece</span>
+            </button>
+          </div>
+        ) : null}
 
         <div className="studio-paste-grid">
           <div className="studio-paste-in">
@@ -266,101 +350,271 @@ export function PasteImport({ pieces, series, lockTarget = null, onApply, onClos
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder={
-                "Paste Claude's response or Studio block:\n\n=== STUDIO ===\nTitle: Why prediction markets work\nSeries: Prediction Markets\nPart: 2\nFormat: reel\nTopic: finance\n\n## Script\nWhat if you could buy a ticket...\n[cards: TITLE CARD]\n\n## Caption\n..."
+                "Paste your series outline or Claude response:\n\nSeries:\n### 1. Ben 10\nRemember when one watch could...\n---\n### 2. Power Rangers\nIt's morphin time!..."
               }
             />
           </div>
 
           <div className="studio-paste-out" aria-live="polite">
-            <span className="studio-label">Destination & Detected Fields</span>
-            {lockTarget ? (
-              <p className="studio-paste-target">
-                <strong>{lockTarget.title}</strong>
-              </p>
-            ) : text.trim() ? (
-              <div className="studio-paste-target">
-                {found ? (
-                  <>
-                    <label className="studio-paste-choice">
-                      <input
-                        type="radio"
-                        name="studio-paste-target"
-                        checked={!asNew}
-                        onChange={() => setAsNew(false)}
-                      />
-                      <span>
-                        Update <strong>{found.title}</strong>
-                      </span>
-                    </label>
-                    <label className="studio-paste-choice">
-                      <input
-                        type="radio"
-                        name="studio-paste-target"
-                        checked={asNew}
-                        onChange={() => setAsNew(true)}
-                      />
-                      <span>Create a new piece</span>
-                    </label>
-                  </>
-                ) : (
-                  <p>
-                    <strong>A new piece will be created</strong>
-                  </p>
-                )}
+            {isSeries ? (
+              <div className="studio-series-import-panel">
+                <span className="studio-label">Series Destination & Configuration</span>
+
+                <div className="studio-field" style={{ marginTop: "8px" }}>
+                  <label className="studio-label" htmlFor="studio-series-title-input">
+                    Series Title
+                  </label>
+                  <input
+                    id="studio-series-title-input"
+                    type="text"
+                    className="studio-input"
+                    value={customSeriesTitle}
+                    onChange={(e) => setCustomSeriesTitle(e.target.value)}
+                    placeholder="e.g. Childhood Shows We Miss"
+                  />
+                </div>
+
+                <div className="studio-row studio-row-start" style={{ gap: "10px", marginTop: "8px" }}>
+                  <div className="studio-field" style={{ flex: 1 }}>
+                    <label className="studio-label">Topic / Pillar</label>
+                    <select
+                      className="studio-select"
+                      value={customPillar}
+                      onChange={(e) => setCustomPillar(e.target.value as StudioPillar)}
+                    >
+                      {STUDIO_PILLARS.map((p) => (
+                        <option key={p} value={p}>
+                          {PILLAR_LABEL[p]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="studio-field" style={{ flex: 1 }}>
+                    <label className="studio-label">Format</label>
+                    <select
+                      className="studio-select"
+                      value={customFormat}
+                      onChange={(e) => setCustomFormat(e.target.value as StudioFormat)}
+                    >
+                      {STUDIO_FORMATS.map((f) => (
+                        <option key={f} value={f}>
+                          {FORMAT_LABEL[f]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {series.length > 0 ? (
+                  <div className="studio-field" style={{ marginTop: "10px" }}>
+                    <label className="studio-label">Destination Series</label>
+                    <div className="studio-row studio-row-start" style={{ gap: "16px" }}>
+                      <label className="studio-paste-choice">
+                        <input
+                          type="radio"
+                          name="target-series-radio"
+                          checked={targetSeriesId === "new"}
+                          onChange={() => setTargetSeriesId("new")}
+                        />
+                        <span>Create new series</span>
+                      </label>
+                      <label className="studio-paste-choice">
+                        <input
+                          type="radio"
+                          name="target-series-radio"
+                          checked={targetSeriesId !== "new"}
+                          onChange={() => setTargetSeriesId(series[0]?.id || "new")}
+                        />
+                        <span>Append to existing series</span>
+                      </label>
+                    </div>
+                    {targetSeriesId !== "new" ? (
+                      <select
+                        className="studio-select"
+                        style={{ marginTop: "6px" }}
+                        value={targetSeriesId}
+                        onChange={(e) => setTargetSeriesId(e.target.value)}
+                      >
+                        {series.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.title} ({s.parts.length} parts)
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <div className="studio-field" style={{ marginTop: "10px" }}>
+                  <label className="studio-paste-check">
+                    <input
+                      type="checkbox"
+                      checked={createPieces}
+                      onChange={(e) => setCreatePieces(e.target.checked)}
+                    />
+                    <span className="studio-label" style={{ margin: 0 }}>
+                      Generate pieces with full scripts for all {seriesPasted!.parts.length} episodes
+                    </span>
+                  </label>
+                </div>
+
+                <div className="studio-paste-episodes-preview">
+                  <span className="studio-label">
+                    Detected Episodes ({seriesPasted!.parts.length}):
+                  </span>
+                  <ul className="studio-paste-episodes-list">
+                    {seriesPasted!.parts.map((p) => {
+                      const wordCount =
+                        p.script?.reduce(
+                          (acc, s) => acc + (s.text ? s.text.split(/\s+/).length : 0),
+                          0
+                        ) ?? 0;
+                      return (
+                        <li key={p.n} className="studio-paste-episode-item">
+                          <span className="studio-chip-part">P{p.n}</span>
+                          <div className="studio-paste-ep-info">
+                            <div className="studio-paste-ep-top">
+                              <strong className="studio-paste-ep-title">{p.title}</strong>
+                              <span className="studio-muted studio-small">
+                                {p.script?.length ?? 0} scenes · ~{wordCount} words
+                              </span>
+                            </div>
+                            {p.hook ? (
+                              <div className="studio-paste-quote studio-small">
+                                &ldquo;{clip(p.hook, 85)}&rdquo;
+                              </div>
+                            ) : null}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               </div>
             ) : (
-              <p className="studio-muted studio-small">Nothing pasted yet. Paste text on the left.</p>
-            )}
+              <>
+                <span className="studio-label">Destination & Detected Fields</span>
+                {lockTarget ? (
+                  <p className="studio-paste-target">
+                    <strong>{lockTarget.title}</strong>
+                  </p>
+                ) : text.trim() ? (
+                  <div className="studio-paste-target">
+                    {found ? (
+                      <>
+                        <label className="studio-paste-choice">
+                          <input
+                            type="radio"
+                            name="studio-paste-target"
+                            checked={!asNew}
+                            onChange={() => setAsNew(false)}
+                          />
+                          <span>
+                            Update <strong>{found.title}</strong>
+                          </span>
+                        </label>
+                        <label className="studio-paste-choice">
+                          <input
+                            type="radio"
+                            name="studio-paste-target"
+                            checked={asNew}
+                            onChange={() => setAsNew(true)}
+                          />
+                          <span>Create a new piece</span>
+                        </label>
+                      </>
+                    ) : (
+                      <p>
+                        <strong>A new piece will be created</strong>
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="studio-muted studio-small">Nothing pasted yet. Paste text on the left.</p>
+                )}
 
-            {present.length ? (
-              <ul className="studio-paste-fields">
-                {present.map((f) => (
-                  <li key={f} className={off.has(f) ? "is-off" : ""}>
-                    <label className="studio-paste-check">
-                      <input
-                        type="checkbox"
-                        checked={!off.has(f)}
-                        onChange={() => toggle(f)}
-                      />
-                      <span className="studio-label">{LABEL[f]}</span>
-                      {replaces(f) && !off.has(f) ? (
-                        <span className="studio-pill studio-btn-danger studio-btn-sm">
-                          replaces
-                        </span>
-                      ) : null}
-                    </label>
-                    <div className="studio-paste-val">{summary(f)}</div>
-                  </li>
-                ))}
-              </ul>
-            ) : text.trim() ? (
-              <p className="studio-muted studio-small">
-                No matching fields found yet. Include section headers like “Script”, “Caption”, “Instagram hashtags” or the Studio block template.
-              </p>
-            ) : null}
+                {present.length ? (
+                  <ul className="studio-paste-fields">
+                    {present.map((f) => (
+                      <li key={f} className={off.has(f) ? "is-off" : ""}>
+                        <label className="studio-paste-check">
+                          <input
+                            type="checkbox"
+                            checked={!off.has(f)}
+                            onChange={() => toggle(f)}
+                          />
+                          <span className="studio-label">{LABEL[f]}</span>
+                          {replaces(f) && !off.has(f) ? (
+                            <span className="studio-pill studio-btn-danger studio-btn-sm">
+                              replaces
+                            </span>
+                          ) : null}
+                        </label>
+                        <div className="studio-paste-val">{summary(f)}</div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : text.trim() ? (
+                  <p className="studio-muted studio-small">
+                    No matching fields found yet. Include section headers like “Script”, “Caption”, “Instagram hashtags” or the Studio block template.
+                  </p>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
 
         <div className="studio-row studio-gap">
-          <span className="studio-muted studio-small">
-            {fields.length ? `${fields.length} of ${present.length} fields selected` : ""}
-          </span>
-          <button
-            type="button"
-            className="studio-btn"
-            disabled={!canApply}
-            onClick={() =>
-              onApply({
-                pasted,
-                fields,
-                targetId: target?.id ?? null,
-                createSeries,
-              })
-            }
-          >
-            <Sparkles size={14} aria-hidden="true" />
-            <span>{target ? "Apply & update piece" : "Create piece"}</span>
-          </button>
+          {isSeries ? (
+            <>
+              <span className="studio-muted studio-small">
+                {seriesPasted!.parts.length} episodes ready to import into{" "}
+                <strong>{customSeriesTitle.trim() || "Series"}</strong>
+              </span>
+              <button
+                type="button"
+                className="studio-btn"
+                disabled={!customSeriesTitle.trim()}
+                onClick={() => {
+                  if (onApplySeries) {
+                    onApplySeries({
+                      seriesTitle: customSeriesTitle.trim(),
+                      pillar: customPillar,
+                      format: customFormat,
+                      parts: seriesPasted!.parts,
+                      createPieces,
+                      targetSeriesId: targetSeriesId === "new" ? null : targetSeriesId,
+                    });
+                  }
+                }}
+              >
+                <Sparkles size={14} aria-hidden="true" />
+                <span>Import Series ({seriesPasted!.parts.length} Parts)</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="studio-muted studio-small">
+                {fields.length ? `${fields.length} of ${present.length} fields selected` : ""}
+              </span>
+              <button
+                type="button"
+                className="studio-btn"
+                disabled={!canApplyPiece}
+                onClick={() =>
+                  onApply({
+                    pasted,
+                    fields,
+                    targetId: target?.id ?? null,
+                    createSeries,
+                  })
+                }
+              >
+                <Sparkles size={14} aria-hidden="true" />
+                <span>{target ? "Apply & update piece" : "Create piece"}</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

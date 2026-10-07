@@ -34,6 +34,23 @@ export interface PastedPiece {
 
 export type PasteField = Exclude<keyof PastedPiece, "part">;
 
+export interface PastedSeriesPart {
+  n: number;
+  title: string;
+  hook?: string;
+  summary?: string;
+  script?: StudioScene[];
+  rawText: string;
+}
+
+export interface PastedSeries {
+  title: string;
+  theme?: string;
+  pillar?: StudioPillar;
+  format?: StudioFormat;
+  parts: PastedSeriesPart[];
+}
+
 /** Fields in the order the preview shows them. `seriesTitle` carries the part number with it. */
 export const PASTE_FIELDS: PasteField[] = [
   "title",
@@ -505,3 +522,318 @@ export const STUDIO_BLOCK_TEMPLATE = [
   "<anything else>",
   BLOCK_END,
 ].join("\n");
+
+/**
+ * Infer primary Studio pillar from series/parts text based on keywords.
+ */
+export function inferPillarFromContent(text: string): StudioPillar {
+  const lower = text.toLowerCase();
+  if (/(?:cartoon|anime|show|character|nostalgia|childhood|pokemon|dragon ball|disney|movie|series|super saiyan|power rangers|hero|comic)/i.test(lower)) return "world";
+  if (/(?:money|invest|stock|crypto|bitcoin|finance|fund|trade|wealth|dollar|revenue|profit|economy|market)/i.test(lower)) return "finance";
+  if (/(?:code|programming|github|software|developer|ai|model|llm|tech|app|database|api|agent)/i.test(lower)) return "tech";
+  if (/(?:nba|football|soccer|cricket|f1|tennis|athlete|olympic|world cup|championship|sport)/i.test(lower)) return "sports";
+  if (/(?:psychology|brain|mental|habit|dopamine|sleep|adhd|focus|bias|mindset)/i.test(lower)) return "psych";
+  if (/(?:website|landing page|ui|ux|design|css|figma)/i.test(lower)) return "sites";
+  return "world";
+}
+
+function parseSeriesFromJson(raw: string): PastedSeries | null {
+  try {
+    const v = JSON.parse(raw);
+    if (Array.isArray(v) && v.length >= 2) {
+      const parts: PastedSeriesPart[] = [];
+      v.forEach((item: Record<string, unknown>, idx: number) => {
+        if (typeof item === "object" && item) {
+          const title = String(item.title || item.name || `Part ${idx + 1}`);
+          const scriptText = typeof item.script === "string" ? item.script : typeof item.content === "string" ? item.content : "";
+          const hook = typeof item.hook === "string" ? item.hook : undefined;
+          const scenes = parseScript((scriptText || "").split("\n").map((t: string) => ({ text: t, quoted: false })));
+          parts.push({
+            n: typeof item.part === "number" ? item.part : idx + 1,
+            title,
+            hook,
+            script: scenes.length ? scenes : undefined,
+            rawText: scriptText || title,
+          });
+        }
+      });
+      if (parts.length >= 2) {
+        return {
+          title: `Imported Series (${parts.length} Parts)`,
+          parts,
+          pillar: inferPillarFromContent(raw),
+          format: "reel",
+        };
+      }
+    }
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      const seriesTitle = typeof v.title === "string" ? v.title : typeof v.series === "string" ? v.series : undefined;
+      const arr = Array.isArray(v.parts) ? v.parts : Array.isArray(v.episodes) ? v.episodes : Array.isArray(v.pieces) ? v.pieces : null;
+      if (arr && arr.length >= 2) {
+        const parts: PastedSeriesPart[] = (arr as Record<string, unknown>[]).map((item, idx) => {
+          const title = String(item.title || item.name || `Part ${idx + 1}`);
+          const scriptText = typeof item.script === "string" ? item.script : typeof item.content === "string" ? item.content : "";
+          const scenes = parseScript((scriptText || "").split("\n").map((t: string) => ({ text: t, quoted: false })));
+          return {
+            n: typeof item.part === "number" ? item.part : idx + 1,
+            title,
+            hook: typeof item.hook === "string" ? item.hook : undefined,
+            script: scenes.length ? scenes : undefined,
+            rawText: scriptText || title,
+          };
+        });
+        return {
+          title: seriesTitle || `Imported Series (${parts.length} Parts)`,
+          theme: typeof v.theme === "string" ? v.theme : undefined,
+          parts,
+          pillar: inferPillarFromContent(raw),
+          format: "reel",
+        };
+      }
+    }
+  } catch {
+    // Not valid JSON
+  }
+  return null;
+}
+
+/**
+ * Match a line that denotes the start of an episode or part within a series.
+ * Supports:
+ * - Markdown headings: "### 1. 👽 Ben 10", "## Part 1: Ben 10", "# Episode 2 - Goku", "### 1: Ben 10"
+ * - Bold headings: "**Part 1: Ben 10**", "**1. 👽 Ben 10**"
+ * - Plain prefixes: "Part 1: Ben 10", "Episode 1 - Ben 10", "Ep 1: Ben 10"
+ * - Bracketed: "[Part 1] Ben 10", "[Episode 1: Ben 10]"
+ * - Numbered items: "1. 👽 Ben 10", "1) Ben 10"
+ */
+function matchPartHeader(line: string): { n?: number; title: string } | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  // Skip dividers
+  if (/^[-*=_]{3,}$/.test(trimmed)) return null;
+
+  // Skip reserved studio keywords when they look like section labels
+  if (/^#{1,6}\s*(?:script|caption|instagram|tiktok|youtube|hashtags|tags|sources|notes|scene)\b/i.test(trimmed)) return null;
+
+  // 1. Markdown heading with optional part keyword and number:
+  // e.g. "### 1. 👽 Ben 10", "## Part 1: Ben 10", "# Episode 2 - Goku", "### 1: Ben 10", "## 10. 🔵 Doraemon"
+  const mdMatch = trimmed.match(/^#{1,4}\s*(?:(?:\*\*|__)?\s*(?:part|episode|ep|p|day|tip|step|vol|volume|video)\s*#?\s*)?(\d+)[.:)\s-]+(.*?)(?:\*\*|__)?$/i);
+  if (mdMatch) {
+    const n = Number(mdMatch[1]);
+    const rawTitle = mdMatch[2].replace(/^[:.\s-]+/, "").trim();
+    return { n, title: rawTitle || `Part ${n}` };
+  }
+
+  // 2. Markdown heading with explicit Part/Episode prefix:
+  // e.g. "## Part: Ben 10", "### Episode - Goku"
+  const mdPartPrefix = trimmed.match(/^#{1,4}\s*(?:part|episode|ep)\s*[:.\s-]+(.*)$/i);
+  if (mdPartPrefix && mdPartPrefix[1].trim()) {
+    return { title: mdPartPrefix[1].trim() };
+  }
+
+  // 3. Bold text line with Part/Episode or Number:
+  // e.g. "**Part 1: Ben 10**", "**1. 👽 Ben 10**", "__Episode 2: Power Rangers__"
+  const boldMatch = trimmed.match(/^(?:\*\*|__)\s*(?:(?:part|episode|ep|p|day|tip|step|video)\s*#?\s*)?(\d+)[.:)\s-]+(.*?)(?:\*\*|__)$/i);
+  if (boldMatch) {
+    const n = Number(boldMatch[1]);
+    const rawTitle = boldMatch[2].replace(/^[:.\s-]+/, "").trim();
+    return { n, title: rawTitle || `Part ${n}` };
+  }
+
+  // 4. Plain line starting with Part / Episode / Ep / Day / Video:
+  // e.g. "Part 1: Ben 10", "Episode 1 - Ben 10", "Ep 1: Ben 10", "Part 1. Ben 10"
+  const prefixMatch = trimmed.match(/^(?:part|episode|ep|day|tip|step|video)\s*#?\s*(\d+)[:.\s-]+(.*)$/i);
+  if (prefixMatch) {
+    const n = Number(prefixMatch[1]);
+    const rawTitle = prefixMatch[2].replace(/^[:.\s-]+/, "").trim();
+    return { n, title: rawTitle || `Part ${n}` };
+  }
+
+  // 5. Bracketed header:
+  // e.g. "[Part 1] Ben 10", "[Episode 1: Ben 10]", "[EP 1] Ben 10"
+  const bracketMatch = trimmed.match(/^\[\s*(?:part|episode|ep|p)\s*#?\s*(\d+)(?:[:.\s-]+(.*?))?\]\s*(.*)$/i);
+  if (bracketMatch) {
+    const n = Number(bracketMatch[1]);
+    const rawTitle = (bracketMatch[2] || bracketMatch[3] || "").trim();
+    return { n, title: rawTitle || `Part ${n}` };
+  }
+
+  // 6. Numbered item: "1. 👽 Ben 10" or "1) Ben 10"
+  const numListMatch = trimmed.match(/^(\d+)[.)]\s+(.+)$/);
+  if (numListMatch) {
+    const n = Number(numListMatch[1]);
+    const title = numListMatch[2].trim();
+    if (title && title.length < 80 && !/[.!?]$/.test(title)) {
+      return { n, title };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Automatically detect and parse a multi-part series from pasted text, outlines,
+ * scripts, markdown headings, or JSON.
+ * Returns null if the text does not contain multiple parts/episodes.
+ */
+export function parseSeriesPaste(input: string): PastedSeries | null {
+  if (!input || typeof input !== "string") return null;
+  const raw = input.replace(/\r\n?/g, "\n");
+
+  // Check JSON first
+  const fromJsonResult = raw.trim().startsWith("[") || raw.trim().startsWith("{") ? parseSeriesFromJson(raw.trim()) : null;
+  if (fromJsonResult) return fromJsonResult;
+
+  const lines = raw.split("\n");
+  let declaredTitle: string | undefined;
+  const preambleLines: string[] = [];
+  const rawParts: { n?: number; title: string; lines: string[] }[] = [];
+  let currentPart: { n?: number; title: string; lines: string[] } | null = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Check for explicit Series header before any parts are encountered
+    if (!currentPart && rawParts.length === 0) {
+      const seriesHeaderMatch = trimmed.match(/^(?:#+\s*)?(?:(?:\*\*|__)?\s*)?(?:series|show|playlist)\s*:\s*(.*?)(?:\*\*|__)?$/i);
+      if (seriesHeaderMatch) {
+        const val = seriesHeaderMatch[1].trim();
+        if (val) declaredTitle = val;
+        continue;
+      }
+    }
+
+    const header = matchPartHeader(line);
+    if (header) {
+      if (currentPart) {
+        rawParts.push(currentPart);
+      }
+      currentPart = {
+        n: header.n,
+        title: header.title,
+        lines: [],
+      };
+      continue;
+    }
+
+    if (currentPart) {
+      // Filter out markdown divider lines
+      if (!/^[-*=_]{3,}$/.test(trimmed)) {
+        currentPart.lines.push(line);
+      }
+    } else {
+      if (!/^[-*=_]{3,}$/.test(trimmed)) {
+        preambleLines.push(line);
+      }
+    }
+  }
+
+  if (currentPart) {
+    rawParts.push(currentPart);
+  }
+
+  // If fewer than 2 parts were found via line scanning, check if divided by horizontal rules
+  if (rawParts.length < 2) {
+    const dividerSections = raw.split(/\n\s*[-*=_]{3,}\s*\n/);
+    if (dividerSections.length >= 2) {
+      const candidateParts: { n?: number; title: string; lines: string[] }[] = [];
+      for (let sIdx = 0; sIdx < dividerSections.length; sIdx++) {
+        const sec = dividerSections[sIdx].trim();
+        if (!sec) continue;
+        const secLines = sec.split("\n");
+        const firstLine = secLines[0].trim();
+        const header = matchPartHeader(firstLine);
+        if (header) {
+          candidateParts.push({ n: header.n ?? candidateParts.length + 1, title: header.title, lines: secLines.slice(1) });
+        } else if (/^#{1,3}\s+(.+)$/.test(firstLine)) {
+          const t = firstLine.replace(/^#{1,3}\s+/, "").trim();
+          candidateParts.push({ n: candidateParts.length + 1, title: t, lines: secLines.slice(1) });
+        }
+      }
+      if (candidateParts.length >= 2) {
+        rawParts.length = 0;
+        rawParts.push(...candidateParts);
+      }
+    }
+  }
+
+  if (rawParts.length < 2) return null;
+
+  // Process and standardize each part
+  const parts: PastedSeriesPart[] = rawParts.map((rp, idx) => {
+    const n = rp.n ?? idx + 1;
+    const rawText = rp.lines.join("\n").trim();
+    
+    // Extract video hook (look for quotes, bold, or opening line)
+    let hook: string | undefined;
+    const quoteMatch = rawText.match(/[“"']([^"”\n]{10,180})[”"']/);
+    if (quoteMatch) {
+      hook = quoteMatch[1].trim();
+    } else {
+      const boldMatch = rawText.match(/\*\*([^*\n]{10,180})\*\*/);
+      if (boldMatch) hook = boldMatch[1].trim();
+      else {
+        const firstNonEmpty = rp.lines.find((l) => l.trim().length > 0)?.trim();
+        if (firstNonEmpty && firstNonEmpty.length < 140) hook = firstNonEmpty.replace(/[*_]/g, "");
+      }
+    }
+
+    // Split paragraphs into scenes
+    const paragraphs = rawText.split(/\n\s*\n+/);
+    const scenes: StudioScene[] = [];
+    for (const para of paragraphs) {
+      const cleanPara = para
+        .replace(/^>+\s*/, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!cleanPara) continue;
+      const text = cleanScriptLine(cleanPara);
+      if (text) scenes.push({ text, cards: [] });
+    }
+
+    const summary = rawText
+      .replace(/[“"”*_`#]/g, "")
+      .replace(/\s+/g, " ")
+      .slice(0, 140)
+      .trim();
+
+    return {
+      n,
+      title: rp.title.replace(/^[*_]+|[*_]+$/g, "").trim(),
+      hook,
+      summary,
+      script: scenes.length ? scenes : undefined,
+      rawText,
+    };
+  });
+
+  // Re-number parts sequentially if needed
+  parts.sort((a, b) => a.n - b.n);
+
+  // Determine series title
+  let title = declaredTitle;
+  if (!title) {
+    // Check preamble for heading
+    const headingInPreamble = preambleLines.find((l) => /^#{1,3}\s+\S/.test(l.trim()));
+    if (headingInPreamble) {
+      title = headingInPreamble.replace(/^#{1,3}\s+/, "").replace(/[*_]/g, "").trim();
+    }
+  }
+
+  if (!title) {
+    // Clean name of first part
+    const cleanFirst = parts[0].title.replace(/^[^\p{L}\p{N}\s]+/gu, "").trim();
+    title = cleanFirst ? `${cleanFirst} & ${parts.length - 1} more` : `Series (${parts.length} Parts)`;
+  }
+
+  const pillar = inferPillarFromContent(raw);
+
+  return {
+    title,
+    parts,
+    pillar,
+    format: "reel",
+  };
+}
