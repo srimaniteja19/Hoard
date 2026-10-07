@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ChevronDown,
+  ChevronUp,
   Clapperboard,
   ClipboardPaste,
   Columns3,
@@ -12,6 +14,7 @@ import {
   Lightbulb,
   List,
   Plus,
+  RotateCcw,
   Search,
   Sparkles,
   Video,
@@ -314,25 +317,62 @@ export function StudioApp() {
     [data.series]
   );
 
+  const seriesMap = useMemo(() => {
+    return new Map(data.series.map((s) => [s.id, s]));
+  }, [data.series]);
+
   // Filtered pieces
   const filteredPieces = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return data.pieces.filter((p) => {
+      // Pillar filter
       if (selectedPillar !== "all" && p.pillar !== selectedPillar) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesTitle = p.title.toLowerCase().includes(q);
+
+      // Search query filter
+      if (q) {
+        const matchesTitle = p.title?.toLowerCase().includes(q);
         const matchesNotes = p.notes?.toLowerCase().includes(q);
         const matchesCaption = p.caption?.toLowerCase().includes(q);
+        const matchesFormat = p.format?.toLowerCase().includes(q);
+        const matchesStatus = p.status?.toLowerCase().includes(q);
+        const matchesPillar = PILLAR_LABEL[p.pillar]?.toLowerCase().includes(q);
+
+        // Check series title & theme if piece is part of a series
+        const seriesObj = p.seriesId ? seriesMap.get(p.seriesId) : null;
+        const matchesSeriesTitle = seriesObj?.title?.toLowerCase().includes(q);
+        const matchesSeriesTheme = seriesObj?.theme?.toLowerCase().includes(q);
+        const matchesPartNum =
+          p.part !== null &&
+          p.part !== undefined &&
+          (`p${p.part}`.toLowerCase().includes(q) ||
+            `part ${p.part}`.toLowerCase().includes(q) ||
+            `part${p.part}`.toLowerCase().includes(q));
+
+        // Check script scene text and cards
         const matchesScript = p.script?.some(
           (s) =>
-            s.text?.toLowerCase().includes(q) ||
-            s.cards?.some((c) => c.toLowerCase().includes(q))
+            s?.text?.toLowerCase().includes(q) ||
+            s?.cards?.some((c) => c?.toLowerCase().includes(q))
         );
-        if (!matchesTitle && !matchesNotes && !matchesCaption && !matchesScript) return false;
+
+        if (
+          !matchesTitle &&
+          !matchesNotes &&
+          !matchesCaption &&
+          !matchesFormat &&
+          !matchesStatus &&
+          !matchesPillar &&
+          !matchesSeriesTitle &&
+          !matchesSeriesTheme &&
+          !matchesPartNum &&
+          !matchesScript
+        ) {
+          return false;
+        }
       }
       return true;
     });
-  }, [data.pieces, selectedPillar, searchQuery]);
+  }, [data.pieces, selectedPillar, searchQuery, seriesMap]);
 
   return (
     <div className="studio">
@@ -498,10 +538,21 @@ export function StudioApp() {
               <div className="studio-search-box">
                 <Search size={14} className="studio-muted" aria-hidden="true" />
                 <input
-                  placeholder="Filter pieces…"
+                  placeholder="Filter pieces by title, series, scene text…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    className="studio-omni-clear"
+                    onClick={() => setSearchQuery("")}
+                    title="Clear filter"
+                    aria-label="Clear filter"
+                  >
+                    <X size={13} aria-hidden="true" />
+                  </button>
+                ) : null}
               </div>
 
               <div className="studio-select">
@@ -510,14 +561,36 @@ export function StudioApp() {
                   onChange={(e) => setSelectedPillar(e.target.value as StudioPillar | "all")}
                   aria-label="Filter by Topic"
                 >
-                  <option value="all">All Topics</option>
-                  {STUDIO_PILLARS.map((p) => (
-                    <option key={p} value={p}>
-                      {PILLAR_LABEL[p]}
-                    </option>
-                  ))}
+                  <option value="all">All Topics ({data.pieces.length})</option>
+                  {STUDIO_PILLARS.map((p) => {
+                    const count = data.pieces.filter((x) => x.pillar === p).length;
+                    return (
+                      <option key={p} value={p}>
+                        {PILLAR_LABEL[p]} ({count})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
+
+              {searchQuery.trim() || selectedPillar !== "all" ? (
+                <div className="studio-filter-status-tag">
+                  <span>
+                    Showing {filteredPieces.length} of {data.pieces.length}
+                  </span>
+                  <button
+                    type="button"
+                    className="studio-filter-reset-btn"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedPillar("all");
+                    }}
+                    title="Reset all filters"
+                  >
+                    Reset
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             <div className="studio-view-toggle">
@@ -557,6 +630,12 @@ export function StudioApp() {
             series={data.series}
             loading={loading}
             layoutMode={layoutMode}
+            searchQuery={searchQuery}
+            selectedPillar={selectedPillar}
+            onResetFilters={() => {
+              setSearchQuery("");
+              setSelectedPillar("all");
+            }}
             onOpen={openPiece}
             onOpenPart={(s, n) => void openPart(s, n)}
             onUpdateStatus={(pieceId, status) => {
@@ -943,6 +1022,9 @@ function PiecesView({
   series,
   loading,
   layoutMode,
+  searchQuery,
+  selectedPillar,
+  onResetFilters,
   onOpen,
   onOpenPart,
   onUpdateStatus,
@@ -953,36 +1035,114 @@ function PiecesView({
   series: StudioSeries[];
   loading: boolean;
   layoutMode: LayoutMode;
+  searchQuery: string;
+  selectedPillar: StudioPillar | "all";
+  onResetFilters: () => void;
   onOpen: (id: string) => void;
   onOpenPart: (seriesId: string, n: number) => void;
   onUpdateStatus: (pieceId: string, status: StudioStatus) => void;
   onNewPiece: (v?: Partial<StudioPiece>) => void;
 }) {
+  const [showRoadmaps, setShowRoadmaps] = useState(false);
+
   if (loading) return <p className="studio-muted">Loading your production pieces…</p>;
 
-  return (
-    <div className="studio-pieces">
-      {/* Series Episode Roadmaps (Active only) */}
-      {series
-        .filter((s) => s.status !== "completed")
-        .map((s) => (
-          <SeriesRoadmap
-            key={s.id}
-            series={s}
-            pieces={allPieces}
-            onOpenPiece={onOpen}
-            onOpenPart={onOpenPart}
-            onUpdateStatus={onUpdateStatus}
-          />
-        ))}
+  const isFiltered = Boolean(searchQuery.trim() || selectedPillar !== "all");
 
-      {!allPieces.length ? (
+  // Active series matching current pillar/query (if any)
+  const activeSeries = series.filter((s) => {
+    if (s.status === "completed") return false;
+    if (selectedPillar !== "all" && s.pillar !== selectedPillar) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchesTitle = s.title?.toLowerCase().includes(q);
+      const matchesTheme = s.theme?.toLowerCase().includes(q);
+      const hasMatchingPiece = pieces.some((p) => p.seriesId === s.id);
+      if (!matchesTitle && !matchesTheme && !hasMatchingPiece) return false;
+    }
+    return true;
+  });
+
+  if (!allPieces.length) {
+    return (
+      <div className="studio-pieces">
         <div className="studio-empty">
           No pieces created yet. Click “+ New piece” above, draft with AI in Ideas, or paste from Claude using “Paste everything”.
         </div>
+      </div>
+    );
+  }
+
+  // If search/filter resulted in 0 matches
+  if (isFiltered && !pieces.length) {
+    return (
+      <div className="studio-pieces">
+        <div className="studio-empty">
+          <p>
+            No pieces match {searchQuery ? `“${searchQuery}”` : ""}
+            {searchQuery && selectedPillar !== "all" ? " in " : ""}
+            {selectedPillar !== "all" ? PILLAR_LABEL[selectedPillar] : ""}.
+          </p>
+          <button
+            type="button"
+            className="studio-btn studio-btn-plain studio-btn-sm"
+            onClick={onResetFilters}
+            style={{ marginTop: "10px" }}
+          >
+            <RotateCcw size={13} aria-hidden="true" />
+            <span>Reset filters</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="studio-pieces">
+      {/* Series Roadmaps: Collapsible drawer in Cards mode only, default collapsed */}
+      {layoutMode === "cards" && activeSeries.length > 0 ? (
+        <div className="studio-roadmaps-section">
+          <button
+            type="button"
+            className="studio-roadmaps-toggle-btn"
+            onClick={() => setShowRoadmaps((prev) => !prev)}
+            aria-expanded={showRoadmaps}
+            title={showRoadmaps ? "Collapse series roadmaps" : "Expand series roadmaps"}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Film size={14} aria-hidden="true" />
+              <span>Series Roadmaps ({activeSeries.length})</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span className="studio-roadmaps-toggle-hint">
+                {showRoadmaps ? "Click to collapse" : "Click to view episode tracks"}
+              </span>
+              {showRoadmaps ? (
+                <ChevronUp size={14} aria-hidden="true" />
+              ) : (
+                <ChevronDown size={14} aria-hidden="true" />
+              )}
+            </div>
+          </button>
+
+          {showRoadmaps ? (
+            <div className="studio-roadmaps-drawer">
+              {activeSeries.map((s) => (
+                <SeriesRoadmap
+                  key={s.id}
+                  series={s}
+                  pieces={allPieces}
+                  onOpenPiece={onOpen}
+                  onOpenPart={onOpenPart}
+                  onUpdateStatus={onUpdateStatus}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
-      {/* Kanban Board View */}
+      {/* Primary Layout Mode: Kanban Board */}
       {layoutMode === "kanban" ? (
         <KanbanBoard
           pieces={pieces}
@@ -1003,7 +1163,10 @@ function PiecesView({
                 a.title.localeCompare(b.title)
             );
 
-          if (!allPieces.length || (!list.length && st === "posted")) return null;
+          // If filtering is active, only show stages with matches
+          if (isFiltered && !list.length) return null;
+          // In unfiltered view, don't show empty posted section
+          if (!list.length && st === "posted") return null;
 
           return (
             <section className="studio-group" key={st} aria-labelledby={`studio-g-${st}`}>

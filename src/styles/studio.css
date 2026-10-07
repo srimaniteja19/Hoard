@@ -3323,6 +3323,87 @@
   white-space: nowrap;
 }
 
+/* ── PIECES ROADMAPS COLLAPSIBLE DRAWER & FILTER RESET ── */
+.studio-roadmaps-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.studio-roadmaps-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--fg);
+  border-radius: 4px;
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.studio-roadmaps-toggle-btn:hover {
+  background: color-mix(in srgb, var(--ink) 4%, var(--paper));
+  box-shadow: 3px 3px 0 var(--ink);
+  transform: translateY(-1px);
+}
+
+.studio-roadmaps-toggle-hint {
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--fg) 60%, transparent);
+}
+
+.studio-roadmaps-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px;
+  border: 2px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ink) 2%, var(--paper));
+  animation: studio-modal-enter 0.15s ease-out;
+}
+
+.studio-filter-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: color-mix(in srgb, var(--ink) 5%, var(--paper));
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.studio-filter-reset-btn {
+  border: none;
+  background: transparent;
+  color: var(--pink);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.studio-filter-reset-btn:hover {
+  color: var(--ink);
+}
+
 /* ── RESPONSIVE ADAPTATIONS ── */
 @media (max-width: 768px) {
   .studio-paste-grid {
