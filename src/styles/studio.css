@@ -78,13 +78,22 @@
 .studio-top {
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 12px;
   flex-wrap: wrap;
-  padding: 12px 16px;
+  padding: 10px 16px;
   border: var(--bd, 2px solid var(--ink));
   background: var(--paper);
   box-shadow: var(--sh-sm, 3px 3px 0 var(--ink));
   border-radius: 4px;
+}
+
+.studio-top-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
 }
 
 .studio-brand {
@@ -156,12 +165,12 @@
 .studio-tab {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   font-family: var(--mono, ui-monospace, monospace);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  min-height: 38px;
-  padding: 6px 14px;
+  min-height: 32px;
+  padding: 4px 12px;
   border: 2px solid transparent;
   background: transparent;
   color: var(--fg);
@@ -194,6 +203,15 @@
   font-weight: 800;
 }
 
+.studio-top-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+}
+
 .studio-state {
   display: inline-flex;
   align-items: center;
@@ -202,7 +220,7 @@
   font-size: 11px;
   font-weight: 600;
   color: color-mix(in srgb, var(--fg) 65%, transparent);
-  padding: 4px 8px;
+  padding: 4px 6px;
 }
 
 .studio-state-dot {
@@ -219,10 +237,8 @@
 
 .studio-top-acts {
   display: flex;
-  gap: 8px;
-  margin-left: auto;
+  gap: 6px;
   align-items: center;
-  flex-wrap: wrap;
 }
 
 .studio-error {
@@ -1024,11 +1040,19 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 12px 16px;
+  padding: 10px 16px;
   border: var(--bd, 2px solid var(--ink));
   background: var(--paper);
   box-shadow: var(--sh-sm, 3px 3px 0 var(--ink));
   border-radius: 4px;
+}
+
+.studio-ed-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .studio-breadcrumb {
@@ -1039,10 +1063,40 @@
   font-size: 12px;
   font-weight: 700;
   color: color-mix(in srgb, var(--fg) 70%, transparent);
+  min-width: 0;
+}
+
+.studio-breadcrumb-series {
+  color: var(--fg);
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .studio-breadcrumb-sep {
-  opacity: 0.5;
+  opacity: 0.45;
+  user-select: none;
+}
+
+.studio-breadcrumb-part {
+  color: color-mix(in srgb, var(--fg) 80%, transparent);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.studio-ed-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 1 auto;
+  justify-content: flex-end;
+}
+
+.studio-ed-acts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .studio-ed-hero {
@@ -2907,7 +2961,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  min-height: 32px;
+  padding: 4px 10px;
   border: 1.5px solid var(--ink);
   background: color-mix(in srgb, var(--ink) 4%, var(--paper));
   color: var(--fg);
@@ -2916,6 +2971,7 @@
   box-shadow: 1.5px 1.5px 0 var(--ink);
   transition: all 0.12s ease;
   font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px;
 }
 
 .studio-omni-trigger-btn:hover {
@@ -3220,18 +3276,21 @@
 
 /* ── PIECE EDITOR SEQUENTIAL NAV & BREADCRUMBS ── */
 .studio-ed-nav {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: var(--paper);
-  padding: 3px 6px;
+  padding: 2px 4px;
   border: 1.5px solid var(--ink);
   border-radius: 4px;
   box-shadow: 2px 2px 0 var(--ink);
+  min-height: 32px;
+  box-sizing: border-box;
 }
 
 .studio-ed-part-select {
-  padding: 3px 8px;
+  height: 26px;
+  padding: 2px 8px;
   border: 1px solid color-mix(in srgb, var(--ink) 35%, transparent);
   border-radius: 3px;
   font-family: var(--mono, ui-monospace, monospace);
@@ -3405,6 +3464,20 @@
 }
 
 /* ── RESPONSIVE ADAPTATIONS ── */
+@media (max-width: 1040px) {
+  .studio-top-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 900px) {
+  .studio-ed-bar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
 @media (max-width: 768px) {
   .studio-paste-grid {
     grid-template-columns: minmax(0, 1fr);

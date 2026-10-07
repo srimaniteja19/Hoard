@@ -377,79 +377,88 @@ export function StudioApp() {
   return (
     <div className="studio">
       <header className="studio-top">
-        <div className="studio-brand">
-          <h1 className="studio-logo">Studio</h1>
-          <span className="studio-badge-live">
-            <span className="studio-live-pulse" />
-            ON AIR
-          </span>
+        <div className="studio-top-left">
+          <div className="studio-brand">
+            <h1 className="studio-logo">Studio</h1>
+            <span className="studio-badge-live">
+              <span className="studio-live-pulse" />
+              ON AIR
+            </span>
+          </div>
+
+          <nav className="studio-tabs" aria-label="Studio sections">
+            {tabs.map((t) => {
+              const Icon = t.icon;
+              const active = view === t.id && !open;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  className="studio-tab"
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => {
+                    setView(t.id);
+                    setOpenId(null);
+                  }}
+                >
+                  <Icon size={14} aria-hidden="true" />
+                  <span>{t.label}</span>
+                  {typeof t.count === "number" ? <span className="studio-tab-count">{t.count}</span> : null}
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
-        <nav className="studio-tabs" aria-label="Studio sections">
-          {tabs.map((t) => {
-            const Icon = t.icon;
-            const active = view === t.id && !open;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                className="studio-tab"
-                aria-current={active ? "page" : undefined}
-                onClick={() => {
-                  setView(t.id);
-                  setOpenId(null);
-                }}
-              >
-                <Icon size={15} aria-hidden="true" />
-                <span>{t.label}</span>
-                {typeof t.count === "number" ? <span className="studio-tab-count">{t.count}</span> : null}
-              </button>
-            );
-          })}
-        </nav>
+        <div className="studio-top-right">
+          <button
+            type="button"
+            className="studio-omni-trigger-btn"
+            onClick={() => setOmnibarOpen(true)}
+            title="Quick search pieces, series, ideas, actions (⌘K or /)"
+            aria-label="Search studio"
+          >
+            <Search size={13} aria-hidden="true" />
+            <span className="studio-omni-trigger-label">Search Studio…</span>
+            <span className="studio-omni-trigger-keys">
+              <kbd className="studio-kbd">⌘K</kbd>
+            </span>
+          </button>
 
-        <button
-          type="button"
-          className="studio-omni-trigger-btn"
-          onClick={() => setOmnibarOpen(true)}
-          title="Quick search pieces, series, ideas, actions (⌘K or /)"
-          aria-label="Search studio"
-        >
-          <Search size={14} aria-hidden="true" />
-          <span className="studio-omni-trigger-label">Search Studio…</span>
-          <span className="studio-omni-trigger-keys">
-            <kbd className="studio-kbd">⌘K</kbd>
+          <span className="studio-state" aria-live="polite">
+            <span className={`studio-state-dot ${studio.saving ? "is-saving" : ""}`} />
+            <span>{studio.saving ? "Saving…" : loading ? "Loading…" : "Synced"}</span>
           </span>
-        </button>
 
-        <span className="studio-state" aria-live="polite">
-          <span className={`studio-state-dot ${studio.saving ? "is-saving" : ""}`} />
-          {studio.saving ? "Saving…" : loading ? "Loading…" : "Synced"}
-        </span>
-
-        <div className="studio-top-acts">
-          <button
-            type="button"
-            className="studio-btn studio-btn-plain"
-            onClick={() => setQuickIdeaOpen(true)}
-            title="Quick-capture video idea or hook from anywhere (Shortcut: i)"
-          >
-            <Sparkles size={14} aria-hidden="true" />
-            <span>+ Idea</span>
-          </button>
-          <button
-            type="button"
-            className="studio-btn studio-btn-plain"
-            onClick={() => setPasting("new")}
-            title="Paste script, caption, hashtags or JSON block from Claude"
-          >
-            <ClipboardPaste size={14} aria-hidden="true" />
-            <span>Paste everything</span>
-          </button>
-          <button type="button" className="studio-btn" onClick={() => void newPiece()}>
-            <Plus size={15} aria-hidden="true" />
-            <span>New piece</span>
-          </button>
+          <div className="studio-top-acts">
+            <button
+              type="button"
+              className="studio-btn studio-btn-plain studio-btn-sm"
+              onClick={() => setQuickIdeaOpen(true)}
+              title="Quick-capture video idea or hook from anywhere (Shortcut: i)"
+            >
+              <Sparkles size={13} aria-hidden="true" />
+              <span>+ Idea</span>
+            </button>
+            <button
+              type="button"
+              className="studio-btn studio-btn-plain studio-btn-sm"
+              onClick={() => setPasting("new")}
+              title="Paste script, caption, hashtags or JSON block from Claude"
+            >
+              <ClipboardPaste size={13} aria-hidden="true" />
+              <span>Paste</span>
+            </button>
+            <button
+              type="button"
+              className="studio-btn studio-btn-sm"
+              onClick={() => void newPiece()}
+              title="Create new production piece (Shortcut: n)"
+            >
+              <Plus size={14} aria-hidden="true" />
+              <span>New piece</span>
+            </button>
+          </div>
         </div>
       </header>
 

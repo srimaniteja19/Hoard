@@ -123,8 +123,8 @@ export function PieceEditor({
     <article className="studio-editor">
       {/* Top Director Action Bar */}
       <div className="studio-ed-bar">
-        <div className="studio-row studio-row-start" style={{ gap: "10px" }}>
-          <button type="button" className="studio-btn studio-btn-plain" onClick={onBack}>
+        <div className="studio-ed-bar-left">
+          <button type="button" className="studio-btn studio-btn-plain studio-btn-sm" onClick={onBack}>
             <ArrowLeft size={14} aria-hidden="true" />
             <span>Pieces</span>
           </button>
@@ -132,9 +132,11 @@ export function PieceEditor({
           <div className="studio-breadcrumb">
             {current ? (
               <>
-                <span>{current.title}</span>
+                <span className="studio-breadcrumb-series" title={current.title}>
+                  {current.title}
+                </span>
                 <span className="studio-breadcrumb-sep">/</span>
-                <span>Part {piece.part ?? 1}</span>
+                <span className="studio-breadcrumb-part">Part {piece.part ?? 1}</span>
               </>
             ) : (
               <span>Standalone Content</span>
@@ -142,109 +144,111 @@ export function PieceEditor({
           </div>
         </div>
 
-        {/* Sequential Episode / Piece Switcher */}
-        {current && (onOpenPiece || onOpenPart) ? (
-          <div className="studio-ed-nav">
+        <div className="studio-ed-bar-right">
+          {/* Sequential Episode / Piece Switcher */}
+          {current && (onOpenPiece || onOpenPart) ? (
+            <div className="studio-ed-nav">
+              <button
+                type="button"
+                className="studio-btn studio-btn-quiet studio-btn-sm"
+                disabled={!prevPart}
+                onClick={() => {
+                  if (!prevPart) return;
+                  if (prevPart.pieceId) onOpenPiece?.(prevPart.pieceId);
+                  else onOpenPart?.(current.id, prevPart.n);
+                }}
+                title={prevPart ? `Jump to Part ${prevPart.n}: ${prevPart.title}` : "First part in series"}
+              >
+                <ChevronLeft size={13} aria-hidden="true" />
+                <span>{prevPart ? `P${prevPart.n}` : "Prev"}</span>
+              </button>
+
+              <select
+                className="studio-ed-part-select"
+                value={piece.part ?? 1}
+                onChange={(e) => {
+                  const targetN = Number(e.target.value);
+                  const targetPart = current.parts.find((p) => p.n === targetN);
+                  if (!targetPart) return;
+                  if (targetPart.pieceId) onOpenPiece?.(targetPart.pieceId);
+                  else onOpenPart?.(current.id, targetN);
+                }}
+                title="Jump to any episode in this series"
+              >
+                {sortedParts.map((p) => (
+                  <option key={p.n} value={p.n}>
+                    Part {p.n}: {p.title} {p.pieceId ? "" : "(Start)"}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                className="studio-btn studio-btn-quiet studio-btn-sm"
+                disabled={!nextPart}
+                onClick={() => {
+                  if (!nextPart) return;
+                  if (nextPart.pieceId) onOpenPiece?.(nextPart.pieceId);
+                  else onOpenPart?.(current.id, nextPart.n);
+                }}
+                title={nextPart ? `Jump to Part ${nextPart.n}: ${nextPart.title}` : "Last part in series"}
+              >
+                <span>{nextPart ? `P${nextPart.n}` : "Next"}</span>
+                <ChevronRight size={13} aria-hidden="true" />
+              </button>
+            </div>
+          ) : allPieces && allPieces.length > 1 && onOpenPiece && currentIndex >= 0 ? (
+            <div className="studio-ed-nav">
+              <button
+                type="button"
+                className="studio-btn studio-btn-quiet studio-btn-sm"
+                disabled={currentIndex <= 0}
+                onClick={() => {
+                  if (currentIndex > 0) onOpenPiece(allPieces[currentIndex - 1].id);
+                }}
+                title="Previous piece in pipeline"
+              >
+                <ChevronLeft size={13} aria-hidden="true" />
+                <span>Prev</span>
+              </button>
+              <span className="studio-mono studio-small studio-muted">
+                {currentIndex + 1} of {allPieces.length}
+              </span>
+              <button
+                type="button"
+                className="studio-btn studio-btn-quiet studio-btn-sm"
+                disabled={currentIndex >= allPieces.length - 1}
+                onClick={() => {
+                  if (currentIndex < allPieces.length - 1) onOpenPiece(allPieces[currentIndex + 1].id);
+                }}
+                title="Next piece in pipeline"
+              >
+                <span>Next</span>
+                <ChevronRight size={13} aria-hidden="true" />
+              </button>
+            </div>
+          ) : null}
+
+          <div className="studio-ed-acts">
             <button
               type="button"
-              className="studio-btn studio-btn-quiet studio-btn-sm"
-              disabled={!prevPart}
-              onClick={() => {
-                if (!prevPart) return;
-                if (prevPart.pieceId) onOpenPiece?.(prevPart.pieceId);
-                else onOpenPart?.(current.id, prevPart.n);
-              }}
-              title={prevPart ? `Jump to Part ${prevPart.n}: ${prevPart.title}` : "First part in series"}
+              className="studio-btn studio-btn-plain studio-btn-sm"
+              onClick={() => copy(toStudioBlock(piece, current?.title), "Studio block")}
+              title="Export as copy-pasteable Studio block"
             >
-              <ChevronLeft size={13} aria-hidden="true" />
-              <span>{prevPart ? `P${prevPart.n}` : "Prev"}</span>
+              <Share2 size={13} aria-hidden="true" />
+              <span>Copy as block</span>
             </button>
-
-            <select
-              className="studio-ed-part-select"
-              value={piece.part ?? 1}
-              onChange={(e) => {
-                const targetN = Number(e.target.value);
-                const targetPart = current.parts.find((p) => p.n === targetN);
-                if (!targetPart) return;
-                if (targetPart.pieceId) onOpenPiece?.(targetPart.pieceId);
-                else onOpenPart?.(current.id, targetN);
-              }}
-              title="Jump to any episode in this series"
-            >
-              {sortedParts.map((p) => (
-                <option key={p.n} value={p.n}>
-                  Part {p.n}: {p.title} {p.pieceId ? "" : "(Start)"}
-                </option>
-              ))}
-            </select>
-
             <button
               type="button"
-              className="studio-btn studio-btn-quiet studio-btn-sm"
-              disabled={!nextPart}
-              onClick={() => {
-                if (!nextPart) return;
-                if (nextPart.pieceId) onOpenPiece?.(nextPart.pieceId);
-                else onOpenPart?.(current.id, nextPart.n);
-              }}
-              title={nextPart ? `Jump to Part ${nextPart.n}: ${nextPart.title}` : "Last part in series"}
+              className="studio-btn studio-btn-sm"
+              onClick={onPaste}
+              title="Paste text from Claude into this piece"
             >
-              <span>{nextPart ? `P${nextPart.n}` : "Next"}</span>
-              <ChevronRight size={13} aria-hidden="true" />
+              <ClipboardPaste size={13} aria-hidden="true" />
+              <span>Paste into piece</span>
             </button>
           </div>
-        ) : allPieces && allPieces.length > 1 && onOpenPiece && currentIndex >= 0 ? (
-          <div className="studio-ed-nav">
-            <button
-              type="button"
-              className="studio-btn studio-btn-quiet studio-btn-sm"
-              disabled={currentIndex <= 0}
-              onClick={() => {
-                if (currentIndex > 0) onOpenPiece(allPieces[currentIndex - 1].id);
-              }}
-              title="Previous piece in pipeline"
-            >
-              <ChevronLeft size={13} aria-hidden="true" />
-              <span>Prev</span>
-            </button>
-            <span className="studio-mono studio-small studio-muted">
-              {currentIndex + 1} of {allPieces.length}
-            </span>
-            <button
-              type="button"
-              className="studio-btn studio-btn-quiet studio-btn-sm"
-              disabled={currentIndex >= allPieces.length - 1}
-              onClick={() => {
-                if (currentIndex < allPieces.length - 1) onOpenPiece(allPieces[currentIndex + 1].id);
-              }}
-              title="Next piece in pipeline"
-            >
-              <span>Next</span>
-              <ChevronRight size={13} aria-hidden="true" />
-            </button>
-          </div>
-        ) : null}
-
-        <div className="studio-row studio-row-start">
-          <button
-            type="button"
-            className="studio-btn studio-btn-plain"
-            onClick={() => copy(toStudioBlock(piece, current?.title), "Studio block")}
-            title="Export as copy-pasteable Studio block"
-          >
-            <Share2 size={13} aria-hidden="true" />
-            <span>Copy as block</span>
-          </button>
-          <button
-            type="button"
-            className="studio-btn"
-            onClick={onPaste}
-            title="Paste text from Claude into this piece"
-          >
-            <ClipboardPaste size={14} aria-hidden="true" />
-            <span>Paste into piece</span>
-          </button>
         </div>
       </div>
 
