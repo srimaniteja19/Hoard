@@ -5,13 +5,18 @@ import { TilType } from "@/db/schema";
 import {
   Search,
   X,
-  Sparkles,
   Tag as TagIcon,
   Filter,
   RotateCcw,
-  SlidersHorizontal,
-  Flame,
-  Check,
+  Layers,
+  Zap,
+  AlertTriangle,
+  Code2,
+  Boxes,
+  Quote,
+  Compass,
+  Link2,
+  Newspaper,
 } from "lucide-react";
 
 export interface TilSearchFilterBarProps {
@@ -33,95 +38,85 @@ export interface TilSearchFilterBarProps {
 
 interface CategoryMeta {
   type: TilType | "ALL";
+  code: string;
   label: string;
-  symbol: string;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   color: string;
-  bgLight: string;
-  borderColor: string;
   description: string;
 }
 
 const CATEGORIES: CategoryMeta[] = [
   {
     type: "ALL",
+    code: "00",
     label: "ALL",
-    symbol: "✦",
+    icon: Layers,
     color: "var(--ink)",
-    bgLight: "var(--cream, #FFFDF7)",
-    borderColor: "var(--ink)",
     description: "Every verified insight",
   },
   {
     type: "FACT",
+    code: "01",
     label: "FACT",
-    symbol: "💡",
-    color: "#00B8D9",
-    bgLight: "rgba(0, 240, 255, 0.12)",
-    borderColor: "var(--ink)",
+    icon: Zap,
+    color: "var(--cyan, #00F0FF)",
     description: "Empirical discoveries",
   },
   {
     type: "GOTCHA",
+    code: "02",
     label: "GOTCHA",
-    symbol: "⚠️",
-    color: "#FF007A",
-    bgLight: "rgba(255, 0, 122, 0.12)",
-    borderColor: "var(--ink)",
-    description: "Pitfalls & landmines",
+    icon: AlertTriangle,
+    color: "var(--pink, #FF007A)",
+    description: "Pitfalls & corrected assumptions",
   },
   {
     type: "SNIPPET",
+    code: "03",
     label: "SNIPPET",
-    symbol: "⚡",
-    color: "#5BB318",
-    bgLight: "rgba(182, 255, 60, 0.2)",
-    borderColor: "var(--ink)",
-    description: "Executable recipes",
+    icon: Code2,
+    color: "var(--lime, #B6FF3C)",
+    description: "Executable code specimens",
   },
   {
     type: "PATTERN",
+    code: "04",
     label: "PATTERN",
-    symbol: "📐",
-    color: "#7C4DFF",
-    bgLight: "rgba(124, 77, 255, 0.15)",
-    borderColor: "var(--ink)",
-    description: "Structural models",
+    icon: Boxes,
+    color: "var(--violet, #7C4DFF)",
+    description: "Recurring structural laws",
   },
   {
     type: "QUOTE",
+    code: "05",
     label: "QUOTE",
-    symbol: "💬",
-    color: "#E6B800",
-    bgLight: "rgba(255, 233, 74, 0.25)",
-    borderColor: "var(--ink)",
-    description: "Attributed wisdom",
+    icon: Quote,
+    color: "var(--yellow, #FFE94A)",
+    description: "Attributed primary-source wisdom",
   },
   {
     type: "OPINION",
+    code: "06",
     label: "OPINION",
-    symbol: "💭",
-    color: "#00B368",
-    bgLight: "rgba(0, 229, 138, 0.18)",
-    borderColor: "var(--ink)",
-    description: "Personal evaluations",
+    icon: Compass,
+    color: "var(--mint, #00E58A)",
+    description: "Signed theses & evaluations",
   },
   {
     type: "LINK",
+    code: "07",
     label: "LINK",
-    symbol: "🔗",
-    color: "#D97706",
-    bgLight: "rgba(255, 230, 0, 0.2)",
-    borderColor: "var(--ink)",
-    description: "External sources",
+    icon: Link2,
+    color: "var(--yel, #FFE600)",
+    description: "External primary sources",
   },
   {
     type: "NEWS",
+    code: "08",
     label: "NEWS",
-    symbol: "📰",
-    color: "#FF6B00",
-    bgLight: "rgba(255, 107, 0, 0.15)",
-    borderColor: "var(--ink)",
-    description: "Announcements & releases",
+    icon: Newspaper,
+    color: "var(--orange, #FF6B00)",
+    description: "Intelligence wire & releases",
   },
 ];
 
@@ -142,15 +137,14 @@ export const TilSearchFilterBar: React.FC<TilSearchFilterBarProps> = ({
   totalCount,
 }) => {
   const [localInput, setLocalInput] = useState(searchQuery);
+  const [showTagsDrawer, setShowTagsDrawer] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [, startTransition] = useTransition();
 
-  // Sync external search query to local input
   useEffect(() => {
     setLocalInput(searchQuery);
   }, [searchQuery]);
 
-  // Debounce search update
   useEffect(() => {
     const handler = setTimeout(() => {
       if (localInput !== searchQuery) {
@@ -158,11 +152,10 @@ export const TilSearchFilterBar: React.FC<TilSearchFilterBarProps> = ({
           onSearchChange(localInput);
         });
       }
-    }, 280);
+    }, 260);
     return () => clearTimeout(handler);
   }, [localInput, searchQuery, onSearchChange]);
 
-  // Global hotkey: '/' or 'Cmd+K' focuses search input
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeEl = document.activeElement;
@@ -191,34 +184,18 @@ export const TilSearchFilterBar: React.FC<TilSearchFilterBarProps> = ({
   const displayTotal = totalCount ?? typeCounts["ALL"] ?? 0;
 
   return (
-    <div className="til-search-filter-console" role="search" aria-label="TIL Search & Categories">
-      {/* Neo-brutalist Terminal Top Strip */}
-      <div className="til-console-top-strip">
-        <div className="til-console-window-dots">
-          <span className="window-dot dot-red" />
-          <span className="window-dot dot-yellow" />
-          <span className="window-dot dot-green" />
-          <span className="til-console-tag">KNOWLEDGE_INDEX // V2.0</span>
-        </div>
-        <div className="til-console-meta">
-          <span className="til-status-live-pulse" />
-          <span className="til-console-count">
-            <b>{displayTotal}</b> {displayTotal === 1 ? "INSIGHT" : "INSIGHTS"} INDEXED
-          </span>
-        </div>
-      </div>
-
-      {/* Main Search Input Box */}
+    <div className="til-search-filter-console" role="search" aria-label="TIL Search and Archetype Index">
+      {/* Row 1: Precision Search Bar */}
       <div className="til-search-input-wrapper">
-        <div className="til-search-icon-box">
-          <Search size={18} strokeWidth={2.5} />
+        <div className="til-search-icon-box" aria-hidden="true">
+          <Search size={16} strokeWidth={2.6} />
         </div>
         <input
           ref={inputRef}
           type="text"
           value={localInput}
           onChange={(e) => setLocalInput(e.target.value)}
-          placeholder="Search insights, snippets, tags, #hash or urls... (Press / or ⌘K)"
+          placeholder="Filter ledger by claim, code, #tag, #hash, or source domain..."
           className="til-search-text-input"
           aria-label="Search insights by query or tag"
         />
@@ -234,74 +211,77 @@ export const TilSearchFilterBar: React.FC<TilSearchFilterBarProps> = ({
             title="Clear search"
             aria-label="Clear search query"
           >
-            <X size={15} strokeWidth={3} />
+            <X size={14} strokeWidth={2.8} />
           </button>
         )}
-        <div className="til-search-kbd-hint">
-          <kbd className="til-kbd">⌘K</kbd>
-          <span className="til-kbd-or">or</span>
-          <kbd className="til-kbd">/</kbd>
-        </div>
-      </div>
-
-      {/* Category Matrix Filter Bar */}
-      <div className="til-category-section">
-        <div className="til-category-section-label">
-          <span className="til-section-icon">
-            <SlidersHorizontal size={13} strokeWidth={2.5} />
-          </span>
-          <span className="til-section-title">FIND BY CATEGORY</span>
-          {selectedType && (
-            <span className="til-category-active-notice">
-              [ACTIVE: <b>{selectedType}</b>]
-            </span>
+        <div className="til-search-telemetry">
+          {topTags.length > 0 && (
+            <button
+              type="button"
+              className={`til-topics-toggle-btn ${showTagsDrawer || selectedTag ? "active" : ""}`}
+              onClick={() => setShowTagsDrawer((v) => !v)}
+              title="Toggle topic tag index"
+            >
+              <TagIcon size={11} strokeWidth={2.5} />
+              <span>TOPICS ({topTags.length})</span>
+            </button>
           )}
-        </div>
-
-        <div className="til-category-matrix" role="radiogroup" aria-label="Filter by TIL archetype">
-          {CATEGORIES.map((cat) => {
-            const isAll = cat.type === "ALL";
-            const isActive = isAll ? selectedType === null : selectedType === cat.type;
-            const count = isAll ? displayTotal : (typeCounts[cat.type] ?? 0);
-
-            return (
-              <button
-                key={cat.type}
-                type="button"
-                role="radio"
-                aria-checked={isActive}
-                onClick={() => {
-                  if (isAll) {
-                    onSelectType(null);
-                  } else {
-                    onSelectType(isActive ? null : (cat.type as TilType));
-                  }
-                }}
-                className={`til-category-btn ${isActive ? "active" : ""}`}
-                style={
-                  {
-                    "--cat-color": cat.color,
-                    "--cat-bg": cat.bgLight,
-                  } as React.CSSProperties
-                }
-                title={`${cat.label}: ${cat.description} (${count})`}
-              >
-                <span className="til-cat-symbol">{cat.symbol}</span>
-                <span className="til-cat-name">{cat.label}</span>
-                <span className="til-cat-count-badge">{count}</span>
-                {isActive && <Check size={12} strokeWidth={3} className="til-cat-check" />}
-              </button>
-            );
-          })}
+          <span className="til-console-count">
+            <b>{displayTotal}</b> SAVED
+          </span>
+          <div className="til-search-kbd-hint" aria-hidden="true">
+            <kbd className="til-kbd">/</kbd>
+            <kbd className="til-kbd">⌘K</kbd>
+          </div>
         </div>
       </div>
 
-      {/* Top Topic Tags Row (if tags exist) */}
-      {topTags.length > 0 && (
+      {/* Row 2: 9-Cell Archetype Matrix Rail */}
+      <div className="til-category-matrix" role="radiogroup" aria-label="Filter by TIL archetype">
+        {CATEGORIES.map((cat) => {
+          const Icon = cat.icon;
+          const isAll = cat.type === "ALL";
+          const isActive = isAll ? selectedType === null : selectedType === cat.type;
+          const count = isAll ? displayTotal : (typeCounts[cat.type] ?? 0);
+
+          return (
+            <button
+              key={cat.type}
+              type="button"
+              role="radio"
+              aria-checked={isActive}
+              onClick={() => {
+                if (isAll) {
+                  onSelectType(null);
+                } else {
+                  onSelectType(isActive ? null : (cat.type as TilType));
+                }
+              }}
+              className={`til-category-btn ${isActive ? "active" : ""}`}
+              style={
+                {
+                  "--cat-color": cat.color,
+                } as React.CSSProperties
+              }
+              title={`${cat.label}: ${cat.description} (${count})`}
+            >
+              <span className="til-cat-bar" aria-hidden="true" />
+              <span className="til-cat-icon">
+                <Icon size={12} strokeWidth={2.5} />
+              </span>
+              <span className="til-cat-name">{cat.label}</span>
+              <span className="til-cat-count-badge">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Row 3: Topic Tag Index Strip (Expandable) */}
+      {topTags.length > 0 && (showTagsDrawer || Boolean(selectedTag)) && (
         <div className="til-tags-discovery-row">
           <div className="til-tags-discovery-label">
-            <TagIcon size={12} strokeWidth={2.5} />
-            <span>POPULAR TOPICS:</span>
+            <TagIcon size={11} strokeWidth={2.5} />
+            <span>INDEX TAGS</span>
           </div>
           <div className="til-tags-pills-list">
             {topTags.map((t) => {
@@ -317,7 +297,7 @@ export const TilSearchFilterBar: React.FC<TilSearchFilterBarProps> = ({
                   <span className="tag-hash">#</span>
                   <span className="tag-name">{t.name}</span>
                   <span className="tag-count">{t.count}</span>
-                  {isTagActive && <X size={11} strokeWidth={3} className="tag-clear-icon" />}
+                  {isTagActive && <X size={10} strokeWidth={3} className="tag-clear-icon" />}
                 </button>
               );
             })}
@@ -325,18 +305,18 @@ export const TilSearchFilterBar: React.FC<TilSearchFilterBarProps> = ({
         </div>
       )}
 
-      {/* Active Filter Badges Bar */}
+      {/* Row 4: Active Filter Ledger Strip */}
       {hasAnyFilter && (
         <div className="til-active-filters-hud">
           <div className="til-hud-title">
-            <Filter size={12} strokeWidth={3} />
-            <span>FILTER APPLIED:</span>
+            <Filter size={11} strokeWidth={2.8} />
+            <span>ACTIVE ISOLATION</span>
           </div>
 
           <div className="til-hud-chips">
             {searchQuery.trim() && (
               <span className="til-hud-chip query">
-                <span className="chip-key">SEARCH:</span>
+                <span className="chip-key">QUERY</span>
                 <span className="chip-val">&ldquo;{searchQuery.trim()}&rdquo;</span>
                 <button
                   type="button"
@@ -347,14 +327,14 @@ export const TilSearchFilterBar: React.FC<TilSearchFilterBarProps> = ({
                   className="chip-remove"
                   aria-label="Remove search filter"
                 >
-                  <X size={12} strokeWidth={3} />
+                  <X size={11} strokeWidth={3} />
                 </button>
               </span>
             )}
 
             {selectedType && (
               <span className="til-hud-chip type">
-                <span className="chip-key">CATEGORY:</span>
+                <span className="chip-key">ARCHETYPE</span>
                 <span className="chip-val">{selectedType}</span>
                 <button
                   type="button"
@@ -362,14 +342,14 @@ export const TilSearchFilterBar: React.FC<TilSearchFilterBarProps> = ({
                   className="chip-remove"
                   aria-label="Remove category filter"
                 >
-                  <X size={12} strokeWidth={3} />
+                  <X size={11} strokeWidth={3} />
                 </button>
               </span>
             )}
 
             {selectedTag && (
               <span className="til-hud-chip tag">
-                <span className="chip-key">TAG:</span>
+                <span className="chip-key">TAG</span>
                 <span className="chip-val">#{selectedTag}</span>
                 <button
                   type="button"
@@ -377,14 +357,14 @@ export const TilSearchFilterBar: React.FC<TilSearchFilterBarProps> = ({
                   className="chip-remove"
                   aria-label="Remove tag filter"
                 >
-                  <X size={12} strokeWidth={3} />
+                  <X size={11} strokeWidth={3} />
                 </button>
               </span>
             )}
 
             {selectedDay && (
               <span className="til-hud-chip day">
-                <span className="chip-key">DAY:</span>
+                <span className="chip-key">DATE</span>
                 <span className="chip-val">{selectedDay}</span>
                 <button
                   type="button"
@@ -392,14 +372,14 @@ export const TilSearchFilterBar: React.FC<TilSearchFilterBarProps> = ({
                   className="chip-remove"
                   aria-label="Remove day filter"
                 >
-                  <X size={12} strokeWidth={3} />
+                  <X size={11} strokeWidth={3} />
                 </button>
               </span>
             )}
 
             {selectedHash && (
               <span className="til-hud-chip hash">
-                <span className="chip-key">HASH:</span>
+                <span className="chip-key">SPECIMEN</span>
                 <span className="chip-val">#{selectedHash}</span>
                 <button
                   type="button"
@@ -407,7 +387,7 @@ export const TilSearchFilterBar: React.FC<TilSearchFilterBarProps> = ({
                   className="chip-remove"
                   aria-label="Remove hash filter"
                 >
-                  <X size={12} strokeWidth={3} />
+                  <X size={11} strokeWidth={3} />
                 </button>
               </span>
             )}
@@ -418,8 +398,8 @@ export const TilSearchFilterBar: React.FC<TilSearchFilterBarProps> = ({
               className="til-hud-reset-all"
               title="Reset all filters"
             >
-              <RotateCcw size={12} strokeWidth={3} />
-              <span>RESET ALL</span>
+              <RotateCcw size={11} strokeWidth={2.8} />
+              <span>CLEAR ALL</span>
             </button>
           </div>
         </div>
@@ -427,3 +407,4 @@ export const TilSearchFilterBar: React.FC<TilSearchFilterBarProps> = ({
     </div>
   );
 };
+

@@ -548,16 +548,16 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
         return {
           maxWidth: "375px",
           margin: "0 auto",
-          borderLeft: "8px solid #0A0A0A",
-          borderRight: "8px solid #0A0A0A",
+          border: "2px solid #0A0A0A",
+          boxShadow: "0 0 0 4px color-mix(in oklab, #0A0A0A 12%, transparent)",
           borderRadius: "16px",
         };
       case "tablet":
         return {
           maxWidth: "768px",
           margin: "0 auto",
-          borderLeft: "6px solid #0A0A0A",
-          borderRight: "6px solid #0A0A0A",
+          border: "2px solid #0A0A0A",
+          boxShadow: "0 0 0 3px color-mix(in oklab, #0A0A0A 10%, transparent)",
           borderRadius: "12px",
         };
       case "desktop":

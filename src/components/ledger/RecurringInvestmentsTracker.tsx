@@ -140,7 +140,6 @@ export const RecurringInvestmentsTracker: React.FC<RecurringInvestmentsTrackerPr
         style={{
           background: "var(--card, #FFFFFF)",
           border: "2.5px solid var(--ink, #0A0A0A)",
-          borderLeft: "6px solid #00E58A",
           boxShadow: "4.5px 4.5px 0 var(--ink, #0A0A0A)",
           padding: "24px 26px",
           display: "flex",

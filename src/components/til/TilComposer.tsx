@@ -50,44 +50,44 @@ interface FormConfig {
 
 const FORMS_CONFIG: Record<TilType, FormConfig> = {
   FACT: {
-    ask: "STATE WHAT'S TRUE. ONE SENTENCE.",
+    ask: "STATE WHAT YOU LEARNED TODAY.",
     colorVar: "var(--cyan)",
-    opt: "IT WILL BE TESTED BACK TO YOU IN 3 DAYS.",
+    opt: "ONE CRISP FACT OR FINDING. ⌘↵ TO SAVE.",
   },
   GOTCHA: {
-    ask: "WHAT BIT YOU?",
+    ask: "WHAT BIT YOU TODAY?",
     colorVar: "var(--pink)",
-    opt: "GOTCHAS ARE TESTED TWICE AS OFTEN. THEY'RE THE ONES THAT STICK.",
+    opt: "SAVE THE WRONG ASSUMPTION AND THE REAL FIX.",
   },
   SNIPPET: {
     ask: "THE CODE, AND WHY IT MATTERS.",
     colorVar: "var(--lime)",
-    opt: "LANGUAGE IS DETECTED. ⌘↵ TO COMMIT.",
+    opt: "LANGUAGE IS DETECTED AUTOMATICALLY. ⌘↵ TO SAVE.",
   },
   PATTERN: {
-    ask: "WHAT KEEPS HAPPENING?",
+    ask: "WHAT PATTERN DID YOU NOTICE?",
     colorVar: "var(--violet)",
-    opt: "A PATTERN WITH 3+ INSTANCES CAN BE PROMOTED TO AN ATLAS.",
+    opt: "CAPTURE REUSABLE MENTAL MODELS & EXAMPLES.",
   },
   QUOTE: {
-    ask: "WHOSE WORDS, AND WHOSE MOUTH.",
+    ask: "WHOSE WORDS, AND WHERE FROM.",
     colorVar: "var(--yellow, #FFE94A)",
-    opt: "QUOTES AREN'T TESTED — THEY'RE FOR RE-READING.",
+    opt: "SAVE EXCERPTS WORTH REVISITING LATER.",
   },
   OPINION: {
     ask: "WHAT'S YOUR TAKE?",
     colorVar: "var(--shelf, #E7E2D8)",
-    opt: "YOU'LL BE ASKED IF YOU STILL BELIEVE THIS IN 60 DAYS.",
+    opt: "RECORD YOUR CURRENT VIEW AND REASONING.",
   },
   LINK: {
-    ask: "WHY IS THIS WORTH KEEPING?",
+    ask: "SAVE A USEFUL LINK & WHY IT MATTERS.",
     colorVar: "var(--card, #FFFDF7)",
-    opt: "WITHOUT A REASON THIS IS A BOOKMARK, NOT A TIL.",
+    opt: "ADD A SHORT NOTE — TAGS ARE GENERATED AUTOMATICALLY.",
   },
   NEWS: {
-    ask: "WHAT HAPPENED? INTEL & NEWS DISPATCH.",
+    ask: "WHAT HAPPENED? NOTES & HIGHLIGHTS.",
     colorVar: "var(--orange, #FF7A00)",
-    opt: "ENTER HEADLINE & BULLETED DEVELOPMENTS. ⌘↵ TO COMMIT.",
+    opt: "ENTER HEADLINE & BULLETED KEY POINTS. ⌘↵ TO SAVE.",
   },
 };
 
@@ -157,28 +157,94 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [clipBatch, setClipBatch] = useState<ClipLink[] | null>(null);
+  const [isMinimized, setIsMinimized] = useState(true);
 
-  // Derive unified text across all categories for Gist topic classification
-  const draftText = useMemo(() => {
+  useEffect(() => {
+    const handleOpenComposer = () => {
+      setIsMinimized(false);
+      setTimeout(() => {
+        activeFieldRef.current?.focus();
+      }, 60);
+    };
+    const handleGlobalKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        !target ||
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey
+      ) {
+        return;
+      }
+      if (e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        handleOpenComposer();
+      }
+    };
+    window.addEventListener("til:open-composer", handleOpenComposer);
+    window.addEventListener("keydown", handleGlobalKey);
+    return () => {
+      window.removeEventListener("til:open-composer", handleOpenComposer);
+      window.removeEventListener("keydown", handleGlobalKey);
+    };
+  }, []);
+
+  // Derive structured title/content/url across all categories for Gist topic classification
+  const draftClassification = useMemo(() => {
     switch (type) {
       case "FACT":
-        return `${factClaim} ${factSource}`.trim();
+        return {
+          title: factClaim.trim(),
+          content: "",
+          url: factSource.trim().startsWith("http") ? factSource.trim() : "",
+        };
       case "GOTCHA":
-        return `${gotchaThought} ${gotchaActually} ${gotchaCost}`.trim();
+        return {
+          title: gotchaActually.trim() || gotchaThought.trim(),
+          content: `${gotchaThought} ${gotchaActually} ${gotchaCost}`.trim(),
+          url: "",
+        };
       case "SNIPPET":
-        return `${snippetWhy} ${snippetCode}`.trim();
+        return {
+          title: snippetWhy.trim(),
+          content: snippetCode.trim(),
+          url: "",
+        };
       case "PATTERN":
-        return `${patternStatement} ${patternInstance}`.trim();
+        return {
+          title: patternStatement.trim(),
+          content: patternInstance.trim(),
+          url: "",
+        };
       case "QUOTE":
-        return `${quoteText} ${quoteWho} ${quoteSource}`.trim();
+        return {
+          title: quoteSource.trim() || quoteText.trim(),
+          content: `${quoteText} ${quoteWho}`.trim(),
+          url: quoteUrl.trim(),
+        };
       case "OPINION":
-        return `${opinionTake}`.trim();
+        return {
+          title: opinionTake.trim(),
+          content: "",
+          url: "",
+        };
       case "LINK":
-        return `${linkWhy} ${linkUrl}`.trim();
+        return {
+          title: linkWhy.trim(),
+          content: "",
+          url: linkUrl.trim(),
+        };
       case "NEWS":
-        return `${newsHeadline} ${newsBullets} ${newsSource}`.trim();
+        return {
+          title: newsHeadline.trim(),
+          content: newsBullets.trim(),
+          url: newsSource.trim().startsWith("http") ? newsSource.trim() : "",
+        };
       default:
-        return "";
+        return { title: "", content: "", url: "" };
     }
   }, [
     type,
@@ -194,6 +260,7 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
     quoteText,
     quoteWho,
     quoteSource,
+    quoteUrl,
     opinionTake,
     linkWhy,
     linkUrl,
@@ -201,6 +268,15 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
     newsBullets,
     newsSource,
   ]);
+
+  const draftText = useMemo(
+    () =>
+      [draftClassification.title, draftClassification.content, draftClassification.url]
+        .filter(Boolean)
+        .join(" ")
+        .trim(),
+    [draftClassification]
+  );
 
   // Debounced Gist topic tagging as user types
   useEffect(() => {
@@ -217,7 +293,13 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
-          body: JSON.stringify({ text: draftText, topK: 4 }),
+          body: JSON.stringify({
+            title: draftClassification.title || undefined,
+            content: draftClassification.content || undefined,
+            url: draftClassification.url || undefined,
+            text: draftText,
+            topK: 4,
+          }),
         });
         if (res.ok) {
           const data = await res.json();
@@ -225,8 +307,8 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
             setSuggestedTags(data.tags);
           }
         }
-      } catch (e: any) {
-        if (e.name !== "AbortError") {
+      } catch (e: unknown) {
+        if ((e as { name?: string })?.name !== "AbortError") {
           // Gracefully ignore network errors
         }
       } finally {
@@ -238,7 +320,7 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
       clearTimeout(timer);
       controller.abort();
     };
-  }, [draftText]);
+  }, [draftText, draftClassification]);
 
   // Attached Images (supported across all categories)
   const [attachedImages, setAttachedImages] = useState<string[]>([]);
@@ -453,16 +535,55 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
   return (
     <div
       id="til-composer"
-      className={`comp${isDragOver ? " comp--dragover" : ""}`}
+      className={`comp${isDragOver ? " comp--dragover" : ""}${isMinimized ? " comp--minimized" : ""}`}
+      style={{ ["--kc" as string]: currentConfig.colorVar }}
       onPaste={handlePaste}
       onKeyDown={handleKeyDown}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Specimen Dispatch Slab Header */}
+      <div
+        className="comp__head"
+        onClick={() => {
+          if (isMinimized) {
+            setIsMinimized(false);
+            setTimeout(() => activeFieldRef.current?.focus(), 60);
+          }
+        }}
+        style={{ cursor: isMinimized ? "pointer" : "default" }}
+      >
+        <div className="comp__head-left">
+          <span className="comp__head-index">+ LOG TODAY&apos;S TIL</span>
+          <span className="comp__head-kind">{type}</span>
+          <span className="comp__head-tagline">
+            {isMinimized
+              ? "Click any category below or press N to record a new insight..."
+              : KINDS.find((k) => k.key === type)?.tagline}
+          </span>
+        </div>
+        <div className="comp__head-right">
+          <span className="comp__head-shortcut" aria-hidden="true">
+            {isMinimized ? "PRESS N" : "⌘⏎ COMMIT"}
+          </span>
+          <button
+            type="button"
+            className="comp__minimize-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsMinimized((prev) => !prev);
+            }}
+            aria-expanded={!isMinimized}
+          >
+            {isMinimized ? "+ OPEN COMPOSER" : "− COLLAPSE"}
+          </button>
+        </div>
+      </div>
+
       {/* Morphing Kind Selector Bar */}
       <div className="kinds" style={{ ["--kc" as string]: currentConfig.colorVar }}>
-        {KINDS.map((k) => {
+        {KINDS.map((k, idx) => {
           const Icon = k.icon;
           const isSelected = type === k.key;
           return (
@@ -471,10 +592,16 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
               type="button"
               data-k={k.key.toLowerCase()}
               aria-pressed={isSelected ? "true" : "false"}
-              onClick={() => setType(k.key)}
+              onClick={() => {
+                setType(k.key);
+                if (isMinimized) setIsMinimized(false);
+              }}
               title={k.tagline}
             >
-              <Icon size={12} strokeWidth={2.4} />
+              <span className="kinds__idx" aria-hidden="true">
+                {String(idx + 1).padStart(2, "0")}
+              </span>
+              <Icon size={12} strokeWidth={2.5} />
               <span>{k.label}</span>
             </button>
           );
@@ -482,51 +609,48 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
       </div>
 
       {/* Composer Input Surface */}
-      <div className="comp__in">
-        <div className="comp__ask-row">
-          <span className="comp__ask">{currentConfig.ask}</span>
-          <span className="comp__ask-tagline">
-            {KINDS.find((k) => k.key === type)?.tagline}
-          </span>
-        </div>
+      {!isMinimized && (
+        <div className="comp__in">
+          <div className="comp__ask-row">
+            <span className="comp__ask">{currentConfig.ask}</span>
+            <span className="comp__ask-tagline">
+              {KINDS.find((k) => k.key === type)?.tagline}
+            </span>
+          </div>
 
-        {/* Dynamic Fields per Type */}
-        <div id="fields">
-          {type === "FACT" && (
-            <>
-              <div className="f">
-                <div className="f__label-row">
-                  <label>THE CLAIM</label>
-                  <span className="f__helper-pill">PRIMARY STATEMENT</span>
-                </div>
-                <div className="f__input-wrap">
-                  <textarea
-                    ref={activeFieldRef as React.RefObject<HTMLTextAreaElement>}
-                    rows={2}
-                    value={factClaim}
-                    onChange={(e) => setFactClaim(e.target.value)}
-                    placeholder="LPCAMM2 replaces both SO-DIMM and soldered RAM."
-                  />
-                  <div className="f__ai-badge" title="Hoard Knowledge Synthesizer">
-                    <Sparkles size={11} strokeWidth={2.4} />
-                    <span>AI READY</span>
+          {/* Dynamic Fields per Type */}
+          <div id="fields">
+            {type === "FACT" && (
+              <>
+                <div className="f">
+                  <div className="f__label-row">
+                    <label>THE CLAIM</label>
+                    <span className="f__helper-pill">PRIMARY STATEMENT</span>
+                  </div>
+                  <div className="f__input-wrap">
+                    <textarea
+                      ref={activeFieldRef as React.RefObject<HTMLTextAreaElement>}
+                      rows={2}
+                      value={factClaim}
+                      onChange={(e) => setFactClaim(e.target.value)}
+                      placeholder="LPCAMM2 replaces both SO-DIMM and soldered RAM."
+                    />
                   </div>
                 </div>
-              </div>
-              <div className="f">
-                <div className="f__label-row">
-                  <label>SOURCE (OPTIONAL)</label>
-                  <span className="f__helper-pill">EVIDENCE LINK</span>
+                <div className="f">
+                  <div className="f__label-row">
+                    <label>SOURCE (OPTIONAL)</label>
+                    <span className="f__helper-pill">EVIDENCE LINK</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={factSource}
+                    onChange={(e) => setFactSource(e.target.value)}
+                    placeholder="paste a link — it attaches as evidence"
+                  />
                 </div>
-                <input
-                  type="text"
-                  value={factSource}
-                  onChange={(e) => setFactSource(e.target.value)}
-                  placeholder="paste a link — it attaches as evidence"
-                />
-              </div>
-            </>
-          )}
+              </>
+            )}
 
           {type === "GOTCHA" && (
             <>
@@ -856,7 +980,8 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
 
           {uploadingImage && (
             <div className="comp__img-uploading">
-              <span>⏳ COMPRESSING &amp; UPLOADING IMAGE...</span>
+              <Loader2 size={11} className="comp__spin" />
+              <span>COMPRESSING &amp; UPLOADING EXHIBIT...</span>
             </div>
           )}
         </div>
@@ -884,7 +1009,7 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
                   handleAddTag(tagInput);
                 }
               }}
-              placeholder="+ tag"
+              placeholder={tags.length === 0 ? "+ tag (auto-tagged from title if empty)" : "+ tag"}
               className="comp__tag-input"
             />
           </div>
@@ -897,7 +1022,7 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
             return (
               <div className="comp__tag-suggestions">
                 <span className="comp__tag-sug-lbl">
-                  {loadingSuggestions ? "THINKING…" : suggestedTags.length > 0 ? "GIST TOPICS:" : "SUGGESTIONS:"}
+                  {loadingSuggestions ? "INDEXING…" : suggestedTags.length > 0 ? "GIST TOPICS:" : "SUGGESTIONS:"}
                 </span>
                 {available.slice(0, 6).map((stag) => (
                   <button
@@ -916,18 +1041,19 @@ export const TilComposer: React.FC<TilComposerProps> = ({ onCommit, onCommitBatc
 
         {/* Composer Footer */}
         <div className="comp__foot">
-          <span className="opt">⚡ {currentConfig.opt}</span>
+          <span className="opt">{currentConfig.opt}</span>
           <button
             className="commit"
             type="button"
             onClick={handleCommit}
             disabled={submitting}
           >
-            <span>{submitting ? "COMMITTING..." : "COMMIT"}</span>
+            <span>{submitting ? "DISPATCHING..." : "FILE SPECIMEN"}</span>
             <CornerDownLeft size={13} strokeWidth={2.5} />
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 };

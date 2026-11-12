@@ -2,9 +2,9 @@
 
 import React, { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Layers, BookOpen, RotateCcw, Printer, Grid3x3, Network, Archive, Plus } from "lucide-react";
+import { Layers, BookOpen, RotateCcw, Printer, Grid3x3, Archive, Plus } from "lucide-react";
 
-export type TilViewMode = "stream" | "codex" | "recall" | "press" | "wall" | "constellation" | "archive";
+export type TilViewMode = "stream" | "codex" | "recall" | "press" | "wall" | "archive";
 
 interface ViewConfig {
   mode: TilViewMode;
@@ -36,19 +36,17 @@ export const TilHeaderNav: React.FC = () => {
     if (currentView !== "stream") {
       handleSwitchView("stream");
       setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("til:open-composer"));
         const comp = document.getElementById("til-composer");
         if (comp) {
           comp.scrollIntoView({ behavior: "smooth", block: "center" });
-          const input = comp.querySelector("textarea, input") as HTMLElement | null;
-          input?.focus();
         }
       }, 150);
     } else {
+      window.dispatchEvent(new CustomEvent("til:open-composer"));
       const comp = document.getElementById("til-composer");
       if (comp) {
         comp.scrollIntoView({ behavior: "smooth", block: "center" });
-        const input = comp.querySelector("textarea, input") as HTMLElement | null;
-        input?.focus();
       }
     }
   };
@@ -100,21 +98,12 @@ export const TilHeaderNav: React.FC = () => {
       description: "365-day zoomable density overview",
     },
     {
-      mode: "constellation",
-      label: "CONSTELLATION",
-      shortLabel: "ORBIT",
-      icon: <Network size={13} strokeWidth={2.4} />,
-      color: "#00E5FF",
-      hotkey: "6",
-      description: "Interactive force graph of knowledge connections",
-    },
-    {
       mode: "archive",
       label: "ARCHIVE",
       shortLabel: "VAULT",
       icon: <Archive size={13} strokeWidth={2.4} />,
       color: "#FF9100",
-      hotkey: "7",
+      hotkey: "6",
       description: "Searchable vault of all filed & superseded insights",
     },
   ];
@@ -133,7 +122,7 @@ export const TilHeaderNav: React.FC = () => {
         return;
       }
 
-      if (e.altKey && e.key >= "1" && e.key <= "7") {
+      if (e.altKey && e.key >= "1" && e.key <= "6") {
         const idx = parseInt(e.key, 10) - 1;
         if (VIEWS[idx]) {
           e.preventDefault();
@@ -146,6 +135,8 @@ export const TilHeaderNav: React.FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [searchParams]);
 
+  const activeConfig = VIEWS.find((v) => v.mode === currentView) || VIEWS[0];
+
   return (
     <div className="til-view-switcher-container">
       <nav
@@ -154,8 +145,9 @@ export const TilHeaderNav: React.FC = () => {
         aria-label="TIL views navigation"
       >
         <div className="til-tabs-group">
-          {VIEWS.map((v) => {
+          {VIEWS.map((v, idx) => {
             const isActive = currentView === v.mode;
+            const indexCode = String(idx + 1).padStart(2, "0");
             return (
               <button
                 key={v.mode}
@@ -174,6 +166,7 @@ export const TilHeaderNav: React.FC = () => {
                 }
                 onClick={() => handleSwitchView(v.mode)}
               >
+                <span className="til-tab-idx" aria-hidden="true">{indexCode}</span>
                 <span className="til-tab-icon">{v.icon}</span>
                 <span className="til-tab-label">{v.label}</span>
                 <span className="til-tab-pip" aria-hidden="true" />
@@ -183,8 +176,12 @@ export const TilHeaderNav: React.FC = () => {
         </div>
 
         <div className="til-nav-actions">
-          <div className="til-nav-hint" title="Switch views using Option + 1-7">
-            <span className="til-nav-hint-kbd">⌥1–7</span>
+          <span className="til-nav-active-desc" aria-live="polite">
+            {activeConfig.description}
+          </span>
+
+          <div className="til-nav-hint" title="Switch views using Option + 1-6">
+            <span className="til-nav-hint-kbd">⌥1–6</span>
             <span className="til-nav-hint-label">VIEWS</span>
           </div>
 

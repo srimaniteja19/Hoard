@@ -66,27 +66,27 @@ export function formatTopicTag(slug: string): string {
  */
 export function prepareClassificationText(input: SuggestTagsInput): string {
   const parts: string[] = [];
+  const cleanTitle = input.title?.trim() || "";
 
-  if (input.title?.trim()) {
-    parts.push(input.title.trim());
+  if (cleanTitle) {
+    parts.push(cleanTitle);
   }
 
-  if (input.content?.trim()) {
-    // Strip markdown links/formatting where helpful and keep the first ~1500 chars
-    const cleanContent = input.content
+  const rawBody = input.content?.trim() || input.text?.trim() || "";
+  if (rawBody) {
+    const cleanContent = rawBody
       .replace(/```[\s\S]*?```/g, " ")
       .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
       .replace(/[#*`_>~]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-    parts.push(cleanContent.slice(0, 1500));
+
+    if (cleanContent && cleanContent !== cleanTitle) {
+      parts.push(cleanContent.slice(0, 1500));
+    }
   }
 
-  if (input.text?.trim() && parts.length === 0) {
-    parts.push(input.text.trim().slice(0, 1500));
-  }
-
-  if (parts.length === 0 && input.url?.trim()) {
+  if (input.url?.trim() && (parts.length === 0 || parts.join(" ").length < 24)) {
     try {
       const parsed = new URL(input.url);
       const pathname = parsed.pathname.replace(/[/_\-]+/g, " ").trim();

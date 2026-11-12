@@ -145,7 +145,7 @@ export const SubscriptionBreakdownChart: React.FC<SubscriptionBreakdownChartProp
                     strokeWidth="2.5"
                     style={{
                       cursor: "pointer",
-                      transition: "transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease",
+                      transition: "transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease",
                       transformOrigin: `${center}px ${center}px`,
                       transform: isHovered ? "scale(1.06)" : "scale(1)",
                       opacity: hoveredCategory && !isHovered ? 0.4 : 1,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { TilType } from "@/db/schema";
+import { tilTypeValues, type TilType } from "@/db/schema";
 import { decodeWallAggregate, type WallWireFormat } from "@/lib/til/wallWireFormat";
 import {
   WALL_ZOOM_MIN,
@@ -60,12 +60,6 @@ export function TilWallView() {
     zoomRef.current = zoom;
   }, [zoom]);
 
-  // Coalesce rapid slider/pinch input into at most one state update per
-  // animation frame. Without this, each native `input` event (which can fire
-  // far faster than 60/s) drives its own synchronous re-render — and content
-  // mode's virtualized window shifts enough per zoom step that most tiles
-  // unmount/remount rather than cheaply restyle in place, compounding badly
-  // under a fast drag.
   const pendingZoomRef = useRef<number | null>(null);
   const zoomRafScheduledRef = useRef(false);
   const scheduleZoomUpdate = useCallback((value: number) => {
@@ -107,7 +101,6 @@ export function TilWallView() {
   const activeDays = dayCells.filter((d) => d.count > 0).length;
   const totalEntries = dayCells.reduce((sum, d) => sum + d.count, 0);
 
-  // ── Fetch the aggregate exactly once on mount ──────────────────────────────
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -128,7 +121,6 @@ export function TilWallView() {
     };
   }, []);
 
-  // ── Measure container width ─────────────────────────────────────────────
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -142,7 +134,6 @@ export function TilWallView() {
     return () => observer.disconnect();
   }, []);
 
-  // ── Debounced URL sync (never on the hot drag path) ─────────────────────
   useEffect(() => {
     const timer = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
@@ -150,8 +141,6 @@ export function TilWallView() {
       router.replace(`/til?${params.toString()}`, { scroll: false });
     }, URL_SYNC_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-    // router/searchParams intentionally excluded: including them would reset
-    // this debounce timer on every navigation, not just on zoom changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoom]);
 
@@ -166,7 +155,6 @@ export function TilWallView() {
     return computeVisibleDayRange(gridMetrics, scrollTop, viewportHeight, days.length);
   }, [virtualize, gridMetrics, scrollTop, viewportHeight, days.length]);
 
-  // ── content mode: fetch bodies for the visible range, debounced ─────────
   useEffect(() => {
     if (mode !== "content") return;
     const visibleDates = days.slice(visibleRange.startIndex, visibleRange.endIndex);
@@ -202,17 +190,12 @@ export function TilWallView() {
       }
     }, ENTRIES_FETCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-    // Re-runs when dayCells changes (e.g. the aggregate finishes loading after
-    // this effect's first, premature bail-out) and when entryBodies changes
-    // (to re-check whether anything visible is still missing after a fetch
-    // resolves) — both intentional, not exhaustive-deps oversights.
   }, [mode, visibleRange.startIndex, visibleRange.endIndex, dayCells, entryBodies, days]);
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     setScrollTop(e.currentTarget.scrollTop);
   }, []);
 
-  // ── Keyboard: +/- step, 1/2/3 jump to mode ──────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -234,7 +217,6 @@ export function TilWallView() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // ── Touch: pinch to zoom ─────────────────────────────────────────────────
   const pinchRef = useRef<{ startDistance: number; startZoom: number } | null>(null);
 
   const getTouchDistance = (touches: React.TouchList) => {
@@ -262,6 +244,10 @@ export function TilWallView() {
 
   const tileTransition = reducedMotion ? "none" : "transform 120ms, box-shadow 120ms";
 
+  const handleSelectDayTile = (dateStr: string) => {
+    router.push(`/til?day=${encodeURIComponent(dateStr)}`);
+  };
+
   const renderTile = (cell: DayCell, style: React.CSSProperties) => {
     const height = tileHeightForZoom(zoom, mode);
 
@@ -269,13 +255,13 @@ export function TilWallView() {
       return (
         <div
           key={cell.date}
-          title={cell.date}
+          title={`${cell.date} — No entries`}
           style={{
             ...style,
             width: zoom,
             height,
             border: "1px solid var(--ink)",
-            opacity: 0.15,
+            opacity: 0.14,
             boxSizing: "border-box",
           }}
         />
@@ -291,15 +277,25 @@ export function TilWallView() {
       return (
         <div
           key={cell.date}
-          title={`${cell.date} — ${cell.count} ${cell.count === 1 ? "entry" : "entries"}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => handleSelectDayTile(cell.date)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleSelectDayTile(cell.date);
+            }
+          }}
+          title={`${cell.date} — ${cell.count} ${cell.count === 1 ? "entry" : "entries"} (click to open day)`}
           style={{
             ...style,
             width: zoom,
             height,
             background: color,
             opacity,
-            border: "2px solid var(--ink)",
+            border: "1.5px solid var(--ink)",
             boxSizing: "border-box",
+            cursor: "pointer",
             transition: tileTransition,
           }}
         />
@@ -310,15 +306,25 @@ export function TilWallView() {
       return (
         <div
           key={cell.date}
-          title={cell.date}
+          role="button"
+          tabIndex={0}
+          onClick={() => handleSelectDayTile(cell.date)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleSelectDayTile(cell.date);
+            }
+          }}
+          title={`${cell.date} — ${type} (${cell.count}) — click to open day`}
           style={{
             ...style,
             width: zoom,
             height,
             background: color,
-            border: "2px solid var(--ink)",
+            border: "1.5px solid var(--ink)",
             boxSizing: "border-box",
             position: "relative",
+            cursor: "pointer",
             transition: tileTransition,
           }}
         >
@@ -330,8 +336,8 @@ export function TilWallView() {
               fontFamily: "var(--mono)",
               fontSize: 8,
               fontWeight: 800,
-              opacity: 0.85,
-              color: "var(--ink)",
+              opacity: 0.9,
+              color: "#0A0A0A",
             }}
           >
             {tilTypeInitial(type)}
@@ -345,33 +351,63 @@ export function TilWallView() {
     return (
       <div
         key={cell.date}
+        role="button"
+        tabIndex={0}
+        onClick={() => handleSelectDayTile(cell.date)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleSelectDayTile(cell.date);
+          }
+        }}
+        title={`Open ${cell.date} in Stream`}
         style={{
           ...style,
           width: zoom,
           height,
-          background: color,
+          background: "var(--card)",
           border: "2px solid var(--ink)",
           boxSizing: "border-box",
           padding: "6px 7px",
           overflow: "hidden",
+          cursor: "pointer",
           transition: tileTransition,
         }}
       >
-        <span
+        <div
           style={{
-            fontFamily: "var(--mono)",
-            fontSize: 8,
-            fontWeight: 800,
-            border: "2px solid var(--ink)",
-            background: "var(--paper)",
-            padding: "0 4px",
-            display: "inline-block",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 4,
             marginBottom: 4,
-            color: "var(--ink)",
           }}
         >
-          {entry?.type || type}
-        </span>
+          <span
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: 8,
+              fontWeight: 800,
+              border: "1px solid var(--ink)",
+              background: color,
+              padding: "0 4px",
+              color: "#0A0A0A",
+            }}
+          >
+            {entry?.type || type}
+          </span>
+          <span
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: 8,
+              fontWeight: 800,
+              opacity: 0.65,
+              color: "var(--ink)",
+            }}
+          >
+            {cell.date.slice(5)}
+          </span>
+        </div>
         <div
           style={{
             fontSize: 11,
@@ -392,11 +428,41 @@ export function TilWallView() {
 
   return (
     <div className="til-wall-container">
+      {/* Masthead */}
+      <header className="til-secondary-masthead">
+        <div className="til-secondary-masthead__left">
+          <div className="til-secondary-masthead__title-row">
+            <h2 className="til-secondary-masthead__title">WALL // 365-DAY KNOWLEDGE MATRIX</h2>
+            <span className="til-secondary-masthead__badge">SEMANTIC ZOOM</span>
+          </div>
+          <p className="til-secondary-masthead__desc">
+            Continuous 365-day density overview. Zoom smoothly from heat rhythm to archetype initials and full daily claim cards, or click any active date tile to open that day.
+          </p>
+        </div>
+
+        <div className="til-secondary-masthead__right">
+          <div className="til-secondary-telemetry">
+            <div className="til-secondary-stat">
+              <span className="til-secondary-stat__val">{days.length}</span>
+              <span className="til-secondary-stat__lbl">DAYS</span>
+            </div>
+            <div className="til-secondary-stat">
+              <span className="til-secondary-stat__val">{totalEntries}</span>
+              <span className="til-secondary-stat__lbl">ENTRIES</span>
+            </div>
+            <div className="til-secondary-stat">
+              <span className="til-secondary-stat__val">{activeDays}</span>
+              <span className="til-secondary-stat__lbl">ACTIVE DAYS</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
       <div className="til-wall-card">
-        {/* Cyber HUD Header */}
+        {/* Control Bar */}
         <div className="til-wall-hud-header">
           <div className="til-wall-hud-left">
-            <span className="til-wall-hud-label">WALL ZOOM</span>
+            <span className="til-wall-hud-label">TILE SCALE</span>
             <input
               type="range"
               min={WALL_ZOOM_MIN}
@@ -409,7 +475,6 @@ export function TilWallView() {
             <span className="til-wall-zoom-val">{zoom}PX</span>
           </div>
 
-          {/* Mode Switcher Buttons */}
           <div className="til-wall-modes">
             <button
               type="button"
@@ -437,19 +502,22 @@ export function TilWallView() {
             </button>
           </div>
 
-          <div className="til-wall-hud-meta">
-            <span><b>{days.length}</b> DAYS</span>
-            <span className="hud-sep">•</span>
-            <span><b>{totalEntries}</b> ENTRIES</span>
-            <span className="hud-sep">•</span>
-            <span className="hud-highlight"><b>{activeDays}</b> ACTIVE</span>
+          {/* Archetype Legend */}
+          <div className="til-wall-legend">
+            {tilTypeValues.map((t) => (
+              <span key={t} className="til-wall-legend__item">
+                <i
+                  className="til-wall-legend__swatch"
+                  style={{ background: tilTypeColorVar(t) }}
+                />
+                <span>{t}</span>
+              </span>
+            ))}
           </div>
         </div>
 
         {loading ? (
-          <div className="til-wall-loading">
-            LOADING 365-DAY KNOWLEDGE WALL...
-          </div>
+          <div className="til-wall-loading">LOADING 365-DAY KNOWLEDGE WALL...</div>
         ) : (
           <div
             ref={containerRef}
@@ -459,8 +527,8 @@ export function TilWallView() {
             onTouchEnd={handleTouchEnd}
             className="til-wall-viewport"
             style={{
-              padding: 14,
-              maxHeight: 520,
+              padding: 16,
+              maxHeight: 540,
               overflowY: "auto",
               display: virtualize ? "block" : "flex",
               flexWrap: virtualize ? undefined : "wrap",
@@ -488,10 +556,11 @@ export function TilWallView() {
         )}
       </div>
 
-      <div className="til-wall-info-banner">
+      <div className="til-secondary-footer-bar">
         <span className="til-info-tag">VIRTUALIZATION ENGINE</span>
         <span>
-          {WALL_VIRTUALIZE_THRESHOLD}px+ tiles virtualize seamlessly for high-density rendering. Press keys <b>[1]</b>, <b>[2]</b>, or <b>[3]</b> to instantly jump between Rhythm, Composition, and Content views.
+          {WALL_VIRTUALIZE_THRESHOLD}px+ tiles virtualize automatically for 60fps scrolling. Press keys{" "}
+          <b>[1]</b>, <b>[2]</b>, or <b>[3]</b> to jump between Rhythm, Composition, and Content views, or click any tile to inspect that day.
         </span>
       </div>
     </div>

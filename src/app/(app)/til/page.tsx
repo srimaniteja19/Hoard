@@ -9,12 +9,10 @@ import { TilSearchFilterBar } from "@/components/til/TilSearchFilterBar";
 import { TilHeaderSummary } from "@/components/til/TilHeaderSummary";
 import { TilStreakBar } from "@/components/til/TilStreakBar";
 import { TilHeatmap } from "@/components/til/TilHeatmap";
-import { TilOnThisDay } from "@/components/til/TilOnThisDay";
 import { TilCodexView, CodexTopicSummary, CodexTopicDetail } from "@/components/til/TilCodexView";
 import { TilRecallView } from "@/components/til/TilRecallView";
 import { TilPressView } from "@/components/til/TilPressView";
 import { TilWallView } from "@/components/til/TilWallView";
-import { TilConstellationView } from "@/components/til/TilConstellationView";
 import { TilArchiveView } from "@/components/til/TilArchiveView";
 import { AppPage } from "@/components/chrome/AppPage";
 import { AppLoading } from "@/components/chrome/AppLoading";
@@ -68,7 +66,6 @@ function TilPageContent() {
     skipsUsedThisMonth: 0,
   });
   const [heatmap, setHeatmap] = useState<HeatmapData>({});
-  const [onThisDay, setOnThisDay] = useState<{ entry: TilItem; daysAgo: number } | null>(null);
 
   // Filters derived from URL query parameters
   const selectedHash = searchParams.get("hash") || null;
@@ -108,15 +105,13 @@ function TilPageContent() {
 
   const fetchAuxiliaryData = useCallback(async () => {
     try {
-      const [streakRes, heatmapRes, onThisDayRes] = await Promise.all([
+      const [streakRes, heatmapRes] = await Promise.all([
         fetch("/api/til/streak", { credentials: "include" }),
         fetch("/api/til/heatmap", { credentials: "include" }),
-        fetch("/api/til/on-this-day", { credentials: "include" }),
       ]);
 
       if (streakRes.ok) setStreak(await streakRes.json());
       if (heatmapRes.ok) setHeatmap(await heatmapRes.json());
-      if (onThisDayRes.ok) setOnThisDay(await onThisDayRes.json());
     } catch (e) {
       console.error("Failed to load TIL auxiliary data", e);
     }
@@ -233,12 +228,12 @@ function TilPageContent() {
       fetchRecall();
     } else if (viewMode === "press") {
       fetchPress();
-    } else if (viewMode === "wall" || viewMode === "constellation") {
-      // Self-contained views fetch their own data internally (Phase 4 / Phase 8).
+    } else if (viewMode === "wall") {
+      // Self-contained view fetches its own data internally.
     } else {
       fetchFeed();
     }
-    if (viewMode !== "wall" && viewMode !== "constellation") {
+    if (viewMode !== "wall") {
       fetchAuxiliaryData();
     }
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -347,27 +342,17 @@ function TilPageContent() {
     }
   };
 
-  const wide =
-    viewMode === "codex" || viewMode === "press" || viewMode === "wall" || viewMode === "constellation";
-
   return (
-    <AppPage width={wide ? "wide" : "md"}>
+    <AppPage width="wide">
       <ChromeSlot name="toolbar">
         <TilHeaderNav />
       </ChromeSlot>
+      <div className="til-page-shell" data-til-view={viewMode}>
         {/* CODEX VIEW MODE */}
         {viewMode === "codex" ? (
-          <div>
+          <div className="til-view-panel">
             {codexLoading ? (
-              <div
-                style={{
-                  padding: "48px 16px",
-                  textAlign: "center",
-                  fontFamily: "var(--mono)",
-                  fontSize: "13px",
-                  fontWeight: 800,
-                }}
-              >
+              <div className="til-loading-state">
                 LOADING CODEX ARCHIVE...
               </div>
             ) : (
@@ -384,17 +369,9 @@ function TilPageContent() {
           </div>
         ) : viewMode === "recall" ? (
           /* RECALL VIEW MODE */
-          <div>
+          <div className="til-view-panel">
             {recallLoading ? (
-              <div
-                style={{
-                  padding: "48px 16px",
-                  textAlign: "center",
-                  fontFamily: "var(--mono)",
-                  fontSize: "13px",
-                  fontWeight: 800,
-                }}
-              >
+              <div className="til-loading-state">
                 LOADING RECALL DECK...
               </div>
             ) : (
@@ -409,17 +386,9 @@ function TilPageContent() {
           </div>
         ) : viewMode === "press" ? (
           /* PRESS VIEW MODE */
-          <div>
+          <div className="til-view-panel">
             {pressLoading ? (
-              <div
-                style={{
-                  padding: "48px 16px",
-                  textAlign: "center",
-                  fontFamily: "var(--mono)",
-                  fontSize: "13px",
-                  fontWeight: 800,
-                }}
-              >
+              <div className="til-loading-state">
                 LOADING PRESS ZINE...
               </div>
             ) : (
@@ -438,22 +407,23 @@ function TilPageContent() {
           </div>
         ) : viewMode === "archive" ? (
           /* ARCHIVE VAULT VIEW MODE */
-          <TilArchiveView
-            items={items}
-            onUpdate={handleUpdate}
-            onDelete={handleDelete}
-            onSelectTag={navigateToCodexTopic}
-            onSelectType={(type) => updateUrlFilters(selectedTag, type, selectedDay)}
-          />
+          <div className="til-view-panel">
+            <TilArchiveView
+              items={items}
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
+              onSelectTag={navigateToCodexTopic}
+              onSelectType={(type) => updateUrlFilters(selectedTag, type, selectedDay)}
+            />
+          </div>
         ) : viewMode === "wall" ? (
           /* WALL VIEW MODE */
-          <TilWallView />
-        ) : viewMode === "constellation" ? (
-          /* CONSTELLATION VIEW MODE */
-          <TilConstellationView />
+          <div className="til-view-panel">
+            <TilWallView />
+          </div>
         ) : (
           /* STREAM VIEW MODE (Default) */
-          <div>
+          <div className="til-stream-workspace">
             {/* Consolidated Header: Stats & 26-Week Dense Strip */}
             <TilHeaderSummary
               streak={streak}
@@ -462,9 +432,6 @@ function TilPageContent() {
               selectedDay={selectedDay}
               onSelectDay={(day) => updateUrlFilters(selectedTag, selectedType, day, selectedHash, searchQuery)}
             />
-
-            {/* On This Day Resurfacing Card */}
-            <TilOnThisDay data={onThisDay} />
 
             {/* Hero Morphing Composer Surface */}
             <TilComposer onCommit={handleCommit} onCommitBatch={handleCommitBatch} />
@@ -489,15 +456,7 @@ function TilPageContent() {
 
             {/* Timeline Feed Container */}
             {loading ? (
-              <div
-                style={{
-                  padding: "48px 16px",
-                  textAlign: "center",
-                  fontFamily: "var(--mono)",
-                  fontSize: "13px",
-                  fontWeight: 800,
-                }}
-              >
+              <div className="til-loading-state">
                 LOADING TIL ARCHIVE...
               </div>
             ) : (
@@ -525,6 +484,7 @@ function TilPageContent() {
             )}
           </div>
         )}
+      </div>
     </AppPage>
   );
 }

@@ -1548,7 +1548,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "12px",
                 transform: toggleOpen ? "rotate(90deg)" : "rotate(0deg)",
-                transition: "transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                transition: "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                 display: "inline-block",
                 userSelect: "none",
               }}
@@ -1637,8 +1637,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   fontSize: "11px",
                   fontWeight: 700,
                   padding: 0,
-                  transform: item.done ? "scale(1.08)" : "scale(1)",
-                  transition: "all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                  transform: item.done ? "scale(1.04)" : "scale(1)",
+                  transition: "all 0.16s cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
               >
                 ✓

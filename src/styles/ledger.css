@@ -635,7 +635,7 @@
   position: relative;
   border-radius: 3px;
   overflow: hidden;
-  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.12s ease;
+  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.14s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.12s ease;
   user-select: none;
 }
 
@@ -891,7 +891,7 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 12px;
-  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.14s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
 }
@@ -1053,7 +1053,7 @@
   justify-content: space-between;
   position: relative;
   overflow: hidden;
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s cubic-bezier(0.16, 1, 0.3, 1);
   animation: subCardPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: calc(var(--sub-index, 0) * 0.05s);
 }
@@ -1093,7 +1093,7 @@
 .sub-card-category-icon {
   display: inline-block;
   font-size: 12px;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sub-card-editorial:hover .sub-card-category-icon {
@@ -1225,7 +1225,7 @@
   box-shadow: 2px 2px 0 var(--ink, #0A0A0A);
   cursor: pointer;
   border-radius: 2px;
-  transition: all 0.1s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
   text-transform: uppercase;
 }
 
@@ -1305,7 +1305,7 @@
   cursor: pointer;
   color: var(--ink, #0A0A0A);
   border-radius: 2px;
-  transition: all 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.14s cubic-bezier(0.16, 1, 0.3, 1);
   text-transform: uppercase;
 }
 
@@ -1384,11 +1384,11 @@
   gap: 14px;
   position: relative;
   overflow: hidden;
-  border-top: 5px solid #FF2E93;
+  border-color: #FF2E93;
 }
 
 .debt-ob-banner--danger {
-  border-top-color: #DC2626;
+  border-color: #DC2626;
   box-shadow: 5px 5px 0 #DC2626;
 }
 
@@ -1632,19 +1632,19 @@
 }
 
 .debt-ob-cell--burn {
-  border-left: 4px solid #FF2E93;
+  background: rgba(255, 46, 147, 0.08);
 }
 
 .debt-ob-cell--min {
-  border-left: 4px solid #FFE600;
+  background: rgba(255, 230, 0, 0.1);
 }
 
 .debt-ob-cell--split {
-  border-left: 4px solid #00F0FF;
+  background: rgba(0, 240, 255, 0.08);
 }
 
 .debt-ob-cell--top {
-  border-left: 4px solid #F43F5E;
+  background: rgba(244, 63, 94, 0.08);
 }
 
 .debt-ob-cell-top {
@@ -4248,19 +4248,19 @@
 }
 
 .dues-stat-card.dues-stat-card--today {
-  border-top: 6px solid var(--lime, #D2F800);
+  background: color-mix(in oklab, var(--lime, #D2F800) 24%, var(--card, #FFFFFF));
 }
 
 .dues-stat-card.dues-stat-card--week {
-  border-top: 6px solid #FF9E2C;
+  background: color-mix(in oklab, #FF9E2C 18%, var(--card, #FFFFFF));
 }
 
 .dues-stat-card.dues-stat-card--month {
-  border-top: 6px solid #7FE9F7;
+  background: color-mix(in oklab, #7FE9F7 22%, var(--card, #FFFFFF));
 }
 
 .dues-stat-card.dues-stat-card--year {
-  border-top: 6px solid #D8B4FE;
+  background: color-mix(in oklab, #D8B4FE 22%, var(--card, #FFFFFF));
 }
 
 .dues-stat-card-top {
@@ -4627,8 +4627,7 @@
 }
 
 .dues-cat-stat-card.dues-cat-stat-card--top {
-  background: #FFFFFF;
-  border-top: 5px solid var(--lime, #D2F800);
+  background: color-mix(in oklab, var(--lime, #D2F800) 18%, #FFFFFF);
 }
 
 .dues-cat-card-top {

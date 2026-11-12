@@ -10,6 +10,7 @@ import { confidence, confidenceSql } from "@/lib/til/confidence";
 import { checkSupersessionCycle } from "@/lib/til/supersession";
 import { recordUse } from "@/lib/library/recordUse";
 import { scheduleBookmarkEmbedding, scheduleTilEmbedding } from "@/lib/embeddings/upsertBookmarkEmbedding";
+import { generateTilAutoTags, normalizeTilTag } from "@/lib/til/autoTags";
 import crypto from "crypto";
 
 // ─── GET /api/til ────────────────────────────────────────────────────────────
@@ -220,7 +221,35 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2. Save to bookmark queue ONLY if explicitly requested by user (default off)
+    // 1. Resolve Link Preview Snapshot if linkUrl provided (gives title + description for auto-tagging)
+    let linkPreview = null;
+    if (data.linkUrl) {
+      try {
+        linkPreview = await fetchLinkPreview(data.linkUrl);
+      } catch {
+        // Fallback preview
+      }
+    }
+
+    // 2. Resolve manual tags or automatically generate tags from title + model when omitted
+    const manualTags = (data.tags || [])
+      .map((raw) => normalizeTilTag(raw))
+      .filter(Boolean);
+
+    const tagsToAssociate =
+      manualTags.length > 0
+        ? manualTags
+        : await generateTilAutoTags({
+            type: data.type,
+            title: linkPreview?.title || null,
+            body: data.body || null,
+            code: data.code || null,
+            codeLang: data.codeLang || null,
+            linkUrl: data.linkUrl || null,
+            linkDescription: linkPreview?.description || null,
+          });
+
+    // 3. Save to bookmark queue ONLY if explicitly requested by user (default off)
     if (rawBody.saveToHoardQueue && data.linkUrl) {
       let domain = "web";
       try {
@@ -229,27 +258,17 @@ export async function POST(req: Request) {
 
       const [tilBookmark] = await db.insert(bookmarks).values({
         userId,
-        title: data.body ? data.body.slice(0, 80) : "TIL Link",
+        title: linkPreview?.title || (data.body ? data.body.slice(0, 80) : "TIL Link"),
         type: "ART",
         source: domain,
         url: data.linkUrl,
         mins: 5,
-        tag: data.tags[0] || "til",
+        tag: tagsToAssociate[0] || "til",
         collectionId: `${userId.slice(-8)}-unsorted`,
         unread: true,
         note: `Derived from TIL #${shortHash}`,
       }).onConflictDoNothing().returning();
       if (tilBookmark) scheduleBookmarkEmbedding(tilBookmark);
-    }
-
-    // 3. Resolve Link Preview Snapshot if linkUrl provided
-    let linkPreview = null;
-    if (data.linkUrl) {
-      try {
-        linkPreview = await fetchLinkPreview(data.linkUrl);
-      } catch {
-        // Fallback preview
-      }
     }
 
     // 4. Insert TIL Entry
@@ -309,10 +328,10 @@ export async function POST(req: Request) {
         .where(and(eq(tilEntries.id, data.replacesEntryId), eq(tilEntries.userId, userId)));
     }
 
-    // 4. Associate Tags
+    // 6. Associate Tags (manual or auto-generated)
     const createdTagNames: string[] = [];
-    if (data.tags && data.tags.length > 0) {
-      for (const rawTag of data.tags) {
+    if (tagsToAssociate.length > 0) {
+      for (const rawTag of tagsToAssociate) {
         const tagName = rawTag.trim().toLowerCase();
         if (!tagName) continue;
 
