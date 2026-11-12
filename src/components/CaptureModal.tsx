@@ -5,7 +5,7 @@ import { Bookmark, Collection, DetectionResult, ItemType, KindType } from "@/typ
 import { TYPES } from "@/data/initialBookmarks";
 import { cleanTitle } from "@/lib/cleanTitle";
 import { detectKindFromMetadata, detectKindFromUrl } from "@/lib/detectKind";
-import { flattenCollections, primaryTag } from "@/lib/library/triageCapture";
+import { flattenCollections, primaryTag } from "@/lib/library/triageHelpers";
 
 interface FetchedMeta {
   title: string | null;
