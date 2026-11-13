@@ -153,33 +153,35 @@ interface BlockEditorProps {
   theme?: NotebookTheme;
 }
 
-const SLASH_MENU_ITEMS: { type: string; glyph: string; label: string; shortcut: string }[] = [
-  { type: "table", glyph: "▦", label: "Data Table (Grid)", shortcut: "/table" },
-  { type: "math", glyph: "∑", label: "Math / LaTeX Equation", shortcut: "/math" },
-  { type: "stat", glyph: "▲", label: "KPI Stat / Metric Card", shortcut: "/stat" },
-  { type: "timeline", glyph: "⏳", label: "Milestone Timeline", shortcut: "/timeline" },
-  { type: "subpage", glyph: "📄", label: "Subpage / Nested Note", shortcut: "/page" },
-  { type: "paragraph", glyph: "¶", label: "Text Paragraph", shortcut: "/text" },
-  { type: "bullet", glyph: "•", label: "Bulleted List (- or *)", shortcut: "/bullet" },
-  { type: "numbered", glyph: "1.", label: "Numbered List (1.)", shortcut: "/num" },
-  { type: "h2", glyph: "H2", label: "Heading 1 (#)", shortcut: "/h1" },
-  { type: "h3", glyph: "H3", label: "Heading 2 (##)", shortcut: "/h2" },
-  { type: "code", glyph: "<>", label: "Code Snippet (```)", shortcut: "/code" },
-  { type: "todo", glyph: "☑", label: "To-Do Checklist ([])", shortcut: "/todo" },
-  { type: "quote", glyph: '"', label: "Quote Block (>)", shortcut: "/quote" },
-  { type: "gotcha", glyph: "!", label: "Gotcha Callout (!)", shortcut: "/gotcha" },
-  { type: "question", glyph: "?", label: "Question for Me (?)", shortcut: "/q" },
-  { type: "fact", glyph: "★", label: "Key Takeaway (Lime)", shortcut: "/fact" },
-  { type: "connects", glyph: "↗", label: "Connects To (Cyan)", shortcut: "/connects" },
-  { type: "image", glyph: "📷", label: "Image / Screenshot", shortcut: "/image" },
-  { type: "toggle", glyph: "▸", label: "Collapsible Toggle", shortcut: "/toggle" },
-  { type: "embed", glyph: "▶", label: "Interactive Embed (Video/Audio/Web)", shortcut: "/embed" },
-  { type: "youtube", glyph: "▶", label: "YouTube Video", shortcut: "/youtube" },
-  { type: "link", glyph: "🔗", label: "Web Bookmark Card", shortcut: "/link" },
-  { type: "pdf", glyph: "📄", label: "PDF Document Viewer", shortcut: "/pdf" },
-  { type: "audio", glyph: "🎵", label: "Audio / Spotify Player", shortcut: "/audio" },
-  { type: "diagram", glyph: "📐", label: "Architecture / Mermaid Diagram", shortcut: "/diagram" },
-  { type: "html", glyph: "</>", label: "HTML & CSS Sandbox (Live Render)", shortcut: "/html" },
+type SlashCategory = "Core Writing" | "Study Callouts" | "Media & Embeds" | "Advanced";
+
+const SLASH_MENU_ITEMS: { type: string; glyph: string; label: string; shortcut: string; category: SlashCategory }[] = [
+  { type: "paragraph", glyph: "¶", label: "Text Paragraph", shortcut: "/text", category: "Core Writing" },
+  { type: "h2", glyph: "H1", label: "Heading 1 (#)", shortcut: "/h1", category: "Core Writing" },
+  { type: "h3", glyph: "H2", label: "Heading 2 (##)", shortcut: "/h2", category: "Core Writing" },
+  { type: "bullet", glyph: "•", label: "Bulleted List (- or *)", shortcut: "/bullet", category: "Core Writing" },
+  { type: "numbered", glyph: "1.", label: "Numbered List (1.)", shortcut: "/num", category: "Core Writing" },
+  { type: "todo", glyph: "☑", label: "To-Do Checklist ([])", shortcut: "/todo", category: "Core Writing" },
+  { type: "code", glyph: "<>", label: "Code Snippet (```)", shortcut: "/code", category: "Core Writing" },
+  { type: "quote", glyph: '"', label: "Quote Block (>)", shortcut: "/quote", category: "Core Writing" },
+  { type: "toggle", glyph: "▸", label: "Collapsible Toggle", shortcut: "/toggle", category: "Core Writing" },
+  { type: "gotcha", glyph: "!", label: "Gotcha Callout (!)", shortcut: "/gotcha", category: "Study Callouts" },
+  { type: "question", glyph: "?", label: "Question for Me (?)", shortcut: "/q", category: "Study Callouts" },
+  { type: "fact", glyph: "★", label: "Key Takeaway (Lime)", shortcut: "/fact", category: "Study Callouts" },
+  { type: "connects", glyph: "↗", label: "Connects To (Cyan)", shortcut: "/connects", category: "Study Callouts" },
+  { type: "image", glyph: "📷", label: "Image / Screenshot", shortcut: "/image", category: "Media & Embeds" },
+  { type: "subpage", glyph: "📄", label: "Subpage / Nested Note", shortcut: "/page", category: "Media & Embeds" },
+  { type: "link", glyph: "🔗", label: "Web Bookmark Card", shortcut: "/link", category: "Media & Embeds" },
+  { type: "embed", glyph: "▶", label: "Interactive Embed (Video/Audio/Web)", shortcut: "/embed", category: "Media & Embeds" },
+  { type: "youtube", glyph: "▶", label: "YouTube Video", shortcut: "/youtube", category: "Media & Embeds" },
+  { type: "pdf", glyph: "📄", label: "PDF Document Viewer", shortcut: "/pdf", category: "Media & Embeds" },
+  { type: "audio", glyph: "🎵", label: "Audio / Spotify Player", shortcut: "/audio", category: "Media & Embeds" },
+  { type: "diagram", glyph: "📐", label: "Architecture / Mermaid Diagram", shortcut: "/diagram", category: "Advanced" },
+  { type: "math", glyph: "∑", label: "Math / LaTeX Equation", shortcut: "/math", category: "Advanced" },
+  { type: "table", glyph: "▦", label: "Data Table (Grid)", shortcut: "/table", category: "Advanced" },
+  { type: "stat", glyph: "▲", label: "KPI Stat / Metric Card", shortcut: "/stat", category: "Advanced" },
+  { type: "timeline", glyph: "⏳", label: "Milestone Timeline", shortcut: "/timeline", category: "Advanced" },
+  { type: "html", glyph: "</>", label: "HTML & CSS Sandbox (Live Render)", shortcut: "/html", category: "Advanced" },
 ];
 
 export const BlockEditor: React.FC<BlockEditorProps> = ({
@@ -546,34 +548,67 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   const handleTransformBlock = (index: number, props: any) => {
     playSound.pop();
     const current = blocks[index] || { id: generateBlockId(), type: "paragraph", text: "" };
-    let transformed: Block;
 
+    if (props.type === "image") {
+      setInsertImageAfterIdx(index);
+      fileInputRef.current?.click();
+      setSlashMenu(null);
+      return;
+    }
+
+    let transformed: Block;
     const baseId = current.id || generateBlockId();
+    const isSlashTriggerOnBlock = Boolean(slashMenu?.isOpen && slashMenu.blockIndex === index);
+    const fallbackText =
+      "text" in current && typeof current.text === "string"
+        ? isSlashTriggerOnBlock && current.text.startsWith("/")
+          ? ""
+          : current.text
+        : "";
+    const resolvedText = typeof props.text === "string" ? props.text : fallbackText;
 
     switch (props.type) {
       case "bullet":
-        transformed = { id: baseId, type: "bullet", text: props.text || "" };
+        transformed = { id: baseId, type: "bullet", text: resolvedText };
         break;
       case "numbered":
-        transformed = { id: baseId, type: "numbered", number: props.number || 1, text: props.text || "" };
+        transformed = { id: baseId, type: "numbered", number: props.number || 1, text: resolvedText };
+        break;
+      case "h2":
+        transformed = { id: baseId, type: "heading", level: 2, text: resolvedText };
+        break;
+      case "h3":
+        transformed = { id: baseId, type: "heading", level: 3, text: resolvedText };
         break;
       case "heading":
-        transformed = { id: baseId, type: "heading", level: props.level || 2, text: props.text || "" };
+        transformed = { id: baseId, type: "heading", level: props.level || 2, text: resolvedText };
         break;
       case "code":
-        transformed = { id: baseId, type: "code", lang: props.lang || "PYTHON", note: "SNIPPET", code: props.code || "# Write code here\n" };
+        transformed = {
+          id: baseId,
+          type: "code",
+          lang: props.lang || "PYTHON",
+          note: "SNIPPET",
+          code: props.code || resolvedText || "# Write code here\n",
+        };
         break;
       case "quote":
-        transformed = { id: baseId, type: "quote", text: props.text || "", attribution: "" };
+        transformed = { id: baseId, type: "quote", text: resolvedText, attribution: "" };
         break;
       case "todo":
-        transformed = { id: baseId, type: "todo", items: props.items || [{ text: "", done: false }] };
+        transformed = { id: baseId, type: "todo", items: props.items || [{ text: resolvedText, done: false }] };
+        break;
+      case "gotcha":
+      case "question":
+      case "fact":
+      case "connects":
+        transformed = { id: baseId, type: "callout", kind: props.type, text: resolvedText };
         break;
       case "callout":
-        transformed = { id: baseId, type: "callout", kind: props.kind || "gotcha", text: props.text || "" };
+        transformed = { id: baseId, type: "callout", kind: props.kind || "gotcha", text: resolvedText };
         break;
       case "toggle":
-        transformed = { id: baseId, type: "toggle", summary: props.summary || "Toggle Title", body: "" };
+        transformed = { id: baseId, type: "toggle", summary: props.summary || resolvedText || "Toggle Title", body: "" };
         break;
       case "html":
         transformed = {
@@ -591,7 +626,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       case "youtube":
       case "pdf":
       case "audio": {
-        const defaultUrl = props.url || (props.type === "youtube" ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : "https://example.com");
+        const defaultUrl = props.url || "";
         transformed = {
           id: baseId,
           type: "embed",
@@ -694,7 +729,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       }
       case "paragraph":
       default:
-        transformed = { id: baseId, type: "paragraph", text: props.text || "" };
+        transformed = { id: baseId, type: "paragraph", text: resolvedText };
         break;
     }
 
@@ -781,11 +816,10 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       case "youtube":
       case "pdf":
       case "audio": {
-        const defaultUrl = type === "youtube" ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : "https://example.com";
         newBlock = {
           id: generateBlockId(),
           type: "embed",
-          url: defaultUrl,
+          url: "",
           embedType: type === "youtube" ? "youtube" : type === "pdf" ? "pdf" : type === "audio" ? "spotify" : "generic",
           title: type === "youtube" ? "YouTube Video" : "Embedded Content",
         };
@@ -1270,6 +1304,73 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         onChange={handleFileUpload}
       />
 
+      {/* Compact Undo / Redo Bar (appears once edits exist) */}
+      {history.length > 1 && (
+        <div
+          className="no-print"
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            gap: "6px",
+            marginBottom: "4px",
+          }}
+        >
+          <button
+            type="button"
+            disabled={historyIndex === 0}
+            onClick={handleUndo}
+            title="Undo (Cmd/Ctrl+Z)"
+            aria-label="Undo last block change"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "9px",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              padding: "4px 8px",
+              border: `1.5px solid ${tokens.borderSubtle}`,
+              background: tokens.cardBg,
+              color: tokens.textPrimary,
+              opacity: historyIndex === 0 ? 0.35 : 0.85,
+              cursor: historyIndex === 0 ? "default" : "pointer",
+              borderRadius: "2px",
+            }}
+          >
+            <RotateCcw size={10} />
+            <span>UNDO</span>
+          </button>
+          <button
+            type="button"
+            disabled={historyIndex >= history.length - 1}
+            onClick={handleRedo}
+            title="Redo (Cmd/Ctrl+Shift+Z)"
+            aria-label="Redo block change"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "9px",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              padding: "4px 8px",
+              border: `1.5px solid ${tokens.borderSubtle}`,
+              background: tokens.cardBg,
+              color: tokens.textPrimary,
+              opacity: historyIndex >= history.length - 1 ? 0.35 : 0.85,
+              cursor: historyIndex >= history.length - 1 ? "default" : "pointer",
+              borderRadius: "2px",
+            }}
+          >
+            <RotateCw size={10} />
+            <span>REDO</span>
+          </button>
+        </div>
+      )}
+
       {/*
         Note Blocks List — deliberately NOT a flex column. Flex items never
         margin-collapse (with siblings or through to a child), so each
@@ -1468,6 +1569,73 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                 </button>
               </div>
 
+              {/* Mobile Active-Block Action Bar (shown only < 768px when desktop gutter is hidden) */}
+              {(activeBlockId === block.id || blockActionMenu?.blockIndex === idx) && (
+                <div className="nb-mobile-block-bar no-print">
+                  <button
+                    type="button"
+                    aria-label="Insert block below"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      playSound.click();
+                      handleInsertBlock("paragraph", idx);
+                    }}
+                    style={{
+                      minWidth: "34px",
+                      minHeight: "30px",
+                      padding: "4px 8px",
+                      border: `1.5px solid ${tokens.borderPrimary}`,
+                      background: tokens.popoverBg,
+                      color: tokens.textPrimary,
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      cursor: "pointer",
+                      borderRadius: "2px",
+                    }}
+                  >
+                    <Plus size={12} />
+                    <span>ADD</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Block actions and transform"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      playSound.click();
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setBlockActionMenu(
+                        blockActionMenu?.blockIndex === idx
+                          ? null
+                          : { blockIndex: idx, top: rect.bottom + 4, left: rect.left }
+                      );
+                    }}
+                    style={{
+                      minWidth: "34px",
+                      minHeight: "30px",
+                      padding: "4px 8px",
+                      border: `1.5px solid ${tokens.borderPrimary}`,
+                      background: blockActionMenu?.blockIndex === idx ? tokens.accentColor : tokens.popoverBg,
+                      color: blockActionMenu?.blockIndex === idx ? tokens.accentFg : tokens.textPrimary,
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      cursor: "pointer",
+                      borderRadius: "2px",
+                    }}
+                  >
+                    <GripVertical size={12} />
+                    <span>BLOCK</span>
+                  </button>
+                </div>
+              )}
+
               {/* Block Content */}
               <BlockRenderer
                 block={block}
@@ -1503,13 +1671,13 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                 <div
                   style={{
                     position: "absolute",
-                    left: "54px",
+                    left: "min(54px, 4vw)",
                     top: "100%",
                     zIndex: 9999,
-                    width: "300px",
-                    border: isInk ? "2px solid rgba(255,255,255,0.25)" : "3px solid #0A0A0A",
-                    background: isInk ? "#1A1D26" : "#FFFFFF",
-                    boxShadow: isInk ? "5px 5px 0 rgba(0,0,0,0.6)" : "7px 7px 0 #0A0A0A",
+                    width: "min(320px, calc(100vw - 32px))",
+                    border: `2.5px solid ${tokens.borderPrimary}`,
+                    background: tokens.popoverBg,
+                    boxShadow: tokens.popoverShadow,
                     overflow: "hidden",
                     animation: "fadeIn 0.1s ease",
                   }}
@@ -1519,79 +1687,113 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                       fontFamily: "var(--mono, monospace)",
                       fontSize: "9px",
                       fontWeight: 700,
-                      letterSpacing: "0.16em",
+                      letterSpacing: "0.14em",
                       padding: "7px 12px",
-                      background: isInk ? "#252A36" : "#EBE7DC",
-                      borderBottom: isInk ? "2px solid rgba(255,255,255,0.15)" : "2px solid #0A0A0A",
-                      color: isInk ? "#F0EDE4" : "#0A0A0A",
+                      background: isInk ? "#252A36" : tokens.sidebarBg,
+                      borderBottom: `2px solid ${tokens.borderPrimary}`,
+                      color: tokens.textPrimary,
                       display: "flex",
                       justifyContent: "space-between",
                     }}
                   >
                     <span>TRANSFORM BLOCK</span>
-                    <span>ESC TO CLOSE</span>
+                    <span style={{ opacity: 0.65 }}>ESC TO CLOSE</span>
                   </div>
-                  <div style={{ maxHeight: "240px", overflowY: "auto" }}>
-                    {filteredSlashItems.map((item, itemIdx) => {
-                      const isActive = slashMenu.activeIndex === itemIdx;
-                      return (
-                        <button
-                          key={item.type}
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            handleTransformBlock(idx, { type: item.type as any });
-                          }}
-                          style={{
-                            display: "flex",
-                            width: "100%",
-                            alignItems: "center",
-                            gap: "10px",
-                            background: isActive ? (isInk ? "#2A303F" : "#FCE94F") : "transparent",
-                            border: "none",
-                            borderBottom: isInk ? "1px solid rgba(255,255,255,0.08)" : "1.5px solid rgba(10,10,10,0.1)",
-                            padding: "8px 12px",
-                            cursor: "pointer",
-                            textAlign: "left",
-                            color: isInk ? (isActive ? "#FFFFFF" : "#F0EDE4") : "#0A0A0A",
-                            transition: "background 0.08s ease",
-                          }}
-                          onMouseEnter={() =>
-                            setSlashMenu((prev) => (prev ? { ...prev, activeIndex: itemIdx } : null))
-                          }
-                        >
-                          <span
-                            style={{
-                              width: "22px",
-                              height: "22px",
-                              border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "2px solid #0A0A0A",
-                              display: "grid",
-                              placeItems: "center",
-                              fontFamily: "var(--mono, monospace)",
-                              fontSize: "10px",
-                              fontWeight: 700,
-                              flex: "none",
-                              background: isInk ? "#252A36" : "#FFFFFF",
-                              color: isInk ? "#F0EDE4" : "#0A0A0A",
-                            }}
-                          >
-                            {item.glyph}
-                          </span>
-                          <b style={{ fontSize: "13px", fontWeight: 700 }}>{item.label}</b>
-                          <span
-                            style={{
-                              fontFamily: "var(--mono, monospace)",
-                              fontSize: "8.5px",
-                              letterSpacing: "0.08em",
-                              opacity: 0.45,
-                              marginLeft: "auto",
-                            }}
-                          >
-                            {item.shortcut}
-                          </span>
-                        </button>
-                      );
-                    })}
+                  <div style={{ maxHeight: "280px", overflowY: "auto" }}>
+                    {filteredSlashItems.length === 0 ? (
+                      <div
+                        style={{
+                          padding: "14px 12px",
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "10px",
+                          color: tokens.textMuted,
+                          textAlign: "center",
+                        }}
+                      >
+                        No matching blocks
+                      </div>
+                    ) : (
+                      filteredSlashItems.map((item, itemIdx) => {
+                        const isActive = slashMenu.activeIndex === itemIdx;
+                        const prevItem = itemIdx > 0 ? filteredSlashItems[itemIdx - 1] : null;
+                        const showCategoryHeader = !prevItem || prevItem.category !== item.category;
+                        return (
+                          <React.Fragment key={item.type}>
+                            {showCategoryHeader && (
+                              <div
+                                style={{
+                                  padding: "6px 12px 4px",
+                                  fontFamily: "var(--mono, monospace)",
+                                  fontSize: "8.5px",
+                                  fontWeight: 800,
+                                  letterSpacing: "0.14em",
+                                  textTransform: "uppercase",
+                                  color: tokens.textMuted,
+                                  background: tokens.sidebarBg,
+                                  borderBottom: `1px solid ${tokens.borderSubtle}`,
+                                }}
+                              >
+                                {item.category}
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleTransformBlock(idx, { type: item.type as any });
+                              }}
+                              style={{
+                                display: "flex",
+                                width: "100%",
+                                alignItems: "center",
+                                gap: "10px",
+                                background: isActive ? (isInk ? "#2A303F" : tokens.accentColor) : "transparent",
+                                border: "none",
+                                borderBottom: `1px solid ${tokens.borderSubtle}`,
+                                padding: "8px 12px",
+                                cursor: "pointer",
+                                textAlign: "left",
+                                color: isActive ? (isInk ? "#FFFFFF" : tokens.accentFg) : tokens.textPrimary,
+                                transition: "background 0.08s ease",
+                              }}
+                              onMouseEnter={() =>
+                                setSlashMenu((prev) => (prev ? { ...prev, activeIndex: itemIdx } : null))
+                              }
+                            >
+                              <span
+                                style={{
+                                  width: "22px",
+                                  height: "22px",
+                                  border: `1.5px solid ${tokens.borderPrimary}`,
+                                  display: "grid",
+                                  placeItems: "center",
+                                  fontFamily: "var(--mono, monospace)",
+                                  fontSize: "10px",
+                                  fontWeight: 700,
+                                  flex: "none",
+                                  background: tokens.cardBg,
+                                  color: tokens.textPrimary,
+                                }}
+                              >
+                                {item.glyph}
+                              </span>
+                              <b style={{ fontSize: "13px", fontWeight: 700 }}>{item.label}</b>
+                              <span
+                                style={{
+                                  fontFamily: "var(--mono, monospace)",
+                                  fontSize: "8.5px",
+                                  letterSpacing: "0.08em",
+                                  opacity: 0.55,
+                                  marginLeft: "auto",
+                                }}
+                              >
+                                {item.shortcut}
+                              </span>
+                            </button>
+                          </React.Fragment>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               )}
@@ -1637,60 +1839,82 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
             animation: "fadeIn 0.08s ease",
           }}
         >
-          {/* Turn Into Header */}
-          <div style={{ padding: "4px 12px 6px", fontSize: "8.5px", letterSpacing: "0.12em", color: tokens.textMuted }}>
-            TURN INTO
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "2px", padding: "0 6px 6px" }}>
-            {[
-              { type: "paragraph", label: "Paragraph", glyph: "¶" },
-              { type: "bullet", label: "Bullet", glyph: "•" },
-              { type: "numbered", label: "Numbered", glyph: "1." },
-              { type: "h2", label: "Heading 1", glyph: "H1" },
-              { type: "h3", label: "Heading 2", glyph: "H2" },
-              { type: "code", label: "Code", glyph: "<>" },
-              { type: "quote", label: "Quote", glyph: '"' },
-              { type: "gotcha", label: "Gotcha", glyph: "!" },
-              { type: "todo", label: "To-Do", glyph: "☑" },
-              { type: "toggle", label: "Toggle", glyph: "▸" },
-              { type: "embed", label: "Embed", glyph: "▶" },
-              { type: "link", label: "Bookmark", glyph: "🔗" },
-              { type: "diagram", label: "Diagram", glyph: "📐" },
-              { type: "subpage", label: "Subpage", glyph: "📄" },
-              { type: "table", label: "Table", glyph: "▦" },
-              { type: "math", label: "Math", glyph: "∑" },
-              { type: "stat", label: "Stat / KPI", glyph: "▲" },
-              { type: "timeline", label: "Timeline", glyph: "⏳" },
-            ].map((t) => (
-              <button
-                key={t.type}
-                type="button"
-                onClick={() => {
-                  playSound.pop();
-                  handleTransformBlock(blockActionMenu.blockIndex, { type: t.type as any });
-                  setBlockActionMenu(null);
-                }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: tokens.textPrimary,
-                  padding: "5px 8px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "9.5px",
-                  borderRadius: "2px",
-                  textAlign: "left",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              >
-                <span style={{ opacity: 0.6 }}>{t.glyph}</span>
-                <span>{t.label}</span>
-              </button>
-            ))}
-          </div>
+          {/* Turn Into Categorized Grid */}
+          {[
+            {
+              group: "TURN INTO · WRITING",
+              items: [
+                { type: "paragraph", label: "Paragraph", glyph: "¶" },
+                { type: "h2", label: "Heading 1", glyph: "H1" },
+                { type: "h3", label: "Heading 2", glyph: "H2" },
+                { type: "bullet", label: "Bullet", glyph: "•" },
+                { type: "numbered", label: "Numbered", glyph: "1." },
+                { type: "todo", label: "To-Do", glyph: "☑" },
+                { type: "code", label: "Code", glyph: "<>" },
+                { type: "quote", label: "Quote", glyph: '"' },
+                { type: "toggle", label: "Toggle", glyph: "▸" },
+              ],
+            },
+            {
+              group: "STUDY CALLOUTS",
+              items: [
+                { type: "gotcha", label: "Gotcha", glyph: "!" },
+                { type: "question", label: "Question", glyph: "?" },
+                { type: "fact", label: "Takeaway", glyph: "★" },
+                { type: "connects", label: "Connects", glyph: "↗" },
+              ],
+            },
+            {
+              group: "MEDIA & ADVANCED",
+              items: [
+                { type: "embed", label: "Embed", glyph: "▶" },
+                { type: "link", label: "Bookmark", glyph: "🔗" },
+                { type: "diagram", label: "Diagram", glyph: "📐" },
+                { type: "subpage", label: "Subpage", glyph: "📄" },
+                { type: "table", label: "Table", glyph: "▦" },
+                { type: "math", label: "Math", glyph: "∑" },
+                { type: "stat", label: "Stat / KPI", glyph: "▲" },
+                { type: "timeline", label: "Timeline", glyph: "⏳" },
+              ],
+            },
+          ].map((section) => (
+            <div key={section.group}>
+              <div style={{ padding: "5px 12px 4px", fontSize: "8px", letterSpacing: "0.12em", color: tokens.textMuted }}>
+                {section.group}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "2px", padding: "0 6px 4px" }}>
+                {section.items.map((t) => (
+                  <button
+                    key={t.type}
+                    type="button"
+                    onClick={() => {
+                      playSound.pop();
+                      handleTransformBlock(blockActionMenu.blockIndex, { type: t.type as any });
+                      setBlockActionMenu(null);
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: tokens.textPrimary,
+                      padding: "5px 8px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "9.5px",
+                      borderRadius: "2px",
+                      textAlign: "left",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <span style={{ opacity: 0.6 }}>{t.glyph}</span>
+                    <span>{t.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
 
           <div style={{ height: "1px", background: tokens.borderSubtle, margin: "4px 0" }} />
 

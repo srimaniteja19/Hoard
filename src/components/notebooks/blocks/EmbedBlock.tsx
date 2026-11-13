@@ -45,7 +45,7 @@ export const EmbedBlock: React.FC<EmbedBlockProps> = ({
   const [embedSize, setEmbedSize] = useState<"compact" | "standard" | "full">("standard");
   const [iframeKey, setIframeKey] = useState(0);
   const [hasError, setHasError] = useState(false);
-  const [isEditingUrl, setIsEditingUrl] = useState(false);
+  const [isEditingUrl, setIsEditingUrl] = useState(!block.url);
   const [urlDraft, setUrlDraft] = useState(block.url);
 
   const embedInfo: EmbedInfo = getEmbedInfo(block.url);
@@ -140,8 +140,8 @@ export const EmbedBlock: React.FC<EmbedBlockProps> = ({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "4px",
-                background: tokens.borderPrimary,
-                color: isInk ? "#FFFFFF" : "#FCE94F",
+                background: tokens.textPrimary,
+                color: tokens.canvasBg,
                 padding: "2px 6px",
                 borderRadius: "2px",
                 letterSpacing: "0.08em",
@@ -186,8 +186,8 @@ export const EmbedBlock: React.FC<EmbedBlockProps> = ({
                     setEmbedSize(s);
                   }}
                   style={{
-                    background: embedSize === s ? tokens.borderPrimary : "transparent",
-                    color: embedSize === s ? (isInk ? "#FFFFFF" : "#FCE94F") : tokens.textPrimary,
+                    background: embedSize === s ? tokens.textPrimary : "transparent",
+                    color: embedSize === s ? tokens.canvasBg : tokens.textPrimary,
                     border: "none",
                     padding: "2px 6px",
                     cursor: "pointer",
@@ -312,7 +312,6 @@ export const EmbedBlock: React.FC<EmbedBlockProps> = ({
                 background: isInk ? "#14161E" : "#FFFFFF",
                 color: tokens.textPrimary,
                 border: `1px solid ${tokens.borderPrimary}`,
-                outline: "none",
               }}
             />
             <button
@@ -322,8 +321,8 @@ export const EmbedBlock: React.FC<EmbedBlockProps> = ({
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "9px",
                 fontWeight: 800,
-                background: accentColor,
-                color: "#FFFFFF",
+                background: tokens.textPrimary,
+                color: tokens.canvasBg,
                 border: "none",
                 padding: "4px 8px",
                 cursor: "pointer",
@@ -354,11 +353,48 @@ export const EmbedBlock: React.FC<EmbedBlockProps> = ({
           style={{
             position: "relative",
             width: "100%",
-            ...(isAspect169 ? { aspectRatio: "16/9" } : { height: `${customHeight}px` }),
+            ...(isAspect169 ? { aspectRatio: "16/9" } : { height: block.url ? `${customHeight}px` : "140px" }),
             background: isInk ? "#14161E" : "#F8F6F0",
           }}
         >
-          {hasError ? (
+          {!block.url ? (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "16px",
+                textAlign: "center",
+                color: tokens.textSecondary,
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "10.5px",
+              }}
+            >
+              <span>Paste a YouTube, Vimeo, Loom, Spotify, PDF, or web URL above to embed.</span>
+              {!isEditingUrl && !readOnly && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingUrl(true)}
+                  style={{
+                    fontFamily: "var(--mono, monospace)",
+                    fontSize: "9.5px",
+                    fontWeight: 700,
+                    padding: "6px 12px",
+                    background: tokens.accentColor,
+                    color: tokens.accentFg,
+                    border: `1.5px solid ${tokens.borderPrimary}`,
+                    cursor: "pointer",
+                  }}
+                >
+                  SET EMBED URL
+                </button>
+              )}
+            </div>
+          ) : hasError ? (
             <div
               style={{
                 position: "absolute",
@@ -465,7 +501,6 @@ export const EmbedBlock: React.FC<EmbedBlockProps> = ({
             padding: "8px 14px",
             borderTop: `1.5px solid ${tokens.borderSubtle}`,
             color: tokens.textMuted,
-            outline: "none",
             background: isInk ? "#181B24" : "#FFFFFF",
           }}
         >

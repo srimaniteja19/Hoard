@@ -2,30 +2,35 @@
 
 import React from "react";
 import { playSound } from "@/lib/sound";
+import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 
 interface EmptyPageProps {
   onStartWriting: () => void;
   onPasteTranscript: () => void;
-  onDraftFromSlides: () => void;
+  onDraftFromSlides?: () => void;
   onDraftFromTopic?: () => void;
   onCreateSubpage?: () => void;
+  theme?: NotebookTheme;
 }
 
 export const EmptyPage: React.FC<EmptyPageProps> = ({
   onStartWriting,
   onPasteTranscript,
-  onDraftFromSlides,
   onDraftFromTopic,
   onCreateSubpage,
+  theme = "cream",
 }) => {
+  const tokens = getThemeTokens(theme);
+
   return (
     <div
       style={{
-        border: "3px dashed rgba(10,10,10,0.22)",
-        padding: "36px 26px",
+        border: `2.5px dashed ${tokens.borderPrimary}`,
+        padding: "34px 24px",
         textAlign: "center",
         marginTop: "14px",
-        background: "rgba(255,255,255,0.4)",
+        background: tokens.isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.55)",
+        color: tokens.textPrimary,
       }}
     >
       <b
@@ -36,28 +41,49 @@ export const EmptyPage: React.FC<EmptyPageProps> = ({
           fontSize: "24px",
           letterSpacing: "-0.035em",
           marginBottom: "8px",
-          color: "inherit",
+          color: tokens.textPrimary,
         }}
       >
         Nothing here yet
       </b>
       <p
         style={{
-          margin: "0 auto 20px",
+          margin: "0 auto 22px",
           fontFamily: "var(--mono, monospace)",
           fontSize: "10px",
           fontWeight: 700,
-          letterSpacing: "0.11em",
-          opacity: 0.55,
-          lineHeight: "1.9",
-          maxWidth: "46ch",
-          color: "inherit",
+          letterSpacing: "0.1em",
+          lineHeight: "1.85",
+          maxWidth: "48ch",
+          color: tokens.textSecondary,
         }}
       >
         PAGES STAY EMPTY UNTIL YOU WRITE THEM. THE OUTLINE STILL COUNTS THIS LESSON, SO THE GAP IS VISIBLE RATHER THAN HIDDEN.
       </p>
 
       <div className="nb-empty-btn-group">
+        <button
+          type="button"
+          onClick={() => {
+            playSound.click();
+            onStartWriting();
+          }}
+          style={{
+            fontFamily: "var(--mono, monospace)",
+            fontSize: "10px",
+            fontWeight: 800,
+            letterSpacing: "0.12em",
+            border: `2px solid ${tokens.borderPrimary}`,
+            background: tokens.isDark ? "#B8F04A" : "#0A0A0A",
+            color: tokens.isDark ? "#0A0A0A" : "#B8F04A",
+            padding: "10px 18px",
+            cursor: "pointer",
+            boxShadow: tokens.isDark ? "3px 3px 0 rgba(0,0,0,0.8)" : "3px 3px 0 #B8F04A",
+          }}
+        >
+          START WRITING
+        </button>
+
         {onDraftFromTopic && (
           <button
             type="button"
@@ -68,53 +94,29 @@ export const EmptyPage: React.FC<EmptyPageProps> = ({
             style={{
               fontFamily: "var(--mono, monospace)",
               fontSize: "10px",
-              fontWeight: 800,
-              letterSpacing: "0.12em",
-              border: "2px solid #0A0A0A",
-              background: "#B8F04A",
-              color: "#0A0A0A",
-              padding: "10px 18px",
+              fontWeight: 700,
+              letterSpacing: "0.11em",
+              border: `2px solid ${tokens.borderPrimary}`,
+              background: tokens.cardBg,
+              color: tokens.textPrimary,
+              padding: "10px 16px",
               cursor: "pointer",
-              boxShadow: "3px 3px 0 #0A0A0A",
               display: "inline-flex",
               alignItems: "center",
               gap: "6px",
-              transition: "all 0.1s ease",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translate(-1px, -1px)";
-              e.currentTarget.style.boxShadow = "4px 4px 0 #0A0A0A";
+              e.currentTarget.style.background = tokens.accentColor;
+              e.currentTarget.style.color = tokens.accentFg;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "none";
-              e.currentTarget.style.boxShadow = "3px 3px 0 #0A0A0A";
+              e.currentTarget.style.background = tokens.cardBg;
+              e.currentTarget.style.color = tokens.textPrimary;
             }}
           >
-            <span>✨ DRAFT FROM QUESTION / TOPIC (AI)</span>
+            <span>✨ DRAFT FROM TOPIC (AI)</span>
           </button>
         )}
-
-        <button
-          type="button"
-          onClick={() => {
-            playSound.click();
-            onStartWriting();
-          }}
-          style={{
-            fontFamily: "var(--mono, monospace)",
-            fontSize: "10px",
-            fontWeight: 700,
-            letterSpacing: "0.13em",
-            border: "2px solid #0A0A0A",
-            background: "#0A0A0A",
-            color: "#B8F04A",
-            padding: "10px 16px",
-            cursor: "pointer",
-            boxShadow: "3px 3px 0 #B8F04A",
-          }}
-        >
-          START WRITING
-        </button>
 
         <button
           type="button"
@@ -126,43 +128,28 @@ export const EmptyPage: React.FC<EmptyPageProps> = ({
             fontFamily: "var(--mono, monospace)",
             fontSize: "10px",
             fontWeight: 700,
-            letterSpacing: "0.13em",
-            border: "2px solid #0A0A0A",
-            background: "#FFFFFF",
-            color: "#0A0A0A",
+            letterSpacing: "0.11em",
+            border: `2px solid ${tokens.borderPrimary}`,
+            background: tokens.cardBg,
+            color: tokens.textPrimary,
             padding: "10px 16px",
             cursor: "pointer",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
-        >
-          PASTE THE TRANSCRIPT
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playSound.click();
-            onDraftFromSlides();
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = tokens.accentColor;
+            e.currentTarget.style.color = tokens.accentFg;
           }}
-          style={{
-            fontFamily: "var(--mono, monospace)",
-            fontSize: "10px",
-            fontWeight: 700,
-            letterSpacing: "0.13em",
-            border: "2px solid #0A0A0A",
-            background: "#FFFFFF",
-            color: "#0A0A0A",
-            padding: "10px 16px",
-            cursor: "pointer",
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = tokens.cardBg;
+            e.currentTarget.style.color = tokens.textPrimary;
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
         >
-          DRAFT FROM THE SLIDES
+          IMPORT TRANSCRIPT / SLIDES
         </button>
+      </div>
 
-        {onCreateSubpage && (
+      {onCreateSubpage && (
+        <div style={{ marginTop: "14px" }}>
           <button
             type="button"
             onClick={() => {
@@ -171,22 +158,22 @@ export const EmptyPage: React.FC<EmptyPageProps> = ({
             }}
             style={{
               fontFamily: "var(--mono, monospace)",
-              fontSize: "10px",
-              fontWeight: 800,
-              letterSpacing: "0.13em",
-              border: "2px solid #0A0A0A",
-              background: "#FFFFFF",
-              color: "#7B5CF0",
-              padding: "10px 16px",
+              fontSize: "9.5px",
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              border: "none",
+              background: "transparent",
+              color: tokens.textSecondary,
+              textDecoration: "underline",
+              textUnderlineOffset: "3px",
+              padding: "4px 8px",
               cursor: "pointer",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#F0EDFE")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
           >
-            ＋ CREATE SUBPAGE
+            ＋ Or create a nested subpage
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

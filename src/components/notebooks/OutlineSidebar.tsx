@@ -33,6 +33,7 @@ interface OutlineSidebarProps {
   onSelectLesson: (moduleIndex: number, lessonIndex: number) => void;
   onDeleteLesson?: (moduleIndex: number, lessonIndex: number) => void;
   onToggleWatched?: (moduleIndex: number, lessonIndex: number) => void;
+  onToggleModuleWatched?: (moduleIndex: number, watched: boolean) => void;
   onDuplicateLesson?: (moduleIndex: number, lessonIndex: number) => void;
   onCreateLessonAbove?: (moduleIndex: number, lessonIndex: number) => void;
   onCreateLessonBelow?: (moduleIndex: number, lessonIndex: number) => void;
@@ -64,6 +65,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
   onSelectLesson,
   onDeleteLesson,
   onToggleWatched,
+  onToggleModuleWatched,
   onDuplicateLesson,
   onCreateLessonAbove,
   onCreateLessonBelow,
@@ -104,18 +106,25 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
 
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown menu on outside click
+  // Close dropdown menu on outside click or Escape
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setActionMenu(null);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActionMenu(null);
+      }
+    };
     if (actionMenu) {
       document.addEventListener("mousedown", handleOutsideClick);
+      document.addEventListener("keydown", handleKeyDown);
     }
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [actionMenu]);
 
@@ -228,13 +237,13 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                   background: "transparent",
                   cursor: "pointer",
                   padding: "2px",
-                  opacity: 0.6,
-                  color: isInk ? "#F0EDE4" : "#0A0A0A",
+                  opacity: 0.72,
+                  color: tokens.textPrimary,
                   display: "grid",
                   placeItems: "center",
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.72")}
               >
                 <Pencil size={11} />
               </button>
@@ -300,11 +309,41 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             fontSize: "19px",
             lineHeight: 1.05,
             letterSpacing: "-0.03em",
-            color: isInk ? "#F0EDE4" : "#0A0A0A",
+            color: tokens.textPrimary,
           }}
         >
           {course.title}
         </h3>
+
+        {courses.length > 1 && (
+          <div style={{ marginBottom: "10px" }}>
+            <select
+              aria-label="Switch course notebook"
+              value={currentCourseIndex}
+              onChange={(e) => {
+                playSound.click();
+                onSelectCourse(Number(e.target.value));
+              }}
+              style={{
+                width: "100%",
+                padding: "5px 8px",
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "10px",
+                fontWeight: 700,
+                border: `1.5px solid ${tokens.borderPrimary}`,
+                background: tokens.cardBg,
+                color: tokens.textPrimary,
+                cursor: "pointer",
+              }}
+            >
+              {courses.map((c, idx) => (
+                <option key={c.id} value={idx}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Progress Bar */}
         <div
@@ -354,6 +393,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
         <div style={{ marginTop: "12px" }}>
           <input
             type="text"
+            aria-label="Filter pages"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Filter pages…"
@@ -366,7 +406,6 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
               border: `1.5px solid ${tokens.borderPrimary}`,
               background: tokens.cardBg,
               color: tokens.textPrimary,
-              outline: "none",
             }}
           />
         </div>
@@ -440,16 +479,16 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                       fontSize: "10px",
                       fontWeight: 800,
                       letterSpacing: "0.1em",
-                      border: isInk ? "2px solid rgba(255,255,255,0.3)" : "2px solid #0A0A0A",
-                      background: isInk ? "#1E222D" : "#FFFFFF",
-                      color: isInk ? "#F0EDE4" : "#0A0A0A",
+                      border: `2px solid ${tokens.borderPrimary}`,
+                      background: tokens.cardBg,
+                      color: tokens.textPrimary,
                       padding: "4px 8px",
-                      outline: "none",
                     }}
                   />
                 </div>
               ) : (
                 <div
+                  className="nb-outline-mod-header"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -464,39 +503,79 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                     userSelect: "none",
                   }}
                 >
-                  <span
+                  <button
+                    type="button"
+                    aria-expanded={!isCollapsed}
+                    aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${mod.title}`}
                     onClick={() => toggleModuleCollapse(mod.id)}
-                    style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      border: "none",
+                      background: "transparent",
+                      color: "inherit",
+                      font: "inherit",
+                      letterSpacing: "inherit",
+                      padding: "2px 0",
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
                   >
                     {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-                  </span>
-                  <span
-                    onClick={() => toggleModuleCollapse(mod.id)}
-                    style={{ cursor: "pointer", flex: "none" }}
-                  >
-                    {mod.title}
-                  </span>
+                    <span>{mod.title}</span>
+                  </button>
                   <span style={{ flex: 1, height: "2px", background: isInk ? "rgba(255,255,255,0.15)" : "rgba(10,10,10,0.14)" }} />
                   <span style={{ fontSize: "8.5px", opacity: 0.7 }}>
                     {modWritten}/{mod.lessons.length}
                   </span>
 
-                  {/* Module Action Icons (Shown smoothly only on module hover) */}
+                  {/* Module Action Icons (visible on hover, focus-within, and touch/mobile) */}
                   <div
+                    className="nb-outline-actions"
                     style={{
                       display: "flex",
                       alignItems: "center",
                       gap: "2px",
                       marginLeft: "4px",
                       opacity: isModHovered ? 1 : 0,
-                      transition: "opacity 0.12s ease",
                       pointerEvents: isModHovered ? "auto" : "none",
                     }}
                   >
+                    {onToggleModuleWatched && mod.lessons.length > 0 && (() => {
+                      const allWatched = mod.lessons.every((l) => l.watched);
+                      return (
+                        <button
+                          type="button"
+                          className="nb-outline-action-btn"
+                          title={allWatched ? "Mark all pages in module unwatched" : "Mark all pages in module watched"}
+                          aria-label={allWatched ? "Mark module unwatched" : "Mark module watched"}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            playSound.click();
+                            onToggleModuleWatched(modIdx, !allWatched);
+                          }}
+                          style={{
+                            border: "none",
+                            background: "transparent",
+                            cursor: "pointer",
+                            opacity: 0.75,
+                            color: isInk ? "#F0EDE4" : "#0A0A0A",
+                            padding: "2px",
+                            display: "grid",
+                            placeItems: "center",
+                          }}
+                        >
+                          {allWatched ? <EyeOff size={11} /> : <Eye size={11} />}
+                        </button>
+                      );
+                    })()}
                     {onNewPageInModule && (
                       <button
                         type="button"
+                        className="nb-outline-action-btn"
                         title="Add page in this module"
+                        aria-label={`Add page in ${mod.title}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           playSound.click();
@@ -506,14 +585,12 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                           border: "none",
                           background: "transparent",
                           cursor: "pointer",
-                          opacity: 0.7,
+                          opacity: 0.75,
                           color: isInk ? "#F0EDE4" : "#0A0A0A",
                           padding: "2px",
                           display: "grid",
                           placeItems: "center",
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
                       >
                         <Plus size={11} />
                       </button>
@@ -521,7 +598,9 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                     {onRenameModule && (
                       <button
                         type="button"
+                        className="nb-outline-action-btn"
                         title="Rename module"
+                        aria-label={`Rename ${mod.title}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           playSound.click();
@@ -532,14 +611,12 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                           border: "none",
                           background: "transparent",
                           cursor: "pointer",
-                          opacity: 0.7,
+                          opacity: 0.75,
                           color: isInk ? "#F0EDE4" : "#0A0A0A",
                           padding: "2px",
                           display: "grid",
                           placeItems: "center",
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
                       >
                         <Pencil size={10} />
                       </button>
@@ -547,7 +624,9 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                     {onDeleteModule && (
                       <button
                         type="button"
+                        className="nb-outline-action-btn"
                         title="Delete module"
+                        aria-label={`Delete ${mod.title}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           playSound.click();
@@ -557,14 +636,12 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                           border: "none",
                           background: "transparent",
                           cursor: "pointer",
-                          opacity: 0.7,
+                          opacity: 0.75,
                           color: "#EF4444",
                           padding: "2px",
                           display: "grid",
                           placeItems: "center",
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
                       >
                         <Trash2 size={10} />
                       </button>
@@ -677,6 +754,11 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                             )}
 
                             <div
+                              className="nb-outline-row"
+                              role="button"
+                              tabIndex={0}
+                              aria-current={isSelected ? "page" : undefined}
+                              aria-label={`${les.title} (${state === "written" ? "written" : state === "stub" ? "draft" : "empty"}${les.watched ? ", watched" : ""})`}
                               draggable
                               onDragStart={(e) => {
                                 e.dataTransfer.setData("text/plain", les.id);
@@ -691,6 +773,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                               onClick={() => {
                                 playSound.click();
                                 onSelectLesson(modIdx, lesIdx);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.target !== e.currentTarget) return;
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  playSound.click();
+                                  onSelectLesson(modIdx, lesIdx);
+                                }
                               }}
                               onContextMenu={(e) => {
                                 e.preventDefault();
@@ -764,30 +854,36 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                                 <div style={{ width: "14px", flexShrink: 0 }} />
                               )}
 
-                              {/* State Status Square or Custom Emoji */}
+                              {/* State Status Square (Always preserved even when page has a custom emoji) */}
                               <span
                                 style={{
-                                  fontSize: "13px",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "5px",
                                   flexShrink: 0,
                                   userSelect: "none",
-                                  display: "grid",
-                                  placeItems: "center",
                                 }}
                               >
-                                {les.icon || (
-                                  <span
-                                    style={{
-                                      width: "11px",
-                                      height: "11px",
-                                      border: isSelected ? "2px solid #F3F0E8" : (isInk ? "2px solid rgba(255,255,255,0.4)" : "2px solid #0A0A0A"),
-                                      background:
-                                        state === "written"
-                                          ? "#B8F04A"
-                                          : state === "stub"
-                                          ? "repeating-linear-gradient(45deg, #FCE94F 0 3px, transparent 3px 6px)"
-                                          : "transparent",
-                                    }}
-                                  />
+                                <span
+                                  aria-label={state === "written" ? "Written" : state === "stub" ? "Draft" : "Empty"}
+                                  title={state === "written" ? "Written" : state === "stub" ? "Draft" : "Empty"}
+                                  style={{
+                                    width: "10px",
+                                    height: "10px",
+                                    border: isSelected ? "2px solid #F3F0E8" : (isInk ? "2px solid rgba(255,255,255,0.45)" : "2px solid #0A0A0A"),
+                                    background:
+                                      state === "written"
+                                        ? "#B8F04A"
+                                        : state === "stub"
+                                        ? "repeating-linear-gradient(45deg, #FCE94F 0 3px, transparent 3px 6px)"
+                                        : "transparent",
+                                    display: "inline-block",
+                                  }}
+                                />
+                                {les.icon && (
+                                  <span style={{ fontSize: "12px", lineHeight: 1 }} aria-hidden="true">
+                                    {les.icon}
+                                  </span>
                                 )}
                               </span>
 
@@ -822,68 +918,75 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                                 </span>
                               )}
 
-                              {/* Quick [＋ Subpage] Button on Hover */}
-                              {onCreateSubpage && (
+                              {/* Row Actions (hover, focus-within, and always accessible on touch/mobile) */}
+                              <div
+                                className="nb-outline-actions"
+                                data-open={actionMenu?.modIdx === modIdx && actionMenu?.lesIdx === lesIdx ? "true" : "false"}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "2px",
+                                  flexShrink: 0,
+                                  opacity: isRowHovered || (actionMenu?.modIdx === modIdx && actionMenu?.lesIdx === lesIdx) ? 1 : 0,
+                                }}
+                              >
+                                {onCreateSubpage && (
+                                  <button
+                                    type="button"
+                                    className="nb-outline-action-btn"
+                                    title="Add subpage under this page"
+                                    aria-label={`Add subpage under ${les.title}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      playSound.click();
+                                      onCreateSubpage(les.id);
+                                      setCollapsedSubpages((prev) => ({ ...prev, [les.id]: false }));
+                                    }}
+                                    style={{
+                                      border: "none",
+                                      background: "transparent",
+                                      color: isSelected ? "#F3F0E8" : (isInk ? "#F0EDE4" : "#0A0A0A"),
+                                      cursor: "pointer",
+                                      padding: "2px",
+                                      display: "grid",
+                                      placeItems: "center",
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    <Plus size={12} />
+                                  </button>
+                                )}
+
                                 <button
                                   type="button"
-                                  title="Add subpage under this page"
+                                  className="nb-outline-action-btn"
+                                  title="Page options"
+                                  aria-label={`Options for ${les.title}`}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     playSound.click();
-                                    onCreateSubpage(les.id);
-                                    setCollapsedSubpages((prev) => ({ ...prev, [les.id]: false }));
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setActionMenu({
+                                      modIdx,
+                                      lesIdx,
+                                      top: rect.bottom + 4,
+                                      left: Math.min(rect.left - 130, window.innerWidth - 180),
+                                    });
                                   }}
                                   style={{
                                     border: "none",
                                     background: "transparent",
                                     color: isSelected ? "#F3F0E8" : (isInk ? "#F0EDE4" : "#0A0A0A"),
-                                    opacity: isRowHovered ? 0.85 : 0,
                                     cursor: "pointer",
                                     padding: "2px",
                                     display: "grid",
                                     placeItems: "center",
                                     flexShrink: 0,
-                                    transition: "opacity 0.1s ease",
                                   }}
-                                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                                  onMouseLeave={(e) => (e.currentTarget.style.opacity = isRowHovered ? "0.85" : "0")}
                                 >
-                                  <Plus size={12} />
+                                  <MoreHorizontal size={13} />
                                 </button>
-                              )}
-
-                              {/* Single Clean "⋯" More Options Button (Revealed on hover) */}
-                              <button
-                                type="button"
-                                title="Page options"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  playSound.click();
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  setActionMenu({
-                                    modIdx,
-                                    lesIdx,
-                                    top: rect.bottom + 4,
-                                    left: Math.min(rect.left - 130, window.innerWidth - 180),
-                                  });
-                                }}
-                                style={{
-                                  border: "none",
-                                  background: "transparent",
-                                  color: isSelected ? "#F3F0E8" : (isInk ? "#F0EDE4" : "#0A0A0A"),
-                                  opacity: isRowHovered || (actionMenu?.modIdx === modIdx && actionMenu?.lesIdx === lesIdx) ? 0.85 : 0,
-                                  cursor: "pointer",
-                                  padding: "2px",
-                                  display: "grid",
-                                  placeItems: "center",
-                                  flexShrink: 0,
-                                  transition: "opacity 0.1s ease",
-                                }}
-                                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                                onMouseLeave={(e) => (e.currentTarget.style.opacity = isRowHovered ? "0.85" : "0")}
-                              >
-                                <MoreHorizontal size={13} />
-                              </button>
+                              </div>
                             </div>
 
                             {/* Drop Target Indicator Line (After) */}
@@ -1160,18 +1263,18 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             width: "100%",
             fontFamily: "var(--mono, monospace)",
             fontSize: "10px",
-            fontWeight: 700,
+            fontWeight: 800,
             letterSpacing: "0.13em",
             border: `2px solid ${tokens.borderPrimary}`,
-            background: tokens.cardBg,
-            color: tokens.textPrimary,
+            background: tokens.accentColor,
+            color: tokens.accentFg,
             padding: "9px",
             cursor: "pointer",
             boxShadow: tokens.boxShadow,
             marginBottom: "8px",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
-          onMouseLeave={(e) => (e.currentTarget.style.background = tokens.cardBg)}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
         >
           ＋ ADD A PAGE
         </button>
@@ -1187,20 +1290,19 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
               fontSize: "10px",
               fontWeight: 700,
               letterSpacing: "0.13em",
-              border: isInk ? "2px solid rgba(255,255,255,0.3)" : "2px solid #0A0A0A",
-              background: "#B8F04A",
-              color: "#0A0A0A",
+              border: `2px solid ${tokens.borderPrimary}`,
+              background: tokens.cardBg,
+              color: tokens.textPrimary,
               padding: "9px",
               cursor: "pointer",
-              boxShadow: isInk ? "3px 3px 0 rgba(0,0,0,0.6)" : "3px 3px 0 #0A0A0A",
               marginBottom: "8px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               gap: "5px",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#A3E635")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#B8F04A")}
+            onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
+            onMouseLeave={(e) => (e.currentTarget.style.background = tokens.cardBg)}
           >
             <FolderPlus size={12} />
             <span>＋ ADD A MODULE</span>

@@ -5,6 +5,9 @@ import { playSound } from "@/lib/sound";
 import { X, Sparkles, Wand2, Compass, Layers, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 import { Block } from "@/lib/notebooks/blocks";
 
+import { getThemeTokens, NotebookTheme } from "@/lib/notebooks/theme";
+import { useModalFocusTrap } from "@/lib/notebooks/useModalFocusTrap";
+
 interface GenerateTopicModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -17,6 +20,8 @@ interface GenerateTopicModalProps {
   }) => void;
   currentLessonTitle?: string;
   courseTitle?: string;
+  hasExistingContent?: boolean;
+  theme?: NotebookTheme;
 }
 
 const INSPIRATION_CHIPS = [
@@ -29,10 +34,10 @@ const INSPIRATION_CHIPS = [
 ];
 
 const GENERATION_PHASES = [
-  "Analyzing subject architecture & runtime boundaries…",
-  "Synthesizing Mermaid.js system illustration & data flows…",
-  "Compiling worked examples, memory models & code mechanics…",
-  "Formulating gotchas, invariants & hands-on lab drills…",
+  "Outlining key concepts and structure…",
+  "Generating diagram and code examples…",
+  "Writing core explanations and worked walkthroughs…",
+  "Adding common pitfalls and practice prompts…",
 ];
 
 export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
@@ -41,15 +46,31 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
   onGenerated,
   currentLessonTitle,
   courseTitle = "COURSE",
+  hasExistingContent = false,
+  theme = "cream",
 }) => {
+  const tokens = getThemeTokens(theme);
   const [prompt, setPrompt] = useState("");
   const [depth, setDepth] = useState<"comprehensive" | "visual" | "concise">("comprehensive");
-  const [destination, setDestination] = useState<"current" | "new">("current");
+  const [destination, setDestination] = useState<"current" | "new">(
+    hasExistingContent ? "new" : "current"
+  );
   const [isGenerating, setIsGenerating] = useState(false);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useModalFocusTrap({
+    isOpen,
+    onClose: () => {
+      if (!isGenerating) onClose();
+    },
+    containerRef: dialogRef,
+    initialFocusRef: textareaRef,
+    closeOnEscape: !isGenerating,
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -58,9 +79,9 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
       setErrorMessage(null);
       setIsGenerating(false);
       setPhaseIdx(0);
-      setTimeout(() => textareaRef.current?.focus(), 80);
+      setDestination(hasExistingContent ? "new" : "current");
     }
-  }, [isOpen, currentLessonTitle]);
+  }, [isOpen, currentLessonTitle, hasExistingContent]);
 
   // Rotate through generation phases while loading
   useEffect(() => {
@@ -140,14 +161,19 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Generate topic notes"
         style={{
           width: "100%",
           maxWidth: "620px",
           maxHeight: "92vh",
           overflowY: "auto",
-          border: "3px solid #0A0A0A",
-          background: "#FFFFFF",
-          boxShadow: "10px 10px 0 #0A0A0A",
+          border: `3px solid ${tokens.borderPrimary}`,
+          background: tokens.cardBg,
+          color: tokens.textPrimary,
+          boxShadow: tokens.boxShadow,
           display: "flex",
           flexDirection: "column",
         }}
@@ -161,7 +187,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
             padding: "14px 18px",
             background: "#FCE94F",
             color: "#0A0A0A",
-            borderBottom: "3px solid #0A0A0A",
+            borderBottom: `3px solid ${tokens.borderPrimary}`,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
@@ -174,7 +200,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                 letterSpacing: "0.14em",
               }}
             >
-              AUTONOMOUS STUDY PLAYBOOK SYNTHESIZER
+              GENERATE TOPIC NOTES
             </span>
           </div>
 
@@ -182,6 +208,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
             <button
               type="button"
               onClick={onClose}
+              aria-label="Close dialog"
               style={{
                 background: "transparent",
                 border: "none",
@@ -211,11 +238,11 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                 fontWeight: 800,
                 letterSpacing: "0.1em",
                 marginBottom: "8px",
-                color: "#0A0A0A",
+                color: tokens.textPrimary,
               }}
             >
               <span>WHAT DO YOU WANT TO STUDY OR MASTER? *</span>
-              <span style={{ opacity: 0.5, fontSize: "9px" }}>QUESTION OR ARCHITECTURAL TOPIC</span>
+              <span style={{ color: tokens.textMuted, fontSize: "9px" }}>TOPIC OR QUESTION</span>
             </label>
             <textarea
               ref={textareaRef}
@@ -232,10 +259,9 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                 fontWeight: 700,
                 lineHeight: "1.4",
                 letterSpacing: "-0.01em",
-                border: "2.5px solid #0A0A0A",
-                background: isGenerating ? "#EBE7DC" : "#FDFCFA",
-                color: "#0A0A0A",
-                outline: "none",
+                border: `2.5px solid ${tokens.borderPrimary}`,
+                background: isGenerating ? tokens.sidebarBg : tokens.canvasBg,
+                color: tokens.textPrimary,
                 resize: "none",
                 boxShadow: "3px 3px 0 rgba(10,10,10,0.1)",
               }}
@@ -257,7 +283,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                   fontSize: "9px",
                   fontWeight: 800,
                   letterSpacing: "0.1em",
-                  opacity: 0.5,
+                  color: tokens.textMuted,
                   marginBottom: "6px",
                 }}
               >
@@ -273,10 +299,10 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                       fontFamily: "var(--mono, monospace)",
                       fontSize: "9.5px",
                       fontWeight: 700,
-                      background: prompt === chip.query ? "#0A0A0A" : "#F3F0E8",
-                      color: prompt === chip.query ? "#FCE94F" : "#0A0A0A",
-                      border: "1.5px solid #0A0A0A",
-                      padding: "3px 8px",
+                      background: prompt === chip.query ? tokens.accentColor : tokens.sidebarBg,
+                      color: prompt === chip.query ? tokens.accentFg : tokens.textPrimary,
+                      border: `1.5px solid ${tokens.borderPrimary}`,
+                      padding: "4px 8px",
                       cursor: "pointer",
                       borderRadius: "2px",
                       transition: "all 0.1s ease",
@@ -298,8 +324,8 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                 gap: "14px",
                 marginBottom: "20px",
                 padding: "12px",
-                background: "#F6F4ED",
-                border: "1.5px solid rgba(10,10,10,0.15)",
+                background: tokens.sidebarBg,
+                border: `1.5px solid ${tokens.borderSubtle}`,
               }}
             >
               {/* Depth Selector */}
@@ -312,7 +338,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                     fontWeight: 800,
                     letterSpacing: "0.1em",
                     marginBottom: "6px",
-                    color: "#0A0A0A",
+                    color: tokens.textPrimary,
                   }}
                 >
                   DEPTH & FORMAT:
@@ -332,6 +358,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                         fontFamily: "var(--mono, monospace)",
                         fontSize: "9.5px",
                         fontWeight: depth === d.id ? 800 : 600,
+                        color: tokens.textPrimary,
                         cursor: "pointer",
                       }}
                     >
@@ -340,7 +367,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                         name="depth"
                         checked={depth === d.id}
                         onChange={() => setDepth(d.id as any)}
-                        style={{ accentColor: "#0A0A0A" }}
+                        style={{ accentColor: tokens.accentColor }}
                       />
                       <span>{d.label}</span>
                     </label>
@@ -358,7 +385,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                     fontWeight: 800,
                     letterSpacing: "0.1em",
                     marginBottom: "6px",
-                    color: "#0A0A0A",
+                    color: tokens.textPrimary,
                   }}
                 >
                   SAVE DESTINATION:
@@ -372,6 +399,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                       fontFamily: "var(--mono, monospace)",
                       fontSize: "9.5px",
                       fontWeight: destination === "current" ? 800 : 600,
+                      color: tokens.textPrimary,
                       cursor: "pointer",
                     }}
                   >
@@ -380,7 +408,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                       name="destination"
                       checked={destination === "current"}
                       onChange={() => setDestination("current")}
-                      style={{ accentColor: "#0A0A0A" }}
+                      style={{ accentColor: tokens.accentColor }}
                     />
                     <span>Populate active page notes</span>
                   </label>
@@ -393,6 +421,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                       fontFamily: "var(--mono, monospace)",
                       fontSize: "9.5px",
                       fontWeight: destination === "new" ? 800 : 600,
+                      color: tokens.textPrimary,
                       cursor: "pointer",
                     }}
                   >
@@ -401,10 +430,28 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                       name="destination"
                       checked={destination === "new"}
                       onChange={() => setDestination("new")}
-                      style={{ accentColor: "#0A0A0A" }}
+                      style={{ accentColor: tokens.accentColor }}
                     />
                     <span>Create brand-new lesson page</span>
                   </label>
+
+                  {hasExistingContent && destination === "current" && (
+                    <div
+                      style={{
+                        marginTop: "6px",
+                        padding: "6px 8px",
+                        background: tokens.isDark ? "rgba(251, 191, 36, 0.14)" : "#FEF3C7",
+                        border: "1.5px solid #D97706",
+                        color: tokens.isDark ? "#FCD34D" : "#92400E",
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      Warning: replaces current page notes, title, and cover.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -417,7 +464,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                 padding: "24px 18px",
                 background: "#0A0A0A",
                 color: "#FFFFFF",
-                border: "2px solid #0A0A0A",
+                border: `2px solid ${tokens.borderPrimary}`,
                 marginBottom: "20px",
                 textAlign: "center",
               }}
@@ -436,7 +483,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                 }}
               >
                 <Wand2 size={16} className="animate-spin" />
-                <span>SYNTHESIZING COMPREHENSIVE STUDY PLAYBOOK…</span>
+                <span>DRAFTING TOPIC NOTES…</span>
               </div>
               <p
                 style={{
@@ -453,11 +500,11 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                 style={{
                   marginTop: "14px",
                   fontSize: "9px",
-                  color: "rgba(255,255,255,0.4)",
+                  color: "rgba(255,255,255,0.6)",
                   fontFamily: "var(--mono, monospace)",
                 }}
               >
-                Generating full architectural diagrams, memory distribution scales, worked examples, and lab exercises.
+                Generating diagram, worked examples, and practice prompts.
               </div>
             </div>
           )}
@@ -491,7 +538,7 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
               justifyContent: "flex-end",
               gap: "12px",
               paddingTop: "12px",
-              borderTop: "2px solid rgba(10,10,10,0.12)",
+              borderTop: `2px solid ${tokens.borderSubtle}`,
             }}
           >
             <button
@@ -503,9 +550,9 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                 fontSize: "10.5px",
                 fontWeight: 700,
                 padding: "9px 16px",
-                border: "2px solid rgba(10,10,10,0.3)",
+                border: `2px solid ${tokens.borderSubtle}`,
                 background: "transparent",
-                color: "#0A0A0A",
+                color: tokens.textPrimary,
                 cursor: isGenerating ? "not-allowed" : "pointer",
                 opacity: isGenerating ? 0.4 : 1,
               }}
@@ -522,11 +569,11 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
                 fontWeight: 800,
                 letterSpacing: "0.12em",
                 padding: "10px 22px",
-                border: "2.5px solid #0A0A0A",
-                background: !prompt.trim() || isGenerating ? "#EBE7DC" : "#B8F04A",
-                color: "#0A0A0A",
+                border: `2.5px solid ${tokens.borderPrimary}`,
+                background: !prompt.trim() || isGenerating ? tokens.sidebarBg : "#B8F04A",
+                color: !prompt.trim() || isGenerating ? tokens.textMuted : "#0A0A0A",
                 cursor: !prompt.trim() || isGenerating ? "not-allowed" : "pointer",
-                boxShadow: !prompt.trim() || isGenerating ? "none" : "4px 4px 0 #0A0A0A",
+                boxShadow: !prompt.trim() || isGenerating ? "none" : tokens.boxShadow,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "7px",
@@ -535,18 +582,16 @@ export const GenerateTopicModal: React.FC<GenerateTopicModalProps> = ({
               onMouseEnter={(e) => {
                 if (prompt.trim() && !isGenerating) {
                   e.currentTarget.style.transform = "translate(-1px, -1px)";
-                  e.currentTarget.style.boxShadow = "5px 5px 0 #0A0A0A";
                 }
               }}
               onMouseLeave={(e) => {
                 if (prompt.trim() && !isGenerating) {
                   e.currentTarget.style.transform = "none";
-                  e.currentTarget.style.boxShadow = "4px 4px 0 #0A0A0A";
                 }
               }}
             >
               <Sparkles size={14} />
-              <span>{isGenerating ? "GENERATING PLAYBOOK…" : "GENERATE NOTES FROM TOPIC"}</span>
+              <span>{isGenerating ? "GENERATING NOTES…" : "GENERATE NOTES"}</span>
             </button>
           </div>
         </form>

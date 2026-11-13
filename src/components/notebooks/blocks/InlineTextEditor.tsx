@@ -71,7 +71,7 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   as = "p",
   blockType = "paragraph",
   style = {},
-  placeholder = "Type note, or # for heading, - for bullet, > for quote…",
+  placeholder = "Type '/' for blocks, # for heading, or paste markdown/URLs…",
   autoFocus = false,
   readOnly = false,
 }) => {
@@ -292,7 +292,6 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
     width: "100%",
     background: "transparent",
     border: "none",
-    outline: "none",
     padding: 0,
     margin: 0,
     color: "inherit",

@@ -2,12 +2,15 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { playSound } from "@/lib/sound";
+import { getThemeTokens, NotebookTheme } from "@/lib/notebooks/theme";
+import { useModalFocusTrap } from "@/lib/notebooks/useModalFocusTrap";
 import { X, Sparkles, BookOpen, Layers } from "lucide-react";
 
 interface AddCourseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: { title: string; provider?: string; accent?: string; accentFg?: string }) => void;
+  theme?: NotebookTheme;
 }
 
 const COLOR_PRESETS = [
@@ -25,16 +28,25 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
+  theme = "cream",
 }) => {
+  const tokens = getThemeTokens(theme);
   const [title, setTitle] = useState("");
   const [provider, setProvider] = useState("DEEPLEARNING.AI");
   const [selectedAccent, setSelectedAccent] = useState(COLOR_PRESETS[0]);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useModalFocusTrap({
+    isOpen,
+    onClose,
+    containerRef: dialogRef,
+    initialFocusRef: inputRef,
+  });
 
   useEffect(() => {
     if (isOpen) {
       setTitle("");
-      setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
 
@@ -52,17 +64,12 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     });
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      onClose();
-    }
-  };
-
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      onKeyDown={handleKeyDown}
+      aria-label="Create new notebook course"
       style={{
         position: "fixed",
         inset: 0,
@@ -82,9 +89,10 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
         style={{
           width: "100%",
           maxWidth: "520px",
-          border: "3px solid #0A0A0A",
-          background: "#FFFFFF",
-          boxShadow: "10px 10px 0 #0A0A0A",
+          border: `3px solid ${tokens.borderPrimary}`,
+          background: tokens.cardBg,
+          color: tokens.textPrimary,
+          boxShadow: tokens.boxShadow,
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
@@ -99,7 +107,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
             padding: "12px 18px",
             background: selectedAccent.hex,
             color: selectedAccent.fg,
-            borderBottom: "3px solid #0A0A0A",
+            borderBottom: `3px solid ${tokens.borderPrimary}`,
             transition: "background 0.2s ease",
           }}
         >
@@ -120,6 +128,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close dialog"
             style={{
               background: "transparent",
               border: "none",
@@ -149,7 +158,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                 fontWeight: 700,
                 letterSpacing: "0.12em",
                 marginBottom: "8px",
-                color: "#0A0A0A",
+                color: tokens.textPrimary,
               }}
             >
               COURSE TITLE *
@@ -168,10 +177,9 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                 fontSize: "18px",
                 fontWeight: 700,
                 letterSpacing: "-0.02em",
-                border: "2.5px solid #0A0A0A",
-                background: "#FDFCFA",
-                color: "#0A0A0A",
-                outline: "none",
+                border: `2.5px solid ${tokens.borderPrimary}`,
+                background: tokens.sidebarBg,
+                color: tokens.textPrimary,
                 boxShadow: "3px 3px 0 rgba(10,10,10,0.1)",
               }}
             />
@@ -187,7 +195,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                 fontWeight: 700,
                 letterSpacing: "0.12em",
                 marginBottom: "8px",
-                color: "#0A0A0A",
+                color: tokens.textPrimary,
               }}
             >
               PROVIDER / PLATFORM
@@ -208,9 +216,9 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                     fontWeight: 700,
                     letterSpacing: "0.08em",
                     padding: "4px 8px",
-                    border: "1.5px solid #0A0A0A",
-                    background: provider === p ? "#0A0A0A" : "#FFFFFF",
-                    color: provider === p ? "#FFFFFF" : "#0A0A0A",
+                    border: `1.5px solid ${tokens.borderPrimary}`,
+                    background: provider === p ? tokens.accentColor : tokens.cardBg,
+                    color: provider === p ? tokens.accentFg : tokens.textPrimary,
                     cursor: "pointer",
                   }}
                 >
@@ -230,10 +238,9 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                 fontSize: "12px",
                 fontWeight: 700,
                 letterSpacing: "0.08em",
-                border: "2px solid #0A0A0A",
-                background: "#FDFCFA",
-                color: "#0A0A0A",
-                outline: "none",
+                border: `2px solid ${tokens.borderPrimary}`,
+                background: tokens.sidebarBg,
+                color: tokens.textPrimary,
               }}
             />
           </div>
@@ -248,7 +255,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                 fontWeight: 700,
                 letterSpacing: "0.12em",
                 marginBottom: "8px",
-                color: "#0A0A0A",
+                color: tokens.textPrimary,
               }}
             >
               ACCENT COLOR THEME
@@ -261,6 +268,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                     key={preset.name}
                     type="button"
                     title={preset.name}
+                    aria-label={`Select ${preset.name} accent color`}
                     onClick={() => {
                       playSound.click();
                       setSelectedAccent(preset);
@@ -269,8 +277,8 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                       width: "32px",
                       height: "32px",
                       background: preset.hex,
-                      border: isSelected ? "3px solid #0A0A0A" : "2px solid rgba(10,10,10,0.3)",
-                      boxShadow: isSelected ? "3px 3px 0 #0A0A0A" : "none",
+                      border: isSelected ? `3px solid ${tokens.borderPrimary}` : `2px solid ${tokens.borderSubtle}`,
+                      boxShadow: isSelected ? `3px 3px 0 ${tokens.borderPrimary}` : "none",
                       cursor: "pointer",
                       transform: isSelected ? "scale(1.1)" : "scale(1)",
                       transition: "transform 0.1s ease, box-shadow 0.1s ease",
@@ -289,7 +297,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
               justifyContent: "flex-end",
               gap: "12px",
               paddingTop: "16px",
-              borderTop: "2px solid rgba(10,10,10,0.12)",
+              borderTop: `2px solid ${tokens.borderSubtle}`,
             }}
           >
             <button
@@ -301,12 +309,12 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                 fontWeight: 700,
                 letterSpacing: "0.1em",
                 padding: "10px 18px",
-                border: "2px solid rgba(10,10,10,0.3)",
+                border: `2px solid ${tokens.borderSubtle}`,
                 background: "transparent",
-                color: "#0A0A0A",
+                color: tokens.textPrimary,
                 cursor: "pointer",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#EBE7DC")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               CANCEL
@@ -321,11 +329,11 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                 fontWeight: 800,
                 letterSpacing: "0.14em",
                 padding: "10px 22px",
-                border: "2.5px solid #0A0A0A",
-                background: title.trim() ? "#FCE94F" : "#EBE7DC",
-                color: "#0A0A0A",
+                border: `2.5px solid ${tokens.borderPrimary}`,
+                background: title.trim() ? "#FCE94F" : tokens.sidebarBg,
+                color: title.trim() ? "#0A0A0A" : tokens.textMuted,
                 cursor: title.trim() ? "pointer" : "not-allowed",
-                boxShadow: title.trim() ? "4px 4px 0 #0A0A0A" : "none",
+                boxShadow: title.trim() ? tokens.boxShadow : "none",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "6px",
@@ -334,13 +342,11 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
               onMouseEnter={(e) => {
                 if (title.trim()) {
                   e.currentTarget.style.transform = "translate(-1px, -1px)";
-                  e.currentTarget.style.boxShadow = "5px 5px 0 #0A0A0A";
                 }
               }}
               onMouseLeave={(e) => {
                 if (title.trim()) {
                   e.currentTarget.style.transform = "none";
-                  e.currentTarget.style.boxShadow = "4px 4px 0 #0A0A0A";
                 }
               }}
             >

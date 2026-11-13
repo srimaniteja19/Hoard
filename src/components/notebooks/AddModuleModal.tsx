@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { playSound } from "@/lib/sound";
+import { getThemeTokens, NotebookTheme } from "@/lib/notebooks/theme";
+import { useModalFocusTrap } from "@/lib/notebooks/useModalFocusTrap";
 import { X, FolderPlus } from "lucide-react";
 
 interface AddModuleModalProps {
@@ -10,6 +12,7 @@ interface AddModuleModalProps {
   onSubmit: (title: string) => void;
   courseTitle?: string;
   defaultIndex?: number;
+  theme?: NotebookTheme;
 }
 
 export const AddModuleModal: React.FC<AddModuleModalProps> = ({
@@ -18,15 +21,24 @@ export const AddModuleModal: React.FC<AddModuleModalProps> = ({
   onSubmit,
   courseTitle = "COURSE",
   defaultIndex = 1,
+  theme = "cream",
 }) => {
+  const tokens = getThemeTokens(theme);
   const [title, setTitle] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useModalFocusTrap({
+    isOpen,
+    onClose,
+    containerRef: dialogRef,
+    initialFocusRef: inputRef,
+  });
 
   useEffect(() => {
     if (isOpen) {
       setTitle(`MODULE ${defaultIndex} · `);
       setTimeout(() => {
-        inputRef.current?.focus();
         inputRef.current?.setSelectionRange(inputRef.current.value.length, inputRef.current.value.length);
       }, 50);
     }
@@ -41,17 +53,12 @@ export const AddModuleModal: React.FC<AddModuleModalProps> = ({
     onSubmit(title.trim());
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      onClose();
-    }
-  };
-
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      onKeyDown={handleKeyDown}
+      aria-label="Create new course module"
       style={{
         position: "fixed",
         inset: 0,
@@ -71,9 +78,10 @@ export const AddModuleModal: React.FC<AddModuleModalProps> = ({
         style={{
           width: "100%",
           maxWidth: "480px",
-          border: "3px solid #0A0A0A",
-          background: "#FFFFFF",
-          boxShadow: "10px 10px 0 #0A0A0A",
+          border: `3px solid ${tokens.borderPrimary}`,
+          background: tokens.cardBg,
+          color: tokens.textPrimary,
+          boxShadow: tokens.boxShadow,
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
@@ -88,7 +96,7 @@ export const AddModuleModal: React.FC<AddModuleModalProps> = ({
             padding: "12px 18px",
             background: "#B8F04A",
             color: "#0A0A0A",
-            borderBottom: "3px solid #0A0A0A",
+            borderBottom: `3px solid ${tokens.borderPrimary}`,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
@@ -136,7 +144,7 @@ export const AddModuleModal: React.FC<AddModuleModalProps> = ({
                 fontSize: "10px",
                 fontWeight: 800,
                 letterSpacing: "0.12em",
-                color: "#0A0A0A",
+                color: tokens.textPrimary,
                 marginBottom: "8px",
               }}
             >
@@ -155,10 +163,9 @@ export const AddModuleModal: React.FC<AddModuleModalProps> = ({
                 fontFamily: "var(--body, 'Space Grotesk', sans-serif)",
                 fontSize: "15px",
                 fontWeight: 600,
-                border: "2px solid #0A0A0A",
-                background: "#F3F0E8",
-                color: "#0A0A0A",
-                outline: "none",
+                border: `2px solid ${tokens.borderPrimary}`,
+                background: tokens.sidebarBg,
+                color: tokens.textPrimary,
               }}
             />
           </div>
@@ -176,9 +183,9 @@ export const AddModuleModal: React.FC<AddModuleModalProps> = ({
                 fontSize: "10.5px",
                 fontWeight: 700,
                 letterSpacing: "0.1em",
-                border: "2px solid #0A0A0A",
+                border: `2px solid ${tokens.borderPrimary}`,
                 background: "transparent",
-                color: "#0A0A0A",
+                color: tokens.textPrimary,
                 padding: "8px 16px",
                 cursor: "pointer",
               }}
@@ -192,12 +199,12 @@ export const AddModuleModal: React.FC<AddModuleModalProps> = ({
                 fontSize: "10.5px",
                 fontWeight: 700,
                 letterSpacing: "0.1em",
-                border: "2px solid #0A0A0A",
+                border: `2px solid ${tokens.borderPrimary}`,
                 background: "#B8F04A",
                 color: "#0A0A0A",
                 padding: "8px 18px",
                 cursor: "pointer",
-                boxShadow: "3px 3px 0 #0A0A0A",
+                boxShadow: tokens.boxShadow,
               }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "#A3E635")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "#B8F04A")}

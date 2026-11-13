@@ -197,7 +197,6 @@ export const MathBlock: React.FC<MathBlockProps> = ({
               letterSpacing: "0.06em",
               background: "transparent",
               border: "none",
-              outline: "none",
               color: tokens.textPrimary,
               width: "100%",
             }}
@@ -379,7 +378,6 @@ export const MathBlock: React.FC<MathBlockProps> = ({
                 lineHeight: "1.6",
                 padding: "10px 12px",
                 borderRadius: "2px",
-                outline: "none",
                 resize: "vertical",
               }}
             />
@@ -446,7 +444,6 @@ export const MathBlock: React.FC<MathBlockProps> = ({
               fontStyle: "italic",
               background: "transparent",
               border: "none",
-              outline: "none",
               color: tokens.textSecondary,
               width: "100%",
             }}

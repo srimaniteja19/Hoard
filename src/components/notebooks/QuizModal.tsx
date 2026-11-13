@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { playSound } from "@/lib/sound";
-import { HelpCircle, Check, X, ArrowRight } from "lucide-react";
+import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
+import { useModalFocusTrap } from "@/lib/notebooks/useModalFocusTrap";
 
 interface QuizQuestion {
   prompt: string;
@@ -17,6 +18,7 @@ interface QuizModalProps {
   explanation?: string;
   onClose: () => void;
   accentColor?: string;
+  theme?: NotebookTheme;
 }
 
 export const QuizModal: React.FC<QuizModalProps> = ({
@@ -24,19 +26,32 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   notEnough = false,
   explanation,
   onClose,
-  accentColor = "#7B5CF0",
+  theme = "cream",
 }) => {
+  const tokens = getThemeTokens(theme);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+
+  useModalFocusTrap({
+    isOpen: true,
+    onClose,
+    containerRef: dialogRef,
+  });
 
   if (notEnough || questions.length === 0) {
     return (
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Not enough material to quiz"
         style={{
           position: "fixed",
           inset: 0,
           background: "rgba(10,10,10,0.75)",
-          zIndex: 100,
+          backdropFilter: "blur(3px)",
+          zIndex: 9999,
           display: "grid",
           placeItems: "center",
           padding: "20px",
@@ -46,9 +61,10 @@ export const QuizModal: React.FC<QuizModalProps> = ({
           style={{
             width: "100%",
             maxWidth: "500px",
-            background: "#F3F0E8",
-            border: "3px solid #0A0A0A",
-            boxShadow: "8px 8px 0 #0A0A0A",
+            background: tokens.canvasBg,
+            color: tokens.textPrimary,
+            border: `3px solid ${tokens.borderPrimary}`,
+            boxShadow: tokens.popoverShadow,
             padding: "24px",
             textAlign: "center",
           }}
@@ -59,7 +75,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
               height: "44px",
               margin: "0 auto 14px",
               background: "#FCE94F",
-              border: "2px solid #0A0A0A",
+              color: "#0A0A0A",
+              border: `2px solid ${tokens.borderPrimary}`,
               display: "grid",
               placeItems: "center",
               fontFamily: "var(--mono, monospace)",
@@ -72,7 +89,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
           <h3 style={{ margin: "0 0 8px", fontFamily: "var(--display, sans-serif)", fontWeight: 800, fontSize: "22px" }}>
             Not Enough Material to Quiz
           </h3>
-          <p style={{ fontSize: "14px", lineHeight: "1.6", opacity: 0.7, margin: "0 0 20px" }}>
+          <p style={{ fontSize: "14px", lineHeight: "1.6", color: tokens.textSecondary, margin: "0 0 20px" }}>
             {explanation || "Notes this thin don't have at least three quizzable claims. The gap is yours to notice rather than papering over with filler questions."}
           </p>
           <button
@@ -83,7 +100,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
               fontSize: "11px",
               fontWeight: 700,
               letterSpacing: "0.12em",
-              border: "2px solid #0A0A0A",
+              border: `2px solid ${tokens.borderPrimary}`,
               background: "#0A0A0A",
               color: "#B8F04A",
               padding: "10px 20px",
@@ -111,11 +128,16 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Notebook active recall quiz"
       style={{
         position: "fixed",
         inset: 0,
         background: "rgba(10,10,10,0.75)",
-        zIndex: 100,
+        backdropFilter: "blur(3px)",
+        zIndex: 9999,
         display: "grid",
         placeItems: "center",
         padding: "20px",
@@ -125,9 +147,10 @@ export const QuizModal: React.FC<QuizModalProps> = ({
         style={{
           width: "100%",
           maxWidth: "640px",
-          background: "#F3F0E8",
-          border: "3px solid #0A0A0A",
-          boxShadow: "10px 10px 0 #0A0A0A",
+          background: tokens.canvasBg,
+          color: tokens.textPrimary,
+          border: `3px solid ${tokens.borderPrimary}`,
+          boxShadow: tokens.popoverShadow,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -142,7 +165,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
             padding: "12px 18px",
             background: "#0A0A0A",
             color: "#F0EDE4",
-            borderBottom: "3px solid #0A0A0A",
+            borderBottom: `3px solid ${tokens.borderPrimary}`,
           }}
         >
           <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 700, color: "#FCE94F", letterSpacing: "0.15em" }}>
@@ -150,6 +173,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
           </span>
           <button
             type="button"
+            aria-label="Close quiz modal"
             onClick={onClose}
             style={{
               background: "transparent",
@@ -166,7 +190,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
         </div>
 
         {/* Card Body */}
-        <div style={{ padding: "24px", color: "#0A0A0A" }}>
+        <div style={{ padding: "24px", color: tokens.textPrimary }}>
           <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "14px" }}>
             <span
               style={{
@@ -176,13 +200,13 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 letterSpacing: "0.12em",
                 background: q.kind === "recall" ? "#B8F04A" : q.kind === "apply" ? "#7FE9F7" : "#FF9E2C",
                 color: "#0A0A0A",
-                border: "1.5px solid #0A0A0A",
+                border: `1.5px solid ${tokens.borderPrimary}`,
                 padding: "2px 7px",
               }}
             >
               {q.kind.toUpperCase()}
             </span>
-            <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "8.5px", opacity: 0.5 }}>
+            <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "8.5px", color: tokens.textMuted }}>
               CITES BLOCK: <code>{q.fromBlockId}</code>
             </span>
           </div>
@@ -203,9 +227,9 @@ export const QuizModal: React.FC<QuizModalProps> = ({
           {showAnswer ? (
             <div
               style={{
-                border: "2px solid #0A0A0A",
-                background: "#FFFFFF",
-                boxShadow: "4px 4px 0 #0A0A0A",
+                border: `2px solid ${tokens.borderPrimary}`,
+                background: tokens.cardBg,
+                boxShadow: tokens.boxShadow,
                 padding: "16px",
                 marginBottom: "20px",
               }}
@@ -215,7 +239,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "9px",
                   fontWeight: 700,
-                  color: "#16A34A",
+                  color: tokens.isDark ? "#4ADE80" : "#16A34A",
                   letterSpacing: "0.12em",
                   marginBottom: "6px",
                 }}
@@ -234,8 +258,9 @@ export const QuizModal: React.FC<QuizModalProps> = ({
               style={{
                 width: "100%",
                 padding: "14px",
-                border: "2px dashed #0A0A0A",
-                background: "rgba(255,255,255,0.6)",
+                border: `2px dashed ${tokens.borderPrimary}`,
+                background: tokens.cardBg,
+                color: tokens.textPrimary,
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "11px",
                 fontWeight: 700,
@@ -243,8 +268,14 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 cursor: "pointer",
                 marginBottom: "20px",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.6)")}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = tokens.accentColor;
+                e.currentTarget.style.color = tokens.accentFg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = tokens.cardBg;
+                e.currentTarget.style.color = tokens.textPrimary;
+              }}
             >
               CLICK TO REVEAL ANSWER
             </button>
@@ -260,7 +291,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 fontSize: "10.5px",
                 fontWeight: 700,
                 letterSpacing: "0.12em",
-                border: "2px solid #0A0A0A",
+                border: `2px solid ${tokens.borderPrimary}`,
                 background: "#0A0A0A",
                 color: "#B8F04A",
                 padding: "10px 18px",

@@ -3,6 +3,8 @@
 import React, { useEffect, useRef } from "react";
 import { playSound } from "@/lib/sound";
 import { AlertTriangle, Trash2, RotateCcw, X } from "lucide-react";
+import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
+import { useModalFocusTrap } from "@/lib/notebooks/useModalFocusTrap";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -12,6 +14,7 @@ interface ConfirmModalProps {
   description: string;
   confirmLabel?: string;
   confirmVariant?: "danger" | "warning" | "default";
+  theme?: NotebookTheme;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -22,42 +25,35 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   description,
   confirmLabel = "CONFIRM",
   confirmVariant = "danger",
+  theme = "cream",
 }) => {
+  const tokens = getThemeTokens(theme);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const cancelBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Steal focus into the dialog when it opens (and restore it on close). This
-  // is what makes the keydown handler below safe: Enter/Escape only ever act
-  // on keystrokes that actually originate from inside this dialog, instead of
-  // hijacking a stray Enter pressed anywhere else on the page (e.g. while
-  // typing a note) into confirming a destructive delete/clear action.
-  useEffect(() => {
-    if (isOpen) {
-      previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
-      dialogRef.current?.focus();
-    } else if (previouslyFocusedRef.current) {
-      previouslyFocusedRef.current.focus();
-      previouslyFocusedRef.current = null;
-    }
-  }, [isOpen]);
+  useModalFocusTrap({
+    isOpen,
+    onClose,
+    containerRef: dialogRef,
+    initialFocusRef: confirmVariant === "danger" ? cancelBtnRef : undefined,
+  });
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
       if (!dialogRef.current?.contains(e.target as Node)) return;
-      if (e.key === "Escape") onClose();
-      if (e.key === "Enter") onConfirm();
+      if (e.key === "Enter" && confirmVariant !== "danger") onConfirm();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, onConfirm]);
+  }, [isOpen, onConfirm, confirmVariant]);
 
   if (!isOpen) return null;
 
   const getHeaderColor = () => {
     switch (confirmVariant) {
       case "danger":
-        return { bg: "#FF2D8A", text: "#FFFFFF" };
+        return { bg: "#FF2D8A", text: "#0A0A0A" };
       case "warning":
         return { bg: "#FCE94F", text: "#0A0A0A" };
       default:
@@ -73,10 +69,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       tabIndex={-1}
       role="dialog"
       aria-modal="true"
+      aria-label={title}
       style={{
         position: "fixed",
         inset: 0,
-        outline: "none",
         background: "rgba(10, 10, 10, 0.65)",
         backdropFilter: "blur(4px)",
         display: "grid",
@@ -93,9 +89,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         style={{
           width: "100%",
           maxWidth: "460px",
-          border: "3px solid #0A0A0A",
-          background: "#FFFFFF",
-          boxShadow: "10px 10px 0 #0A0A0A",
+          border: `3px solid ${tokens.borderPrimary}`,
+          background: tokens.cardBg,
+          color: tokens.textPrimary,
+          boxShadow: tokens.popoverShadow,
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
@@ -110,7 +107,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             padding: "12px 18px",
             background: colors.bg,
             color: colors.text,
-            borderBottom: "3px solid #0A0A0A",
+            borderBottom: `3px solid ${tokens.borderPrimary}`,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -129,6 +126,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
           <button
             type="button"
+            aria-label="Close confirmation dialog"
             onClick={onClose}
             style={{
               background: "transparent",
@@ -152,7 +150,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               fontFamily: "var(--body, 'Space Grotesk', sans-serif)",
               fontSize: "16px",
               lineHeight: "1.55",
-              color: "#0A0A0A",
+              color: tokens.textPrimary,
             }}
           >
             {description}
@@ -165,10 +163,11 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               justifyContent: "flex-end",
               gap: "12px",
               paddingTop: "14px",
-              borderTop: "2px solid rgba(10,10,10,0.12)",
+              borderTop: `2px solid ${tokens.borderSubtle}`,
             }}
           >
             <button
+              ref={cancelBtnRef}
               type="button"
               onClick={onClose}
               style={{
@@ -177,12 +176,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 fontWeight: 700,
                 letterSpacing: "0.1em",
                 padding: "9px 16px",
-                border: "2px solid rgba(10,10,10,0.3)",
+                border: `2px solid ${tokens.borderPrimary}`,
                 background: "transparent",
-                color: "#0A0A0A",
+                color: tokens.textPrimary,
                 cursor: "pointer",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#EBE7DC")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               CANCEL
@@ -200,23 +199,15 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 fontWeight: 800,
                 letterSpacing: "0.14em",
                 padding: "9px 20px",
-                border: "2.5px solid #0A0A0A",
+                border: `2.5px solid ${tokens.borderPrimary}`,
                 background: confirmVariant === "danger" ? "#FF2D8A" : "#FCE94F",
-                color: confirmVariant === "danger" ? "#FFFFFF" : "#0A0A0A",
+                color: "#0A0A0A",
                 cursor: "pointer",
-                boxShadow: "4px 4px 0 #0A0A0A",
+                boxShadow: tokens.boxShadow,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "6px",
                 transition: "all 0.1s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translate(-1px, -1px)";
-                e.currentTarget.style.boxShadow = "5px 5px 0 #0A0A0A";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "none";
-                e.currentTarget.style.boxShadow = "4px 4px 0 #0A0A0A";
               }}
             >
               {confirmVariant === "danger" ? <Trash2 size={13} /> : <RotateCcw size={13} />}

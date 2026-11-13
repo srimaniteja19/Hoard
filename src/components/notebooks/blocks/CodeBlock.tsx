@@ -424,7 +424,6 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
             style={{
               color: theme.type,
               opacity: 0.9,
-              outline: "none",
             }}
           >
             {block.note || "SNIPPET"}
@@ -592,7 +591,6 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
             background: theme.bg,
             color: theme.text,
             border: "none",
-            outline: "none",
             resize: "vertical",
             whiteSpace: "pre",
           }}

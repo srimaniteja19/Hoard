@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { playSound } from "@/lib/sound";
+import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
+import { useModalFocusTrap } from "@/lib/notebooks/useModalFocusTrap";
 
 interface TranscriptModalProps {
   onConvertToNotes: (transcript: string) => void;
   onAnalyzeGaps: (transcript: string) => void;
   onClose: () => void;
   loading?: boolean;
+  theme?: NotebookTheme;
 }
 
 export const TranscriptModal: React.FC<TranscriptModalProps> = ({
@@ -15,8 +18,19 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
   onAnalyzeGaps,
   onClose,
   loading = false,
+  theme = "cream",
 }) => {
+  const tokens = getThemeTokens(theme);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [transcript, setTranscript] = useState("");
+
+  useModalFocusTrap({
+    isOpen: true,
+    onClose: () => {
+      if (!loading) onClose();
+    },
+    containerRef: dialogRef,
+  });
 
   const handleConvert = () => {
     if (!transcript.trim() || loading) return;
@@ -32,11 +46,16 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
 
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Import transcript or slides"
       style={{
         position: "fixed",
         inset: 0,
         background: "rgba(10,10,10,0.75)",
-        zIndex: 100,
+        backdropFilter: "blur(3px)",
+        zIndex: 9999,
         display: "grid",
         placeItems: "center",
         padding: "20px",
@@ -46,9 +65,10 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
         style={{
           width: "100%",
           maxWidth: "640px",
-          background: "#F3F0E8",
-          border: "3px solid #0A0A0A",
-          boxShadow: "10px 10px 0 #0A0A0A",
+          background: tokens.canvasBg,
+          color: tokens.textPrimary,
+          border: `3px solid ${tokens.borderPrimary}`,
+          boxShadow: tokens.popoverShadow,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -63,7 +83,7 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
             padding: "12px 18px",
             background: "#0A0A0A",
             color: "#F0EDE4",
-            borderBottom: "3px solid #0A0A0A",
+            borderBottom: `3px solid ${tokens.borderPrimary}`,
           }}
         >
           <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 700, color: "#B8F04A", letterSpacing: "0.15em" }}>
@@ -71,6 +91,7 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
           </span>
           <button
             type="button"
+            aria-label="Close transcript modal"
             onClick={onClose}
             style={{
               background: "transparent",
@@ -86,7 +107,7 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
           </button>
         </div>
 
-        <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px", color: "#0A0A0A" }}>
+        <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px", color: tokens.textPrimary }}>
           <p style={{ margin: 0, fontSize: "14.5px", lineHeight: "1.5" }}>
             Paste a lecture transcript, slide text, or any source material below. You can either <b>convert it directly into clean, structured notes</b> or <b>find missing topics</b> against your existing notes.
           </p>
@@ -98,15 +119,14 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
             placeholder="0:03 The reflection design pattern is something I've used in many applications..."
             style={{
               width: "100%",
-              border: "2px solid #0A0A0A",
+              border: `2px solid ${tokens.borderPrimary}`,
               padding: "12px",
               fontFamily: "var(--mono, monospace)",
               fontSize: "12.5px",
               lineHeight: "1.6",
               resize: "vertical",
-              outline: "none",
-              background: "#FFFFFF",
-              color: "#0A0A0A",
+              background: tokens.cardBg,
+              color: tokens.textPrimary,
             }}
           />
 
@@ -118,8 +138,9 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "10px",
                 fontWeight: 700,
-                border: "2px solid #0A0A0A",
-                background: "#FFFFFF",
+                border: `2px solid ${tokens.borderPrimary}`,
+                background: tokens.cardBg,
+                color: tokens.textPrimary,
                 padding: "8px 14px",
                 cursor: "pointer",
               }}
@@ -136,14 +157,22 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "10px",
                   fontWeight: 700,
-                  border: "2px solid #0A0A0A",
-                  background: "#FFFFFF",
-                  color: "#0A0A0A",
+                  border: `2px solid ${tokens.borderPrimary}`,
+                  background: tokens.cardBg,
+                  color: tokens.textPrimary,
                   padding: "9px 14px",
                   cursor: loading ? "wait" : "pointer",
+                  opacity: !transcript.trim() ? 0.5 : 1,
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "#FFFFFF")}
+                onMouseEnter={(e) => {
+                  if (!transcript.trim()) return;
+                  e.currentTarget.style.background = tokens.accentColor;
+                  e.currentTarget.style.color = tokens.accentFg;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = tokens.cardBg;
+                  e.currentTarget.style.color = tokens.textPrimary;
+                }}
               >
                 COMPARE GAPS
               </button>
@@ -157,12 +186,13 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
                   fontSize: "10px",
                   fontWeight: 700,
                   letterSpacing: "0.12em",
-                  border: "2px solid #0A0A0A",
+                  border: `2px solid ${tokens.borderPrimary}`,
                   background: "#0A0A0A",
                   color: "#B8F04A",
                   padding: "9px 16px",
                   cursor: loading ? "wait" : "pointer",
                   boxShadow: "3px 3px 0 #B8F04A",
+                  opacity: !transcript.trim() ? 0.5 : 1,
                 }}
               >
                 {loading ? "SYNTHESIZING NOTES…" : "✦ CONVERT INTO NOTES (AI) →"}

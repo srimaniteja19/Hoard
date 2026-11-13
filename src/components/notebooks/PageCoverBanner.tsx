@@ -64,7 +64,7 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
 
   return (
     <div
-      className="no-print"
+      className="no-print nb-reveal-parent"
       style={{ position: "relative", marginBottom: hasCover ? "36px" : "12px" }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -164,8 +164,10 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
       >
         {hasIcon ? (
           <div style={{ position: "relative", display: "inline-block" }}>
-            <div
+            <button
+              type="button"
               title="Click to change page icon"
+              aria-label="Change page icon"
               onClick={() => {
                 playSound.pop();
                 setShowIconPicker(!showIconPicker);
@@ -183,11 +185,13 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
               onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
             >
               {icon}
-            </div>
+            </button>
 
             {/* Direct ✕ Remove Icon Button */}
             <button
               type="button"
+              className="nb-touch-always-visible"
+              aria-label="Remove page icon"
               onClick={(e) => {
                 e.stopPropagation();
                 playSound.click();
@@ -197,13 +201,13 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
               title="Remove icon"
               style={{
                 position: "absolute",
-                top: "-4px",
-                right: "-4px",
-                width: "18px",
-                height: "18px",
+                top: "-8px",
+                right: "-8px",
+                minWidth: "28px",
+                minHeight: "28px",
                 borderRadius: "50%",
                 background: "#EF4444",
-                color: "#FFFFFF",
+                color: "#0A0A0A",
                 border: `1.5px solid ${tokens.borderPrimary}`,
                 display: "grid",
                 placeItems: "center",
@@ -211,9 +215,11 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
                 padding: 0,
                 zIndex: 25,
                 boxShadow: "1px 1px 0 #000000",
+                opacity: isHovered ? 1 : 0,
+                transition: "opacity 0.15s ease",
               }}
             >
-              <X size={10} strokeWidth={3} />
+              <X size={11} strokeWidth={3} />
             </button>
           </div>
         ) : null}

@@ -38,7 +38,7 @@ export const SubpageBlock: React.FC<SubpageBlockProps> = ({
 
   return (
     <div
-      className="notion-subpage-block group"
+      className="notion-subpage-block group nb-reveal-parent"
       onClick={handleOpen}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -168,9 +168,9 @@ export const SubpageBlock: React.FC<SubpageBlockProps> = ({
             fontSize: "10px",
             fontWeight: 800,
             letterSpacing: "0.08em",
-            background: isHovered ? accentColor : "transparent",
-            color: isHovered ? "#FFFFFF" : tokens.textPrimary,
-            border: `1.5px solid ${isHovered ? accentColor : tokens.borderPrimary}`,
+            background: isHovered ? tokens.accentColor : "transparent",
+            color: isHovered ? tokens.accentFg : tokens.textPrimary,
+            border: `1.5px solid ${isHovered ? tokens.accentColor : tokens.borderPrimary}`,
             boxShadow: isHovered ? "2px 2px 0 #000000" : "none",
             padding: "5px 10px",
             cursor: "pointer",
@@ -188,6 +188,8 @@ export const SubpageBlock: React.FC<SubpageBlockProps> = ({
         {onDeleteBlock && (
           <button
             type="button"
+            className="nb-touch-always-visible nb-touch-target"
+            aria-label={`Remove subpage ${displayTitle}`}
             onClick={(e) => {
               e.stopPropagation();
               playSound.click();
@@ -196,22 +198,24 @@ export const SubpageBlock: React.FC<SubpageBlockProps> = ({
             title="Remove subpage block from this note"
             style={{
               background: "transparent",
-              border: `1.5px solid transparent`,
-              color: isHovered ? "#EF4444" : "transparent",
+              border: "1.5px solid transparent",
+              color: isHovered ? "#EF4444" : tokens.textMuted,
               padding: "5px",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               borderRadius: "2px",
-              opacity: isHovered ? 0.75 : 0,
+              opacity: isHovered ? 0.85 : 0,
               transition: "opacity 0.1s ease, color 0.1s ease",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.opacity = "1";
+              e.currentTarget.style.color = "#EF4444";
               e.currentTarget.style.borderColor = "#EF4444";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = "0.75";
+              e.currentTarget.style.opacity = "0.85";
               e.currentTarget.style.borderColor = "transparent";
             }}
           >

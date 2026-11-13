@@ -97,28 +97,8 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({ theme = "cream",
 
   const config = getStatusConfig();
 
-  return (
-    <div
-      title={config.tooltip}
-      onClick={status === "error" && onRetry ? onRetry : undefined}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "6px",
-        fontFamily: "var(--mono, monospace)",
-        fontSize: "9px",
-        fontWeight: 700,
-        letterSpacing: "0.12em",
-        padding: "3px 8px",
-        border: `1.5px solid ${config.borderColor}`,
-        borderRadius: "4px",
-        background: config.background,
-        color: config.textColor,
-        cursor: status === "error" ? "pointer" : "default",
-        userSelect: "none",
-        transition: "all 0.2s ease",
-      }}
-    >
+  const content = (
+    <>
       <span
         style={{
           width: "6px",
@@ -135,10 +115,47 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({ theme = "cream",
       />
       <span>{config.label}</span>
       {status === "saved" && (
-        <span style={{ opacity: 0.6, fontWeight: 500, marginLeft: "2px" }}>
+        <span className="nb-sync-timeago" style={{ opacity: 0.65, fontWeight: 500, marginLeft: "2px" }}>
           {timeAgo}
         </span>
       )}
+    </>
+  );
+
+  const sharedStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    fontFamily: "var(--mono, monospace)",
+    fontSize: "9px",
+    fontWeight: 700,
+    letterSpacing: "0.12em",
+    padding: "3px 8px",
+    border: `1.5px solid ${config.borderColor}`,
+    borderRadius: "4px",
+    background: config.background,
+    color: config.textColor,
+    userSelect: "none",
+    transition: "all 0.2s ease",
+  };
+
+  if (status === "error" && onRetry) {
+    return (
+      <button
+        type="button"
+        title={config.tooltip}
+        aria-label="Sync failed. Retry saving changes"
+        onClick={onRetry}
+        style={{ ...sharedStyle, cursor: "pointer" }}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div title={config.tooltip} role="status" aria-live="polite" style={{ ...sharedStyle, cursor: "default" }}>
+      {content}
     </div>
   );
 };

@@ -2,12 +2,17 @@
 
 import React from "react";
 import { CourseCollision } from "@/lib/notebooks/seedData";
+import { playSound } from "@/lib/sound";
 
 interface CollisionsPanelProps {
   collisions: CourseCollision[];
+  onSelectSource?: (courseTitle: string, lessonTitle: string) => void;
 }
 
-export const CollisionsPanel: React.FC<CollisionsPanelProps> = ({ collisions }) => {
+export const CollisionsPanel: React.FC<CollisionsPanelProps> = ({
+  collisions,
+  onSelectSource,
+}) => {
   return (
     <div
       style={{
@@ -92,24 +97,44 @@ export const CollisionsPanel: React.FC<CollisionsPanelProps> = ({ collisions }) 
               flexWrap: "wrap",
               justifyContent: "flex-end",
               flex: "none",
+              maxWidth: "100%",
             }}
           >
-            <span
+            <button
+              type="button"
+              disabled={!onSelectSource}
+              onClick={() => {
+                if (!onSelectSource) return;
+                playSound.click();
+                onSelectSource(col.sourceA.course, col.sourceA.lesson);
+              }}
+              title={onSelectSource ? `Open ${col.sourceA.course} · ${col.sourceA.lesson}` : undefined}
               style={{
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "8.5px",
                 fontWeight: 700,
                 letterSpacing: "0.1em",
-                border: "2px solid #7B5CF0",
-                background: "#7B5CF0",
+                border: "2px solid #5B3FD9",
+                background: "#5B3FD9",
                 color: "#FFFFFF",
-                padding: "3px 8px",
-                whiteSpace: "nowrap",
+                padding: "4px 9px",
+                cursor: onSelectSource ? "pointer" : "default",
+                overflowWrap: "anywhere",
+                textAlign: "left",
+                minHeight: "30px",
               }}
             >
-              {col.sourceA.course} · {col.sourceA.lesson}
-            </span>
-            <span
+              {col.sourceA.course} · {col.sourceA.lesson} →
+            </button>
+            <button
+              type="button"
+              disabled={!onSelectSource}
+              onClick={() => {
+                if (!onSelectSource) return;
+                playSound.click();
+                onSelectSource(col.sourceB.course, col.sourceB.lesson);
+              }}
+              title={onSelectSource ? `Open ${col.sourceB.course} · ${col.sourceB.lesson}` : undefined}
               style={{
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "8.5px",
@@ -118,12 +143,15 @@ export const CollisionsPanel: React.FC<CollisionsPanelProps> = ({ collisions }) 
                 border: "2px solid #FF9E2C",
                 background: "#FF9E2C",
                 color: "#0A0A0A",
-                padding: "3px 8px",
-                whiteSpace: "nowrap",
+                padding: "4px 9px",
+                cursor: onSelectSource ? "pointer" : "default",
+                overflowWrap: "anywhere",
+                textAlign: "left",
+                minHeight: "30px",
               }}
             >
-              {col.sourceB.course} · {col.sourceB.lesson}
-            </span>
+              {col.sourceB.course} · {col.sourceB.lesson} →
+            </button>
           </div>
         </div>
       ))}

@@ -138,6 +138,7 @@ export const LinkCardBlock: React.FC<LinkCardBlockProps> = ({
 
   return (
     <div
+      className="nb-reveal-parent"
       style={{
         margin: "12px 0 16px",
         position: "relative",
@@ -148,6 +149,7 @@ export const LinkCardBlock: React.FC<LinkCardBlockProps> = ({
       {/* ── Toolbar Actions ── */}
       {!readOnly && (
         <div
+          className="nb-touch-always-visible"
           style={{
             position: "absolute",
             top: "-12px",
@@ -312,7 +314,6 @@ export const LinkCardBlock: React.FC<LinkCardBlockProps> = ({
               background: tokens.isDark ? "#14161E" : "#F5F3ED",
               color: tokens.textPrimary,
               border: `1px solid ${tokens.borderSubtle}`,
-              outline: "none",
             }}
           />
           <button
@@ -323,8 +324,8 @@ export const LinkCardBlock: React.FC<LinkCardBlockProps> = ({
               fontSize: "10px",
               fontWeight: 800,
               padding: "4px 10px",
-              background: accentColor,
-              color: "#FFFFFF",
+              background: tokens.textPrimary,
+              color: tokens.canvasBg,
               border: "none",
               cursor: "pointer",
             }}

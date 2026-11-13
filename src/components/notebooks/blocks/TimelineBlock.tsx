@@ -148,7 +148,6 @@ export const TimelineBlock: React.FC<TimelineBlockProps> = ({
               color: tokens.textPrimary,
               background: "transparent",
               border: "none",
-              outline: "none",
               width: "100%",
             }}
           />
@@ -293,7 +292,6 @@ export const TimelineBlock: React.FC<TimelineBlockProps> = ({
                       color: tokens.textPrimary,
                       background: "transparent",
                       border: "none",
-                      outline: "none",
                       flex: 1,
                       minWidth: "160px",
                     }}
@@ -315,7 +313,6 @@ export const TimelineBlock: React.FC<TimelineBlockProps> = ({
                       border: `1px solid ${tokens.borderSubtle}`,
                       borderRadius: "2px",
                       padding: "1px 6px",
-                      outline: "none",
                       width: "80px",
                       textAlign: "center",
                     }}
@@ -355,7 +352,6 @@ export const TimelineBlock: React.FC<TimelineBlockProps> = ({
                     color: tokens.textSecondary,
                     background: "transparent",
                     border: "none",
-                    outline: "none",
                     width: "100%",
                     marginTop: "3px",
                   }}

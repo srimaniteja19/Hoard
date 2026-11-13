@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { playSound } from "@/lib/sound";
+import { getThemeTokens, NotebookTheme } from "@/lib/notebooks/theme";
+import { useModalFocusTrap } from "@/lib/notebooks/useModalFocusTrap";
 import { X, FileText, Plus, Sparkles } from "lucide-react";
 
 interface AddPageModalProps {
@@ -10,6 +12,7 @@ interface AddPageModalProps {
   onSubmit: (title: string) => void;
   onOpenAiDraft?: (initialTopic?: string) => void;
   courseTitle?: string;
+  theme?: NotebookTheme;
 }
 
 export const AddPageModal: React.FC<AddPageModalProps> = ({
@@ -18,14 +21,23 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
   onSubmit,
   onOpenAiDraft,
   courseTitle = "COURSE",
+  theme = "cream",
 }) => {
+  const tokens = getThemeTokens(theme);
   const [title, setTitle] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useModalFocusTrap({
+    isOpen,
+    onClose,
+    containerRef: dialogRef,
+    initialFocusRef: inputRef,
+  });
 
   useEffect(() => {
     if (isOpen) {
       setTitle("");
-      setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
 
@@ -38,17 +50,12 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
     onSubmit(title.trim());
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      onClose();
-    }
-  };
-
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      onKeyDown={handleKeyDown}
+      aria-label="Create new notebook page"
       style={{
         position: "fixed",
         inset: 0,
@@ -68,9 +75,10 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
         style={{
           width: "100%",
           maxWidth: "480px",
-          border: "3px solid #0A0A0A",
-          background: "#FFFFFF",
-          boxShadow: "10px 10px 0 #0A0A0A",
+          border: `3px solid ${tokens.borderPrimary}`,
+          background: tokens.cardBg,
+          color: tokens.textPrimary,
+          boxShadow: tokens.boxShadow,
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
@@ -85,7 +93,7 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
             padding: "12px 18px",
             background: "#FCE94F",
             color: "#0A0A0A",
-            borderBottom: "3px solid #0A0A0A",
+            borderBottom: `3px solid ${tokens.borderPrimary}`,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
@@ -105,6 +113,7 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close dialog"
             style={{
               background: "transparent",
               border: "none",
@@ -128,7 +137,7 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
                 fontSize: "9.5px",
                 fontWeight: 700,
                 letterSpacing: "0.1em",
-                opacity: 0.5,
+                color: tokens.textMuted,
                 marginBottom: "6px",
               }}
             >
@@ -142,7 +151,7 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
                 fontWeight: 700,
                 letterSpacing: "0.12em",
                 marginBottom: "8px",
-                color: "#0A0A0A",
+                color: tokens.textPrimary,
               }}
             >
               LESSON / PAGE TITLE *
@@ -161,10 +170,9 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
                 fontSize: "17px",
                 fontWeight: 700,
                 letterSpacing: "-0.02em",
-                border: "2.5px solid #0A0A0A",
-                background: "#FDFCFA",
-                color: "#0A0A0A",
-                outline: "none",
+                border: `2.5px solid ${tokens.borderPrimary}`,
+                background: tokens.sidebarBg,
+                color: tokens.textPrimary,
                 boxShadow: "3px 3px 0 rgba(10,10,10,0.1)",
               }}
             />
@@ -177,7 +185,7 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
               justifyContent: "flex-end",
               gap: "12px",
               paddingTop: "14px",
-              borderTop: "2px solid rgba(10,10,10,0.12)",
+              borderTop: `2px solid ${tokens.borderSubtle}`,
             }}
           >
             <button
@@ -189,12 +197,12 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
                 fontWeight: 700,
                 letterSpacing: "0.1em",
                 padding: "9px 16px",
-                border: "2px solid rgba(10,10,10,0.3)",
+                border: `2px solid ${tokens.borderSubtle}`,
                 background: "transparent",
-                color: "#0A0A0A",
+                color: tokens.textPrimary,
                 cursor: "pointer",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#EBE7DC")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               CANCEL
@@ -214,14 +222,14 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
                   fontWeight: 800,
                   letterSpacing: "0.1em",
                   padding: "9px 14px",
-                  border: "2.5px solid #0A0A0A",
+                  border: `2.5px solid ${tokens.borderPrimary}`,
                   background: "#FCE94F",
                   color: "#0A0A0A",
                   cursor: "pointer",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "5px",
-                  boxShadow: "3px 3px 0 #0A0A0A",
+                  boxShadow: tokens.boxShadow,
                 }}
               >
                 <Sparkles size={13} />
@@ -238,11 +246,11 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
                 fontWeight: 800,
                 letterSpacing: "0.14em",
                 padding: "9px 20px",
-                border: "2.5px solid #0A0A0A",
-                background: title.trim() ? "#B8F04A" : "#EBE7DC",
-                color: "#0A0A0A",
+                border: `2.5px solid ${tokens.borderPrimary}`,
+                background: title.trim() ? "#B8F04A" : tokens.sidebarBg,
+                color: title.trim() ? "#0A0A0A" : tokens.textMuted,
                 cursor: title.trim() ? "pointer" : "not-allowed",
-                boxShadow: title.trim() ? "4px 4px 0 #0A0A0A" : "none",
+                boxShadow: title.trim() ? tokens.boxShadow : "none",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "5px",
@@ -251,13 +259,11 @@ export const AddPageModal: React.FC<AddPageModalProps> = ({
               onMouseEnter={(e) => {
                 if (title.trim()) {
                   e.currentTarget.style.transform = "translate(-1px, -1px)";
-                  e.currentTarget.style.boxShadow = "5px 5px 0 #0A0A0A";
                 }
               }}
               onMouseLeave={(e) => {
                 if (title.trim()) {
                   e.currentTarget.style.transform = "none";
-                  e.currentTarget.style.boxShadow = "4px 4px 0 #0A0A0A";
                 }
               }}
             >

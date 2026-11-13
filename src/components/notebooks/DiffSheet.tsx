@@ -1,18 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Block } from "@/lib/notebooks/blocks";
 import { BlockRenderer } from "./blocks/BlockRenderer";
 import { playSound } from "@/lib/sound";
+import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
+import { useModalFocusTrap } from "@/lib/notebooks/useModalFocusTrap";
 
 interface DiffSheetProps {
   originalBlocks: Block[];
   proposedBlocks: Block[];
   summaryOfChanges?: string;
-  onApplyAll: () => void;
+  onApplyAll?: () => void;
   onApplySelected: (acceptedBlocks: Block[]) => void;
   onDiscard: () => void;
   accentColor?: string;
+  theme?: NotebookTheme;
 }
 
 export const DiffSheet: React.FC<DiffSheetProps> = ({
@@ -23,10 +26,19 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
   onApplySelected,
   onDiscard,
   accentColor = "#7B5CF0",
+  theme = "cream",
 }) => {
+  const tokens = getThemeTokens(theme);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [selectedBlockIds, setSelectedBlockIds] = useState<Set<string>>(
     () => new Set(proposedBlocks.map((b) => b.id))
   );
+
+  useModalFocusTrap({
+    isOpen: true,
+    onClose: onDiscard,
+    containerRef: dialogRef,
+  });
 
   const toggleSelectBlock = (id: string) => {
     playSound.pop();
@@ -75,14 +87,19 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
 
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Review proposed note changes"
       style={{
         position: "fixed",
         inset: 0,
         background: "rgba(10,10,10,0.75)",
-        zIndex: 100,
+        backdropFilter: "blur(3px)",
+        zIndex: 9999,
         display: "grid",
         placeItems: "center",
-        padding: "20px",
+        padding: "16px",
       }}
     >
       <div
@@ -90,9 +107,10 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
           width: "100%",
           maxWidth: "1050px",
           maxHeight: "90vh",
-          background: "#F3F0E8",
-          border: "3px solid #0A0A0A",
-          boxShadow: "10px 10px 0 #0A0A0A",
+          background: tokens.canvasBg,
+          color: tokens.textPrimary,
+          border: `3px solid ${tokens.borderPrimary}`,
+          boxShadow: tokens.popoverShadow,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -107,14 +125,15 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
             padding: "14px 20px",
             background: "#0A0A0A",
             color: "#F0EDE4",
-            borderBottom: "3px solid #0A0A0A",
+            borderBottom: `3px solid ${tokens.borderPrimary}`,
+            gap: "12px",
           }}
         >
           <div>
             <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 700, color: "#B8F04A", letterSpacing: "0.15em" }}>
               ✦ TIDY MY NOTES · REVIEW PROPOSED CHANGES
             </div>
-            <div style={{ fontSize: "14px", opacity: 0.7, marginTop: "2px" }}>
+            <div style={{ fontSize: "14px", opacity: 0.78, marginTop: "2px" }}>
               {summaryOfChanges || "Reorganized loose fragments under clear headings, identified traps into gotchas, and preserved unedited blocks."}
             </div>
           </div>
@@ -130,6 +149,7 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
               fontWeight: 700,
               padding: "5px 10px",
               cursor: "pointer",
+              flexShrink: 0,
             }}
           >
             ✕ CANCEL
@@ -137,21 +157,12 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
         </div>
 
         {/* Diff Columns */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "16px",
-            padding: "20px",
-            overflowY: "auto",
-            flex: 1,
-          }}
-        >
+        <div className="nb-diff-grid">
           {/* Left: Original Blocks */}
           <div
             style={{
-              background: "#FFFFFF",
-              border: "2px solid rgba(10,10,10,0.2)",
+              background: tokens.cardBg,
+              border: `2px solid ${tokens.borderSubtle}`,
               padding: "16px",
               overflowY: "auto",
             }}
@@ -163,15 +174,15 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
                 fontWeight: 700,
                 letterSpacing: "0.15em",
                 marginBottom: "12px",
-                opacity: 0.5,
+                color: tokens.textMuted,
               }}
             >
               CURRENT NOTEBOOK BLOCKS ({originalBlocks.length})
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {originalBlocks.map((b) => (
-                <div key={b.id} style={{ opacity: 0.75 }}>
-                  <BlockRenderer block={b} accentColor={accentColor} readOnly />
+                <div key={b.id} style={{ opacity: 0.78 }}>
+                  <BlockRenderer block={b} accentColor={accentColor} theme={theme} readOnly />
                 </div>
               ))}
             </div>
@@ -180,7 +191,7 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
           {/* Right: Proposed Restructured Blocks */}
           <div
             style={{
-              background: "#FFFFFF",
+              background: tokens.cardBg,
               border: `3px solid ${accentColor}`,
               boxShadow: `4px 4px 0 ${accentColor}`,
               padding: "16px",
@@ -197,11 +208,11 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
                 fontWeight: 700,
                 letterSpacing: "0.15em",
                 marginBottom: "12px",
-                color: "#0A0A0A",
+                color: tokens.textPrimary,
               }}
             >
               <span>PROPOSED STRUCTURED BLOCKS ({proposedBlocks.length})</span>
-              <span style={{ color: "#16A34A" }}>✓ SELECT TO APPLY</span>
+              <span style={{ color: tokens.isDark ? "#4ADE80" : "#16A34A" }}>✓ SELECT TO APPLY</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {proposedBlocks.map((b) => {
@@ -209,11 +220,22 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
                 return (
                   <div
                     key={b.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
                     onClick={() => toggleSelectBlock(b.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleSelectBlock(b.id);
+                      }
+                    }}
                     style={{
                       border: "2px solid",
-                      borderColor: isSelected ? "#16A34A" : "rgba(10,10,10,0.15)",
-                      background: isSelected ? "#F0FDF4" : "#FFFFFF",
+                      borderColor: isSelected ? "#16A34A" : tokens.borderSubtle,
+                      background: isSelected
+                        ? (tokens.isDark ? "rgba(22, 163, 74, 0.14)" : "#F0FDF4")
+                        : tokens.cardBg,
                       padding: "8px 10px",
                       cursor: "pointer",
                       transition: "all 0.12s ease",
@@ -224,8 +246,8 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
                         style={{
                           width: "14px",
                           height: "14px",
-                          border: "1.5px solid #0A0A0A",
-                          background: isSelected ? "#16A34A" : "#FFFFFF",
+                          border: `1.5px solid ${tokens.borderPrimary}`,
+                          background: isSelected ? "#16A34A" : tokens.cardBg,
                           color: "#FFFFFF",
                           display: "grid",
                           placeItems: "center",
@@ -235,11 +257,11 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
                       >
                         {isSelected ? "✓" : ""}
                       </span>
-                      <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "8.5px", fontWeight: 700, opacity: 0.5 }}>
+                      <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "8.5px", fontWeight: 700, color: tokens.textMuted }}>
                         {b.type.toUpperCase()} BLOCK
                       </span>
                     </div>
-                    <BlockRenderer block={b} accentColor={accentColor} readOnly />
+                    <BlockRenderer block={b} accentColor={accentColor} theme={theme} readOnly />
                   </div>
                 );
               })}
@@ -254,14 +276,16 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
             alignItems: "center",
             justifyContent: "space-between",
             padding: "14px 20px",
-            borderTop: "3px solid #0A0A0A",
-            background: "#EBE7DC",
+            borderTop: `3px solid ${tokens.borderPrimary}`,
+            background: tokens.sidebarBg,
+            flexWrap: "wrap",
+            gap: "10px",
           }}
         >
-          <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 700, opacity: 0.6 }}>
+          <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 700, color: tokens.textSecondary }}>
             {selectedBlockIds.size} of {proposedBlocks.length} blocks accepted
           </div>
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             <button
               type="button"
               onClick={onDiscard}
@@ -269,14 +293,33 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "10px",
                 fontWeight: 700,
-                border: "2px solid #0A0A0A",
-                background: "#FFFFFF",
+                border: `2px solid ${tokens.borderPrimary}`,
+                background: tokens.cardBg,
+                color: tokens.textPrimary,
                 padding: "9px 15px",
                 cursor: "pointer",
               }}
             >
               DISCARD ALL
             </button>
+            {onApplyAll && selectedBlockIds.size < proposedBlocks.length && (
+              <button
+                type="button"
+                onClick={onApplyAll}
+                style={{
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  border: `2px solid ${tokens.borderPrimary}`,
+                  background: tokens.popoverBg,
+                  color: tokens.textPrimary,
+                  padding: "9px 15px",
+                  cursor: "pointer",
+                }}
+              >
+                APPLY ALL
+              </button>
+            )}
             <button
               type="button"
               onClick={handleConfirmSelected}
@@ -284,7 +327,7 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "10px",
                 fontWeight: 700,
-                border: "2px solid #0A0A0A",
+                border: `2px solid ${tokens.borderPrimary}`,
                 background: "#0A0A0A",
                 color: "#B8F04A",
                 padding: "9px 16px",

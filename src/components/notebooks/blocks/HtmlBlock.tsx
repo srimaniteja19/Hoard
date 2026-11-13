@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Block } from "@/lib/notebooks/blocks";
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
+import { useModalFocusTrap } from "@/lib/notebooks/useModalFocusTrap";
 import { playSound } from "@/lib/sound";
 import {
   Code2,
@@ -123,6 +124,23 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
   const codeTextareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const consoleBottomRef = useRef<HTMLDivElement>(null);
+  const templatesDialogRef = useRef<HTMLDivElement>(null);
+  const importDialogRef = useRef<HTMLDivElement>(null);
+
+  useModalFocusTrap({
+    isOpen: showTemplatesModal,
+    onClose: () => setShowTemplatesModal(false),
+    containerRef: templatesDialogRef,
+  });
+
+  useModalFocusTrap({
+    isOpen: showImportModal,
+    onClose: () => {
+      setShowImportModal(false);
+      setImportError(null);
+    },
+    containerRef: importDialogRef,
+  });
 
   // Sync draft when block prop updates
   useEffect(() => {
@@ -739,7 +757,6 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
                   background: "#FFFFFF",
                   color: "#0A0A0A",
                   padding: "2px 8px",
-                  outline: "none",
                   maxWidth: "220px",
                 }}
               />
@@ -1074,7 +1091,6 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
                         border: "1.5px solid #0A0A0A",
                         background: "#FFF",
                         color: "#0A0A0A",
-                        outline: "none",
                         marginBottom: "6px",
                         boxSizing: "border-box",
                       }}
@@ -1597,7 +1613,6 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
                             fontSize: "10px",
                             border: "1px solid #CCC",
                             padding: "2px 4px",
-                            outline: "none",
                           }}
                         />
                       </div>
@@ -1612,7 +1627,6 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
                           fontSize: "10px",
                           border: "1px solid #CCC",
                           padding: "2px 4px",
-                          outline: "none",
                         }}
                       />
                     )}
@@ -1712,7 +1726,6 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
                     margin: 0,
                     padding: "12px 14px",
                     border: "none",
-                    outline: "none",
                     background: "transparent",
                     color: "#F0EDE4",
                     fontFamily: "var(--mono, monospace)",
@@ -1938,7 +1951,6 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
                   flex: 1,
                   background: "transparent",
                   border: "none",
-                  outline: "none",
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "10.5px",
                   color: "#00FF66",
@@ -2013,6 +2025,10 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
           }}
         >
           <div
+            ref={templatesDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Interactive Widget Templates & AI Generator"
             style={{
               width: "100%",
               maxWidth: "680px",
@@ -2097,7 +2113,6 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
                     border: "2px solid #0A0A0A",
                     background: "#FFF",
                     color: "#0A0A0A",
-                    outline: "none",
                   }}
                 />
                 <button
@@ -2234,6 +2249,10 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
           }}
         >
           <div
+            ref={importDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Import HTML from Web URL"
             style={{
               width: "100%",
               maxWidth: "540px",
@@ -2306,7 +2325,6 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
                   border: "2px solid #0A0A0A",
                   background: "#FFF",
                   color: "#0A0A0A",
-                  outline: "none",
                   boxSizing: "border-box",
                 }}
               />

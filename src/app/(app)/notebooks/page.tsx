@@ -30,7 +30,6 @@ import {
   deleteModuleInDbApi,
   getLessonAncestors,
   getDirectChildLessons,
-  isSameId,
 } from "@/lib/notebooks/storage";
 import { SubpagesDirectory } from "@/components/notebooks/SubpagesDirectory";
 import {
@@ -39,13 +38,13 @@ import {
   setSyncStatus,
 } from "@/lib/notebooks/realtime";
 import { SeedCourse, SeedCourseLesson, SeedCourseModule, CourseCollision } from "@/lib/notebooks/seedData";
-import { Block, computeWordCount, generateBlockId, convertBlocksToMarkdown, isHtmlContent, extractHtmlTitle } from "@/lib/notebooks/blocks";
+import { Block, computeWordCount, generateBlockId, convertBlocksToMarkdown, isHtmlContent, extractHtmlTitle, lessonState } from "@/lib/notebooks/blocks";
+import { useModalFocusTrap } from "@/lib/notebooks/useModalFocusTrap";
 import { CourseCard } from "@/components/notebooks/CourseCard";
 import { CollisionsPanel } from "@/components/notebooks/CollisionsPanel";
 import { OutlineSidebar } from "@/components/notebooks/OutlineSidebar";
 import { BlockEditor } from "@/components/notebooks/BlockEditor";
 import { SyncStatusPill } from "@/components/notebooks/SyncStatusPill";
-import { AiBar } from "@/components/notebooks/AiBar";
 import { EmptyPage } from "@/components/notebooks/EmptyPage";
 import { GapPanel } from "@/components/notebooks/GapPanel";
 import { DiffSheet } from "@/components/notebooks/DiffSheet";
@@ -90,12 +89,31 @@ import { PageCoverBanner } from "@/components/notebooks/PageCoverBanner";
 import { PageEmbeddedMedia } from "@/components/notebooks/PageEmbeddedMedia";
 import { GenerateTopicModal } from "@/components/notebooks/GenerateTopicModal";
 
+const MAX_INLINE_IMAGE_BYTES = 4 * 1024 * 1024;
+const MAX_SEARCH_RESULTS = 60;
+
+const isSafeHttpUrl = (raw?: string | null): boolean => {
+  if (!raw) return false;
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
 export default function NotebooksPage() {
   const [courses, setCourses] = useState<SeedCourse[]>([]);
+  const coursesRef = useRef<SeedCourse[]>(courses);
+  useEffect(() => {
+    coursesRef.current = courses;
+  }, [courses]);
   const [collisions, setCollisions] = useState<CourseCollision[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [aiError, setAiError] = useState<{ message: string; retry?: () => void } | null>(null);
   const [view, setView] = useState<"index" | "course">("index");
   const [currentCourseIdx, setCurrentCourseIdx] = useState(0);
-  const [currentModuleIdx, setCurrentModuleIdx] = useState(1);
+  const [currentModuleIdx, setCurrentModuleIdx] = useState(0);
   const [currentLessonIdx, setCurrentLessonIdx] = useState(0);
   const [paperTheme, setPaperTheme] = useState<NotebookTheme>("cream");
   const [typography, setTypography] = useState<TypographyStyle>(() => {
@@ -164,6 +182,7 @@ export default function NotebooksPage() {
 
   const [explainSelection, setExplainSelection] = useState<string | null>(null);
   const [explainText, setExplainText] = useState<string>("");
+  const [explainError, setExplainError] = useState<string | null>(null);
   const [isExplaining, setIsExplaining] = useState(false);
 
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
@@ -176,8 +195,37 @@ export default function NotebooksPage() {
   const [titleDraft, setTitleDraft] = useState("");
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [urlDraft, setUrlDraft] = useState("");
+  const [urlError, setUrlError] = useState<string | null>(null);
   const [copiedMarkdownToast, setCopiedMarkdownToast] = useState(false);
   const [showToc, setShowToc] = useState(false);
+  const diffTargetRef = useRef<{ courseId: string; lessonId: string } | null>(null);
+  const pendingTopicMetaRef = useRef<{
+    courseId: string;
+    lessonId: string;
+    title: string;
+    icon?: string;
+    coverUrl?: string;
+  } | null>(null);
+  const explainTargetRef = useRef<{ courseId: string; lessonId: string } | null>(null);
+  const urlModalDialogRef = useRef<HTMLDivElement>(null);
+  const mobileDrawerRef = useRef<HTMLDivElement | null>(null);
+  const activeControllersRef = useRef<Set<AbortController>>(new Set());
+  const copiedToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mutationInFlightRef = useRef({
+    createCourse: false,
+    createModule: false,
+    createPage: false,
+    duplicateLesson: false,
+  });
+
+  useEffect(() => {
+    const controllers = activeControllersRef.current;
+    return () => {
+      controllers.forEach((c) => c.abort());
+      controllers.clear();
+      if (copiedToastTimerRef.current) clearTimeout(copiedToastTimerRef.current);
+    };
+  }, []);
 
   // Focus Mode, Quick Switcher, Flashcard, & Deep Search States
   const [isFocusMode, setIsFocusMode] = useState(false);
@@ -188,8 +236,13 @@ export default function NotebooksPage() {
   // Clean Header Dropdown States
   const [showAiMenu, setShowAiMenu] = useState(false);
   const [showPageMoreMenu, setShowPageMoreMenu] = useState(false);
+  const [showAppearanceMenu, setShowAppearanceMenu] = useState(false);
+  const [showHelpMenu, setShowHelpMenu] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const aiMenuRef = useRef<HTMLDivElement>(null);
   const pageMoreMenuRef = useRef<HTMLDivElement>(null);
+  const appearanceMenuRef = useRef<HTMLDivElement>(null);
+  const helpMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -199,28 +252,71 @@ export default function NotebooksPage() {
       if (pageMoreMenuRef.current && !pageMoreMenuRef.current.contains(e.target as Node)) {
         setShowPageMoreMenu(false);
       }
+      if (appearanceMenuRef.current && !appearanceMenuRef.current.contains(e.target as Node)) {
+        setShowAppearanceMenu(false);
+      }
+      if (helpMenuRef.current && !helpMenuRef.current.contains(e.target as Node)) {
+        setShowHelpMenu(false);
+      }
     };
-    if (showAiMenu || showPageMoreMenu) {
+    if (showAiMenu || showPageMoreMenu || showAppearanceMenu || showHelpMenu) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showAiMenu, showPageMoreMenu]);
+  }, [showAiMenu, showPageMoreMenu, showAppearanceMenu, showHelpMenu]);
 
-  // Global Keyboard Shortcuts (Cmd+K / Ctrl+K for Quick Switcher, Escape for Focus mode)
+  // Global Keyboard Shortcuts (Cmd+K Quick Switcher, Cmd+\ Sidebar, Cmd+Shift+F Focus, ? Help, Escape)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable;
+
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setShowQuickSwitcher((prev) => !prev);
-      } else if (e.key === "Escape" && isFocusMode) {
-        setIsFocusMode(false);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
+        e.preventDefault();
+        if (isMobile) setMobileSidebarOpen((prev) => !prev);
+        else setSidebarCollapsed((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        setIsFocusMode((prev) => !prev);
+      } else if (e.key === "?" && !isTyping && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        setShowHelpMenu((prev) => !prev);
+      } else if (e.key === "Escape") {
+        setShowAppearanceMenu(false);
+        setShowHelpMenu(false);
+        setShowAiMenu(false);
+        setShowPageMoreMenu(false);
+        if (mobileSidebarOpen) setMobileSidebarOpen(false);
+        else if (isFocusMode) setIsFocusMode(false);
       }
     };
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [isFocusMode]);
+  }, [isFocusMode, isMobile, mobileSidebarOpen]);
+
+  useEffect(() => {
+    const el = mobileDrawerRef.current;
+    if (el) {
+      el.inert = isMobile && !mobileSidebarOpen;
+    }
+  }, [isMobile, mobileSidebarOpen]);
+
+  useModalFocusTrap({
+    isOpen: showUrlModal,
+    onClose: () => {
+      setShowUrlModal(false);
+      setUrlError(null);
+    },
+    containerRef: urlModalDialogRef,
+  });
 
   // Tracks a write (PATCH) that has already been dispatched to the server but
   // hasn't resolved yet. A refetch-and-overwrite (visibilitychange, online,
@@ -281,17 +377,26 @@ export default function NotebooksPage() {
     setCollisions(getCollisions());
 
     // 2. Asynchronously fetch from PostgreSQL database
-    fetchNotebooksFromDbApi().then((dbData) => {
-      if (applyFetchedCoursesIfSafe(dbData)) {
-        saveCollisions(dbData!.collisions || []);
-        setCollisions(dbData!.collisions || []);
-      }
-    });
+    fetchNotebooksFromDbApi()
+      .then((dbData) => {
+        if (applyFetchedCoursesIfSafe(dbData)) {
+          saveCollisions(dbData!.collisions || []);
+          setCollisions(dbData!.collisions || []);
+        }
+      })
+      .finally(() => {
+        setIsInitialLoading(false);
+      });
 
-    // Restore paper theme
+    // Restore paper theme (default to global app theme when no notebook override is stored)
     const savedTheme = localStorage.getItem("hoard_notebook_theme") as NotebookTheme | null;
     if (savedTheme === "cream" || savedTheme === "ink" || savedTheme === "matcha" || savedTheme === "midnight") {
       setPaperTheme(savedTheme);
+    } else {
+      const appTheme = document.documentElement.dataset.theme;
+      if (appTheme === "matcha") setPaperTheme("matcha");
+      else if (appTheme === "matte_black" || appTheme === "tokyo") setPaperTheme("ink");
+      else if (appTheme === "cyberpunk" || appTheme === "nordic") setPaperTheme("midnight");
     }
 
     // Check URL parameters first, then localStorage
@@ -831,11 +936,69 @@ export default function NotebooksPage() {
 
   const handleSelectCourseFromCard = (idx: number) => {
     playSound.click();
+    const selectedCourse = courses[idx];
+    let targetModIdx = 0;
+    let targetLesIdx = 0;
+
+    if (selectedCourse) {
+      let foundFallback = false;
+      for (let mIdx = 0; mIdx < selectedCourse.modules.length; mIdx++) {
+        const lessons = selectedCourse.modules[mIdx].lessons;
+        const watchedUnwrittenIdx = lessons.findIndex(
+          (l) => l.watched && lessonState({ wordCount: computeWordCount(l.blocks || []) }) !== "written"
+        );
+        if (watchedUnwrittenIdx !== -1) {
+          targetModIdx = mIdx;
+          targetLesIdx = watchedUnwrittenIdx;
+          foundFallback = true;
+          break;
+        }
+      }
+      if (!foundFallback) {
+        for (let mIdx = 0; mIdx < selectedCourse.modules.length; mIdx++) {
+          const lessons = selectedCourse.modules[mIdx].lessons;
+          const firstUnwrittenIdx = lessons.findIndex(
+            (l) => lessonState({ wordCount: computeWordCount(l.blocks || []) }) !== "written"
+          );
+          if (firstUnwrittenIdx !== -1) {
+            targetModIdx = mIdx;
+            targetLesIdx = firstUnwrittenIdx;
+            break;
+          }
+        }
+      }
+    }
+
     setCurrentCourseIdx(idx);
-    setCurrentModuleIdx(0);
-    setCurrentLessonIdx(0);
+    setCurrentModuleIdx(targetModIdx);
+    setCurrentLessonIdx(targetLesIdx);
     setView("course");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleNavigateToCollision = (courseTitle: string, lessonTitle: string) => {
+    const normCourse = courseTitle.trim().toLowerCase();
+    const normLesson = lessonTitle.trim().toLowerCase();
+    for (let cIdx = 0; cIdx < courses.length; cIdx++) {
+      const course = courses[cIdx];
+      if (course.title.trim().toLowerCase() !== normCourse) continue;
+      for (let mIdx = 0; mIdx < course.modules.length; mIdx++) {
+        const lIdx = course.modules[mIdx].lessons.findIndex(
+          (l) => l.title.trim().toLowerCase() === normLesson
+        );
+        if (lIdx !== -1) {
+          setCurrentCourseIdx(cIdx);
+          setCurrentModuleIdx(mIdx);
+          setCurrentLessonIdx(lIdx);
+          setView("course");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
+      }
+    }
+    setAiError({
+      message: `Could not locate "${lessonTitle}" in "${courseTitle}".`,
+    });
   };
 
   const handleToggleWatched = (modIdx: number, lesIdx: number) => {
@@ -845,6 +1008,35 @@ export default function NotebooksPage() {
     const updated = toggleLessonWatched(currentCourse.id, targetLesson.id);
     setCourses([...updated]);
     updateLessonInDbApi(targetLesson.id, { toggleWatched: true });
+  };
+
+  const handleToggleModuleWatched = (modIdx: number, watched: boolean) => {
+    if (!currentCourse) return;
+    const targetModule = currentCourse.modules[modIdx];
+    if (!targetModule) return;
+    const toUpdate = targetModule.lessons.filter((l) => Boolean(l.watched) !== watched);
+    if (toUpdate.length === 0) return;
+
+    playSound.click();
+    const updated = courses.map((course) => {
+      if (!isSameId(course.id, currentCourse.id)) return course;
+      return {
+        ...course,
+        modules: course.modules.map((mod, idx) =>
+          idx === modIdx
+            ? {
+                ...mod,
+                lessons: mod.lessons.map((les) => ({ ...les, watched })),
+              }
+            : mod
+        ),
+      };
+    });
+    setCourses(updated);
+    saveStoredCourses(updated);
+    toUpdate.forEach((les) => {
+      updateLessonInDbApi(les.id, { toggleWatched: true });
+    });
   };
 
   const handleDeleteLesson = (modIdx: number, lesIdx: number) => {
@@ -901,29 +1093,159 @@ export default function NotebooksPage() {
     });
   };
 
-  // AI: TIDY MY NOTES
-  const handleTidyNotes = async () => {
-    if (currentBlocks.length === 0) return;
-    setIsTidying(true);
+  const handleApplyBlocksForLesson = (courseId: string, lessonId: string, newBlocks: Block[]) => {
+    setCourses((prevCourses) => {
+      const updated = computeLessonBlocksUpdate(prevCourses, courseId, lessonId, newBlocks);
+      saveStoredCourses(updated);
+      return updated;
+    });
+    broadcastRealtimeEvent({
+      type: "NOTE_BLOCKS_UPDATED",
+      lessonId,
+      blocks: newBlocks,
+      wordCount: computeWordCount(newBlocks),
+    });
+    saveLessonBlocksToDbApi(lessonId, newBlocks);
+  };
+
+  const getTargetBlockIdxFromEvent = (target: EventTarget | null): number => {
+    const findBlockIdx = (el: HTMLElement | null): number => {
+      const blockEl = el?.closest<HTMLElement>("[data-block-id]");
+      const blockId = blockEl?.getAttribute("data-block-id");
+      return blockId ? currentBlocks.findIndex((b) => b.id === blockId) : -1;
+    };
+    let idx = target instanceof HTMLElement ? findBlockIdx(target) : -1;
+    if (idx === -1 && typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      idx = findBlockIdx(document.activeElement);
+    }
+    return idx;
+  };
+
+  const insertImageFileIntoBlocks = (file: File, targetIdx: number, caption: string) => {
+    if (!currentCourse || !currentLesson) return;
+    if (file.size > MAX_INLINE_IMAGE_BYTES) {
+      setAiError({
+        message: `Image "${file.name || "pasted image"}" exceeds the 4 MB inline storage limit (${(file.size / (1024 * 1024)).toFixed(1)} MB). Compress or link an external image URL instead.`,
+      });
+      return;
+    }
+    const targetCourseId = currentCourse.id;
+    const targetLessonId = currentLesson.id;
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const dataUrl = uploadEvent.target?.result;
+      if (typeof dataUrl !== "string" || !dataUrl) return;
+      const imageBlock: Block = {
+        id: generateBlockId(),
+        type: "image",
+        url: dataUrl,
+        caption,
+      };
+      const targetLessonObj = coursesRef.current
+        .find((c) => isSameId(c.id, targetCourseId))
+        ?.modules.flatMap((m) => m.lessons)
+        .find((l) => isSameId(l.id, targetLessonId));
+      const baseBlocks = targetLessonObj?.blocks || currentBlocks;
+      let nextBlocks: Block[];
+      if (targetIdx >= 0 && targetIdx < baseBlocks.length) {
+        const targetBlock = baseBlocks[targetIdx];
+        const isEmptyParagraph =
+          targetBlock.type === "paragraph" &&
+          (!("text" in targetBlock) || !targetBlock.text || !targetBlock.text.trim());
+        nextBlocks = [...baseBlocks];
+        if (isEmptyParagraph) {
+          nextBlocks[targetIdx] = imageBlock;
+        } else {
+          nextBlocks.splice(targetIdx + 1, 0, imageBlock);
+        }
+      } else {
+        nextBlocks = [...baseBlocks, imageBlock];
+      }
+      handleApplyBlocksForLesson(targetCourseId, targetLessonId, nextBlocks);
+      playSound.fileIt();
+    };
+    reader.onerror = () => {
+      setAiError({
+        message: `Failed to read "${file.name || "image file"}". Try another image format.`,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const isAbortError = (err: unknown): boolean =>
+    err instanceof Error && err.name === "AbortError";
+
+  const getErrorMessage = (err: unknown, fallback: string): string =>
+    err instanceof Error && err.message ? err.message : fallback;
+
+  const fetchJsonWithTimeout = async <T = unknown>(
+    url: string,
+    payload: unknown,
+    fallbackError: string
+  ): Promise<T> => {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      throw new Error("You appear to be offline. Reconnect and try again.");
+    }
+    const controller = new AbortController();
+    activeControllersRef.current.add(controller);
+    const timeoutId = setTimeout(() => controller.abort("timeout"), 45000);
     try {
-      const res = await fetch("/api/notebooks/tidy", {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          blocks: currentBlocks,
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        message?: string;
+      };
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("Session expired. Sign in again and retry.");
+        if (res.status === 429) throw new Error("Rate limit reached. Wait a moment and retry.");
+        throw new Error(data?.error || data?.message || fallbackError);
+      }
+      return data as T;
+    } catch (err: unknown) {
+      if (isAbortError(err) && controller.signal.reason === "timeout") {
+        throw new Error("Request timed out after 45s. Please try again.");
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+      activeControllersRef.current.delete(controller);
+    }
+  };
+
+  // AI: TIDY MY NOTES
+  const handleTidyNotes = async () => {
+    if (!currentCourse || !currentLesson || currentBlocks.length === 0 || isTidying) return;
+    const targetCourseId = currentCourse.id;
+    const targetLessonId = currentLesson.id;
+    const snapshotBlocks = currentBlocks;
+    setAiError(null);
+    setIsTidying(true);
+    try {
+      const data = await fetchJsonWithTimeout<{ blocks: Block[]; summaryOfChanges?: string }>(
+        "/api/notebooks/tidy",
+        {
+          blocks: snapshotBlocks,
           courseTitle: currentCourse.title,
           lessonTitle: currentLesson.title,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
-      setDiffOriginal(currentBlocks);
+        },
+        "Could not tidy notes. Check your connection and try again."
+      );
+      diffTargetRef.current = { courseId: targetCourseId, lessonId: targetLessonId };
+      setDiffOriginal(snapshotBlocks);
       setDiffProposed(data.blocks);
       setDiffSummary(data.summaryOfChanges || "Restructured notes into organized sections.");
       playSound.fileIt();
-    } catch {
-      alert("Could not tidy notes at this moment. Please check connection.");
+    } catch (err: unknown) {
+      if (isAbortError(err)) return;
+      setAiError({
+        message: getErrorMessage(err, "Could not tidy notes. Check your connection and try again."),
+        retry: () => handleTidyNotes(),
+      });
     } finally {
       setIsTidying(false);
     }
@@ -931,27 +1253,33 @@ export default function NotebooksPage() {
 
   // AI: QUIZ ME
   const handleQuizMe = async () => {
-    if (isQuizzing) return;
+    if (!currentCourse || !currentLesson || isQuizzing) return;
+    setAiError(null);
     setIsQuizzing(true);
     try {
-      const res = await fetch("/api/notebooks/quiz", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await fetchJsonWithTimeout<{
+        questions?: React.ComponentProps<typeof QuizModal>["questions"];
+        notEnough?: boolean;
+        explanation?: string;
+      }>(
+        "/api/notebooks/quiz",
+        {
           blocks: currentBlocks,
           courseTitle: currentCourse.title,
           lessonTitle: currentLesson.title,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
+        },
+        "Failed to generate quiz for this lesson."
+      );
       setQuizQuestions(data.questions || []);
       setQuizNotEnough(!!data.notEnough);
       setQuizExplanation(data.explanation || "");
       playSound.fileIt();
-    } catch {
-      alert("Failed to generate quiz.");
+    } catch (err: unknown) {
+      if (isAbortError(err)) return;
+      setAiError({
+        message: getErrorMessage(err, "Failed to generate quiz for this lesson."),
+        retry: () => handleQuizMe(),
+      });
     } finally {
       setIsQuizzing(false);
     }
@@ -969,38 +1297,50 @@ export default function NotebooksPage() {
     } else {
       selectedText = window.getSelection()?.toString().trim() || "";
     }
+    const fallbackBlock = currentBlocks.find(
+      (b) =>
+        (b.type === "paragraph" || b.type === "callout" || b.type === "quote" || b.type === "heading") &&
+        Boolean((b as { text?: string }).text?.trim())
+    );
     const targetText =
       selectedText ||
-      currentBlocks.find((b) => b.type === "paragraph" || b.type === "callout")?.text ||
-      "Agentic reflection with outside verification";
+      (fallbackBlock && "text" in fallbackBlock ? fallbackBlock.text?.trim() : "") ||
+      "";
+
+    if (!targetText) {
+      setAiError({
+        message: "Select a passage or write some notes first before asking AI to explain.",
+      });
+      return;
+    }
 
     await handleExplainWithSelection(targetText);
   };
 
   const handleExplainWithSelection = async (text: string) => {
-    if (!text.trim()) return;
+    if (!text.trim() || !currentCourse || !currentLesson || isExplaining) return;
+    explainTargetRef.current = { courseId: currentCourse.id, lessonId: currentLesson.id };
     setExplainSelection(text.trim());
     setExplainText("");
+    setExplainError(null);
     setIsExplaining(true);
 
     try {
-      const res = await fetch("/api/notebooks/explain", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await fetchJsonWithTimeout<{ explanation: string }>(
+        "/api/notebooks/explain",
+        {
           selection: text.trim(),
           context: JSON.stringify(currentBlocks),
           courseTitle: currentCourse.title,
           lessonTitle: currentLesson.title,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
+        },
+        "Failed to generate contextual explanation."
+      );
       setExplainText(data.explanation);
       playSound.fileIt();
-    } catch {
-      setExplainText("Failed to generate contextual explanation.");
+    } catch (err: unknown) {
+      if (isAbortError(err)) return;
+      setExplainError(getErrorMessage(err, "Failed to generate contextual explanation."));
     } finally {
       setIsExplaining(false);
     }
@@ -1008,27 +1348,35 @@ export default function NotebooksPage() {
 
   // AI: CONVERT TRANSCRIPT TO STRUCTURED NOTES
   const handleConvertToNotes = async (transcriptText: string) => {
+    if (!currentCourse || !currentLesson || isAnalyzingGaps) return;
+    const targetCourseId = currentCourse.id;
+    const targetLessonId = currentLesson.id;
+    const snapshotBlocks = currentBlocks;
+    setAiError(null);
     setIsAnalyzingGaps(true);
     try {
-      const res = await fetch("/api/notebooks/draft-transcript", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await fetchJsonWithTimeout<{ blocks: Block[]; summary?: string }>(
+        "/api/notebooks/draft-transcript",
+        {
           transcript: transcriptText,
           courseTitle: currentCourse.title,
           lessonTitle: currentLesson.title,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
-      setDiffOriginal(currentBlocks);
+        },
+        "Failed to convert transcript into structured notes."
+      );
+      diffTargetRef.current = { courseId: targetCourseId, lessonId: targetLessonId };
+      setDiffOriginal(snapshotBlocks);
       setDiffProposed(data.blocks);
       setDiffSummary(data.summary || "Structured lecture transcript into clean notebook blocks.");
       setShowTranscriptModal(false);
       playSound.fileIt();
-    } catch {
-      alert("Failed to convert transcript into notes.");
+    } catch (err: unknown) {
+      if (isAbortError(err)) return;
+      setShowTranscriptModal(false);
+      setAiError({
+        message: getErrorMessage(err, "Failed to convert transcript into structured notes."),
+        retry: () => handleConvertToNotes(transcriptText),
+      });
     } finally {
       setIsAnalyzingGaps(false);
     }
@@ -1036,32 +1384,48 @@ export default function NotebooksPage() {
 
   // AI: WHAT DID I MISS? (Gap analysis)
   const handleAnalyzeTranscript = async (transcriptText: string) => {
-    if (isAnalyzingGaps) return;
+    if (!currentCourse || !currentLesson || isAnalyzingGaps) return;
+    const targetCourseId = currentCourse.id;
+    const targetLessonId = currentLesson.id;
+    setAiError(null);
     setIsAnalyzingGaps(true);
     try {
-      const res = await fetch("/api/notebooks/gaps", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await fetchJsonWithTimeout<{ gaps?: SeedCourseLesson["gap"] }>(
+        "/api/notebooks/gaps",
+        {
           transcript: transcriptText,
           blocks: currentBlocks,
           courseTitle: currentCourse.title,
           lessonTitle: currentLesson.title,
-        }),
+        },
+        "Failed to analyze transcript for missed concepts."
+      );
+      setCourses((prevCourses) => {
+        const nextCourses = prevCourses.map((c) => {
+          if (!isSameId(c.id, targetCourseId)) return c;
+          return {
+            ...c,
+            modules: c.modules.map((m) => ({
+              ...m,
+              lessons: m.lessons.map((l) =>
+                isSameId(l.id, targetLessonId) ? { ...l, gap: data.gaps } : l
+              ),
+            })),
+          };
+        });
+        saveStoredCourses(nextCourses);
+        return nextCourses;
       });
-
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
-      if (currentLesson) {
-        currentLesson.gap = data.gaps;
-        saveStoredCourses(courses);
-        setCourses([...courses]);
-        updateLessonInDbApi(currentLesson.id, { gap: data.gaps });
-      }
+      updateLessonInDbApi(targetLessonId, { gap: data.gaps });
       setShowTranscriptModal(false);
       playSound.fileIt();
-    } catch {
-      alert("Failed to analyze gaps.");
+    } catch (err: unknown) {
+      if (isAbortError(err)) return;
+      setShowTranscriptModal(false);
+      setAiError({
+        message: getErrorMessage(err, "Failed to analyze transcript for missed concepts."),
+        retry: () => handleAnalyzeTranscript(transcriptText),
+      });
     } finally {
       setIsAnalyzingGaps(false);
     }
@@ -1083,23 +1447,31 @@ export default function NotebooksPage() {
     accent?: string;
     accentFg?: string;
   }) => {
-    const newCourse = await createCourseInDbApi({
-      title,
-      provider: provider || "DEEPLEARNING.AI",
-      accent: accent || "#7B5CF0",
-      accentFg: accentFg || "#FFFFFF",
-    });
-    const courseToAdd =
-      newCourse ||
-      createNewCourse(title, provider || "DEEPLEARNING.AI", accent || "#7B5CF0", accentFg || "#FFFFFF");
-    const updated = [...courses, courseToAdd];
-    saveStoredCourses(updated);
-    setCourses(updated);
-    setCurrentCourseIdx(courses.length);
-    setCurrentModuleIdx(0);
-    setCurrentLessonIdx(0);
-    setView("course");
-    setShowAddCourseModal(false);
+    if (mutationInFlightRef.current.createCourse) return;
+    mutationInFlightRef.current.createCourse = true;
+    try {
+      const newCourse = await createCourseInDbApi({
+        title,
+        provider: provider || "DEEPLEARNING.AI",
+        accent: accent || "#7B5CF0",
+        accentFg: accentFg || "#FFFFFF",
+      });
+      const courseToAdd =
+        newCourse ||
+        createNewCourse(title, provider || "DEEPLEARNING.AI", accent || "#7B5CF0", accentFg || "#FFFFFF");
+      setCourses((prevCourses) => {
+        const updated = [...prevCourses, courseToAdd];
+        saveStoredCourses(updated);
+        setCurrentCourseIdx(updated.length - 1);
+        return updated;
+      });
+      setCurrentModuleIdx(0);
+      setCurrentLessonIdx(0);
+      setView("course");
+      setShowAddCourseModal(false);
+    } finally {
+      mutationInFlightRef.current.createCourse = false;
+    }
   };
 
   const handleStartEditCourse = (course: SeedCourse) => {
@@ -1161,30 +1533,38 @@ export default function NotebooksPage() {
 
   // Module Management Handlers
   const handleCreateModule = async (title: string) => {
-    if (!currentCourse) return;
-    const createdMod = await createModuleInDbApi(currentCourse.id, title);
-    const newModule: SeedCourseModule = createdMod || {
-      id: "mod-" + Date.now().toString(36),
-      title: title.trim(),
-      lessons: [],
-    };
+    if (!currentCourse || !title.trim() || mutationInFlightRef.current.createModule) return;
+    mutationInFlightRef.current.createModule = true;
+    const targetCourseId = currentCourse.id;
+    try {
+      const createdMod = await createModuleInDbApi(targetCourseId, title.trim());
+      const newModule: SeedCourseModule = createdMod || {
+        id: "mod-" + Date.now().toString(36),
+        title: title.trim(),
+        lessons: [],
+      };
 
-    const updated = courses.map((c) => {
-      if (c.id === currentCourse.id) {
-        return {
-          ...c,
-          modules: [...c.modules, newModule],
-        };
-      }
-      return c;
-    });
-
-    saveStoredCourses(updated);
-    setCourses(updated);
-    setCurrentModuleIdx(currentCourse.modules.length);
-    setCurrentLessonIdx(0);
-    setShowAddModuleModal(false);
-    playSound.fileIt();
+      setCourses((prevCourses) => {
+        const updated = prevCourses.map((c) => {
+          if (c.id === targetCourseId) {
+            const nextModules = [...c.modules, newModule];
+            setCurrentModuleIdx(nextModules.length - 1);
+            return {
+              ...c,
+              modules: nextModules,
+            };
+          }
+          return c;
+        });
+        saveStoredCourses(updated);
+        return updated;
+      });
+      setCurrentLessonIdx(0);
+      setShowAddModuleModal(false);
+      playSound.fileIt();
+    } finally {
+      mutationInFlightRef.current.createModule = false;
+    }
   };
 
   const handleRenameModule = (modIdx: number, newTitle: string) => {
@@ -1255,44 +1635,54 @@ export default function NotebooksPage() {
   };
 
   const handleCreatePage = async (newTitle: string) => {
-    if (!currentCourse) return;
+    if (!currentCourse || !newTitle.trim() || mutationInFlightRef.current.createPage) return;
     const targetModIdx = addPageContext ? addPageContext.modIdx : currentModule ? currentModuleIdx : 0;
     const targetMod = currentCourse.modules[targetModIdx];
     if (!targetMod) return;
 
+    mutationInFlightRef.current.createPage = true;
+    const targetCourseId = currentCourse.id;
+    const targetModId = targetMod.id;
     const targetPos = addPageContext?.targetPosition ?? targetMod.lessons.length;
-    const createdLesson = await createLessonInDbApi(targetMod.id, newTitle, undefined, targetPos);
-    const newLesson: SeedCourseLesson = createdLesson || {
-      id: "les-" + Date.now().toString(36),
-      title: newTitle,
-      watched: false,
-      meta: "STUB · 1 LINE",
-      blocks: [{ id: generateBlockId(), type: "paragraph" as const, text: "" }],
-    };
 
-    const updated = courses.map((c) => {
-      if (c.id === currentCourse.id) {
-        return {
-          ...c,
-          modules: c.modules.map((m, mIdx) => {
-            if (mIdx === targetModIdx) {
-              const nextLessons = [...m.lessons];
-              nextLessons.splice(targetPos, 0, newLesson);
-              return { ...m, lessons: nextLessons };
-            }
-            return m;
-          }),
-        };
-      }
-      return c;
-    });
+    try {
+      const createdLesson = await createLessonInDbApi(targetModId, newTitle.trim(), undefined, targetPos);
+      const newLesson: SeedCourseLesson = createdLesson || {
+        id: "les-" + Date.now().toString(36),
+        title: newTitle.trim(),
+        watched: false,
+        meta: "STUB · 1 LINE",
+        blocks: [{ id: generateBlockId(), type: "paragraph" as const, text: "" }],
+      };
 
-    saveStoredCourses(updated);
-    setCourses(updated);
-    setCurrentModuleIdx(targetModIdx);
-    setCurrentLessonIdx(targetPos);
-    setAddPageContext(null);
-    setShowAddPageModal(false);
+      setCourses((prevCourses) => {
+        const updated = prevCourses.map((c) => {
+          if (c.id === targetCourseId) {
+            return {
+              ...c,
+              modules: c.modules.map((m, mIdx) => {
+                if (mIdx === targetModIdx) {
+                  const nextLessons = [...m.lessons];
+                  const safePos = Math.max(0, Math.min(targetPos, nextLessons.length));
+                  nextLessons.splice(safePos, 0, newLesson);
+                  setCurrentLessonIdx(safePos);
+                  return { ...m, lessons: nextLessons };
+                }
+                return m;
+              }),
+            };
+          }
+          return c;
+        });
+        saveStoredCourses(updated);
+        return updated;
+      });
+      setCurrentModuleIdx(targetModIdx);
+      setAddPageContext(null);
+      setShowAddPageModal(false);
+    } finally {
+      mutationInFlightRef.current.createPage = false;
+    }
   };
 
   // Drag-and-Drop Reorder Handler
@@ -1331,42 +1721,50 @@ export default function NotebooksPage() {
 
   // 1-Click Page Duplication
   const handleDuplicateLesson = async (modIdx: number, lesIdx: number) => {
-    if (!currentCourse) return;
+    if (!currentCourse || mutationInFlightRef.current.duplicateLesson) return;
     const targetMod = currentCourse.modules[modIdx];
     const targetLes = targetMod?.lessons[lesIdx];
     if (!targetMod || !targetLes) return;
 
-    const duplicated = await duplicateLessonInDbApi(targetLes.id);
-    const newLesson: SeedCourseLesson = duplicated || {
-      id: "les-" + Date.now().toString(36),
-      title: `${targetLes.title} (Copy)`,
-      watched: false,
-      meta: targetLes.meta,
-      blocks: targetLes.blocks ? JSON.parse(JSON.stringify(targetLes.blocks)) : [],
-      gap: targetLes.gap,
-      lessonUrl: targetLes.lessonUrl,
-    };
+    mutationInFlightRef.current.duplicateLesson = true;
+    const targetCourseId = currentCourse.id;
+    try {
+      const duplicated = await duplicateLessonInDbApi(targetLes.id);
+      const newLesson: SeedCourseLesson = duplicated || {
+        id: "les-" + Date.now().toString(36),
+        title: `${targetLes.title} (Copy)`,
+        watched: false,
+        meta: targetLes.meta,
+        blocks: targetLes.blocks ? JSON.parse(JSON.stringify(targetLes.blocks)) : [],
+        gap: targetLes.gap,
+        lessonUrl: targetLes.lessonUrl,
+      };
 
-    const updated = courses.map((c) => {
-      if (c.id === currentCourse.id) {
-        return {
-          ...c,
-          modules: c.modules.map((m, mIdx) => {
-            if (mIdx === modIdx) {
-              return { ...m, lessons: [...m.lessons, newLesson] };
-            }
-            return m;
-          }),
-        };
-      }
-      return c;
-    });
-
-    saveStoredCourses(updated);
-    setCourses(updated);
-    setCurrentModuleIdx(modIdx);
-    setCurrentLessonIdx(targetMod.lessons.length);
-    playSound.fileIt();
+      setCourses((prevCourses) => {
+        const updated = prevCourses.map((c) => {
+          if (c.id === targetCourseId) {
+            return {
+              ...c,
+              modules: c.modules.map((m, mIdx) => {
+                if (mIdx === modIdx) {
+                  const nextLessons = [...m.lessons, newLesson];
+                  setCurrentLessonIdx(nextLessons.length - 1);
+                  return { ...m, lessons: nextLessons };
+                }
+                return m;
+              }),
+            };
+          }
+          return c;
+        });
+        saveStoredCourses(updated);
+        return updated;
+      });
+      setCurrentModuleIdx(modIdx);
+      playSound.fileIt();
+    } finally {
+      mutationInFlightRef.current.duplicateLesson = false;
+    }
   };
 
   // Inline Page Title Renaming
@@ -1415,13 +1813,23 @@ export default function NotebooksPage() {
   };
 
   // Copy Full Page as Markdown
-  const handleCopyAsMarkdown = () => {
+  const handleCopyAsMarkdown = async () => {
     if (!currentLesson) return;
     const md = convertBlocksToMarkdown(currentLesson.title, currentBlocks);
-    navigator.clipboard.writeText(md);
-    setCopiedMarkdownToast(true);
-    playSound.click();
-    setTimeout(() => setCopiedMarkdownToast(false), 2200);
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard unavailable");
+      }
+      await navigator.clipboard.writeText(md);
+      setCopiedMarkdownToast(true);
+      playSound.click();
+      if (copiedToastTimerRef.current) clearTimeout(copiedToastTimerRef.current);
+      copiedToastTimerRef.current = setTimeout(() => setCopiedMarkdownToast(false), 2200);
+    } catch {
+      setAiError({
+        message: "Clipboard access was blocked by the browser. Use Print / PDF or copy blocks manually.",
+      });
+    }
   };
 
   // Handle autonomously generated notes from topic / question
@@ -1477,49 +1885,57 @@ export default function NotebooksPage() {
       });
     } else {
       if (!currentLesson) return;
-      const updated = courses.map((c) => {
-        if (c.id === currentCourse.id) {
-          return {
-            ...c,
-            modules: c.modules.map((m, mIdx) => {
-              if (mIdx === currentModuleIdx) {
-                return {
-                  ...m,
-                  lessons: m.lessons.map((l, lIdx) =>
-                    lIdx === currentLessonIdx
-                      ? {
-                          ...l,
-                          title: result.title,
-                          icon: result.icon,
-                          coverUrl: result.coverUrl,
-                          blocks: result.blocks,
-                        }
-                      : l
-                  ),
-                };
-              }
-              return m;
-            }),
-          };
-        }
-        return c;
-      });
+      const isFreshOrUntitled =
+        !hasCurrentLessonContent &&
+        (!currentLesson.title ||
+          currentLesson.title === "Untitled Page" ||
+          currentLesson.title === "New Page");
+      pendingTopicMetaRef.current = isFreshOrUntitled
+        ? {
+            courseId: currentCourse.id,
+            lessonId: currentLesson.id,
+            title: result.title,
+            icon: result.icon,
+            coverUrl: result.coverUrl,
+          }
+        : null;
+      diffTargetRef.current = { courseId: currentCourse.id, lessonId: currentLesson.id };
+      setDiffOriginal(currentBlocks);
+      setDiffProposed(result.blocks);
+      setDiffSummary(`AI Draft: "${result.title}" — review blocks before applying to this page.`);
+    }
+  };
 
-      saveStoredCourses(updated);
-      setCourses(updated);
-      saveLessonBlocksToDbApi(currentLesson.id, result.blocks);
-      updateLessonInDbApi(currentLesson.id, {
-        title: result.title,
-        coverUrl: result.coverUrl,
-        icon: result.icon,
-      });
+  const normalizeAndValidateHttpUrl = (
+    raw: string
+  ): { ok: true; value: string } | { ok: false; error: string } => {
+    const trimmed = raw.trim();
+    if (!trimmed) return { ok: true, value: "" };
+    if (/^(javascript|data|vbscript|file):/i.test(trimmed)) {
+      return { ok: false, error: "Only http:// or https:// URLs are allowed." };
+    }
+    const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    try {
+      const parsed = new URL(candidate);
+      if ((parsed.protocol !== "http:" && parsed.protocol !== "https:") || !parsed.hostname.includes(".")) {
+        return { ok: false, error: "Enter a valid web address (e.g. https://youtube.com/...)." };
+      }
+      return { ok: true, value: parsed.toString() };
+    } catch {
+      return { ok: false, error: "Enter a valid web address (e.g. https://youtube.com/...)." };
     }
   };
 
   // Attach / Update Lesson URL
   const handleSaveLessonUrl = (url: string) => {
     if (!currentCourse || !currentLesson) return;
-    const trimmed = url.trim();
+    const checked = normalizeAndValidateHttpUrl(url);
+    if (!checked.ok) {
+      setUrlError(checked.error);
+      return;
+    }
+    const trimmed = checked.value;
+    setUrlError(null);
     const updated = courses.map((c) => {
       if (c.id === currentCourse.id) {
         return {
@@ -1626,9 +2042,25 @@ export default function NotebooksPage() {
   const tokens = getThemeTokens(paperTheme);
   const isInk = tokens.isDark;
 
+  const hasCurrentLessonContent =
+    wordCount > 0 ||
+    currentBlocks.length > 1 ||
+    (currentBlocks.length === 1 &&
+      Boolean((currentBlocks[0] as any).text?.trim() || currentBlocks[0].type !== "paragraph"));
+
+  const activeAiTaskLabel = isTidying
+    ? "Tidying notes into clean structured blocks…"
+    : isQuizzing
+    ? "Generating active-recall quiz questions…"
+    : isExplaining
+    ? "Analyzing passage for deep-dive explanation…"
+    : isAnalyzingGaps
+    ? "Analyzing transcript against your notes…"
+    : null;
+
   return (
     <div
-      className="page-scroll"
+      className="page-scroll nb-scope"
       style={{
         background: tokens.canvasBg,
         color: tokens.textPrimary,
@@ -1667,68 +2099,101 @@ export default function NotebooksPage() {
             background: tokens.canvasBg,
           }}
         >
-          {view === "course" && isMobile && (
+          <div className="nb-topbar-track">
+            {view === "course" && (isMobile || sidebarCollapsed) && (
+              <button
+                type="button"
+                className="nb-touch-target"
+                onClick={() => {
+                  if (isMobile) setMobileSidebarOpen(true);
+                  else setSidebarCollapsed(false);
+                }}
+                aria-label="Open lesson outline"
+                title="Open lesson outline (Cmd+\\)"
+                style={{
+                  background: "transparent",
+                  border: `2px solid ${tokens.borderPrimary}`,
+                  color: "inherit",
+                  cursor: "pointer",
+                  padding: "4px 8px",
+                  fontSize: "13px",
+                  lineHeight: 1,
+                  flex: "none",
+                  borderRadius: "2px",
+                }}
+              >
+                ☰
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setMobileSidebarOpen(true)}
-              aria-label="Open lesson outline"
+              onClick={() => setView("index")}
               style={{
                 background: "transparent",
-                border: `2px solid ${tokens.borderPrimary}`,
+                border: "none",
+                padding: 0,
                 color: "inherit",
+                font: "inherit",
+                letterSpacing: "inherit",
                 cursor: "pointer",
-                padding: "4px 8px",
-                fontSize: "13px",
-                lineHeight: 1,
+                opacity: view === "index" ? 1 : 0.72,
                 flex: "none",
-                borderRadius: "2px",
               }}
             >
-              ☰
+              NOTEBOOKS
             </button>
-          )}
-          <span
-            onClick={() => setView("index")}
-            style={{ cursor: "pointer", opacity: view === "index" ? 1 : 0.4, flex: "none" }}
-          >
-            NOTEBOOKS
-          </span>
-          {view === "course" && (
-            <>
-              <span style={{ opacity: 0.3, flex: "none" }}>/</span>
-              <span
-                className="nb-breadcrumb-title"
-                style={{ color: currentCourse?.accent || "inherit" }}
-              >
-                {currentCourse?.title.toUpperCase()}
-              </span>
+            {view === "course" && (
+              <>
+                <span style={{ opacity: 0.5, flex: "none" }}>/</span>
+                <span
+                  className="nb-breadcrumb-title"
+                  style={{ color: tokens.textPrimary }}
+                >
+                  {currentCourse?.title.toUpperCase()}
+                </span>
 
-              {/* Dynamic Hierarchical Subpage Breadcrumbs */}
-              {lessonAncestors.map((anc, ancIdx) => {
-                const isLast = ancIdx === lessonAncestors.length - 1;
-                return (
-                  <React.Fragment key={anc.id}>
-                    <span style={{ opacity: 0.3, flex: "none" }}>/</span>
-                    <span
-                      onClick={() => !isLast && navigateToLesson(anc.id)}
-                      className="nb-breadcrumb-title"
-                      style={{
-                        cursor: isLast ? "default" : "pointer",
-                        opacity: isLast ? 1 : 0.6,
-                        fontWeight: isLast ? 800 : 600,
-                        textDecoration: !isLast ? "underline" : "none",
-                        textUnderlineOffset: "2px",
-                      }}
-                      title={anc.title}
-                    >
-                      {anc.icon ? `${anc.icon} ` : ""}{anc.title}
-                    </span>
-                  </React.Fragment>
-                );
-              })}
-            </>
-          )}
-          <span style={{ flex: 1 }} />
+                {/* Dynamic Hierarchical Subpage Breadcrumbs */}
+                {lessonAncestors.map((anc, ancIdx) => {
+                  const isLast = ancIdx === lessonAncestors.length - 1;
+                  return (
+                    <React.Fragment key={anc.id}>
+                      <span style={{ opacity: 0.5, flex: "none" }}>/</span>
+                      {isLast ? (
+                        <span
+                          className="nb-breadcrumb-title"
+                          style={{ opacity: 1, fontWeight: 800 }}
+                          title={anc.title}
+                        >
+                          {anc.icon ? `${anc.icon} ` : ""}{anc.title}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => navigateToLesson(anc.id)}
+                          className="nb-breadcrumb-title"
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            padding: 0,
+                            color: "inherit",
+                            font: "inherit",
+                            cursor: "pointer",
+                            opacity: 0.78,
+                            fontWeight: 600,
+                            textDecoration: "underline",
+                            textUnderlineOffset: "2px",
+                          }}
+                          title={anc.title}
+                        >
+                          {anc.icon ? `${anc.icon} ` : ""}{anc.title}
+                        </button>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </>
+            )}
+          </div>
 
           {/* Quick Jump / Switcher Button (Cmd + K) */}
           <button
@@ -1751,136 +2216,257 @@ export default function NotebooksPage() {
               boxShadow: tokens.isDark ? "2px 2px 0 rgba(0,0,0,0.6)" : "2px 2px 0 #0A0A0A",
               flex: "none",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = tokens.isDark ? "rgba(255,255,255,0.15)" : "#FCE94F")}
+            onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
             onMouseLeave={(e) => (e.currentTarget.style.background = tokens.cardBg)}
           >
             <Search size={11} />
             <span className="nb-text-hide-mobile">QUICK JUMP</span>
-            <span className="nb-text-hide-mobile" style={{ opacity: 0.5, fontSize: "8.5px" }}>⌘K</span>
+            <span className="nb-text-hide-mobile" style={{ opacity: 0.65, fontSize: "8.5px" }}>⌘K</span>
           </button>
 
-          <div className="nb-hide-mobile">
-            <SyncStatusPill
-              theme={paperTheme}
-              onRetry={() => {
-                flushOfflineQueueToDbApi();
-                fetchNotebooksFromDbApi().then((dbData) => {
-                  if (dbData?.courses && dbData.courses.length > 0) {
-                    setCourses(dbData.courses);
-                    saveStoredCourses(dbData.courses);
-                  }
-                });
+          <SyncStatusPill
+            theme={paperTheme}
+            onRetry={() => {
+              flushOfflineQueueToDbApi();
+              fetchNotebooksFromDbApi().then((dbData) => {
+                if (dbData?.courses && dbData.courses.length > 0) {
+                  setCourses(dbData.courses);
+                  saveStoredCourses(dbData.courses);
+                }
+              });
+            }}
+          />
+
+          {/* Compact Appearance Popover (Theme + Typography) */}
+          <div ref={appearanceMenuRef} style={{ position: "relative", flex: "none" }}>
+            <button
+              type="button"
+              onClick={() => {
+                playSound.click();
+                setShowAppearanceMenu((prev) => !prev);
+                setShowHelpMenu(false);
               }}
-            />
+              aria-expanded={showAppearanceMenu}
+              title="Paper theme & typography"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "9px",
+                fontWeight: 800,
+                letterSpacing: "0.08em",
+                border: `2px solid ${tokens.borderPrimary}`,
+                background: showAppearanceMenu ? "#FCE94F" : tokens.cardBg,
+                color: showAppearanceMenu ? "#0A0A0A" : tokens.textPrimary,
+                padding: "4px 8px",
+                cursor: "pointer",
+                boxShadow: tokens.isDark ? "2px 2px 0 rgba(0,0,0,0.6)" : "2px 2px 0 #0A0A0A",
+              }}
+            >
+              <span>Aa</span>
+              <span className="nb-text-hide-mobile">· {paperTheme.toUpperCase()}</span>
+              <ChevronDown size={10} />
+            </button>
+
+            {showAppearanceMenu && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 6px)",
+                  right: 0,
+                  zIndex: 300,
+                  width: "240px",
+                  background: tokens.popoverBg,
+                  color: tokens.textPrimary,
+                  border: `2px solid ${tokens.borderPrimary}`,
+                  boxShadow: tokens.popoverShadow,
+                  padding: "12px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "8.5px",
+                      fontWeight: 800,
+                      letterSpacing: "0.12em",
+                      color: tokens.textMuted,
+                      marginBottom: "6px",
+                    }}
+                  >
+                    PAPER THEME
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                    {[
+                      { id: "cream" as NotebookTheme, label: "CREAM", emoji: "📜" },
+                      { id: "matcha" as NotebookTheme, label: "MATCHA", emoji: "🍵" },
+                      { id: "ink" as NotebookTheme, label: "INK", emoji: "🖋️" },
+                      { id: "midnight" as NotebookTheme, label: "MIDNIGHT", emoji: "🌌" },
+                    ].map((th) => {
+                      const isActive = paperTheme === th.id;
+                      return (
+                        <button
+                          key={th.id}
+                          type="button"
+                          onClick={() => handleToggleTheme(th.id)}
+                          style={{
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9px",
+                            fontWeight: 800,
+                            letterSpacing: "0.08em",
+                            border: `1.5px solid ${tokens.borderPrimary}`,
+                            background: isActive ? "#FCE94F" : tokens.sidebarBg,
+                            color: isActive ? "#0A0A0A" : tokens.textPrimary,
+                            padding: "6px 8px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "5px",
+                          }}
+                        >
+                          <span>{th.emoji}</span>
+                          <span>{th.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "8.5px",
+                      fontWeight: 800,
+                      letterSpacing: "0.12em",
+                      color: tokens.textMuted,
+                      marginBottom: "6px",
+                    }}
+                  >
+                    TYPOGRAPHY
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px" }}>
+                    {(["sans", "serif", "mono"] as TypographyStyle[]).map((fId) => {
+                      const fontObj = TYPOGRAPHY_FONTS[fId];
+                      const isActive = typography === fId;
+                      return (
+                        <button
+                          key={fId}
+                          type="button"
+                          onClick={() => handleToggleTypography(fId)}
+                          style={{
+                            fontFamily: fontObj.fontStack,
+                            fontSize: "9px",
+                            fontWeight: 800,
+                            border: `1.5px solid ${tokens.borderPrimary}`,
+                            background: isActive ? "#FCE94F" : tokens.sidebarBg,
+                            color: isActive ? "#0A0A0A" : tokens.textPrimary,
+                            padding: "6px 4px",
+                            cursor: "pointer",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: "2px",
+                          }}
+                        >
+                          <span style={{ fontSize: "11px" }}>{fontObj.glyph}</span>
+                          <span>{fontObj.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* 4-Theme Segmented Switcher */}
-          <div
-            style={{
-              display: "flex",
-              border: `2px solid ${tokens.borderPrimary}`,
-              background: tokens.isDark ? "#12151E" : "#E5E1D5",
-              boxShadow: tokens.isDark ? "2px 2px 0 rgba(0,0,0,0.6)" : "2px 2px 0 #0A0A0A",
-              flex: "none",
-            }}
-          >
-            {[
-              { id: "cream" as NotebookTheme, label: "CREAM", emoji: "📜" },
-              { id: "matcha" as NotebookTheme, label: "MATCHA", emoji: "🍵" },
-              { id: "ink" as NotebookTheme, label: "INK", emoji: "🖋️" },
-              { id: "midnight" as NotebookTheme, label: "MIDNIGHT", emoji: "🌌" },
-            ].map((th, thIdx) => {
-              const isActive = paperTheme === th.id;
-              return (
-                <button
-                  key={th.id}
-                  type="button"
-                  onClick={() => handleToggleTheme(th.id)}
-                  title={`Switch to ${th.label} theme`}
-                  style={{
-                    fontFamily: "var(--mono, monospace)",
-                    fontSize: "8.5px",
-                    fontWeight: 800,
-                    letterSpacing: "0.1em",
-                    border: "none",
-                    borderRight: thIdx < 3 ? `1.5px solid ${tokens.borderPrimary}` : "none",
-                    background: isActive
-                      ? (tokens.isDark
-                          ? (th.id === "midnight" ? "#8B5CF6" : "#242A38")
-                          : (th.id === "matcha" ? "#2E6B47" : "#0A0A0A"))
-                      : "transparent",
-                    color: isActive
-                      ? (th.id === "matcha" ? "#F5FDF7" : (th.id === "midnight" ? "#FFFFFF" : (tokens.isDark ? "#FCE94F" : "#F3F0E8")))
-                      : (tokens.isDark ? "rgba(240,237,228,0.6)" : "rgba(10,10,10,0.65)"),
-                    padding: "4px 7px",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "3px",
-                    transition: "all 0.12s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) e.currentTarget.style.background = tokens.isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) e.currentTarget.style.background = "transparent";
-                  }}
-                >
-                  <span style={{ fontSize: "10px" }}>{th.emoji}</span>
-                  <span className="nb-text-hide-mobile">{th.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* Keyboard Shortcuts & Syntax Help Popover (?) */}
+          <div ref={helpMenuRef} style={{ position: "relative", flex: "none" }}>
+            <button
+              type="button"
+              onClick={() => {
+                playSound.click();
+                setShowHelpMenu((prev) => !prev);
+                setShowAppearanceMenu(false);
+              }}
+              aria-expanded={showHelpMenu}
+              aria-label="Keyboard shortcuts and slash syntax help"
+              title="Shortcuts & markdown syntax (?)"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: `2px solid ${tokens.borderPrimary}`,
+                background: showHelpMenu ? "#FCE94F" : tokens.cardBg,
+                color: showHelpMenu ? "#0A0A0A" : tokens.textPrimary,
+                padding: "4px 7px",
+                cursor: "pointer",
+                boxShadow: tokens.isDark ? "2px 2px 0 rgba(0,0,0,0.6)" : "2px 2px 0 #0A0A0A",
+              }}
+            >
+              <HelpCircle size={13} />
+            </button>
 
-          {/* Typography Switcher (Hidden on Mobile) */}
-          <div
-            className="nb-hide-mobile"
-            style={{
-              display: "flex",
-              border: `2px solid ${tokens.borderPrimary}`,
-              background: tokens.isDark ? "#12151E" : "#E5E1D5",
-              boxShadow: tokens.isDark ? "2px 2px 0 rgba(0,0,0,0.6)" : "2px 2px 0 #0A0A0A",
-              flex: "none",
-            }}
-          >
-            {(["sans", "serif", "mono"] as TypographyStyle[]).map((fId, fIdx) => {
-              const fontObj = TYPOGRAPHY_FONTS[fId];
-              const isActive = typography === fId;
-              return (
-                <button
-                  key={fId}
-                  type="button"
-                  onClick={() => handleToggleTypography(fId)}
-                  title={`Switch font to ${fontObj.label}`}
+            {showHelpMenu && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 6px)",
+                  right: 0,
+                  zIndex: 300,
+                  width: "280px",
+                  background: tokens.popoverBg,
+                  color: tokens.textPrimary,
+                  border: `2px solid ${tokens.borderPrimary}`,
+                  boxShadow: tokens.popoverShadow,
+                  padding: "14px",
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "9.5px",
+                }}
+              >
+                <div
                   style={{
-                    fontFamily: fontObj.fontStack,
-                    fontSize: "9px",
                     fontWeight: 800,
-                    letterSpacing: "0.08em",
-                    border: "none",
-                    borderRight: fIdx < 2 ? `1.5px solid ${tokens.borderPrimary}` : "none",
-                    background: isActive ? (tokens.isDark ? "#242A38" : "#0A0A0A") : "transparent",
-                    color: isActive ? (tokens.isDark ? "#FCE94F" : "#F3F0E8") : tokens.textSecondary,
-                    padding: "4px 8px",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    transition: "all 0.12s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) e.currentTarget.style.background = tokens.isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) e.currentTarget.style.background = "transparent";
+                    letterSpacing: "0.12em",
+                    borderBottom: `1.5px solid ${tokens.borderSubtle}`,
+                    paddingBottom: "6px",
+                    marginBottom: "8px",
                   }}
                 >
-                  <span style={{ fontSize: "10px", opacity: 0.7 }}>{fontObj.glyph}</span>
-                  <span>{fontObj.label}</span>
-                </button>
-              );
-            })}
+                  SHORTCUTS & EDITOR SYNTAX
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: tokens.textSecondary }}>Quick jump</span>
+                    <strong>⌘K / Ctrl+K</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: tokens.textSecondary }}>Toggle sidebar</span>
+                    <strong>⌘\ / Ctrl+\</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: tokens.textSecondary }}>Zen Focus Mode</span>
+                    <strong>⌘⇧F / Esc</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: tokens.textSecondary }}>Insert block</span>
+                    <strong>/</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: tokens.textSecondary }}>Headings / Quote</span>
+                    <strong># · ## · &gt;</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: tokens.textSecondary }}>Checklist / Code</span>
+                    <strong>[ ] · ```</strong>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1917,12 +2503,13 @@ export default function NotebooksPage() {
                   fontSize: "10.5px",
                   fontWeight: 700,
                   letterSpacing: "0.15em",
-                  opacity: 0.5,
+                  color: tokens.textMuted,
                   marginTop: "9px",
                 }}
               >
-                {courses.length} COURSES ·{" "}
-                {courses.flatMap((c) => c.modules.flatMap((m) => m.lessons)).length} LESSONS
+                {isInitialLoading && courses.length === 0
+                  ? "LOADING NOTEBOOKS…"
+                  : `${courses.length} COURSES · ${courses.flatMap((c) => c.modules.flatMap((m) => m.lessons)).length} LESSONS`}
               </div>
             </div>
 
@@ -1964,6 +2551,7 @@ export default function NotebooksPage() {
               <Search size={18} style={{ opacity: 0.5, flexShrink: 0, color: tokens.textPrimary }} />
               <input
                 type="text"
+                aria-label="Deep search across all notes"
                 value={globalSearchQuery}
                 onChange={(e) => setGlobalSearchQuery(e.target.value)}
                 placeholder="Deep search across all notes, blocks, code snippets, and callouts…"
@@ -1972,10 +2560,9 @@ export default function NotebooksPage() {
                   border: "none",
                   background: "transparent",
                   fontFamily: "var(--body, 'Space Grotesk', sans-serif)",
-                  fontSize: "15px",
+                  fontSize: "16px",
                   fontWeight: 600,
                   color: tokens.textPrimary,
-                  outline: "none",
                 }}
               />
               {globalSearchQuery && (
@@ -1984,7 +2571,7 @@ export default function NotebooksPage() {
                   onClick={() => setGlobalSearchQuery("")}
                   style={{
                     border: "none",
-                    background: tokens.borderPrimary,
+                    background: tokens.textPrimary,
                     color: tokens.canvasBg,
                     cursor: "pointer",
                     fontFamily: "var(--mono, monospace)",
@@ -2013,6 +2600,9 @@ export default function NotebooksPage() {
                 }}
               >
                 MATCHING SEARCH RESULTS ({globalSearchResults.length})
+                {globalSearchResults.length > MAX_SEARCH_RESULTS
+                  ? ` · SHOWING TOP ${MAX_SEARCH_RESULTS}`
+                  : ""}
               </div>
 
               {globalSearchResults.length === 0 ? (
@@ -2030,9 +2620,11 @@ export default function NotebooksPage() {
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
-                  {globalSearchResults.map((res, rIdx) => (
+                  {globalSearchResults.slice(0, MAX_SEARCH_RESULTS).map((res, rIdx) => (
                     <div
-                      key={rIdx}
+                      key={`${res.courseIdx}-${res.moduleIdx}-${res.lessonIdx}-${rIdx}`}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => {
                         playSound.click();
                         setCurrentCourseIdx(res.courseIdx);
@@ -2040,30 +2632,39 @@ export default function NotebooksPage() {
                         setCurrentLessonIdx(res.lessonIdx);
                         setView("course");
                       }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          playSound.click();
+                          setCurrentCourseIdx(res.courseIdx);
+                          setCurrentModuleIdx(res.moduleIdx);
+                          setCurrentLessonIdx(res.lessonIdx);
+                          setView("course");
+                        }
+                      }}
                       style={{
-                        border: "3px solid #0A0A0A",
-                        background: "#FFFFFF",
-                        boxShadow: "4px 4px 0 #0A0A0A",
+                        border: `3px solid ${tokens.borderPrimary}`,
+                        background: tokens.cardBg,
+                        boxShadow: tokens.boxShadow,
                         padding: "16px",
                         cursor: "pointer",
-                        color: "#0A0A0A",
+                        color: tokens.textPrimary,
                         display: "flex",
                         flexDirection: "column",
                         justifyContent: "space-between",
+                        minWidth: 0,
                         transition: "transform 0.1s ease, box-shadow 0.1s ease",
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = "translate(-2px, -2px)";
-                        e.currentTarget.style.boxShadow = "6px 6px 0 #0A0A0A";
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = "none";
-                        e.currentTarget.style.boxShadow = "4px 4px 0 #0A0A0A";
                       }}
                     >
-                      <div>
+                      <div style={{ minWidth: 0 }}>
                         {/* Course & Match Type Badges */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
                           <span
                             style={{
                               fontFamily: "var(--mono, monospace)",
@@ -2072,7 +2673,11 @@ export default function NotebooksPage() {
                               background: res.courseAccent,
                               color: res.courseAccentFg,
                               padding: "2px 6px",
-                              border: "1px solid #0A0A0A",
+                              border: `1px solid ${tokens.borderPrimary}`,
+                              maxWidth: "100%",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
                             }}
                           >
                             {res.courseTitle.toUpperCase()}
@@ -2082,7 +2687,8 @@ export default function NotebooksPage() {
                               fontFamily: "var(--mono, monospace)",
                               fontSize: "8.5px",
                               fontWeight: 700,
-                              background: "#EBE7DC",
+                              background: tokens.sidebarBg,
+                              color: tokens.textPrimary,
                               padding: "2px 5px",
                             }}
                           >
@@ -2091,10 +2697,10 @@ export default function NotebooksPage() {
                         </div>
 
                         {/* Title & Module */}
-                        <h4 style={{ margin: "0 0 4px", fontSize: "16px", fontWeight: 700 }}>
+                        <h4 style={{ margin: "0 0 4px", fontSize: "16px", fontWeight: 700, overflowWrap: "anywhere" }}>
                           {res.lessonTitle}
                         </h4>
-                        <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "9px", opacity: 0.5, marginBottom: "10px" }}>
+                        <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "9px", color: tokens.textMuted, marginBottom: "10px", overflowWrap: "anywhere" }}>
                           {res.moduleTitle}
                         </div>
 
@@ -2103,11 +2709,13 @@ export default function NotebooksPage() {
                           style={{
                             fontSize: "13px",
                             lineHeight: 1.4,
-                            background: "#F7F5EE",
-                            border: "1px solid rgba(10,10,10,0.15)",
+                            background: tokens.sidebarBg,
+                            color: tokens.textPrimary,
+                            border: `1px solid ${tokens.borderSubtle}`,
                             padding: "8px 10px",
                             fontFamily: "var(--body, sans-serif)",
                             fontStyle: "italic",
+                            overflowWrap: "anywhere",
                           }}
                         >
                           &quot;{res.matchSnippet}&quot;
@@ -2123,16 +2731,49 @@ export default function NotebooksPage() {
                           fontFamily: "var(--mono, monospace)",
                           fontSize: "8.5px",
                           fontWeight: 700,
-                          opacity: 0.6,
+                          color: tokens.textSecondary,
                         }}
                       >
                         <span>{res.wordCount} WORDS</span>
-                        <span style={{ color: "#0A0A0A", fontWeight: 800 }}>OPEN NOTE →</span>
+                        <span style={{ color: tokens.textPrimary, fontWeight: 800 }}>OPEN NOTE →</span>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
+            </div>
+          ) : isInitialLoading && courses.length === 0 ? (
+            /* Initial DB Hydration Skeleton */
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                gap: "24px",
+                marginBottom: "40px",
+              }}
+            >
+              {[0, 1, 2].map((skeletonIdx) => (
+                <div
+                  key={skeletonIdx}
+                  style={{
+                    border: `3px solid ${tokens.borderSubtle}`,
+                    background: tokens.sidebarBg,
+                    minHeight: "250px",
+                    padding: "20px",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    opacity: 0.75,
+                  }}
+                >
+                  <div>
+                    <div style={{ width: "42%", height: "14px", background: tokens.borderSubtle, marginBottom: "14px" }} />
+                    <div style={{ width: "80%", height: "26px", background: tokens.borderSubtle, marginBottom: "8px" }} />
+                    <div style={{ width: "55%", height: "14px", background: tokens.borderSubtle }} />
+                  </div>
+                  <div style={{ width: "65%", height: "12px", background: tokens.borderSubtle }} />
+                </div>
+              ))}
             </div>
           ) : (
             /* Courses Grid */
@@ -2160,7 +2801,8 @@ export default function NotebooksPage() {
               ))}
 
               {/* Add Course Dashed Card */}
-              <div
+              <button
+                type="button"
                 onClick={handleAddCourse}
                 style={{
                   border: `3px dashed ${tokens.borderSubtle}`,
@@ -2185,20 +2827,100 @@ export default function NotebooksPage() {
                 >
                   ＋ ADD A COURSE
                 </span>
-              </div>
+              </button>
             </div>
           )}
 
-          {collisions.length > 0 && <CollisionsPanel collisions={collisions} />}
+          {collisions.length > 0 && (
+            <CollisionsPanel
+              collisions={collisions}
+              onSelectSource={handleNavigateToCollision}
+            />
+          )}
         </div>
       )}
 
       {/* ══════════ 2. COURSE WORKSPACE VIEW ══════════ */}
-      {view === "course" && currentCourse && currentLesson && (
+      {view === "course" && !currentCourse && !isInitialLoading && (
+        <div
+          style={{
+            flex: 1,
+            display: "grid",
+            placeItems: "center",
+            padding: "32px 20px",
+          }}
+        >
+          <div
+            style={{
+              maxWidth: "460px",
+              width: "100%",
+              background: tokens.cardBg,
+              border: `3px solid ${tokens.borderPrimary}`,
+              boxShadow: tokens.boxShadow,
+              padding: "28px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "10px",
+                fontWeight: 800,
+                letterSpacing: "0.15em",
+                color: tokens.textMuted,
+                marginBottom: "8px",
+              }}
+            >
+              NOTEBOOK UNAVAILABLE
+            </div>
+            <h2
+              style={{
+                margin: "0 0 10px",
+                fontFamily: "var(--display, sans-serif)",
+                fontSize: "24px",
+                fontWeight: 800,
+                letterSpacing: "-0.03em",
+              }}
+            >
+              This notebook could not be loaded
+            </h2>
+            <p
+              style={{
+                margin: "0 0 20px",
+                fontSize: "13px",
+                color: tokens.textSecondary,
+                lineHeight: 1.5,
+              }}
+            >
+              It may have been removed or relocated. Return to the notebooks library to select another notebook.
+            </p>
+            <button
+              type="button"
+              onClick={() => setView("index")}
+              style={{
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "10px",
+                fontWeight: 800,
+                letterSpacing: "0.1em",
+                background: "#FCE94F",
+                color: "#0A0A0A",
+                border: `2px solid ${tokens.borderPrimary}`,
+                boxShadow: tokens.boxShadow,
+                padding: "9px 16px",
+                cursor: "pointer",
+              }}
+            >
+              ← BACK TO NOTEBOOKS
+            </button>
+          </div>
+        </div>
+      )}
+
+      {view === "course" && currentCourse && (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: isFocusMode ? "1fr" : isMobile ? "1fr" : "300px minmax(0, 1fr)",
+            gridTemplateColumns: isFocusMode || (!isMobile && sidebarCollapsed) ? "1fr" : isMobile ? "1fr" : "300px minmax(0, 1fr)",
             flex: 1,
             minHeight: 0,
             height: "100%",
@@ -2270,9 +2992,14 @@ export default function NotebooksPage() {
           {/* Outline Sidebar — a normal grid column on desktop, a sliding
               off-canvas drawer on mobile (closes itself after a selection,
               same as any mobile nav drawer). */}
-          {!isFocusMode && (
+          {!isFocusMode && (isMobile || !sidebarCollapsed) && (
             <div
+              ref={mobileDrawerRef}
               className="no-print"
+              role={isMobile && mobileSidebarOpen ? "dialog" : undefined}
+              aria-modal={isMobile && mobileSidebarOpen ? true : undefined}
+              aria-label={isMobile ? "Course outline drawer" : undefined}
+              aria-hidden={isMobile && !mobileSidebarOpen ? true : undefined}
               style={
                 isMobile
                   ? {
@@ -2305,7 +3032,10 @@ export default function NotebooksPage() {
                 currentModuleIndex={currentModuleIdx}
                 currentLessonIndex={currentLessonIdx}
                 theme={paperTheme}
-                onClose={() => setMobileSidebarOpen(false)}
+                onClose={() => {
+                  if (isMobile) setMobileSidebarOpen(false);
+                  else setSidebarCollapsed(true);
+                }}
                 onCreateSubpage={(parentLessonId) => handleCreateSubpage(parentLessonId)}
                 onSelectCourse={(idx) => {
                   setCurrentCourseIdx(idx);
@@ -2324,6 +3054,7 @@ export default function NotebooksPage() {
                 onCreateLessonBelow={handleCreateLessonBelow}
                 onDeleteLesson={handleDeleteLesson}
                 onToggleWatched={handleToggleWatched}
+                onToggleModuleWatched={handleToggleModuleWatched}
                 onCreateModule={() => {
                   playSound.click();
                   setShowAddModuleModal(true);
@@ -2356,6 +3087,7 @@ export default function NotebooksPage() {
           {/* Main Notebook Page Area */}
           <main
             onPaste={(e) => {
+              if (!currentLesson) return;
               const items = e.clipboardData?.items;
               if (items) {
                 for (let i = 0; i < items.length; i++) {
@@ -2363,51 +3095,9 @@ export default function NotebooksPage() {
                     const file = items[i].getAsFile();
                     if (file) {
                       e.preventDefault();
-                      let targetIdx = -1;
-                      if (e.target instanceof HTMLElement) {
-                        const targetEl = e.target.closest<HTMLElement>("[data-block-id]");
-                        if (targetEl) {
-                          const targetId = targetEl.getAttribute("data-block-id");
-                          targetIdx = targetId ? currentBlocks.findIndex((b) => b.id === targetId) : -1;
-                        }
-                      }
-                      if (targetIdx === -1 && typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
-                        const targetEl = document.activeElement.closest<HTMLElement>("[data-block-id]");
-                        if (targetEl) {
-                          const targetId = targetEl.getAttribute("data-block-id");
-                          targetIdx = targetId ? currentBlocks.findIndex((b) => b.id === targetId) : -1;
-                        }
-                      }
-
-                      const reader = new FileReader();
-                      reader.onload = (uploadEvent) => {
-                        const dataUrl = uploadEvent.target?.result as string;
-                        if (dataUrl) {
-                          const imageBlock: Block = {
-                            id: generateBlockId(),
-                            type: "image",
-                            url: dataUrl,
-                            caption: `PASTED IMAGE · ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
-                          };
-                          if (targetIdx >= 0 && targetIdx < currentBlocks.length) {
-                            const targetBlock = currentBlocks[targetIdx];
-                            const isEmptyParagraph =
-                              targetBlock.type === "paragraph" &&
-                              (!("text" in targetBlock) || !targetBlock.text || !targetBlock.text.trim());
-                            const next = [...currentBlocks];
-                            if (isEmptyParagraph) {
-                              next[targetIdx] = imageBlock;
-                            } else {
-                              next.splice(targetIdx + 1, 0, imageBlock);
-                            }
-                            handleUpdateBlocks(next);
-                          } else {
-                            handleUpdateBlocks([...currentBlocks, imageBlock]);
-                          }
-                          playSound.fileIt();
-                        }
-                      };
-                      reader.readAsDataURL(file);
+                      const targetIdx = getTargetBlockIdxFromEvent(e.target);
+                      const caption = `PASTED IMAGE · ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+                      insertImageFileIntoBlocks(file, targetIdx, caption);
                       return;
                     }
                   }
@@ -2434,56 +3124,14 @@ export default function NotebooksPage() {
             }}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
+              if (!currentLesson) return;
               const files = e.dataTransfer?.files;
               if (files && files.length > 0) {
                 const file = files[0];
                 if (file.type.startsWith("image/")) {
                   e.preventDefault();
-                  let targetIdx = -1;
-                  if (e.target instanceof HTMLElement) {
-                    const targetEl = e.target.closest<HTMLElement>("[data-block-id]");
-                    if (targetEl) {
-                      const targetId = targetEl.getAttribute("data-block-id");
-                      targetIdx = targetId ? currentBlocks.findIndex((b) => b.id === targetId) : -1;
-                    }
-                  }
-                  if (targetIdx === -1 && typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
-                    const targetEl = document.activeElement.closest<HTMLElement>("[data-block-id]");
-                    if (targetEl) {
-                      const targetId = targetEl.getAttribute("data-block-id");
-                      targetIdx = targetId ? currentBlocks.findIndex((b) => b.id === targetId) : -1;
-                    }
-                  }
-
-                  const reader = new FileReader();
-                  reader.onload = (uploadEvent) => {
-                    const dataUrl = uploadEvent.target?.result as string;
-                    if (dataUrl) {
-                      const imageBlock: Block = {
-                        id: generateBlockId(),
-                        type: "image",
-                        url: dataUrl,
-                        caption: file.name || "DROPPED IMAGE",
-                      };
-                      if (targetIdx >= 0 && targetIdx < currentBlocks.length) {
-                        const targetBlock = currentBlocks[targetIdx];
-                        const isEmptyParagraph =
-                          targetBlock.type === "paragraph" &&
-                          (!("text" in targetBlock) || !targetBlock.text || !targetBlock.text.trim());
-                        const next = [...currentBlocks];
-                        if (isEmptyParagraph) {
-                          next[targetIdx] = imageBlock;
-                        } else {
-                          next.splice(targetIdx + 1, 0, imageBlock);
-                        }
-                        handleUpdateBlocks(next);
-                      } else {
-                        handleUpdateBlocks([...currentBlocks, imageBlock]);
-                      }
-                      playSound.fileIt();
-                    }
-                  };
-                  reader.readAsDataURL(file);
+                  const targetIdx = getTargetBlockIdxFromEvent(e.target);
+                  insertImageFileIntoBlocks(file, targetIdx, file.name || "DROPPED IMAGE");
                 }
               }
             }}
@@ -2492,6 +3140,8 @@ export default function NotebooksPage() {
             {/* Copied to Clipboard Notification Toast */}
             {copiedMarkdownToast && (
               <div
+                role="status"
+                aria-live="polite"
                 style={{
                   position: "fixed",
                   bottom: "32px",
@@ -2521,210 +3171,358 @@ export default function NotebooksPage() {
                 maxWidth: "900px",
                 margin: "0 auto",
                 fontFamily: TYPOGRAPHY_FONTS[typography].fontStack,
+                minWidth: 0,
               }}
             >
-              {/* Page Hero Cover Artwork & Custom Emoji Badge */}
-              <PageCoverBanner
-                coverUrl={currentLesson.coverUrl}
-                icon={currentLesson.icon}
-                theme={paperTheme}
-                onChangeCover={handleUpdateCurrentLessonCover}
-                onChangeIcon={handleUpdateCurrentLessonIcon}
-              />
+              {currentLesson && currentModule ? (
+                <>
+                  {/* Page Hero Cover Artwork & Custom Emoji Badge */}
+                  <PageCoverBanner
+                    coverUrl={currentLesson.coverUrl}
+                    icon={currentLesson.icon}
+                    theme={paperTheme}
+                    onChangeCover={handleUpdateCurrentLessonCover}
+                    onChangeIcon={handleUpdateCurrentLessonIcon}
+                  />
 
-              {/* Docked Interactive Media Player & Resource Banner */}
-              {currentLesson.lessonUrl && (
-                <PageEmbeddedMedia
-                  lessonUrl={currentLesson.lessonUrl}
-                  onEditUrl={() => {
-                    setUrlDraft(currentLesson.lessonUrl || "");
-                    setShowUrlModal(true);
-                  }}
-                  onRemoveUrl={() => handleSaveLessonUrl("")}
-                  onInsertIntoNotes={(url, title) => {
-                    const embedBlock: Block = {
-                      id: generateBlockId(),
-                      type: "embed",
-                      url,
-                      title,
-                    };
-                    handleUpdateBlocks([...currentBlocks, embedBlock]);
-                  }}
-                  theme={paperTheme}
-                  accentColor={currentCourse.accent}
-                />
-              )}
-
-              {/* Breadcrumb & Navigation */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "12px",
-                  marginBottom: "14px",
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: "var(--mono, monospace)",
-                    fontSize: "9.5px",
-                    fontWeight: 700,
-                    letterSpacing: "0.14em",
-                    opacity: 0.45,
-                  }}
-                >
-                  {currentCourse.title.toUpperCase()} · {currentModule.title.split(" · ")[0]} · PAGE{" "}
-                  {currentLessonIdx + 1}
-                </div>
-
-                {/* Source Lecture Link Badge */}
-                {currentLesson.lessonUrl ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <a
-                      href={currentLesson.lessonUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Open source video / lecture"
-                      style={{
-                        fontFamily: "var(--mono, monospace)",
-                        fontSize: "9px",
-                        fontWeight: 700,
-                        letterSpacing: "0.1em",
-                        color: "inherit",
-                        textDecoration: "none",
-                        border: "1.5px solid rgba(10,10,10,0.3)",
-                        padding: "2px 7px",
-                        background: "rgba(184, 240, 74, 0.25)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                      }}
-                    >
-                      <ExternalLink size={10} />
-                      SOURCE LECTURE
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => {
+                  {/* Docked Interactive Media Player & Resource Banner */}
+                  {currentLesson.lessonUrl && (
+                    <PageEmbeddedMedia
+                      lessonUrl={currentLesson.lessonUrl}
+                      onEditUrl={() => {
                         setUrlDraft(currentLesson.lessonUrl || "");
+                        setUrlError(null);
                         setShowUrlModal(true);
                       }}
-                      title="Edit source URL"
-                      style={{
-                        border: "none",
-                        background: "transparent",
-                        cursor: "pointer",
-                        opacity: 0.4,
-                        padding: "2px",
+                      onRemoveUrl={() => handleSaveLessonUrl("")}
+                      onInsertIntoNotes={(url, title) => {
+                        const embedBlock: Block = {
+                          id: generateBlockId(),
+                          type: "embed",
+                          url,
+                          title,
+                        };
+                        handleUpdateBlocks([...currentBlocks, embedBlock]);
                       }}
-                    >
-                      <Pencil size={10} />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUrlDraft("");
-                      setShowUrlModal(true);
-                    }}
+                      theme={paperTheme}
+                      accentColor={currentCourse.accent}
+                    />
+                  )}
+
+                  {/* Breadcrumb & Navigation */}
+                  <div
                     style={{
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "8.5px",
-                      fontWeight: 700,
-                      letterSpacing: "0.1em",
-                      border: "1px dashed rgba(10,10,10,0.3)",
-                      background: "transparent",
-                      color: "inherit",
-                      opacity: 0.45,
-                      padding: "2px 6px",
-                      cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
-                      gap: "3px",
+                      justifyContent: "space-between",
+                      gap: "12px",
+                      flexWrap: "wrap",
+                      marginBottom: "14px",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
-                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.45")}
                   >
-                    <LinkIcon size={9} />
-                    ＋ LINK SOURCE URL
-                  </button>
-                )}
-              </div>
+                    <div
+                      style={{
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "9.5px",
+                        fontWeight: 700,
+                        letterSpacing: "0.14em",
+                        opacity: 0.45,
+                        minWidth: 0,
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {currentCourse.title.toUpperCase()} · {currentModule.title.split(" · ")[0]} · PAGE{" "}
+                      {currentLessonIdx + 1}
+                    </div>
 
-              {/* Editable Page Title Header */}
-              {isEditingTitle ? (
-                <div style={{ marginBottom: "12px", display: "flex", gap: "8px", alignItems: "center" }}>
-                  <input
-                    type="text"
-                    autoFocus
-                    value={titleDraft}
-                    onChange={(e) => setTitleDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleRenameLesson(titleDraft);
-                      if (e.key === "Escape") setIsEditingTitle(false);
-                    }}
-                    onBlur={() => handleRenameLesson(titleDraft)}
-                    style={{
-                      flex: 1,
-                      fontFamily: "var(--display, sans-serif)",
-                      fontWeight: 800,
-                      fontSize: "clamp(26px, 4.5vw, 44px)",
-                      lineHeight: 1,
-                      letterSpacing: "-0.05em",
-                      border: "3px solid #0A0A0A",
-                      background: "#FFFFFF",
-                      color: "#0A0A0A",
-                      padding: "6px 12px",
-                      outline: "none",
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRenameLesson(titleDraft)}
-                    style={{
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      border: "2px solid #0A0A0A",
-                      background: "#B8F04A",
-                      color: "#0A0A0A",
-                      padding: "10px 14px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    SAVE
-                  </button>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    marginBottom: "6px",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => {
-                    setTitleDraft(currentLesson.title);
-                    setIsEditingTitle(true);
-                  }}
-                  title="Click to rename page"
-                >
-                  <h1 className="nb-page-title">
-                    {currentLesson.title}
-                  </h1>
-                  <span
-                    style={{
-                      opacity: 0.25,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      transition: "opacity 0.15s ease",
-                    }}
-                  >
-                    <Pencil size={16} />
-                  </span>
+                    {/* Source Lecture Link Badge */}
+                    {currentLesson.lessonUrl ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        {isSafeHttpUrl(currentLesson.lessonUrl) ? (
+                          <a
+                            href={currentLesson.lessonUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Open source video / lecture"
+                            style={{
+                              fontFamily: "var(--mono, monospace)",
+                              fontSize: "9px",
+                              fontWeight: 700,
+                              letterSpacing: "0.1em",
+                              color: "inherit",
+                              textDecoration: "none",
+                              border: `1.5px solid ${tokens.borderSubtle}`,
+                              padding: "2px 7px",
+                              background: "rgba(184, 240, 74, 0.25)",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                            }}
+                          >
+                            <ExternalLink size={10} />
+                            SOURCE LECTURE
+                          </a>
+                        ) : (
+                          <span
+                            title="Invalid URL protocol"
+                            style={{
+                              fontFamily: "var(--mono, monospace)",
+                              fontSize: "9px",
+                              fontWeight: 700,
+                              padding: "2px 7px",
+                              border: "1.5px solid #EF4444",
+                              color: "#EF4444",
+                            }}
+                          >
+                            INVALID SOURCE URL
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUrlDraft(currentLesson.lessonUrl || "");
+                            setUrlError(null);
+                            setShowUrlModal(true);
+                          }}
+                          aria-label="Edit source URL"
+                          title="Edit source URL"
+                          style={{
+                            border: "none",
+                            background: "transparent",
+                            color: "inherit",
+                            cursor: "pointer",
+                            opacity: 0.45,
+                            padding: "2px",
+                          }}
+                        >
+                          <Pencil size={10} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUrlDraft("");
+                          setUrlError(null);
+                          setShowUrlModal(true);
+                        }}
+                        style={{
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "8.5px",
+                          fontWeight: 700,
+                          letterSpacing: "0.1em",
+                          border: `1px dashed ${tokens.borderSubtle}`,
+                          background: "transparent",
+                          color: "inherit",
+                          opacity: 0.45,
+                          padding: "2px 6px",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "3px",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.45")}
+                      >
+                        <LinkIcon size={9} />
+                        ＋ LINK SOURCE URL
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Editable Page Title Header */}
+                  {isEditingTitle ? (
+                    <div style={{ marginBottom: "12px", display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                      <input
+                        type="text"
+                        autoFocus
+                        aria-label="Rename lesson page title"
+                        value={titleDraft}
+                        onChange={(e) => setTitleDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleRenameLesson(titleDraft);
+                          if (e.key === "Escape") {
+                            e.stopPropagation();
+                            setIsEditingTitle(false);
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          minWidth: "200px",
+                          fontFamily: "var(--display, sans-serif)",
+                          fontWeight: 800,
+                          fontSize: "clamp(24px, 4.5vw, 44px)",
+                          lineHeight: 1.05,
+                          letterSpacing: "-0.05em",
+                          border: `3px solid ${tokens.borderPrimary}`,
+                          background: tokens.cardBg,
+                          color: tokens.textPrimary,
+                          padding: "6px 12px",
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleRenameLesson(titleDraft)}
+                        style={{
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          border: `2px solid ${tokens.borderPrimary}`,
+                          background: "#B8F04A",
+                          color: "#0A0A0A",
+                          padding: "10px 14px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        SAVE
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => setIsEditingTitle(false)}
+                        style={{
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          border: `2px solid ${tokens.borderPrimary}`,
+                          background: tokens.cardBg,
+                          color: tokens.textPrimary,
+                          padding: "10px 12px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        CANCEL
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className="nb-reveal-parent"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        marginBottom: "6px",
+                        minWidth: 0,
+                      }}
+                    >
+                      <h1
+                        className="nb-page-title"
+                        onDoubleClick={() => {
+                          setTitleDraft(currentLesson.title);
+                          setIsEditingTitle(true);
+                        }}
+                      >
+                        {currentLesson.title}
+                      </h1>
+                      <button
+                        type="button"
+                        className="nb-touch-always-visible nb-touch-target"
+                        aria-label={`Rename page: ${currentLesson.title}`}
+                        title="Rename page title"
+                        onClick={() => {
+                          setTitleDraft(currentLesson.title);
+                          setIsEditingTitle(true);
+                        }}
+                        style={{
+                          background: "transparent",
+                          border: "1.5px solid transparent",
+                          color: tokens.textMuted,
+                          padding: "6px",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          opacity: 0.65,
+                          transition: "opacity 0.15s ease",
+                        }}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                    </div>
+                  )}
+
+              {/* Active AI Progress Indicator / Inline Dismissible Error Banner */}
+              {(activeAiTaskLabel || aiError) && (
+                <div className="no-print" style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "14px" }}>
+                  {activeAiTaskLabel && (
+                    <div
+                      role="status"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "8px 12px",
+                        background: tokens.isDark ? "rgba(252, 233, 79, 0.14)" : "#FEF9C3",
+                        border: `2px solid ${tokens.borderPrimary}`,
+                        color: tokens.isDark ? "#FCE94F" : "#0A0A0A",
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      <Sparkles size={13} />
+                      <span>{activeAiTaskLabel}</span>
+                    </div>
+                  )}
+
+                  {aiError && (
+                    <div
+                      role="alert"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "12px",
+                        padding: "9px 12px",
+                        background: tokens.isDark ? "rgba(239, 68, 68, 0.18)" : "#FFF1F2",
+                        border: "2px solid #EF4444",
+                        color: tokens.isDark ? "#FECACA" : "#991B1B",
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      <span>{aiError.message}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                        {aiError.retry && (
+                          <button
+                            type="button"
+                            onClick={() => aiError.retry?.()}
+                            style={{
+                              border: "1.5px solid #EF4444",
+                              background: "#EF4444",
+                              color: "#FFFFFF",
+                              padding: "4px 9px",
+                              fontFamily: "var(--mono, monospace)",
+                              fontSize: "9.5px",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                            }}
+                          >
+                            RETRY
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setAiError(null)}
+                          style={{
+                            border: "1.5px solid currentColor",
+                            background: "transparent",
+                            color: "inherit",
+                            padding: "4px 8px",
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9.5px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          DISMISS
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2736,7 +3534,7 @@ export default function NotebooksPage() {
                 }}
               >
                 {/* Stats indicators */}
-                <div className="nb-meta-stats" style={{ display: "flex", alignItems: "center", gap: "10px", opacity: 0.65 }}>
+                <div className="nb-meta-stats" style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", color: tokens.textMuted }}>
                   <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                     <Clock size={11} />
                     ~{Math.max(1, Math.ceil(wordCount / 200))} MIN READ
@@ -2745,6 +3543,42 @@ export default function NotebooksPage() {
                   <span>{wordCount.toLocaleString()} WORDS</span>
                   <span>·</span>
                   <span>{currentBlocks.length} BLOCKS</span>
+                  <span>·</span>
+                  <button
+                    type="button"
+                    aria-pressed={Boolean(currentLesson.watched)}
+                    onClick={() => {
+                      playSound.pop();
+                      handleToggleWatched(currentModuleIdx, currentLessonIdx);
+                    }}
+                    title="Toggle lesson watched status"
+                    style={{
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "9px",
+                      fontWeight: 800,
+                      letterSpacing: "0.08em",
+                      padding: "3px 8px",
+                      border: `1.5px solid ${tokens.borderPrimary}`,
+                      background: currentLesson.watched
+                        ? lessonState({ wordCount }) === "written"
+                          ? "#B8F04A"
+                          : "#FF2D8A"
+                        : tokens.cardBg,
+                      color: currentLesson.watched ? "#0A0A0A" : tokens.textPrimary,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    {lessonState({ wordCount }) === "written"
+                      ? currentLesson.watched
+                        ? "✓ WRITTEN & WATCHED"
+                        : "✓ WRITTEN · MARK WATCHED"
+                      : currentLesson.watched
+                      ? "● WATCHED · UNWRITTEN"
+                      : "○ MARK WATCHED"}
+                  </button>
                 </div>
 
                 {/* Clean Unified Action Controls */}
@@ -2753,14 +3587,16 @@ export default function NotebooksPage() {
                   <div ref={aiMenuRef} style={{ position: "relative" }}>
                     <button
                       type="button"
+                      aria-expanded={showAiMenu}
+                      aria-haspopup="menu"
                       onClick={() => {
                         playSound.click();
                         setShowAiMenu(!showAiMenu);
                         setShowPageMoreMenu(false);
                       }}
                       style={{
-                        border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid #0A0A0A",
-                        background: isInk ? "#242A38" : "#7B5CF0",
+                        border: isInk ? `1.5px solid ${tokens.borderPrimary}` : "1.5px solid #0A0A0A",
+                        background: isInk ? "#242A38" : "#5B3FD9",
                         color: isInk ? "#FCE94F" : "#FFFFFF",
                         fontFamily: "var(--mono, monospace)",
                         fontSize: "9px",
@@ -2785,7 +3621,9 @@ export default function NotebooksPage() {
                         style={{
                           position: "absolute",
                           top: "calc(100% + 6px)",
-                          right: 0,
+                          left: isMobile ? 0 : "auto",
+                          right: isMobile ? "auto" : 0,
+                          maxWidth: "calc(100vw - 24px)",
                           zIndex: 100,
                           background: tokens.popoverBg,
                           border: `2px solid ${tokens.borderPrimary}`,
@@ -2953,9 +3791,9 @@ export default function NotebooksPage() {
                     }}
                     title="Toggle Zen Focus Mode (ESC to exit)"
                     style={{
-                      border: isInk ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(10,10,10,0.3)",
-                      background: isFocusMode ? (isInk ? "#FCE94F" : "#0A0A0A") : "transparent",
-                      color: isFocusMode ? "#0A0A0A" : "inherit",
+                      border: `1.5px solid ${tokens.borderPrimary}`,
+                      background: isFocusMode ? tokens.accentColor : "transparent",
+                      color: isFocusMode ? tokens.accentFg : tokens.textPrimary,
                       fontFamily: "var(--mono, monospace)",
                       fontSize: "9px",
                       fontWeight: 700,
@@ -2966,10 +3804,16 @@ export default function NotebooksPage() {
                       gap: "5px",
                     }}
                     onMouseEnter={(e) => {
-                      if (!isFocusMode) e.currentTarget.style.background = isInk ? "rgba(255,255,255,0.12)" : "#FCE94F";
+                      if (!isFocusMode) {
+                        e.currentTarget.style.background = tokens.accentColor;
+                        e.currentTarget.style.color = tokens.accentFg;
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      if (!isFocusMode) e.currentTarget.style.background = "transparent";
+                      if (!isFocusMode) {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.color = tokens.textPrimary;
+                      }
                     }}
                   >
                     <Maximize2 size={11} />
@@ -3008,6 +3852,9 @@ export default function NotebooksPage() {
                   <div ref={pageMoreMenuRef} style={{ position: "relative" }}>
                     <button
                       type="button"
+                      aria-label="More page actions"
+                      aria-expanded={showPageMoreMenu}
+                      aria-haspopup="menu"
                       onClick={() => {
                         playSound.click();
                         setShowPageMoreMenu(!showPageMoreMenu);
@@ -3314,9 +4161,18 @@ export default function NotebooksPage() {
                       .map((h, hIdx) => (
                         <div
                           key={h.id || hIdx}
+                          role="button"
+                          tabIndex={0}
                           onClick={() => {
                             const el = document.getElementById(h.id);
                             if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              const el = document.getElementById(h.id);
+                              if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                            }
                           }}
                           style={{
                             fontFamily: "var(--body, sans-serif)",
@@ -3328,6 +4184,8 @@ export default function NotebooksPage() {
                             display: "flex",
                             alignItems: "center",
                             gap: "6px",
+                            minWidth: 0,
+                            overflowWrap: "anywhere",
                           }}
                           onMouseEnter={(e) => (e.currentTarget.style.color = currentCourse.accent)}
                           onMouseLeave={(e) => (e.currentTarget.style.color = "inherit")}
@@ -3358,6 +4216,7 @@ export default function NotebooksPage() {
               {/* Content: Empty Page vs Block Editor */}
               {currentBlocks.length === 0 ? (
                 <EmptyPage
+                  theme={paperTheme}
                   onStartWriting={() => {
                     handleUpdateBlocks([
                       { id: generateBlockId(), type: "paragraph", text: "" },
@@ -3418,6 +4277,120 @@ export default function NotebooksPage() {
                   }}
                 />
               )}
+                </>
+              ) : (
+                <div
+                  style={{
+                    border: `3px solid ${tokens.borderPrimary}`,
+                    background: tokens.cardBg,
+                    boxShadow: tokens.boxShadow,
+                    padding: "36px 28px",
+                    textAlign: "center",
+                    marginTop: "24px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      letterSpacing: "0.15em",
+                      color: tokens.textMuted,
+                      marginBottom: "8px",
+                    }}
+                  >
+                    {currentModule ? currentModule.title.toUpperCase() : currentCourse.title.toUpperCase()}
+                  </div>
+                  <h2
+                    style={{
+                      margin: "0 0 10px",
+                      fontFamily: "var(--display, sans-serif)",
+                      fontSize: "24px",
+                      fontWeight: 800,
+                      letterSpacing: "-0.03em",
+                    }}
+                  >
+                    {currentModule ? "No pages in this section yet" : "No sections in this notebook yet"}
+                  </h2>
+                  <p
+                    style={{
+                      margin: "0 0 22px",
+                      fontSize: "13.5px",
+                      color: tokens.textSecondary,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {currentModule
+                      ? "Create a new page to start capturing structured notes, code snippets, or embeds in this section."
+                      : "Add a module section first, then create lesson pages inside it."}
+                  </p>
+                  <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+                    {currentModule ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playSound.click();
+                          setAddPageContext({ modIdx: currentModuleIdx });
+                          setShowAddPageModal(true);
+                        }}
+                        style={{
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "10px",
+                          fontWeight: 800,
+                          letterSpacing: "0.1em",
+                          background: "#B8F04A",
+                          color: "#0A0A0A",
+                          border: `2px solid ${tokens.borderPrimary}`,
+                          boxShadow: tokens.boxShadow,
+                          padding: "9px 16px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        ＋ ADD LESSON PAGE
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playSound.click();
+                          setShowAddModuleModal(true);
+                        }}
+                        style={{
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "10px",
+                          fontWeight: 800,
+                          letterSpacing: "0.1em",
+                          background: "#FCE94F",
+                          color: "#0A0A0A",
+                          border: `2px solid ${tokens.borderPrimary}`,
+                          boxShadow: tokens.boxShadow,
+                          padding: "9px 16px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        ＋ ADD MODULE
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setView("index")}
+                      style={{
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        letterSpacing: "0.1em",
+                        background: "transparent",
+                        color: tokens.textPrimary,
+                        border: `2px solid ${tokens.borderPrimary}`,
+                        padding: "9px 14px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      ← BACK TO NOTEBOOKS
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </main>
         </div>
@@ -3425,28 +4398,70 @@ export default function NotebooksPage() {
 
       {/* ══════════ AI MODALS & SHEETS ══════════ */}
       {/* 1. DiffSheet (Tidy My Notes) */}
-      {diffOriginal && diffProposed && (
-        <DiffSheet
-          originalBlocks={diffOriginal}
-          proposedBlocks={diffProposed}
-          summaryOfChanges={diffSummary}
-          onApplyAll={() => {
-            handleUpdateBlocks(diffProposed);
-            setDiffOriginal(null);
-            setDiffProposed(null);
-          }}
-          onApplySelected={(accepted) => {
-            handleUpdateBlocks(accepted);
-            setDiffOriginal(null);
-            setDiffProposed(null);
-          }}
-          onDiscard={() => {
-            setDiffOriginal(null);
-            setDiffProposed(null);
-          }}
-          accentColor={currentCourse?.accent}
-        />
-      )}
+      {diffOriginal && diffProposed && (() => {
+        const applyAcceptedDiff = (nextBlocks: Block[]) => {
+          const target = diffTargetRef.current;
+          const pendingMeta = pendingTopicMetaRef.current;
+          if (target) {
+            handleApplyBlocksForLesson(target.courseId, target.lessonId, nextBlocks);
+            if (pendingMeta && isSameId(pendingMeta.lessonId, target.lessonId)) {
+              setCourses((prev) => {
+                const next = prev.map((c) =>
+                  isSameId(c.id, target.courseId)
+                    ? {
+                        ...c,
+                        modules: c.modules.map((m) => ({
+                          ...m,
+                          lessons: m.lessons.map((l) =>
+                            isSameId(l.id, target.lessonId)
+                              ? {
+                                  ...l,
+                                  title: pendingMeta.title,
+                                  icon: pendingMeta.icon,
+                                  coverUrl: pendingMeta.coverUrl,
+                                }
+                              : l
+                          ),
+                        })),
+                      }
+                    : c
+                );
+                saveStoredCourses(next);
+                return next;
+              });
+              updateLessonInDbApi(target.lessonId, {
+                title: pendingMeta.title,
+                coverUrl: pendingMeta.coverUrl,
+                icon: pendingMeta.icon,
+              });
+            }
+          } else {
+            handleUpdateBlocks(nextBlocks);
+          }
+          pendingTopicMetaRef.current = null;
+          diffTargetRef.current = null;
+          setDiffOriginal(null);
+          setDiffProposed(null);
+        };
+
+        return (
+          <DiffSheet
+            originalBlocks={diffOriginal}
+            proposedBlocks={diffProposed}
+            summaryOfChanges={diffSummary}
+            onApplyAll={() => applyAcceptedDiff(diffProposed)}
+            onApplySelected={applyAcceptedDiff}
+            onDiscard={() => {
+              pendingTopicMetaRef.current = null;
+              diffTargetRef.current = null;
+              setDiffOriginal(null);
+              setDiffProposed(null);
+            }}
+            accentColor={currentCourse?.accent}
+            theme={paperTheme}
+          />
+        );
+      })()}
 
       {/* 2. Quiz Modal */}
       {quizQuestions !== null && (
@@ -3456,6 +4471,7 @@ export default function NotebooksPage() {
           explanation={quizExplanation}
           onClose={() => setQuizQuestions(null)}
           accentColor={currentCourse?.accent}
+          theme={paperTheme}
         />
       )}
 
@@ -3464,12 +4480,36 @@ export default function NotebooksPage() {
         <ExplainModal
           selection={explainSelection}
           explanation={explainText}
+          error={explainError}
           loading={isExplaining}
+          onRetry={
+            explainSelection ? () => handleExplainWithSelection(explainSelection) : undefined
+          }
           onAddAsToggle={(toggleBlock) => {
-            handleUpdateBlocks([...currentBlocks, toggleBlock]);
+            const target =
+              explainTargetRef.current ||
+              (currentCourse && currentLesson
+                ? { courseId: currentCourse.id, lessonId: currentLesson.id }
+                : null);
+            if (!target) return;
+            const latestLesson = coursesRef.current
+              .find((c) => isSameId(c.id, target.courseId))
+              ?.modules.flatMap((m) => m.lessons)
+              .find((l) => isSameId(l.id, target.lessonId));
+            const baseBlocks =
+              latestLesson?.blocks ||
+              (target.lessonId === currentLesson?.id ? currentBlocks : []);
+            handleApplyBlocksForLesson(target.courseId, target.lessonId, [
+              ...baseBlocks,
+              toggleBlock,
+            ]);
           }}
-          onClose={() => setExplainSelection(null)}
+          onClose={() => {
+            explainTargetRef.current = null;
+            setExplainSelection(null);
+          }}
           accentColor={currentCourse?.accent}
+          theme={paperTheme}
         />
       )}
 
@@ -3480,6 +4520,7 @@ export default function NotebooksPage() {
           onAnalyzeGaps={handleAnalyzeTranscript}
           onClose={() => setShowTranscriptModal(false)}
           loading={isAnalyzingGaps}
+          theme={paperTheme}
         />
       )}
 
@@ -3488,6 +4529,7 @@ export default function NotebooksPage() {
         isOpen={showAddCourseModal}
         onClose={() => setShowAddCourseModal(false)}
         onSubmit={handleCreateCourse}
+        theme={paperTheme}
       />
 
       {/* 5b. Edit Course Modal Popup */}
@@ -3499,6 +4541,7 @@ export default function NotebooksPage() {
           setEditingCourse(null);
         }}
         onSubmit={handleSaveEditedCourse}
+        theme={paperTheme}
       />
 
       {/* 6. Add Page / Lesson Modal Popup */}
@@ -3515,6 +4558,7 @@ export default function NotebooksPage() {
           setShowTopicModal(true);
         }}
         courseTitle={currentCourse?.title}
+        theme={paperTheme}
       />
 
       {/* 6b. Add Module Modal Popup */}
@@ -3524,6 +4568,7 @@ export default function NotebooksPage() {
         onSubmit={handleCreateModule}
         courseTitle={currentCourse?.title}
         defaultIndex={currentCourse ? currentCourse.modules.length + 1 : 1}
+        theme={paperTheme}
       />
 
       {/* 7. Confirmation Modal Popup */}
@@ -3535,6 +4580,7 @@ export default function NotebooksPage() {
         description={confirmModalState.description}
         confirmLabel={confirmModalState.confirmLabel}
         confirmVariant={confirmModalState.confirmVariant}
+        theme={paperTheme}
       />
 
       {/* 8. Source URL Modal Popup */}
@@ -3550,18 +4596,25 @@ export default function NotebooksPage() {
             zIndex: 9999,
             padding: "20px",
           }}
-          onClick={() => setShowUrlModal(false)}
+          onClick={() => {
+            setShowUrlModal(false);
+            setUrlError(null);
+          }}
         >
           <div
+            ref={urlModalDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="nb-url-modal-title"
             onClick={(e) => e.stopPropagation()}
             style={{
               width: "100%",
               maxWidth: "480px",
-              background: "#FFFFFF",
-              border: "3px solid #0A0A0A",
-              boxShadow: "7px 7px 0 #0A0A0A",
+              background: tokens.cardBg,
+              border: `3px solid ${tokens.borderPrimary}`,
+              boxShadow: tokens.boxShadow,
               padding: "24px",
-              color: "#0A0A0A",
+              color: tokens.textPrimary,
             }}
           >
             <div
@@ -3570,13 +4623,14 @@ export default function NotebooksPage() {
                 fontSize: "10px",
                 fontWeight: 800,
                 letterSpacing: "0.16em",
-                opacity: 0.5,
+                color: tokens.textMuted,
                 marginBottom: "6px",
               }}
             >
               LECTURE / VIDEO / RESOURCE LINK
             </div>
             <h3
+              id="nb-url-modal-title"
               style={{
                 margin: "0 0 16px",
                 fontFamily: "var(--display, sans-serif)",
@@ -3590,36 +4644,61 @@ export default function NotebooksPage() {
             <input
               type="url"
               autoFocus
+              aria-invalid={Boolean(urlError)}
+              aria-describedby={urlError ? "nb-url-error" : undefined}
               value={urlDraft}
-              onChange={(e) => setUrlDraft(e.target.value)}
+              onChange={(e) => {
+                setUrlDraft(e.target.value);
+                if (urlError) setUrlError(null);
+              }}
               placeholder="https://youtube.com/watch?v=... or https://coursera.org/..."
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSaveLessonUrl(urlDraft);
-                if (e.key === "Escape") setShowUrlModal(false);
+                if (e.key === "Escape") {
+                  setShowUrlModal(false);
+                  setUrlError(null);
+                }
               }}
               style={{
                 width: "100%",
                 padding: "10px 12px",
                 fontFamily: "var(--mono, monospace)",
-                fontSize: "12px",
-                border: "2px solid #0A0A0A",
-                background: "#F3F0E8",
-                color: "#0A0A0A",
-                outline: "none",
-                marginBottom: "18px",
+                fontSize: "16px",
+                border: `2px solid ${urlError ? "#EF4444" : tokens.borderPrimary}`,
+                background: tokens.sidebarBg,
+                color: tokens.textPrimary,
+                marginBottom: urlError ? "8px" : "18px",
               }}
             />
-            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                onClick={() => setShowUrlModal(false)}
+            {urlError && (
+              <div
+                id="nb-url-error"
+                role="alert"
                 style={{
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "10px",
                   fontWeight: 700,
-                  border: "2px solid #0A0A0A",
+                  color: "#EF4444",
+                  marginBottom: "14px",
+                }}
+              >
+                {urlError}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUrlModal(false);
+                  setUrlError(null);
+                }}
+                style={{
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  border: `2px solid ${tokens.borderPrimary}`,
                   background: "transparent",
-                  color: "#0A0A0A",
+                  color: tokens.textPrimary,
                   padding: "8px 14px",
                   cursor: "pointer",
                 }}
@@ -3633,12 +4712,12 @@ export default function NotebooksPage() {
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "10px",
                   fontWeight: 700,
-                  border: "2px solid #0A0A0A",
+                  border: `2px solid ${tokens.borderPrimary}`,
                   background: "#B8F04A",
                   color: "#0A0A0A",
                   padding: "8px 16px",
                   cursor: "pointer",
-                  boxShadow: "2px 2px 0 #0A0A0A",
+                  boxShadow: tokens.boxShadow,
                 }}
               >
                 SAVE URL
@@ -3653,6 +4732,7 @@ export default function NotebooksPage() {
         isOpen={showQuickSwitcher}
         onClose={() => setShowQuickSwitcher(false)}
         courses={courses}
+        theme={paperTheme}
         onSelectPage={(cIdx, mIdx, lIdx) => {
           setCurrentCourseIdx(cIdx);
           setCurrentModuleIdx(mIdx);
@@ -3669,6 +4749,7 @@ export default function NotebooksPage() {
           lessonTitle={currentLesson.title}
           blocks={currentBlocks}
           accentColor={currentCourse?.accent}
+          theme={paperTheme}
         />
       )}
 
@@ -3679,6 +4760,8 @@ export default function NotebooksPage() {
         onGenerated={handleTopicGenerated}
         currentLessonTitle={topicModalInitialQuery || currentLesson?.title}
         courseTitle={currentCourse?.title}
+        hasExistingContent={hasCurrentLessonContent}
+        theme={paperTheme}
       />
     </div>
   );

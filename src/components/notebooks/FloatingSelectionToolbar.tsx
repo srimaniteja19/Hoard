@@ -530,7 +530,6 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
               background: tokens.isDark ? "#12141B" : "#FFFFFF",
               color: tokens.textPrimary,
               border: `1px solid ${tokens.borderPrimary}`,
-              outline: "none",
             }}
           />
           <button
@@ -541,7 +540,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
               fontSize: "9px",
               fontWeight: 800,
               background: tokens.accentColor,
-              color: "#FFFFFF",
+              color: tokens.accentFg,
               border: "none",
               padding: "4px 8px",
               cursor: "pointer",

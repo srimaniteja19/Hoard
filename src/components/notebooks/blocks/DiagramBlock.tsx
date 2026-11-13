@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Block } from "@/lib/notebooks/blocks";
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
+import { useModalFocusTrap } from "@/lib/notebooks/useModalFocusTrap";
 import { playSound } from "@/lib/sound";
 import {
   Maximize2,
@@ -49,6 +50,13 @@ export const DiagramBlock: React.FC<DiagramBlockProps> = ({
   const [editableCode, setEditableCode] = useState<string>(block.code);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const fullscreenDialogRef = useRef<HTMLDivElement>(null);
+
+  useModalFocusTrap({
+    isOpen: isFullscreen,
+    onClose: () => setIsFullscreen(false),
+    containerRef: fullscreenDialogRef,
+  });
 
   // Synchronize local editable code when block code updates externally
   useEffect(() => {
@@ -304,8 +312,8 @@ export const DiagramBlock: React.FC<DiagramBlockProps> = ({
               fontFamily: "var(--mono, monospace)",
               fontSize: "9px",
               fontWeight: 700,
-              background: showCode ? tokens.borderPrimary : (isInk ? "#222734" : "#FFFFFF"),
-              color: showCode ? (isInk ? "#FFFFFF" : "#FCE94F") : "inherit",
+              background: showCode ? tokens.textPrimary : (isInk ? "#222734" : "#FFFFFF"),
+              color: showCode ? tokens.canvasBg : "inherit",
               border: isInk ? "1px solid rgba(255,255,255,0.2)" : "1.5px solid #0A0A0A",
               padding: "3px 7px",
               cursor: "pointer",
@@ -391,7 +399,6 @@ export const DiagramBlock: React.FC<DiagramBlockProps> = ({
               fontSize: "12px",
               lineHeight: "1.5",
               padding: "10px",
-              outline: "none",
               resize: "vertical",
             }}
           />
@@ -507,7 +514,6 @@ export const DiagramBlock: React.FC<DiagramBlockProps> = ({
             flex: 1,
             background: "transparent",
             border: "none",
-            outline: "none",
             fontFamily: "var(--mono, monospace)",
             fontSize: "10px",
             fontWeight: 600,
@@ -519,8 +525,10 @@ export const DiagramBlock: React.FC<DiagramBlockProps> = ({
       {/* ── Fullscreen Modal View ── */}
       {isFullscreen && (
         <div
+          ref={fullscreenDialogRef}
           role="dialog"
           aria-modal="true"
+          aria-label={block.title || "System Architecture Diagram"}
           style={{
             position: "fixed",
             inset: 0,
@@ -541,7 +549,7 @@ export const DiagramBlock: React.FC<DiagramBlockProps> = ({
               display: "flex",
               flexDirection: "column",
               background: isInk ? "#13161F" : "#FFFFFF",
-              border: "3px solid #0A0A0A",
+              border: `3px solid ${tokens.borderPrimary}`,
               boxShadow: "10px 10px 0 #0A0A0A",
               overflow: "hidden",
             }}
@@ -554,8 +562,8 @@ export const DiagramBlock: React.FC<DiagramBlockProps> = ({
                 justifyContent: "space-between",
                 padding: "10px 16px",
                 background: isInk ? "#1A1D27" : "#FCE94F",
-                borderBottom: "2px solid #0A0A0A",
-                color: "#0A0A0A",
+                borderBottom: `2px solid ${tokens.borderPrimary}`,
+                color: isInk ? "#F1F5F9" : "#0A0A0A",
               }}
             >
               <span
@@ -572,29 +580,33 @@ export const DiagramBlock: React.FC<DiagramBlockProps> = ({
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <button
                   type="button"
+                  aria-label="Zoom out diagram"
                   onClick={() => handleZoom(-0.2)}
-                  style={{ padding: "4px 8px", cursor: "pointer", border: "1.5px solid #0A0A0A", background: "#FFFFFF" }}
+                  style={{ padding: "4px 8px", cursor: "pointer", border: `1.5px solid ${tokens.borderPrimary}`, background: isInk ? "#222734" : "#FFFFFF", color: isInk ? "#F1F5F9" : "#0A0A0A" }}
                 >
                   <ZoomOut size={13} />
                 </button>
                 <button
                   type="button"
+                  aria-label="Reset diagram zoom"
                   onClick={handleResetZoom}
-                  style={{ padding: "4px 8px", cursor: "pointer", border: "1.5px solid #0A0A0A", background: "#FFFFFF", fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 700 }}
+                  style={{ padding: "4px 8px", cursor: "pointer", border: `1.5px solid ${tokens.borderPrimary}`, background: isInk ? "#222734" : "#FFFFFF", color: isInk ? "#F1F5F9" : "#0A0A0A", fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 700 }}
                 >
                   {Math.round(zoomLevel * 100)}%
                 </button>
                 <button
                   type="button"
+                  aria-label="Zoom in diagram"
                   onClick={() => handleZoom(0.2)}
-                  style={{ padding: "4px 8px", cursor: "pointer", border: "1.5px solid #0A0A0A", background: "#FFFFFF" }}
+                  style={{ padding: "4px 8px", cursor: "pointer", border: `1.5px solid ${tokens.borderPrimary}`, background: isInk ? "#222734" : "#FFFFFF", color: isInk ? "#F1F5F9" : "#0A0A0A" }}
                 >
                   <ZoomIn size={13} />
                 </button>
                 <button
                   type="button"
+                  aria-label="Close fullscreen diagram"
                   onClick={() => setIsFullscreen(false)}
-                  style={{ padding: "4px 10px", cursor: "pointer", border: "1.5px solid #0A0A0A", background: "#FF4A4A", color: "#FFFFFF", fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 800 }}
+                  style={{ padding: "4px 10px", cursor: "pointer", border: `1.5px solid ${tokens.borderPrimary}`, background: "#FF4A4A", color: "#0A0A0A", fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 800 }}
                 >
                   CLOSE ✕
                 </button>

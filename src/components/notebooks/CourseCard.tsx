@@ -48,10 +48,24 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
 
   const writtenPct = totalLessons > 0 ? (writtenCount / totalLessons) * 100 : 0;
   const unwrittenPct = totalLessons > 0 ? (unwrittenCount / totalLessons) * 100 : 0;
+  const nextUnwrittenLesson =
+    allLessons.find((l) => l.watched && lessonState({ wordCount: computeWordCount(l.blocks || []) }) !== "written") ||
+    allLessons.find((l) => lessonState({ wordCount: computeWordCount(l.blocks || []) }) !== "written") ||
+    allLessons[0];
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Open notebook ${course.title}`}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       style={{
         border: `3px solid ${tokens.borderPrimary}`,
         background: tokens.cardBg,
@@ -125,31 +139,40 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
             {course.provider} · IN PROGRESS
           </div>
           {(onEdit || onDelete) && (
-            <div style={{ display: "flex", gap: "5px", zIndex: 5 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", gap: "6px", zIndex: 5 }} onClick={(e) => e.stopPropagation()}>
               {onEdit && (
                 <button
                   type="button"
+                  className="nb-touch-target"
                   title="Edit Course Details"
+                  aria-label={`Edit course ${course.title}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onEdit();
                   }}
                   style={{
-                    background: "rgba(0,0,0,0.2)",
-                    border: "1px solid rgba(0,0,0,0.3)",
-                    color: course.accentFg,
-                    padding: "3px 6px",
+                    background: tokens.cardBg,
+                    border: `1.5px solid ${tokens.borderPrimary}`,
+                    color: tokens.textPrimary,
+                    padding: "4px 8px",
                     cursor: "pointer",
                     fontFamily: "var(--mono, monospace)",
                     fontSize: "8.5px",
                     fontWeight: 700,
                     display: "inline-flex",
                     alignItems: "center",
+                    justifyContent: "center",
                     gap: "3px",
                     borderRadius: "2px",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#0A0A0A")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.2)")}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = tokens.accentColor;
+                    e.currentTarget.style.color = tokens.accentFg;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = tokens.cardBg;
+                    e.currentTarget.style.color = tokens.textPrimary;
+                  }}
                 >
                   <Pencil size={10} />
                   EDIT
@@ -158,27 +181,36 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
               {onDelete && (
                 <button
                   type="button"
+                  className="nb-touch-target"
                   title="Delete Course"
+                  aria-label={`Delete course ${course.title}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete();
                   }}
                   style={{
-                    background: "rgba(0,0,0,0.2)",
-                    border: "1px solid rgba(0,0,0,0.3)",
-                    color: course.accentFg,
-                    padding: "3px 6px",
+                    background: tokens.cardBg,
+                    border: `1.5px solid ${tokens.borderPrimary}`,
+                    color: tokens.textPrimary,
+                    padding: "4px 8px",
                     cursor: "pointer",
                     fontFamily: "var(--mono, monospace)",
                     fontSize: "8.5px",
                     fontWeight: 700,
                     display: "inline-flex",
                     alignItems: "center",
+                    justifyContent: "center",
                     gap: "3px",
                     borderRadius: "2px",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#DC2626")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.2)")}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#DC2626";
+                    e.currentTarget.style.color = "#FFFFFF";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = tokens.cardBg;
+                    e.currentTarget.style.color = tokens.textPrimary;
+                  }}
                 >
                   <Trash2 size={10} />
                 </button>
@@ -274,13 +306,13 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
               {stubCount}
             </b>
             <span style={{ display: "block", fontFamily: "var(--mono, monospace)", fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.12em", color: tokens.textMuted, marginTop: "5px" }}>
-              STUBS
+              DRAFTS
             </span>
           </div>
         </div>
       </div>
 
-      {/* Footer with Unwritten Warning Badge */}
+      {/* Footer with Next Step & Unwritten Warning Badge */}
       <div
         style={{
           display: "flex",
@@ -292,19 +324,34 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
           fontFamily: "var(--mono, monospace)",
           fontSize: "9.5px",
           fontWeight: 700,
-          letterSpacing: "0.1em",
+          letterSpacing: "0.08em",
           color: tokens.textPrimary,
         }}
       >
-        <span style={{ color: tokens.textSecondary }}>TOUCHED RECENTLY</span>
-        <span style={{ flex: 1 }} />
+        <span
+          style={{
+            color: tokens.textSecondary,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          {nextUnwrittenLesson
+            ? `NEXT: ${nextUnwrittenLesson.title.toUpperCase()} →`
+            : totalLessons > 0
+            ? `COMPLETED · ${writtenCount} / ${totalLessons} WRITTEN →`
+            : `NO LESSONS YET · OPEN →`}
+        </span>
         {unwrittenCount > 0 && (
           <span
             style={{
               background: "#FF2D8A",
-              color: "#FFFFFF",
+              color: "#0A0A0A",
               padding: "2px 7px",
               letterSpacing: "0.1em",
+              flexShrink: 0,
             }}
           >
             {unwrittenCount} UNWRITTEN

@@ -17,19 +17,40 @@
   z-index: 40;
   width: 100%;
   box-sizing: border-box;
+  position: relative;
+  overflow: visible;
+}
+
+.nb-topbar-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nb-topbar-track::-webkit-scrollbar {
+  display: none;
 }
 
 @media (max-width: 860px) {
   .nb-topbar {
     padding: 8px 10px;
     gap: 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+    overflow: visible;
   }
-  .nb-topbar::-webkit-scrollbar {
-    display: none;
-  }
+}
+
+.nb-breadcrumb-title {
+  max-width: min(220px, 26vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 /* Hide on mobile devices (< 768px) */
@@ -144,11 +165,25 @@
   }
 }
 
-/* ── Touch Friendly Cover Action Buttons ── */
-@media (hover: none) or (max-width: 768px) {
+/* ── Touch Friendly & Focus-Accessible Action Buttons ── */
+.nb-reveal-parent:hover .nb-touch-always-visible,
+.nb-reveal-parent:focus-within .nb-touch-always-visible,
+.nb-touch-always-visible:focus-visible {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+@media (hover: none), (max-width: 860px) {
   .nb-touch-always-visible {
     opacity: 0.95 !important;
+    pointer-events: auto !important;
   }
+}
+
+.nb-block-row:hover .nb-block-gutter,
+.nb-block-row:focus-within .nb-block-gutter {
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 /* ── Page Meta & Action Controls Bar ── */
@@ -182,12 +217,9 @@
     align-items: center;
     justify-content: flex-start;
     gap: 6px;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    overflow: visible;
     padding-bottom: 2px;
-    scrollbar-width: none;
-  }
-  .nb-meta-actions::-webkit-scrollbar {
-    display: none;
   }
 }
 
@@ -200,6 +232,8 @@
   line-height: 1.05;
   letter-spacing: -0.04em;
   word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 /* ── Empty Page Buttons on Mobile ── */
@@ -273,7 +307,105 @@
   overflow: hidden;
 }
 
-/* ── Touch Feedback & Smooth Scrolling ── */
+/* ── Touch Feedback, Focus Accessibility & Responsive Utilities ── */
+.nb-scope :focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.nb-outline-actions {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.nb-outline-row:hover .nb-outline-actions,
+.nb-outline-row:focus-within .nb-outline-actions,
+.nb-outline-mod-header:hover .nb-outline-actions,
+.nb-outline-mod-header:focus-within .nb-outline-actions,
+.nb-outline-actions[data-open="true"] {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+@media (hover: none), (max-width: 860px) {
+  .nb-outline-actions {
+    opacity: 0.9 !important;
+    pointer-events: auto !important;
+  }
+  .nb-outline-action-btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    padding: 6px !important;
+  }
+  .nb-mobile-block-bar button {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  .nb-touch-target {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  .nb-todo-touch {
+    position: relative;
+  }
+  .nb-todo-touch::after {
+    content: "";
+    position: absolute;
+    inset: -12px;
+  }
+}
+
+.nb-responsive-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.nb-responsive-anchors {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .nb-responsive-two-col,
+  .nb-responsive-anchors {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.nb-mobile-block-bar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .nb-mobile-block-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .nb-sync-timeago {
+    display: none;
+  }
+}
+
+.nb-diff-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+@media (max-width: 720px) {
+  .nb-diff-grid {
+    grid-template-columns: 1fr;
+    padding: 12px;
+    gap: 12px;
+  }
+}
+
 @media (max-width: 860px) {
   button, a {
     touch-action: manipulation;

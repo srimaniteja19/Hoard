@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Block } from "@/lib/notebooks/blocks";
+import { getThemeTokens, NotebookTheme } from "@/lib/notebooks/theme";
+import { useModalFocusTrap } from "@/lib/notebooks/useModalFocusTrap";
 import { playSound } from "@/lib/sound";
 import {
   RotateCcw,
@@ -29,6 +31,7 @@ interface FlashcardModalProps {
   lessonTitle: string;
   blocks: Block[];
   accentColor?: string;
+  theme?: NotebookTheme;
 }
 
 export function extractFlashcards(lessonTitle: string, blocks: Block[]): Flashcard[] {
@@ -50,7 +53,7 @@ export function extractFlashcards(lessonTitle: string, blocks: Block[]): Flashca
         cards.push({
           id: b.id,
           category: "fact",
-          front: `Key takeaway / principle regarding:`,
+          front: `Key takeaway from "${lessonTitle}":`,
           back: b.text,
           sourceHint: "Core Takeaway",
         });
@@ -93,17 +96,6 @@ export function extractFlashcards(lessonTitle: string, blocks: Block[]): Flashca
     }
   }
 
-  // Fallback card if notes are very brief
-  if (cards.length === 0) {
-    cards.push({
-      id: "fallback-1",
-      category: "concept",
-      front: `Summarize the primary purpose of "${lessonTitle}"`,
-      back: `Review and jot down key bullets or concepts for ${lessonTitle} to generate more targeted active recall cards!`,
-      sourceHint: "Lesson Overview",
-    });
-  }
-
   return cards;
 }
 
@@ -113,12 +105,21 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
   lessonTitle,
   blocks,
   accentColor = "#7B5CF0",
+  theme = "cream",
 }) => {
+  const tokens = getThemeTokens(theme);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [sessionFinished, setSessionFinished] = useState(false);
+
+  useModalFocusTrap({
+    isOpen,
+    onClose,
+    containerRef: dialogRef,
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -168,11 +169,18 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
     }
   };
 
-  // Keyboard controls
+  // Keyboard controls (Escape works on both review and completion screens)
   useEffect(() => {
-    if (!isOpen || sessionFinished) return;
+    if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (sessionFinished) return;
+
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
         handleFlip();
@@ -194,15 +202,12 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
       } else if (e.key === "4") {
         e.preventDefault();
         handleRate(4);
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isFlipped, currentIndex, cards.length, sessionFinished]);
+  }, [isOpen, isFlipped, currentIndex, cards.length, sessionFinished, onClose]);
 
   if (!isOpen) return null;
 
@@ -221,15 +226,19 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Active recall study deck for ${lessonTitle}`}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
           maxWidth: "680px",
-          background: "#FFFFFF",
-          border: "3px solid #0A0A0A",
-          boxShadow: "10px 10px 0 #0A0A0A",
+          background: tokens.cardBg,
+          border: `3px solid ${tokens.borderPrimary}`,
+          boxShadow: tokens.boxShadow,
           padding: "28px",
-          color: "#0A0A0A",
+          color: tokens.textPrimary,
           position: "relative",
           animation: "fadeIn 0.12s ease",
         }}
@@ -241,7 +250,7 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
             justifyContent: "space-between",
             alignItems: "center",
             marginBottom: "18px",
-            borderBottom: "2px solid rgba(10,10,10,0.12)",
+            borderBottom: `2px solid ${tokens.borderSubtle}`,
             paddingBottom: "12px",
           }}
         >
@@ -252,7 +261,7 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
                 fontSize: "9px",
                 fontWeight: 800,
                 letterSpacing: "0.15em",
-                opacity: 0.5,
+                color: tokens.textMuted,
                 marginBottom: "3px",
               }}
             >
@@ -272,24 +281,29 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span
-              style={{
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "10px",
-                fontWeight: 700,
-                background: "#EBE7DC",
-                border: "1.5px solid #0A0A0A",
-                padding: "2px 8px",
-              }}
-            >
-              CARD {currentIndex + 1} / {cards.length}
-            </span>
+            {cards.length > 0 && (
+              <span
+                style={{
+                  fontFamily: "var(--mono, monospace)",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  background: tokens.sidebarBg,
+                  color: tokens.textPrimary,
+                  border: `1.5px solid ${tokens.borderPrimary}`,
+                  padding: "2px 8px",
+                }}
+              >
+                CARD {currentIndex + 1} / {cards.length}
+              </span>
+            )}
             <button
               type="button"
               onClick={onClose}
+              aria-label="Close flashcard deck"
               style={{
                 background: "transparent",
-                border: "1.5px solid #0A0A0A",
+                color: tokens.textPrimary,
+                border: `1.5px solid ${tokens.borderPrimary}`,
                 cursor: "pointer",
                 padding: "4px",
                 display: "grid",
@@ -301,8 +315,51 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
           </div>
         </div>
 
-        {/* Study Finished View */}
-        {sessionFinished ? (
+        {/* Empty State when no extractable study prompts exist */}
+        {cards.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "24px 12px" }}>
+            <h2
+              style={{
+                fontFamily: "var(--display, sans-serif)",
+                fontSize: "22px",
+                fontWeight: 800,
+                margin: "0 0 10px",
+                letterSpacing: "-0.03em",
+              }}
+            >
+              Not Enough Study Material Yet
+            </h2>
+            <p
+              style={{
+                fontFamily: "var(--body, sans-serif)",
+                fontSize: "14px",
+                color: tokens.textSecondary,
+                maxWidth: "440px",
+                margin: "0 auto 22px",
+                lineHeight: 1.6,
+              }}
+            >
+              Flashcards are extracted from headings followed by paragraphs, key takeaways, gotchas,
+              self-check questions, collapsible toggles, and annotated code snippets.
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "10px",
+                fontWeight: 700,
+                border: `2px solid ${tokens.borderPrimary}`,
+                background: tokens.textPrimary,
+                color: tokens.canvasBg,
+                padding: "10px 18px",
+                cursor: "pointer",
+              }}
+            >
+              ← BACK TO NOTES
+            </button>
+          </div>
+        ) : sessionFinished ? (
           <div style={{ textAlign: "center", padding: "24px 12px" }}>
             <div
               style={{
@@ -369,9 +426,9 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "10px",
                   fontWeight: 700,
-                  border: "2px solid #0A0A0A",
-                  background: "#FFFFFF",
-                  color: "#0A0A0A",
+                  border: `2px solid ${tokens.borderPrimary}`,
+                  background: tokens.sidebarBg,
+                  color: tokens.textPrimary,
                   padding: "10px 18px",
                   cursor: "pointer",
                 }}
@@ -385,12 +442,21 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
           <div>
             {/* 3D Flashcard Container */}
             <div
+              role="button"
+              tabIndex={0}
               onClick={handleFlip}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleFlip();
+                }
+              }}
               style={{
                 minHeight: "220px",
-                background: isFlipped ? "#F7F5EE" : "#FFFFFF",
-                border: "3px solid #0A0A0A",
-                boxShadow: "6px 6px 0 #0A0A0A",
+                background: isFlipped ? tokens.sidebarBg : tokens.canvasBg,
+                color: tokens.textPrimary,
+                border: `3px solid ${tokens.borderPrimary}`,
+                boxShadow: tokens.boxShadow,
                 padding: "24px",
                 cursor: "pointer",
                 display: "flex",
@@ -542,11 +608,12 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
                     fontFamily: "var(--mono, monospace)",
                     fontSize: "9.5px",
                     fontWeight: 700,
-                    border: "2px solid #0A0A0A",
-                    background: "#FFFFFF",
+                    border: `2px solid ${tokens.borderPrimary}`,
+                    background: tokens.sidebarBg,
+                    color: tokens.textPrimary,
                     padding: "8px 14px",
                     cursor: currentIndex > 0 ? "pointer" : "default",
-                    opacity: currentIndex > 0 ? 1 : 0.3,
+                    opacity: currentIndex > 0 ? 1 : 0.35,
                     display: "flex",
                     alignItems: "center",
                     gap: "4px",
@@ -562,11 +629,12 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
                     fontFamily: "var(--mono, monospace)",
                     fontSize: "10.5px",
                     fontWeight: 800,
-                    border: "2px solid #0A0A0A",
+                    border: `2px solid ${tokens.borderPrimary}`,
                     background: "#FCE94F",
+                    color: "#0A0A0A",
                     padding: "9px 24px",
                     cursor: "pointer",
-                    boxShadow: "3px 3px 0 #0A0A0A",
+                    boxShadow: tokens.boxShadow,
                   }}
                 >
                   FLIP CARD (SPACE)
@@ -580,11 +648,12 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
                     fontFamily: "var(--mono, monospace)",
                     fontSize: "9.5px",
                     fontWeight: 700,
-                    border: "2px solid #0A0A0A",
-                    background: "#FFFFFF",
+                    border: `2px solid ${tokens.borderPrimary}`,
+                    background: tokens.sidebarBg,
+                    color: tokens.textPrimary,
                     padding: "8px 14px",
                     cursor: currentIndex < cards.length - 1 ? "pointer" : "default",
-                    opacity: currentIndex < cards.length - 1 ? 1 : 0.3,
+                    opacity: currentIndex < cards.length - 1 ? 1 : 0.35,
                     display: "flex",
                     alignItems: "center",
                     gap: "4px",

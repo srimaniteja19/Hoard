@@ -106,7 +106,6 @@ export const StatBlock: React.FC<StatBlockProps> = ({
               textTransform: "uppercase",
               background: "transparent",
               border: "none",
-              outline: "none",
               width: "100%",
               maxWidth: "240px",
             }}
@@ -151,7 +150,6 @@ export const StatBlock: React.FC<StatBlockProps> = ({
               style={{
                 background: "transparent",
                 border: "none",
-                outline: "none",
                 color: "inherit",
                 fontFamily: "inherit",
                 fontSize: "inherit",
@@ -207,7 +205,6 @@ export const StatBlock: React.FC<StatBlockProps> = ({
             color: tokens.textPrimary,
             background: "transparent",
             border: "none",
-            outline: "none",
             width: "100%",
             lineHeight: 1.1,
           }}
@@ -264,7 +261,6 @@ export const StatBlock: React.FC<StatBlockProps> = ({
                 fontSize: "inherit",
                 background: "transparent",
                 border: "none",
-                outline: "none",
                 color: "inherit",
               }}
             />
@@ -316,7 +312,6 @@ export const StatBlock: React.FC<StatBlockProps> = ({
             color: tokens.textSecondary,
             background: "transparent",
             border: "none",
-            outline: "none",
             width: "100%",
           }}
         />

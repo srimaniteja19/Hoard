@@ -318,7 +318,6 @@ export const TableBlock: React.FC<TableBlockProps> = ({
               fontSize: "13.5px",
               background: "transparent",
               border: "none",
-              outline: "none",
               color: tokens.textPrimary,
               width: "100%",
               padding: "2px 0",
@@ -562,7 +561,6 @@ export const TableBlock: React.FC<TableBlockProps> = ({
                         color: tokens.textPrimary,
                         background: "transparent",
                         border: "none",
-                        outline: "none",
                         width: "100%",
                         textAlign: col.align || "left",
                       }}
@@ -833,7 +831,6 @@ export const TableBlock: React.FC<TableBlockProps> = ({
                           width: "100%",
                           background: "transparent",
                           border: "none",
-                          outline: "none",
                           color: tokens.textPrimary,
                           fontFamily: "var(--sans, system-ui, sans-serif)",
                           fontSize: "13px",

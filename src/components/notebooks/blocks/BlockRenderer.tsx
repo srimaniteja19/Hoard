@@ -139,9 +139,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 fontWeight: 700,
                 letterSpacing: "0.1em",
                 padding: "8px 13px",
-                borderTop: "2px solid rgba(10,10,10,0.14)",
-                color: "#4A4A4A",
-                outline: "none",
+                borderTop: `2px solid ${tokens.borderSubtle}`,
+                color: tokens.textSecondary,
               }}
             >
               {caption}
@@ -255,9 +254,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             fontSize: "9.5px",
             fontWeight: 700,
             padding: "8px 13px",
-            borderTop: "2px solid rgba(10,10,10,0.14)",
-            opacity: 0.7,
-            outline: "none",
+            borderTop: `2px solid ${tokens.borderSubtle}`,
+            color: tokens.textMuted,
           }}
         >
           {caption || "Click to add caption…"}
@@ -304,7 +302,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               e.stopPropagation();
             }}
             style={{
-              color: tokens.accentColor || accentColor,
+              color: tokens.linkColor,
               textDecoration: "underline",
               textDecorationThickness: "1.5px",
               textUnderlineOffset: "3px",
@@ -363,7 +361,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 e.stopPropagation();
               }}
               style={{
-                color: tokens.accentColor || accentColor,
+                color: tokens.linkColor,
                 textDecoration: "underline",
                 textDecorationThickness: "1.5px",
                 textUnderlineOffset: "3px",
@@ -913,7 +911,6 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               onBlur={(e) => {
                 if (onUpdateBlock) onUpdateBlock({ ...block, title: e.currentTarget.innerText });
               }}
-              style={{ outline: "none" }}
             >
               {block.title || "THE EXAMPLE HE USED"}
             </span>
@@ -921,6 +918,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           </div>
 
           <div
+            className="nb-responsive-two-col"
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 46px 1fr",
@@ -945,8 +943,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   marginBottom: "11px",
                   border: "2px solid #0A0A0A",
                   background: "#FFFFFF",
-                  opacity: 0.7,
-                  outline: "none",
+                  color: "rgba(10, 10, 10, 0.72)",
                 }}
               >
                 {block.v1Title || "DRAFT 1 · TYPED FAST"}
@@ -964,13 +961,12 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   margin: 0,
                   color: "#0A0A0A",
                   whiteSpace: "pre-wrap",
-                  outline: "none",
                 }}
               >
                 {block.v1BadWords && block.v1BadWords.length > 0 ? (
                   block.v1Text.split(new RegExp(`(${block.v1BadWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')).map((seg, i) =>
                     block.v1BadWords?.includes(seg) ? (
-                      <span key={i} style={{ background: "#FF2D8A", color: "#FFFFFF", padding: "0 3px" }}>
+                      <span key={i} style={{ background: "#FF2D8A", color: "#0A0A0A", fontWeight: 700, padding: "0 3px" }}>
                         {seg}
                       </span>
                     ) : (
@@ -1019,7 +1015,6 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   border: "2px solid #0A0A0A",
                   background: "#B8F04A",
                   color: "#0A0A0A",
-                  outline: "none",
                 }}
               >
                 {block.v2Title || "DRAFT 2 · AFTER REREADING"}
@@ -1037,7 +1032,6 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   margin: 0,
                   color: "#0A0A0A",
                   whiteSpace: "pre-wrap",
-                  outline: "none",
                 }}
               >
                 {block.v2FixWords && block.v2FixWords.length > 0 ? (
@@ -1135,7 +1129,6 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               padding: "8px 14px",
               background: "#EBE7DC",
               borderBottom: "3px solid #0A0A0A",
-              outline: "none",
             }}
           >
             {block.title || "HIS WORDS, NOT MEASUREMENTS"}
@@ -1144,6 +1137,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             {block.items.map((item, idx) => (
               <div
                 key={idx}
+                className="nb-responsive-two-col"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "160px minmax(0, 1fr)",
@@ -1167,7 +1161,6 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                     fontSize: "10px",
                     fontWeight: 700,
                     letterSpacing: "0.06em",
-                    outline: "none",
                   }}
                 >
                   {item.name}
@@ -1213,7 +1206,6 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   borderTop: "2px dashed rgba(10,10,10,0.14)",
                   lineHeight: 1.75,
                   marginTop: "6px",
-                  outline: "none",
                 }}
               >
                 {block.footer}
@@ -1259,6 +1251,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             {block.items.map((row, idx) => (
               <div
                 key={idx}
+                className="nb-responsive-anchors"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "66px minmax(0, 1fr) auto",
@@ -1539,7 +1532,10 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               color: isInk ? "#F0EDE4" : "#0A0A0A",
             }}
           >
-            <span
+            <button
+              type="button"
+              aria-expanded={toggleOpen}
+              aria-label={toggleOpen ? "Collapse toggle section" : "Expand toggle section"}
               onClick={() => {
                 playSound.click();
                 setToggleOpen(!toggleOpen);
@@ -1549,19 +1545,27 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 fontSize: "12px",
                 transform: toggleOpen ? "rotate(90deg)" : "rotate(0deg)",
                 transition: "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                display: "inline-block",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "24px",
+                height: "24px",
+                padding: 0,
+                background: "transparent",
+                border: "none",
+                color: "inherit",
+                cursor: "pointer",
                 userSelect: "none",
               }}
             >
               ▸
-            </span>
+            </button>
             <span
               contentEditable={!!onUpdateBlock}
               suppressContentEditableWarning
               onBlur={(e) => {
                 if (onUpdateBlock) onUpdateBlock({ ...block, summary: e.currentTarget.innerText });
               }}
-              style={{ outline: "none" }}
             >
               {block.summary}
             </span>
@@ -1621,18 +1625,22 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             >
               <button
                 type="button"
+                role="checkbox"
+                aria-checked={item.done}
+                aria-label={`${item.done ? "Unmark" : "Mark"} task: ${item.text || "Task"}`}
+                className="nb-todo-touch"
                 onClick={() => handleToggle(idx)}
                 style={{
                   width: "19px",
                   height: "19px",
-                  border: isInk ? "2px solid rgba(255,255,255,0.4)" : "2px solid #0A0A0A",
+                  border: `2px solid ${tokens.borderPrimary}`,
                   flex: "none",
                   marginTop: "2px",
                   cursor: "pointer",
                   display: "grid",
                   placeItems: "center",
-                  background: item.done ? (isInk ? "#FCE94F" : "#0A0A0A") : (isInk ? "#181B24" : "#FFFFFF"),
-                  color: item.done ? (isInk ? "#0A0A0A" : "#FFFFFF") : "transparent",
+                  background: item.done ? tokens.accentColor : tokens.cardBg,
+                  color: item.done ? tokens.accentFg : "transparent",
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "11px",
                   fontWeight: 700,
@@ -1641,7 +1649,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   transition: "all 0.16s cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
               >
-                ✓
+                {item.done ? "✓" : ""}
               </button>
               <InlineTextEditor
                 as="div"
@@ -1679,14 +1687,21 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 fontWeight: 700,
                 letterSpacing: "0.1em",
                 background: "transparent",
-                border: "1.5px dashed rgba(10,10,10,0.3)",
-                padding: "3px 8px",
+                color: tokens.textSecondary,
+                border: `1.5px dashed ${tokens.borderPrimary}`,
+                padding: "4px 10px",
+                minHeight: "32px",
                 cursor: "pointer",
                 marginTop: "4px",
-                opacity: 0.6,
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#FCE94F")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = tokens.accentColor;
+                e.currentTarget.style.color = tokens.accentFg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = tokens.textSecondary;
+              }}
             >
               ＋ ADD ITEM
             </button>
@@ -1885,8 +1900,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             style={{
               flex: 1,
               border: "none",
-              borderBottom: "2px solid rgba(10,10,10,0.14)",
-              outline: "none",
+              borderBottom: `2px solid ${tokens.borderSubtle}`,
               background: "transparent",
               fontFamily: "var(--quote, Georgia, serif)",
               fontSize: "16px",
@@ -1899,7 +1913,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
     }
 
     case "divider":
-      return <hr style={{ border: "none", borderTop: "2px solid rgba(10,10,10,0.14)", margin: "20px 0" }} />;
+      return <hr style={{ border: "none", borderTop: `2px solid ${tokens.borderSubtle}`, margin: "20px 0" }} />;
 
     default:
       return null;

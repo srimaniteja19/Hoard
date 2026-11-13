@@ -1,38 +1,43 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useRef } from "react";
 import { playSound } from "@/lib/sound";
 import { Block, generateBlockId } from "@/lib/notebooks/blocks";
+import { getThemeTokens, NotebookTheme } from "@/lib/notebooks/theme";
+import { useModalFocusTrap } from "@/lib/notebooks/useModalFocusTrap";
 import { Sparkles, X, Plus } from "lucide-react";
 
 interface ExplainModalProps {
   selection: string;
   explanation: string;
+  error?: string | null;
   loading: boolean;
+  onRetry?: () => void;
   onAddAsToggle: (toggleBlock: Block) => void;
   onClose: () => void;
   accentColor?: string;
+  theme?: NotebookTheme;
 }
 
 export const ExplainModal: React.FC<ExplainModalProps> = ({
   selection,
   explanation,
+  error = null,
   loading,
+  onRetry,
   onAddAsToggle,
   onClose,
   accentColor = "#7B5CF0",
+  theme = "cream",
 }) => {
-  // Close on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  const tokens = getThemeTokens(theme);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useModalFocusTrap({
+    isOpen: true,
+    onClose,
+    containerRef: dialogRef,
+  });
 
   const handleAddToggle = () => {
     playSound.fileIt();
@@ -62,14 +67,19 @@ export const ExplainModal: React.FC<ExplainModalProps> = ({
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Explain passage deep dive"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
           maxWidth: "640px",
           maxHeight: "88vh",
-          background: "#F3F0E8",
-          border: "3px solid #0A0A0A",
-          boxShadow: "10px 10px 0 #0A0A0A",
+          background: tokens.cardBg,
+          color: tokens.textPrimary,
+          border: `3px solid ${tokens.borderPrimary}`,
+          boxShadow: tokens.boxShadow,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -84,7 +94,7 @@ export const ExplainModal: React.FC<ExplainModalProps> = ({
             padding: "12px 18px",
             background: "#0A0A0A",
             color: "#F0EDE4",
-            borderBottom: "3px solid #0A0A0A",
+            borderBottom: `3px solid ${tokens.borderPrimary}`,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -136,9 +146,9 @@ export const ExplainModal: React.FC<ExplainModalProps> = ({
         <div
           style={{
             padding: "14px 18px",
-            background: "#EBE7DC",
-            borderBottom: "2px solid #0A0A0A",
-            color: "#0A0A0A",
+            background: tokens.sidebarBg,
+            borderBottom: `2px solid ${tokens.borderPrimary}`,
+            color: tokens.textPrimary,
           }}
         >
           <div
@@ -147,7 +157,7 @@ export const ExplainModal: React.FC<ExplainModalProps> = ({
               fontSize: "8.5px",
               fontWeight: 700,
               letterSpacing: "0.1em",
-              opacity: 0.55,
+              color: tokens.textMuted,
               marginBottom: "5px",
             }}
           >
@@ -159,7 +169,7 @@ export const ExplainModal: React.FC<ExplainModalProps> = ({
               fontStyle: "italic",
               fontSize: "14.5px",
               lineHeight: "1.45",
-              color: "#1E1E1E",
+              color: tokens.textPrimary,
             }}
           >
             &ldquo;{selection}&rdquo;
@@ -172,7 +182,7 @@ export const ExplainModal: React.FC<ExplainModalProps> = ({
             padding: "20px 22px",
             flex: 1,
             overflowY: "auto",
-            color: "#0A0A0A",
+            color: tokens.textPrimary,
             fontSize: "15.5px",
             lineHeight: "1.68",
           }}
@@ -186,14 +196,14 @@ export const ExplainModal: React.FC<ExplainModalProps> = ({
                 padding: "24px 0",
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "12px",
-                color: "#6B7280",
+                color: tokens.textSecondary,
               }}
             >
               <div
                 style={{
                   width: "12px",
                   height: "12px",
-                  border: "2px solid #0A0A0A",
+                  border: `2px solid ${tokens.borderPrimary}`,
                   borderTopColor: "transparent",
                   borderRadius: "50%",
                   animation: "spin 0.8s linear infinite",
@@ -201,8 +211,45 @@ export const ExplainModal: React.FC<ExplainModalProps> = ({
               />
               Analyzing context and generating deep dive explanation…
             </div>
+          ) : error ? (
+            <div
+              role="alert"
+              style={{
+                padding: "16px",
+                background: tokens.isDark ? "rgba(239, 68, 68, 0.18)" : "#FFF1F2",
+                border: "2px solid #EF4444",
+                color: tokens.isDark ? "#FECACA" : "#991B1B",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+              }}
+            >
+              <div style={{ fontFamily: "var(--mono, monospace)", fontSize: "11px", fontWeight: 700 }}>
+                {error}
+              </div>
+              {onRetry && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    style={{
+                      border: "1.5px solid #EF4444",
+                      background: "#EF4444",
+                      color: "#FFFFFF",
+                      padding: "6px 12px",
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    RETRY EXPLANATION
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
-            <div style={{ whiteSpace: "pre-wrap", color: "#111827" }}>
+            <div style={{ whiteSpace: "pre-wrap", color: tokens.textPrimary }}>
               {explanation}
             </div>
           )}
@@ -212,8 +259,8 @@ export const ExplainModal: React.FC<ExplainModalProps> = ({
         <div
           style={{
             padding: "14px 18px",
-            borderTop: "3px solid #0A0A0A",
-            background: "#EBE7DC",
+            borderTop: `3px solid ${tokens.borderPrimary}`,
+            background: tokens.sidebarBg,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -228,13 +275,13 @@ export const ExplainModal: React.FC<ExplainModalProps> = ({
               fontSize: "10px",
               fontWeight: 700,
               letterSpacing: "0.1em",
-              border: "2px solid #0A0A0A",
+              border: `2px solid ${tokens.borderPrimary}`,
               background: "transparent",
-              color: "#0A0A0A",
+              color: tokens.textPrimary,
               padding: "9px 14px",
               cursor: "pointer",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#D9D5CB")}
+            onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             CLOSE
@@ -249,7 +296,7 @@ export const ExplainModal: React.FC<ExplainModalProps> = ({
               fontSize: "10px",
               fontWeight: 700,
               letterSpacing: "0.12em",
-              border: "2px solid #0A0A0A",
+              border: `2px solid ${tokens.borderPrimary}`,
               background: "#0A0A0A",
               color: "#B8F04A",
               padding: "9px 16px",
