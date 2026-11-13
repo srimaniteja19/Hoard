@@ -155,6 +155,8 @@ interface BlockEditorProps {
 
 type SlashCategory = "Core Writing" | "Study Callouts" | "Media & Embeds" | "Advanced";
 
+const CORE_SLASH_TYPES = new Set(["paragraph", "h2", "bullet", "todo", "fact", "code"]);
+
 const SLASH_MENU_ITEMS: { type: string; glyph: string; label: string; shortcut: string; category: SlashCategory }[] = [
   { type: "paragraph", glyph: "¶", label: "Text Paragraph", shortcut: "/text", category: "Core Writing" },
   { type: "h2", glyph: "H1", label: "Heading 1 (#)", shortcut: "/h1", category: "Core Writing" },
@@ -215,6 +217,20 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   } | null>(null);
 
   const blockActionMenuRef = useRef<HTMLDivElement>(null);
+  const [showAllSlashBlocks, setShowAllSlashBlocks] = useState(false);
+  const [showAllTurnInto, setShowAllTurnInto] = useState(false);
+
+  useEffect(() => {
+    if (!slashMenu?.isOpen) {
+      setShowAllSlashBlocks(false);
+    }
+  }, [slashMenu?.isOpen]);
+
+  useEffect(() => {
+    if (!blockActionMenu) {
+      setShowAllTurnInto(false);
+    }
+  }, [blockActionMenu]);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -464,9 +480,22 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     }
   }, [history, historyIndex, onChange]);
 
-  // Global Undo / Redo keyboard listener
+  // Global Undo / Redo keyboard listener (scoped to editor blocks, not page title / sidebar / dialogs)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        if (target.closest("[role='dialog']")) return;
+        const isEditable =
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement ||
+          target.isContentEditable;
+        if (isEditable && !containerRef.current?.contains(target)) {
+          return;
+        }
+      }
+
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
         e.preventDefault();
         handleUndo();
@@ -1060,15 +1089,16 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     e.target.value = "";
   };
 
-  // Filter slash menu items based on query
+  // Filter slash menu items based on query (default to core study blocks unless searching or expanded)
+  const normalizedSlashQuery = slashMenu?.query ? slashMenu.query.toLowerCase().replace(/^\//, "").trim() : "";
   const filteredSlashItems = SLASH_MENU_ITEMS.filter((item) => {
-    if (!slashMenu || !slashMenu.query) return true;
-    const q = slashMenu.query.toLowerCase().replace(/^\//, "");
-    if (!q) return true;
+    if (!normalizedSlashQuery) {
+      return showAllSlashBlocks || CORE_SLASH_TYPES.has(item.type);
+    }
     return (
-      item.type.toLowerCase().includes(q) ||
-      item.label.toLowerCase().includes(q) ||
-      item.shortcut.toLowerCase().includes(q)
+      item.type.toLowerCase().includes(normalizedSlashQuery) ||
+      item.label.toLowerCase().includes(normalizedSlashQuery) ||
+      item.shortcut.toLowerCase().includes(normalizedSlashQuery)
     );
   });
 
@@ -1696,8 +1726,8 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                       justifyContent: "space-between",
                     }}
                   >
-                    <span>TRANSFORM BLOCK</span>
-                    <span style={{ opacity: 0.65 }}>ESC TO CLOSE</span>
+                    <span>{normalizedSlashQuery ? "SEARCH BLOCKS" : showAllSlashBlocks ? "ALL BLOCK TYPES" : "CORE BLOCKS"}</span>
+                    <span style={{ color: tokens.textMuted }}>ESC TO CLOSE</span>
                   </div>
                   <div style={{ maxHeight: "280px", overflowY: "auto" }}>
                     {filteredSlashItems.length === 0 ? (
@@ -1716,7 +1746,9 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                       filteredSlashItems.map((item, itemIdx) => {
                         const isActive = slashMenu.activeIndex === itemIdx;
                         const prevItem = itemIdx > 0 ? filteredSlashItems[itemIdx - 1] : null;
-                        const showCategoryHeader = !prevItem || prevItem.category !== item.category;
+                        const showCategoryHeader =
+                          (normalizedSlashQuery.length > 0 || showAllSlashBlocks) &&
+                          (!prevItem || prevItem.category !== item.category);
                         return (
                           <React.Fragment key={item.type}>
                             {showCategoryHeader && (
@@ -1783,7 +1815,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                                   fontFamily: "var(--mono, monospace)",
                                   fontSize: "8.5px",
                                   letterSpacing: "0.08em",
-                                  opacity: 0.55,
+                                  color: isActive ? (isInk ? "#CBD5E1" : tokens.accentFg) : tokens.textMuted,
                                   marginLeft: "auto",
                                 }}
                               >
@@ -1795,6 +1827,35 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                       })
                     )}
                   </div>
+                  {!normalizedSlashQuery && (
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setShowAllSlashBlocks((prev) => !prev);
+                        setSlashMenu((prev) => (prev ? { ...prev, activeIndex: 0 } : null));
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        border: "none",
+                        borderTop: `1.5px solid ${tokens.borderSubtle}`,
+                        background: tokens.sidebarBg,
+                        color: tokens.textSecondary,
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "9px",
+                        fontWeight: 800,
+                        letterSpacing: "0.1em",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <span>{showAllSlashBlocks ? "SHOW CORE BLOCKS ONLY" : `SHOW ALL ${SLASH_MENU_ITEMS.length} BLOCK TYPES`}</span>
+                      <span>{showAllSlashBlocks ? "▴" : "▾"}</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1839,45 +1900,60 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
             animation: "fadeIn 0.08s ease",
           }}
         >
-          {/* Turn Into Categorized Grid */}
-          {[
-            {
-              group: "TURN INTO · WRITING",
-              items: [
-                { type: "paragraph", label: "Paragraph", glyph: "¶" },
-                { type: "h2", label: "Heading 1", glyph: "H1" },
-                { type: "h3", label: "Heading 2", glyph: "H2" },
-                { type: "bullet", label: "Bullet", glyph: "•" },
-                { type: "numbered", label: "Numbered", glyph: "1." },
-                { type: "todo", label: "To-Do", glyph: "☑" },
-                { type: "code", label: "Code", glyph: "<>" },
-                { type: "quote", label: "Quote", glyph: '"' },
-                { type: "toggle", label: "Toggle", glyph: "▸" },
-              ],
-            },
-            {
-              group: "STUDY CALLOUTS",
-              items: [
-                { type: "gotcha", label: "Gotcha", glyph: "!" },
-                { type: "question", label: "Question", glyph: "?" },
-                { type: "fact", label: "Takeaway", glyph: "★" },
-                { type: "connects", label: "Connects", glyph: "↗" },
-              ],
-            },
-            {
-              group: "MEDIA & ADVANCED",
-              items: [
-                { type: "embed", label: "Embed", glyph: "▶" },
-                { type: "link", label: "Bookmark", glyph: "🔗" },
-                { type: "diagram", label: "Diagram", glyph: "📐" },
-                { type: "subpage", label: "Subpage", glyph: "📄" },
-                { type: "table", label: "Table", glyph: "▦" },
-                { type: "math", label: "Math", glyph: "∑" },
-                { type: "stat", label: "Stat / KPI", glyph: "▲" },
-                { type: "timeline", label: "Timeline", glyph: "⏳" },
-              ],
-            },
-          ].map((section) => (
+          {/* Turn Into Core Grid + Progressive Disclosure */}
+          {(showAllTurnInto
+            ? [
+                {
+                  group: "TURN INTO · WRITING",
+                  items: [
+                    { type: "paragraph", label: "Paragraph", glyph: "¶" },
+                    { type: "h2", label: "Heading 1", glyph: "H1" },
+                    { type: "h3", label: "Heading 2", glyph: "H2" },
+                    { type: "bullet", label: "Bullet", glyph: "•" },
+                    { type: "numbered", label: "Numbered", glyph: "1." },
+                    { type: "todo", label: "To-Do", glyph: "☑" },
+                    { type: "code", label: "Code", glyph: "<>" },
+                    { type: "quote", label: "Quote", glyph: '"' },
+                    { type: "toggle", label: "Toggle", glyph: "▸" },
+                  ],
+                },
+                {
+                  group: "STUDY CALLOUTS",
+                  items: [
+                    { type: "gotcha", label: "Gotcha", glyph: "!" },
+                    { type: "question", label: "Question", glyph: "?" },
+                    { type: "fact", label: "Takeaway", glyph: "★" },
+                    { type: "connects", label: "Connects", glyph: "↗" },
+                  ],
+                },
+                {
+                  group: "MEDIA & ADVANCED",
+                  items: [
+                    { type: "embed", label: "Embed", glyph: "▶" },
+                    { type: "link", label: "Bookmark", glyph: "🔗" },
+                    { type: "diagram", label: "Diagram", glyph: "📐" },
+                    { type: "subpage", label: "Subpage", glyph: "📄" },
+                    { type: "table", label: "Table", glyph: "▦" },
+                    { type: "math", label: "Math", glyph: "∑" },
+                    { type: "stat", label: "Stat / KPI", glyph: "▲" },
+                    { type: "timeline", label: "Timeline", glyph: "⏳" },
+                  ],
+                },
+              ]
+            : [
+                {
+                  group: "TURN INTO · CORE",
+                  items: [
+                    { type: "paragraph", label: "Paragraph", glyph: "¶" },
+                    { type: "h2", label: "Heading 1", glyph: "H1" },
+                    { type: "bullet", label: "Bullet", glyph: "•" },
+                    { type: "todo", label: "To-Do", glyph: "☑" },
+                    { type: "fact", label: "Takeaway", glyph: "★" },
+                    { type: "code", label: "Code", glyph: "<>" },
+                  ],
+                },
+              ]
+          ).map((section) => (
             <div key={section.group}>
               <div style={{ padding: "5px 12px 4px", fontSize: "8px", letterSpacing: "0.12em", color: tokens.textMuted }}>
                 {section.group}
@@ -1908,13 +1984,38 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
                     onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
-                    <span style={{ opacity: 0.6 }}>{t.glyph}</span>
+                    <span style={{ color: tokens.textMuted }}>{t.glyph}</span>
                     <span>{t.label}</span>
                   </button>
                 ))}
               </div>
             </div>
           ))}
+
+          <button
+            type="button"
+            onClick={() => setShowAllTurnInto((prev) => !prev)}
+            style={{
+              width: "100%",
+              padding: "6px 12px",
+              background: tokens.sidebarBg,
+              border: "none",
+              borderTop: `1px solid ${tokens.borderSubtle}`,
+              borderBottom: `1px solid ${tokens.borderSubtle}`,
+              color: tokens.textSecondary,
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "8.5px",
+              fontWeight: 800,
+              letterSpacing: "0.08em",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>{showAllTurnInto ? "FEWER BLOCK TYPES" : "ALL 21 BLOCK TYPES"}</span>
+            <span>{showAllTurnInto ? "▴" : "▾"}</span>
+          </button>
 
           <div style={{ height: "1px", background: tokens.borderSubtle, margin: "4px 0" }} />
 
@@ -2015,7 +2116,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
               padding: "6px 12px",
               background: "transparent",
               border: "none",
-              color: "#EF4444",
+              color: tokens.dangerText,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",

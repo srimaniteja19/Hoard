@@ -124,8 +124,9 @@ export const SubpagesDirectory: React.FC<SubpagesDirectoryProps> = ({
           const icon = sub.icon || "📄";
 
           return (
-            <div
+            <button
               key={sub.id}
+              type="button"
               onClick={() => {
                 playSound.click();
                 onSelectSubpage(sub.id);
@@ -141,6 +142,11 @@ export const SubpagesDirectory: React.FC<SubpagesDirectoryProps> = ({
                 flexDirection: "column",
                 transition: "all 0.12s cubic-bezier(0.16, 1, 0.3, 1)",
                 position: "relative",
+                textAlign: "left",
+                padding: 0,
+                width: "100%",
+                font: "inherit",
+                color: "inherit",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translate(-2px, -2px)";
@@ -211,7 +217,7 @@ export const SubpagesDirectory: React.FC<SubpagesDirectoryProps> = ({
                   </span>
                 </div>
               </div>
-            </div>
+            </button>
           );
         })}
 

@@ -15,7 +15,6 @@ interface ExplainModalProps {
   onRetry?: () => void;
   onAddAsToggle: (toggleBlock: Block) => void;
   onClose: () => void;
-  accentColor?: string;
   theme?: NotebookTheme;
 }
 
@@ -27,7 +26,6 @@ export const ExplainModal: React.FC<ExplainModalProps> = ({
   onRetry,
   onAddAsToggle,
   onClose,
-  accentColor = "#7B5CF0",
   theme = "cream",
 }) => {
   const tokens = getThemeTokens(theme);

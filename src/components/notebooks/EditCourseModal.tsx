@@ -208,6 +208,7 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({
             </label>
             <input
               type="text"
+              className="nb-mobile-16px"
               value={provider}
               onChange={(e) => setProvider(e.target.value)}
               placeholder="e.g. MIT OPENCOURSEWARE, COURSERA, STANFORD"

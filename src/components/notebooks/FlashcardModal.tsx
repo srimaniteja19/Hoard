@@ -30,7 +30,6 @@ interface FlashcardModalProps {
   onClose: () => void;
   lessonTitle: string;
   blocks: Block[];
-  accentColor?: string;
   theme?: NotebookTheme;
 }
 
@@ -104,11 +103,11 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
   onClose,
   lessonTitle,
   blocks,
-  accentColor = "#7B5CF0",
   theme = "cream",
 }) => {
   const tokens = getThemeTokens(theme);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const [allCards, setAllCards] = useState<Flashcard[]>([]);
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -124,6 +123,7 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       const generated = extractFlashcards(lessonTitle, blocks);
+      setAllCards(generated);
       setCards(generated);
       setCurrentIndex(0);
       setIsFlipped(false);
@@ -180,6 +180,14 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
         return;
       }
       if (sessionFinished) return;
+
+      const target = e.target instanceof Element ? e.target : null;
+      const isInteractiveTarget = Boolean(
+        target?.closest("button, a[href], input, textarea, select")
+      );
+      if (isInteractiveTarget && (e.key === "Enter" || e.key === " ")) {
+        return;
+      }
 
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
@@ -360,83 +368,177 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
             </button>
           </div>
         ) : sessionFinished ? (
-          <div style={{ textAlign: "center", padding: "24px 12px" }}>
-            <div
-              style={{
-                display: "inline-flex",
-                padding: "16px",
-                background: "#B8F04A",
-                border: "3px solid #0A0A0A",
-                boxShadow: "4px 4px 0 #0A0A0A",
-                marginBottom: "16px",
-              }}
-            >
-              <Sparkles size={28} />
-            </div>
-            <h2
-              style={{
-                fontFamily: "var(--display, sans-serif)",
-                fontSize: "26px",
-                fontWeight: 800,
-                margin: "0 0 8px",
-                letterSpacing: "-0.03em",
-              }}
-            >
-              Session Complete!
-            </h2>
-            <p
-              style={{
-                fontFamily: "var(--body, sans-serif)",
-                fontSize: "14px",
-                opacity: 0.7,
-                maxWidth: "400px",
-                margin: "0 auto 24px",
-              }}
-            >
-              You reviewed all {cards.length} recall prompts for this lesson.
-            </p>
+          (() => {
+            const countByRating = { 1: 0, 2: 0, 3: 0, 4: 0 };
+            for (const c of cards) {
+              const r = ratings[c.id];
+              if (r === 1 || r === 2 || r === 3 || r === 4) {
+                countByRating[r]++;
+              }
+            }
+            const weakCards = cards.filter((c) => ratings[c.id] === 1 || ratings[c.id] === 2);
+            return (
+              <div style={{ textAlign: "center", padding: "24px 12px" }}>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    padding: "16px",
+                    background: "#B8F04A",
+                    color: "#0A0A0A",
+                    border: "3px solid #0A0A0A",
+                    boxShadow: "4px 4px 0 #0A0A0A",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <Sparkles size={28} />
+                </div>
+                <h2
+                  style={{
+                    fontFamily: "var(--display, sans-serif)",
+                    fontSize: "26px",
+                    fontWeight: 800,
+                    margin: "0 0 8px",
+                    letterSpacing: "-0.03em",
+                  }}
+                >
+                  Session Complete!
+                </h2>
+                <p
+                  style={{
+                    fontFamily: "var(--body, sans-serif)",
+                    fontSize: "14px",
+                    color: tokens.textSecondary,
+                    maxWidth: "440px",
+                    margin: "0 auto 18px",
+                  }}
+                >
+                  You reviewed {cards.length} recall prompt{cards.length === 1 ? "" : "s"}.
+                  {weakCards.length > 0
+                    ? ` ${weakCards.length} marked Again or Hard for follow-up review.`
+                    : " Strong recall across the deck."}
+                </p>
 
-            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentIndex(0);
-                  setIsFlipped(false);
-                  setRatings({});
-                  setSessionFinished(false);
-                }}
-                style={{
-                  fontFamily: "var(--mono, monospace)",
-                  fontSize: "10px",
-                  fontWeight: 700,
-                  border: "2px solid #0A0A0A",
-                  background: "#FCE94F",
-                  color: "#0A0A0A",
-                  padding: "10px 18px",
-                  cursor: "pointer",
-                  boxShadow: "3px 3px 0 #0A0A0A",
-                }}
-              >
-                STUDY AGAIN
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  fontFamily: "var(--mono, monospace)",
-                  fontSize: "10px",
-                  fontWeight: 700,
-                  border: `2px solid ${tokens.borderPrimary}`,
-                  background: tokens.sidebarBg,
-                  color: tokens.textPrimary,
-                  padding: "10px 18px",
-                  cursor: "pointer",
-                }}
-              >
-                CLOSE DECK
-              </button>
-            </div>
-          </div>
+                {/* Recall Rating Breakdown */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, 1fr)",
+                    gap: "8px",
+                    maxWidth: "460px",
+                    margin: "0 auto 22px",
+                  }}
+                >
+                  {[
+                    { score: 1, label: "AGAIN", count: countByRating[1], bg: "#FFE4E6", fg: "#0A0A0A" },
+                    { score: 2, label: "HARD", count: countByRating[2], bg: "#FEF3C7", fg: "#0A0A0A" },
+                    { score: 3, label: "GOOD", count: countByRating[3], bg: "#E0F2FE", fg: "#0A0A0A" },
+                    { score: 4, label: "EASY", count: countByRating[4], bg: "#DCFCE7", fg: "#0A0A0A" },
+                  ].map((item) => (
+                    <div
+                      key={item.score}
+                      style={{
+                        border: `2px solid ${tokens.borderPrimary}`,
+                        background: item.bg,
+                        color: item.fg,
+                        padding: "8px 6px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontFamily: "var(--display, sans-serif)",
+                          fontSize: "20px",
+                          fontWeight: 800,
+                          lineHeight: 1.1,
+                        }}
+                      >
+                        {item.count}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "8.5px",
+                          fontWeight: 800,
+                          letterSpacing: "0.08em",
+                          marginTop: "3px",
+                        }}
+                      >
+                        {item.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+                  {weakCards.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound.click();
+                        setCards(weakCards);
+                        setCurrentIndex(0);
+                        setIsFlipped(false);
+                        setRatings({});
+                        setSessionFinished(false);
+                      }}
+                      style={{
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "10px",
+                        fontWeight: 800,
+                        border: "2px solid #0A0A0A",
+                        background: "#FF9E2C",
+                        color: "#0A0A0A",
+                        padding: "10px 16px",
+                        cursor: "pointer",
+                        boxShadow: "3px 3px 0 #0A0A0A",
+                      }}
+                    >
+                      RE-STUDY AGAIN / HARD ({weakCards.length})
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound.click();
+                      setCards(allCards);
+                      setCurrentIndex(0);
+                      setIsFlipped(false);
+                      setRatings({});
+                      setSessionFinished(false);
+                    }}
+                    style={{
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      border: "2px solid #0A0A0A",
+                      background: "#FCE94F",
+                      color: "#0A0A0A",
+                      padding: "10px 18px",
+                      cursor: "pointer",
+                      boxShadow: "3px 3px 0 #0A0A0A",
+                    }}
+                  >
+                    {cards.length < allCards.length ? `STUDY FULL DECK (${allCards.length})` : "STUDY AGAIN"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    style={{
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      border: `2px solid ${tokens.borderPrimary}`,
+                      background: tokens.sidebarBg,
+                      color: tokens.textPrimary,
+                      padding: "10px 18px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    CLOSE DECK
+                  </button>
+                </div>
+              </div>
+            );
+          })()
         ) : (
           /* Active Flashcard View */
           <div>

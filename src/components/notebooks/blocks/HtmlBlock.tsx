@@ -119,6 +119,7 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
 
   // Menus
   const [showSettingsMenu, setShowSettingsMenu] = useState<boolean>(false);
+  const [showToolsMenu, setShowToolsMenu] = useState<boolean>(false);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const codeTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -792,9 +793,8 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "9px",
                 fontWeight: 600,
-                opacity: 0.6,
                 letterSpacing: "0.05em",
-                color: tokens.textSecondary,
+                color: tokens.textMuted,
               }}
             >
               {metrics.lines}L · {metrics.kb}KB
@@ -885,407 +885,517 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
             </button>
           </div>
 
-          {/* Right: Feature Toolbars (Tokens, Restyle, Console, Templates, Import) */}
-          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-            {/* Feature 1: CSS Variable Tokens Toggle */}
-            <button
-              type="button"
-              onClick={() => {
-                playSound.click();
-                setShowTokensShelf(!showTokensShelf);
-              }}
-              title="Inspect & live-tweak :root CSS variables"
-              style={{
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "9.5px",
-                fontWeight: 800,
-                border: `2px solid ${tokens.borderPrimary}`,
-                background: showTokensShelf
-                  ? "#FCE94F"
-                  : cssVariables.length > 0
-                  ? isInk
-                    ? "#1E293B"
-                    : "#FFF"
-                  : isInk
-                  ? "#0A0A0A"
-                  : "#FFFFFF",
-                color: showTokensShelf ? "#0A0A0A" : tokens.textPrimary,
-                padding: "3px 7px",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              <Sliders size={11} />
-              <span>TOKENS{cssVariables.length > 0 ? ` (${cssVariables.length})` : ""}</span>
-            </button>
-
-            {/* Feature 2: 1-Click Restyle Menu */}
+          {/* Right: Compact Sandbox Controls + Tools Popover */}
+          <div style={{ display: "flex", alignItems: "center", gap: "5px", position: "relative" }}>
+            {/* Consolidated Secondary IDE Tools Popover */}
             <div style={{ position: "relative" }}>
               <button
                 type="button"
+                aria-expanded={showToolsMenu}
+                aria-label="Sandbox tools and presets"
                 onClick={() => {
                   playSound.click();
-                  setShowRestyleMenu(!showRestyleMenu);
+                  setShowToolsMenu((prev) => !prev);
+                  setShowSettingsMenu(false);
+                  setShowRestyleMenu(false);
                 }}
-                title="1-Click art direction & CSS restyling"
+                title="Sandbox tools, CSS tokens, templates, import, and viewport presets"
                 style={{
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "9.5px",
                   fontWeight: 800,
                   border: `2px solid ${tokens.borderPrimary}`,
-                  background: showRestyleMenu ? "#FF2D8A" : isInk ? "#0A0A0A" : "#FFFFFF",
-                  color: showRestyleMenu ? "#FFFFFF" : tokens.textPrimary,
-                  padding: "3px 7px",
+                  background: showToolsMenu ? tokens.accentColor : tokens.cardBg,
+                  color: showToolsMenu ? tokens.accentFg : tokens.textPrimary,
+                  padding: "3px 8px",
                   cursor: "pointer",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "4px",
                 }}
               >
-                <Wand2 size={11} />
-                <span>RESTYLE</span>
+                <Sliders size={11} />
+                <span>TOOLS</span>
                 <ChevronDown size={10} />
               </button>
 
-              {showRestyleMenu && (
+              {showToolsMenu && (
                 <div
                   style={{
                     position: "absolute",
                     top: "100%",
                     right: 0,
-                    marginTop: "4px",
-                    background: isInk ? "#161920" : "#FFFFFF",
-                    border: "2.5px solid #0A0A0A",
-                    boxShadow: "4px 4px 0 #0A0A0A",
+                    marginTop: "6px",
+                    background: tokens.popoverBg,
+                    color: tokens.textPrimary,
+                    border: `2px solid ${tokens.borderPrimary}`,
+                    boxShadow: tokens.popoverShadow,
                     zIndex: 100,
                     width: "260px",
-                    padding: "8px",
+                    padding: "10px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
                   }}
                 >
-                  <div
-                    style={{
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "8.5px",
-                      fontWeight: 800,
-                      opacity: 0.5,
-                      padding: "2px 4px 6px",
-                      letterSpacing: "0.1em",
-                    }}
-                  >
-                    1-CLICK ART DIRECTION PRESETS
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleApplyPreset("neubrutalist")}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "6px 8px",
-                      border: "1.5px solid #0A0A0A",
-                      background: "#B8F04A",
-                      color: "#0A0A0A",
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "10.5px",
-                      fontWeight: 800,
-                      cursor: "pointer",
-                      marginBottom: "5px",
-                    }}
-                  >
-                    ⚡ HOARD NEUBRUTALIST
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleApplyPreset("cyberpunk")}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "6px 8px",
-                      border: "1.5px solid #0A0A0A",
-                      background: "#0A0E14",
-                      color: "#00FF66",
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "10.5px",
-                      fontWeight: 800,
-                      cursor: "pointer",
-                      marginBottom: "5px",
-                    }}
-                  >
-                    📟 CYBERPUNK TERMINAL
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleApplyPreset("swiss")}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "6px 8px",
-                      border: "1.5px solid #0A0A0A",
-                      background: "#FFFFFF",
-                      color: "#0A0A0A",
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "10.5px",
-                      fontWeight: 800,
-                      cursor: "pointer",
-                      marginBottom: "5px",
-                    }}
-                  >
-                    📰 SWISS EDITORIAL
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleApplyPreset("tailwind")}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "6px 8px",
-                      border: "1.5px solid #0A0A0A",
-                      background: "#38BDF8",
-                      color: "#0A0A0A",
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "10.5px",
-                      fontWeight: 800,
-                      cursor: "pointer",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    🌊 INJECT TAILWIND CDN
-                  </button>
-
-                  <div
-                    style={{
-                      borderTop: "1px dashed rgba(0,0,0,0.15)",
-                      paddingTop: "8px",
-                      marginTop: "4px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontFamily: "var(--mono, monospace)",
-                        fontSize: "8.5px",
-                        fontWeight: 800,
-                        opacity: 0.5,
-                        marginBottom: "4px",
-                      }}
-                    >
-                      AI CUSTOM STYLE PROMPT
+                  {/* Viewport switcher inside popover */}
+                  {viewMode !== "source" && (
+                    <div>
+                      <div
+                        style={{
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "8.5px",
+                          fontWeight: 800,
+                          letterSpacing: "0.1em",
+                          color: tokens.textMuted,
+                          marginBottom: "4px",
+                        }}
+                      >
+                        PREVIEW WIDTH
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(3, 1fr)",
+                          gap: "4px",
+                        }}
+                      >
+                        {[
+                          { id: "responsive" as ViewportMode, label: "Full", icon: <Monitor size={11} /> },
+                          { id: "tablet" as ViewportMode, label: "768px", icon: <Tablet size={11} /> },
+                          { id: "mobile" as ViewportMode, label: "375px", icon: <Smartphone size={11} /> },
+                        ].map((vp) => (
+                          <button
+                            key={vp.id}
+                            type="button"
+                            aria-pressed={viewport === vp.id}
+                            aria-label={`${vp.label} width preview`}
+                            onClick={() => handleSetViewport(vp.id)}
+                            style={{
+                              border: `1.5px solid ${tokens.borderPrimary}`,
+                              background: viewport === vp.id ? "#FCE94F" : tokens.sidebarBg,
+                              color: viewport === vp.id ? "#0A0A0A" : tokens.textPrimary,
+                              padding: "4px 6px",
+                              cursor: "pointer",
+                              fontFamily: "var(--mono, monospace)",
+                              fontSize: "9px",
+                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "4px",
+                            }}
+                          >
+                            {vp.icon}
+                            <span>{vp.label}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <input
-                      type="text"
-                      placeholder="e.g. Glassmorphic dark with purple neon glow..."
-                      value={aiRestylePrompt}
-                      onChange={(e) => setAiRestylePrompt(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleAiRestyle();
-                      }}
-                      style={{
-                        width: "100%",
-                        padding: "4px 6px",
-                        fontFamily: "var(--mono, monospace)",
-                        fontSize: "9.5px",
-                        border: "1.5px solid #0A0A0A",
-                        background: "#FFF",
-                        color: "#0A0A0A",
-                        marginBottom: "6px",
-                        boxSizing: "border-box",
-                      }}
-                    />
+                  )}
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px" }}>
                     <button
                       type="button"
-                      disabled={isRestyling || !aiRestylePrompt.trim()}
-                      onClick={handleAiRestyle}
+                      onClick={() => {
+                        playSound.click();
+                        setShowTokensShelf(!showTokensShelf);
+                        setShowToolsMenu(false);
+                      }}
                       style={{
-                        width: "100%",
-                        padding: "5px 8px",
-                        border: "1.5px solid #0A0A0A",
-                        background: "#FF2D8A",
-                        color: "#FFF",
                         fontFamily: "var(--mono, monospace)",
-                        fontSize: "9.5px",
+                        fontSize: "9px",
                         fontWeight: 800,
-                        cursor: isRestyling ? "wait" : "pointer",
-                        display: "flex",
+                        border: `1.5px solid ${tokens.borderPrimary}`,
+                        background: showTokensShelf ? "#FCE94F" : tokens.sidebarBg,
+                        color: showTokensShelf ? "#0A0A0A" : tokens.textPrimary,
+                        padding: "5px 7px",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <Sliders size={11} />
+                      <span>TOKENS{cssVariables.length > 0 ? ` (${cssVariables.length})` : ""}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound.click();
+                        setShowConsoleDrawer(!showConsoleDrawer);
+                        setShowToolsMenu(false);
+                      }}
+                      style={{
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "9px",
+                        fontWeight: 800,
+                        border: `1.5px solid ${tokens.borderPrimary}`,
+                        background: showConsoleDrawer ? "#00FF66" : tokens.sidebarBg,
+                        color: showConsoleDrawer ? "#0A0A0A" : tokens.textPrimary,
+                        padding: "5px 7px",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <Terminal size={11} />
+                      <span>LOGS{consoleLogs.length > 0 ? ` (${consoleLogs.length})` : ""}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound.click();
+                        setShowTemplatesModal(true);
+                        setShowToolsMenu(false);
+                      }}
+                      style={{
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "9px",
+                        fontWeight: 800,
+                        border: `1.5px solid ${tokens.borderPrimary}`,
+                        background: tokens.sidebarBg,
+                        color: tokens.textPrimary,
+                        padding: "5px 7px",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <Sparkles size={11} />
+                      <span>TEMPLATES</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound.click();
+                        setShowImportModal(true);
+                        setShowToolsMenu(false);
+                      }}
+                      style={{
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "9px",
+                        fontWeight: 800,
+                        border: `1.5px solid ${tokens.borderPrimary}`,
+                        background: tokens.sidebarBg,
+                        color: tokens.textPrimary,
+                        padding: "5px 7px",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <Upload size={11} />
+                      <span>IMPORT URL</span>
+                    </button>
+                  </div>
+
+                  {/* Quick Copy / Popout / Restyle Toggle */}
+                  <div style={{ display: "flex", gap: "5px" }}>
+                    <button
+                      type="button"
+                      onClick={handleCopyCode}
+                      style={{
+                        flex: 1,
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "9px",
+                        fontWeight: 800,
+                        border: `1.5px solid ${tokens.borderPrimary}`,
+                        background: copied ? "#B8F04A" : tokens.sidebarBg,
+                        color: copied ? "#0A0A0A" : tokens.textPrimary,
+                        padding: "5px 7px",
+                        cursor: "pointer",
+                        display: "inline-flex",
                         alignItems: "center",
                         justifyContent: "center",
                         gap: "4px",
                       }}
                     >
-                      {isRestyling ? (
-                        <>
-                          <Loader2 size={10} className="animate-spin" />
-                          <span>RESTYLING...</span>
-                        </>
-                      ) : (
-                        <span>APPLY AI RESTYLE</span>
-                      )}
+                      {copied ? <Check size={11} /> : <Copy size={11} />}
+                      <span>{copied ? "COPIED" : "COPY"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handlePopout();
+                        setShowToolsMenu(false);
+                      }}
+                      style={{
+                        flex: 1,
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "9px",
+                        fontWeight: 800,
+                        border: `1.5px solid ${tokens.borderPrimary}`,
+                        background: tokens.sidebarBg,
+                        color: tokens.textPrimary,
+                        padding: "5px 7px",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <ExternalLink size={11} />
+                      <span>NEW TAB</span>
                     </button>
                   </div>
+
+                  {/* Height & Backdrop quick buttons */}
+                  <div style={{ borderTop: `1px solid ${tokens.borderSubtle}`, paddingTop: "8px" }}>
+                    <div
+                      style={{
+                        fontFamily: "var(--mono, monospace)",
+                        fontSize: "8.5px",
+                        fontWeight: 800,
+                        color: tokens.textMuted,
+                        letterSpacing: "0.1em",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      HEIGHT & BACKDROP
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "4px", marginBottom: "6px" }}>
+                      {([380, 560, 820, "auto"] as HeightPreset[]).map((hp) => (
+                        <button
+                          key={hp}
+                          type="button"
+                          onClick={() => {
+                            playSound.click();
+                            setHeightPreset(hp);
+                            if (onUpdateBlock && typeof hp === "number") {
+                              onUpdateBlock({ ...block, height: hp });
+                            }
+                          }}
+                          style={{
+                            border: `1.5px solid ${tokens.borderPrimary}`,
+                            background: heightPreset === hp ? "#FCE94F" : tokens.sidebarBg,
+                            color: heightPreset === hp ? "#0A0A0A" : tokens.textPrimary,
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "9px",
+                            fontWeight: 700,
+                            padding: "4px 2px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {hp === "auto" ? "AUTO" : `${hp}`}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "4px" }}>
+                      {(["paper", "dark", "white", "canvas"] as BackdropChoice[]).map((bg) => (
+                        <button
+                          key={bg}
+                          type="button"
+                          onClick={() => {
+                            playSound.click();
+                            setBackdrop(bg);
+                          }}
+                          style={{
+                            border: `1.5px solid ${tokens.borderPrimary}`,
+                            background: backdrop === bg ? "#B8F04A" : tokens.sidebarBg,
+                            color: backdrop === bg ? "#0A0A0A" : tokens.textPrimary,
+                            fontFamily: "var(--mono, monospace)",
+                            fontSize: "8.5px",
+                            fontWeight: 700,
+                            padding: "4px 2px",
+                            cursor: "pointer",
+                            textTransform: "capitalize",
+                          }}
+                        >
+                          {bg}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Restyle Submenu Trigger */}
+                  <button
+                    type="button"
+                    aria-expanded={showRestyleMenu}
+                    onClick={() => {
+                      playSound.click();
+                      setShowRestyleMenu(!showRestyleMenu);
+                    }}
+                    style={{
+                      width: "100%",
+                      fontFamily: "var(--mono, monospace)",
+                      fontSize: "9px",
+                      fontWeight: 800,
+                      border: `1.5px solid ${tokens.borderPrimary}`,
+                      background: showRestyleMenu ? "#FF2D8A" : tokens.sidebarBg,
+                      color: showRestyleMenu ? "#FFFFFF" : tokens.textPrimary,
+                      padding: "6px 8px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                      <Wand2 size={11} />
+                      <span>1-CLICK / AI RESTYLE</span>
+                    </span>
+                    <ChevronDown size={10} />
+                  </button>
+
+                  {showRestyleMenu && (
+                    <div
+                      style={{
+                        border: `1.5px solid ${tokens.borderPrimary}`,
+                        background: tokens.cardBg,
+                        padding: "8px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "5px",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleApplyPreset("neubrutalist")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "5px 8px",
+                          border: "1.5px solid #0A0A0A",
+                          background: "#B8F04A",
+                          color: "#0A0A0A",
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "10px",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                        }}
+                      >
+                        ⚡ HOARD NEUBRUTALIST
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyPreset("cyberpunk")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "5px 8px",
+                          border: "1.5px solid #0A0A0A",
+                          background: "#0A0E14",
+                          color: "#00FF66",
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "10px",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                        }}
+                      >
+                        📟 CYBERPUNK TERMINAL
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyPreset("swiss")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "5px 8px",
+                          border: "1.5px solid #0A0A0A",
+                          background: "#FFFFFF",
+                          color: "#0A0A0A",
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "10px",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                        }}
+                      >
+                        📰 SWISS EDITORIAL
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyPreset("tailwind")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "5px 8px",
+                          border: "1.5px solid #0A0A0A",
+                          background: "#38BDF8",
+                          color: "#0A0A0A",
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "10px",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                        }}
+                      >
+                        🌊 INJECT TAILWIND CDN
+                      </button>
+                      <input
+                        type="text"
+                        className="nb-mobile-16px"
+                        aria-label="Custom AI style prompt"
+                        placeholder="AI custom style prompt…"
+                        value={aiRestylePrompt}
+                        onChange={(e) => setAiRestylePrompt(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleAiRestyle();
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "5px 6px",
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "10px",
+                          border: `1.5px solid ${tokens.borderPrimary}`,
+                          background: tokens.canvasBg,
+                          color: tokens.textPrimary,
+                          boxSizing: "border-box",
+                        }}
+                      />
+                      <button
+                        type="button"
+                        disabled={isRestyling || !aiRestylePrompt.trim()}
+                        onClick={handleAiRestyle}
+                        style={{
+                          width: "100%",
+                          padding: "5px 8px",
+                          border: "1.5px solid #0A0A0A",
+                          background: "#FF2D8A",
+                          color: "#0A0A0A",
+                          fontFamily: "var(--mono, monospace)",
+                          fontSize: "9.5px",
+                          fontWeight: 800,
+                          cursor: isRestyling ? "wait" : "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        {isRestyling ? (
+                          <>
+                            <Loader2 size={10} className="animate-spin" />
+                            <span>RESTYLING...</span>
+                          </>
+                        ) : (
+                          <span>APPLY AI RESTYLE</span>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-
-            {/* Feature 3: Retro Console Drawer Toggle */}
-            <button
-              type="button"
-              onClick={() => {
-                playSound.click();
-                setShowConsoleDrawer(!showConsoleDrawer);
-              }}
-              title="Toggle Retro CRT JS Console"
-              style={{
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "9.5px",
-                fontWeight: 800,
-                border: `2px solid ${tokens.borderPrimary}`,
-                background: showConsoleDrawer
-                  ? "#00FF66"
-                  : consoleLogs.length > 0
-                  ? isInk
-                    ? "#1E293B"
-                    : "#FFF"
-                  : isInk
-                  ? "#0A0A0A"
-                  : "#FFFFFF",
-                color: showConsoleDrawer ? "#0A0A0A" : tokens.textPrimary,
-                padding: "3px 7px",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              <Terminal size={11} />
-              <span>LOGS{consoleLogs.length > 0 ? ` (${consoleLogs.length})` : ""}</span>
-            </button>
-
-            {/* Feature 6: Templates & AI Generators */}
-            <button
-              type="button"
-              onClick={() => {
-                playSound.click();
-                setShowTemplatesModal(true);
-              }}
-              title="Choose instant interactive widgets or generate with AI"
-              style={{
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "9.5px",
-                fontWeight: 800,
-                border: `2px solid ${tokens.borderPrimary}`,
-                background: isInk ? "#0A0A0A" : "#FFFFFF",
-                color: tokens.textPrimary,
-                padding: "3px 7px",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              <Sparkles size={11} />
-              <span>TEMPLATES</span>
-            </button>
-
-            {/* Feature 7: Web Clipper / Import URL */}
-            <button
-              type="button"
-              onClick={() => {
-                playSound.click();
-                setShowImportModal(true);
-              }}
-              title="Import public page or CodePen from URL"
-              style={{
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "9.5px",
-                fontWeight: 800,
-                border: `2px solid ${tokens.borderPrimary}`,
-                background: isInk ? "#0A0A0A" : "#FFFFFF",
-                color: tokens.textPrimary,
-                padding: "3px 7px",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              <Upload size={11} />
-              <span>IMPORT</span>
-            </button>
-
-            {/* Viewport switcher (in Preview or Split) */}
-            {viewMode !== "source" && (
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  border: `2px solid ${tokens.borderPrimary}`,
-                  background: isInk ? "#0A0A0A" : "#FFFFFF",
-                  padding: "2px",
-                  gap: "1px",
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => handleSetViewport("responsive")}
-                  title="Full width responsive"
-                  style={{
-                    border: "none",
-                    background: viewport === "responsive" ? "#FCE94F" : "transparent",
-                    color: "#0A0A0A",
-                    padding: "3px 5px",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                  }}
-                >
-                  <Monitor size={11} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetViewport("tablet")}
-                  title="Tablet (768px)"
-                  style={{
-                    border: "none",
-                    background: viewport === "tablet" ? "#FCE94F" : "transparent",
-                    color: "#0A0A0A",
-                    padding: "3px 5px",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                  }}
-                >
-                  <Tablet size={11} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetViewport("mobile")}
-                  title="Mobile (375px)"
-                  style={{
-                    border: "none",
-                    background: viewport === "mobile" ? "#FCE94F" : "transparent",
-                    color: "#0A0A0A",
-                    padding: "3px 5px",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                  }}
-                >
-                  <Smartphone size={11} />
-                </button>
-              </div>
-            )}
 
             {/* Reload */}
             <button
               type="button"
               onClick={handleReload}
+              aria-label="Reload sandbox"
               title="Reload sandbox"
               style={{
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "10px",
                 fontWeight: 700,
                 border: `2px solid ${tokens.borderPrimary}`,
-                background: isInk ? "#0A0A0A" : "#FFFFFF",
+                background: tokens.cardBg,
                 color: tokens.textPrimary,
                 padding: "3px 6px",
                 cursor: "pointer",
@@ -1295,175 +1405,6 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
               <RotateCw size={11} />
             </button>
 
-            {/* Copy */}
-            <button
-              type="button"
-              onClick={handleCopyCode}
-              title="Copy HTML to clipboard"
-              style={{
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "10px",
-                fontWeight: 700,
-                border: `2px solid ${tokens.borderPrimary}`,
-                background: copied ? "#B8F04A" : isInk ? "#0A0A0A" : "#FFFFFF",
-                color: copied ? "#0A0A0A" : tokens.textPrimary,
-                padding: "3px 6px",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "3px",
-              }}
-            >
-              {copied ? <Check size={11} /> : <Copy size={11} />}
-            </button>
-
-            {/* Pop-out */}
-            <button
-              type="button"
-              onClick={handlePopout}
-              title="Open standalone web page in new tab"
-              style={{
-                fontFamily: "var(--mono, monospace)",
-                fontSize: "10px",
-                fontWeight: 700,
-                border: `2px solid ${tokens.borderPrimary}`,
-                background: isInk ? "#0A0A0A" : "#FFFFFF",
-                color: tokens.textPrimary,
-                padding: "3px 6px",
-                cursor: "pointer",
-                display: "inline-flex",
-              }}
-            >
-              <ExternalLink size={11} />
-            </button>
-
-            {/* Height preset / Backdrop dropdown */}
-            <div style={{ position: "relative" }}>
-              <button
-                type="button"
-                onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-                title="Adjust height & backdrop"
-                style={{
-                  fontFamily: "var(--mono, monospace)",
-                  fontSize: "9px",
-                  fontWeight: 800,
-                  border: `2px solid ${tokens.borderPrimary}`,
-                  background: isInk ? "#0A0A0A" : "#FFFFFF",
-                  color: tokens.textPrimary,
-                  padding: "3px 6px",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "2px",
-                }}
-              >
-                <span>{heightPreset === "auto" ? "AUTO" : `${heightPreset}P`}</span>
-                <ChevronDown size={10} />
-              </button>
-
-              {showSettingsMenu && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "100%",
-                    right: 0,
-                    marginTop: "4px",
-                    background: isInk ? "#161920" : "#FFFFFF",
-                    border: "2px solid #0A0A0A",
-                    boxShadow: "3px 3px 0 #0A0A0A",
-                    zIndex: 50,
-                    minWidth: "150px",
-                    padding: "6px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "8.5px",
-                      fontWeight: 800,
-                      opacity: 0.5,
-                      padding: "4px 6px",
-                      letterSpacing: "0.1em",
-                    }}
-                  >
-                    HEIGHT PRESET
-                  </div>
-                  {([380, 560, 820, "auto"] as HeightPreset[]).map((hp) => (
-                    <button
-                      key={hp}
-                      type="button"
-                      onClick={() => {
-                        playSound.click();
-                        setHeightPreset(hp);
-                        setShowSettingsMenu(false);
-                        if (onUpdateBlock && typeof hp === "number") {
-                          onUpdateBlock({ ...block, height: hp });
-                        }
-                      }}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "4px 8px",
-                        border: "none",
-                        background: heightPreset === hp ? "#FCE94F" : "transparent",
-                        color: "#0A0A0A",
-                        fontFamily: "var(--mono, monospace)",
-                        fontSize: "10px",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        display: "flex",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <span>{hp === "auto" ? "Auto Fit" : `${hp}px`}</span>
-                      {heightPreset === hp && <span>✓</span>}
-                    </button>
-                  ))}
-
-                  <div
-                    style={{
-                      fontFamily: "var(--mono, monospace)",
-                      fontSize: "8.5px",
-                      fontWeight: 800,
-                      opacity: 0.5,
-                      padding: "8px 6px 4px",
-                      letterSpacing: "0.1em",
-                      borderTop: "1px solid rgba(0,0,0,0.1)",
-                      marginTop: "4px",
-                    }}
-                  >
-                    BACKDROP
-                  </div>
-                  {(["paper", "dark", "white", "canvas"] as BackdropChoice[]).map((bg) => (
-                    <button
-                      key={bg}
-                      type="button"
-                      onClick={() => {
-                        playSound.click();
-                        setBackdrop(bg);
-                        setShowSettingsMenu(false);
-                      }}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "4px 8px",
-                        border: "none",
-                        background: backdrop === bg ? "#B8F04A" : "transparent",
-                        color: "#0A0A0A",
-                        fontFamily: "var(--mono, monospace)",
-                        fontSize: "10px",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {bg}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* Fullscreen */}
             <button
               type="button"
@@ -1471,14 +1412,15 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
                 playSound.pop();
                 setIsFullscreen(!isFullscreen);
               }}
+              aria-label={isFullscreen ? "Exit fullscreen" : "Open fullscreen"}
               title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Immersion"}
               style={{
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "10px",
                 fontWeight: 700,
                 border: `2px solid ${tokens.borderPrimary}`,
-                background: isFullscreen ? "#FF2D8A" : isInk ? "#0A0A0A" : "#FFFFFF",
-                color: isFullscreen ? "#FFFFFF" : tokens.textPrimary,
+                background: isFullscreen ? "#FF2D8A" : tokens.cardBg,
+                color: isFullscreen ? "#0A0A0A" : tokens.textPrimary,
                 padding: "3px 6px",
                 cursor: "pointer",
                 display: "inline-flex",
@@ -1495,6 +1437,7 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
                   playSound.click();
                   onDeleteBlock();
                 }}
+                aria-label="Delete HTML block"
                 title="Delete HTML block"
                 style={{
                   fontFamily: "var(--mono, monospace)",
@@ -1502,7 +1445,7 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({
                   fontWeight: 700,
                   border: `2px solid ${tokens.borderPrimary}`,
                   background: "transparent",
-                  color: "#FF2D8A",
+                  color: tokens.dangerText,
                   padding: "3px 5px",
                   cursor: "pointer",
                   display: "inline-flex",

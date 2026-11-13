@@ -54,19 +54,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
     allLessons[0];
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-label={`Open notebook ${course.title}`}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.target !== e.currentTarget) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
+    <article
       style={{
+        position: "relative",
         border: `3px solid ${tokens.borderPrimary}`,
         background: tokens.cardBg,
         boxShadow: isDark
@@ -91,6 +81,22 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
           : `8px 8px 0 ${course.accent}, 16px 16px 0 #0A0A0A`;
       }}
     >
+      <button
+        type="button"
+        aria-label={`Open notebook ${course.title}`}
+        onClick={onClick}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+          zIndex: 1,
+        }}
+      />
       {/* Top Banner with Ghost Initial */}
       <div
         style={{
@@ -358,6 +364,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, onEdit,
           </span>
         )}
       </div>
-    </div>
+    </article>
   );
 };

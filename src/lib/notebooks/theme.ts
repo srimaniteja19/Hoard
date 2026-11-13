@@ -63,6 +63,10 @@ export interface ThemeTokens {
   codeBorder: string;
   codeFg: string;
 
+  // Semantic status text (WCAG AA compliant against cardBg/popoverBg)
+  dangerText: string;
+  successText: string;
+
   // Callouts
   calloutGotchaBg: string;
   calloutQuestionBg: string;
@@ -100,6 +104,8 @@ export const THEME_TOKENS: Record<NotebookTheme, ThemeTokens> = {
     codeBg: "#EBE7DC",
     codeBorder: "#0A0A0A",
     codeFg: "#0A0A0A",
+    dangerText: "#B91C1C",
+    successText: "#15803D",
     calloutGotchaBg: "#FFE4E6",
     calloutQuestionBg: "#FEF3C7",
     calloutFactBg: "#DCFCE7",
@@ -134,6 +140,8 @@ export const THEME_TOKENS: Record<NotebookTheme, ThemeTokens> = {
     codeBg: "#161618",
     codeBorder: "rgba(255, 255, 255, 0.15)",
     codeFg: "#F5F5F7",
+    dangerText: "#F87171",
+    successText: "#4ADE80",
     calloutGotchaBg: "#231518",
     calloutQuestionBg: "#241E14",
     calloutFactBg: "#152219",
@@ -168,6 +176,8 @@ export const THEME_TOKENS: Record<NotebookTheme, ThemeTokens> = {
     codeBg: "#E0E9DC",
     codeBorder: "rgba(22, 38, 27, 0.35)",
     codeFg: "#16261B",
+    dangerText: "#B91C1C",
+    successText: "#15803D",
     calloutGotchaBg: "#FCEAE8",
     calloutQuestionBg: "#FEF6E0",
     calloutFactBg: "#E3F8EB",
@@ -190,7 +200,7 @@ export const THEME_TOKENS: Record<NotebookTheme, ThemeTokens> = {
     borderSubtle: "rgba(255, 255, 255, 0.14)",
     boxShadow: "3px 3px 0 rgba(0,0,0,0.8)",
     popoverShadow: "4px 4px 0 rgba(0,0,0,0.9)",
-    accentColor: "#8B5CF6",
+    accentColor: "#7C3AED",
     accentFg: "#FFFFFF",
     linkColor: "#C4B5FD",
     highlightYellow: "#C084FC",
@@ -202,6 +212,8 @@ export const THEME_TOKENS: Record<NotebookTheme, ThemeTokens> = {
     codeBg: "#141A2D",
     codeBorder: "rgba(139, 92, 246, 0.35)",
     codeFg: "#E2E8F0",
+    dangerText: "#F87171",
+    successText: "#4ADE80",
     calloutGotchaBg: "#2B1425",
     calloutQuestionBg: "#261B33",
     calloutFactBg: "#0F292B",

@@ -114,6 +114,7 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({
 
           <textarea
             rows={9}
+            className="nb-mobile-16px"
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}
             placeholder="0:03 The reflection design pattern is something I've used in many applications..."

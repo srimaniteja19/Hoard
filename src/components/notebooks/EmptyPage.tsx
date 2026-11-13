@@ -7,7 +7,6 @@ import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
 interface EmptyPageProps {
   onStartWriting: () => void;
   onPasteTranscript: () => void;
-  onDraftFromSlides?: () => void;
   onDraftFromTopic?: () => void;
   onCreateSubpage?: () => void;
   theme?: NotebookTheme;

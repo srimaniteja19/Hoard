@@ -212,7 +212,7 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
               }}
             >
               <span>PROPOSED STRUCTURED BLOCKS ({proposedBlocks.length})</span>
-              <span style={{ color: tokens.isDark ? "#4ADE80" : "#16A34A" }}>✓ SELECT TO APPLY</span>
+              <span style={{ color: tokens.successText }}>✓ SELECT TO APPLY</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {proposedBlocks.map((b) => {
@@ -232,7 +232,7 @@ export const DiffSheet: React.FC<DiffSheetProps> = ({
                     }}
                     style={{
                       border: "2px solid",
-                      borderColor: isSelected ? "#16A34A" : tokens.borderSubtle,
+                      borderColor: isSelected ? tokens.successText : tokens.borderSubtle,
                       background: isSelected
                         ? (tokens.isDark ? "rgba(22, 163, 74, 0.14)" : "#F0FDF4")
                         : tokens.cardBg,

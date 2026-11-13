@@ -69,7 +69,12 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   const tokens = getThemeTokens(theme);
   const isInk = tokens.isDark;
   const [toggleOpen, setToggleOpen] = useState(false);
-  const [imageSize, setImageSize] = useState<"compact" | "standard" | "full">("standard");
+  const imageSize = block.type === "image" && block.size ? block.size : "standard";
+  const handleSetImageSize = (nextSize: "compact" | "standard" | "full") => {
+    if (onUpdateBlock && block.type === "image") {
+      onUpdateBlock({ ...block, size: nextSize });
+    }
+  };
 
   // Render Loop diagram SVG if block is loop image
   const renderImageContent = (url: string, caption?: string) => {
@@ -83,11 +88,11 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
       return (
         <div
           style={{
-            border: "3px solid #0A0A0A",
-            boxShadow: "5px 5px 0 #0A0A0A",
+            border: `3px solid ${tokens.borderPrimary}`,
+            boxShadow: tokens.boxShadow,
             overflow: "hidden",
-            background: "#FFFFFF",
-            color: "#0A0A0A",
+            background: tokens.cardBg,
+            color: tokens.textPrimary,
             margin: "16px 0",
             ...sizeStyle,
           }}
@@ -126,6 +131,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           </div>
           {caption && (
             <div
+              role={onUpdateBlock ? "textbox" : undefined}
+              aria-label={onUpdateBlock ? "Diagram caption" : undefined}
               contentEditable={!!onUpdateBlock}
               suppressContentEditableWarning
               onBlur={(e) => {
@@ -153,11 +160,11 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
     return (
       <div
         style={{
-          border: "3px solid #0A0A0A",
-          boxShadow: "5px 5px 0 #0A0A0A",
+          border: `3px solid ${tokens.borderPrimary}`,
+          boxShadow: tokens.boxShadow,
           overflow: "hidden",
-          background: "#FFFFFF",
-          color: "#0A0A0A",
+          background: tokens.cardBg,
+          color: tokens.textPrimary,
           margin: "16px 0",
           ...sizeStyle,
         }}
@@ -169,8 +176,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             justifyContent: "space-between",
             alignItems: "center",
             padding: "4px 10px",
-            background: "#EBE7DC",
-            borderBottom: "2px solid #0A0A0A",
+            background: tokens.sidebarBg,
+            borderBottom: `2px solid ${tokens.borderPrimary}`,
             fontFamily: "var(--mono, monospace)",
             fontSize: "8.5px",
             fontWeight: 700,
@@ -179,13 +186,15 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           <div style={{ display: "flex", gap: "4px" }}>
             <button
               type="button"
-              onClick={() => setImageSize("compact")}
+              aria-label="Set image width 50%"
+              aria-pressed={imageSize === "compact"}
+              onClick={() => handleSetImageSize("compact")}
               style={{
-                background: imageSize === "compact" ? "#0A0A0A" : "transparent",
-                color: imageSize === "compact" ? "#FFFFFF" : "#0A0A0A",
-                border: "1px solid #0A0A0A",
+                background: imageSize === "compact" ? tokens.textPrimary : "transparent",
+                color: imageSize === "compact" ? tokens.cardBg : tokens.textPrimary,
+                border: `1px solid ${tokens.borderPrimary}`,
                 padding: "2px 5px",
-                cursor: "pointer",
+                cursor: onUpdateBlock ? "pointer" : "default",
                 fontSize: "8px",
               }}
             >
@@ -193,13 +202,15 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setImageSize("standard")}
+              aria-label="Set image width 75%"
+              aria-pressed={imageSize === "standard"}
+              onClick={() => handleSetImageSize("standard")}
               style={{
-                background: imageSize === "standard" ? "#0A0A0A" : "transparent",
-                color: imageSize === "standard" ? "#FFFFFF" : "#0A0A0A",
-                border: "1px solid #0A0A0A",
+                background: imageSize === "standard" ? tokens.textPrimary : "transparent",
+                color: imageSize === "standard" ? tokens.cardBg : tokens.textPrimary,
+                border: `1px solid ${tokens.borderPrimary}`,
                 padding: "2px 5px",
-                cursor: "pointer",
+                cursor: onUpdateBlock ? "pointer" : "default",
                 fontSize: "8px",
               }}
             >
@@ -207,13 +218,15 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setImageSize("full")}
+              aria-label="Set image width 100%"
+              aria-pressed={imageSize === "full"}
+              onClick={() => handleSetImageSize("full")}
               style={{
-                background: imageSize === "full" ? "#0A0A0A" : "transparent",
-                color: imageSize === "full" ? "#FFFFFF" : "#0A0A0A",
-                border: "1px solid #0A0A0A",
+                background: imageSize === "full" ? tokens.textPrimary : "transparent",
+                color: imageSize === "full" ? tokens.cardBg : tokens.textPrimary,
+                border: `1px solid ${tokens.borderPrimary}`,
                 padding: "2px 5px",
-                cursor: "pointer",
+                cursor: onUpdateBlock ? "pointer" : "default",
                 fontSize: "8px",
               }}
             >
@@ -224,11 +237,12 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             <button
               type="button"
               onClick={onDeleteBlock}
+              aria-label="Delete image"
               title="Delete image"
               style={{
                 background: "transparent",
                 border: "none",
-                color: "#DC2626",
+                color: tokens.dangerText,
                 cursor: "pointer",
                 padding: "2px 4px",
                 fontSize: "10px",
@@ -242,6 +256,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
         <img src={url} alt={caption || "Pasted image"} style={{ width: "100%", display: "block" }} />
 
         <div
+          role={onUpdateBlock ? "textbox" : undefined}
+          aria-label={onUpdateBlock ? "Image caption" : undefined}
           contentEditable={!!onUpdateBlock}
           suppressContentEditableWarning
           onBlur={(e) => {
@@ -882,10 +898,10 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
       return (
         <div
           style={{
-            border: "3px solid #0A0A0A",
-            background: "#FFFFFF",
-            color: "#0A0A0A",
-            boxShadow: "6px 6px 0 #0A0A0A",
+            border: `3px solid ${tokens.borderPrimary}`,
+            background: tokens.cardBg,
+            color: tokens.textPrimary,
+            boxShadow: tokens.boxShadow,
             margin: "18px 0 22px",
             overflow: "hidden",
           }}
@@ -901,11 +917,13 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               fontWeight: 700,
               letterSpacing: "0.17em",
               padding: "8px 14px",
-              background: "#EBE7DC",
-              borderBottom: "3px solid #0A0A0A",
+              background: tokens.sidebarBg,
+              borderBottom: `3px solid ${tokens.borderPrimary}`,
             }}
           >
             <span
+              role={onUpdateBlock ? "textbox" : undefined}
+              aria-label={onUpdateBlock ? "Example block title" : undefined}
               contentEditable={!!onUpdateBlock}
               suppressContentEditableWarning
               onBlur={(e) => {
@@ -926,8 +944,10 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             }}
           >
             {/* Draft 1 */}
-            <div style={{ padding: "15px 16px", borderRight: "2px solid rgba(10,10,10,0.14)" }}>
+            <div style={{ padding: "15px 16px", borderRight: `2px solid ${tokens.borderSubtle}` }}>
               <span
+                role={onUpdateBlock ? "textbox" : undefined}
+                aria-label={onUpdateBlock ? "First draft label" : undefined}
                 contentEditable={!!onUpdateBlock}
                 suppressContentEditableWarning
                 onBlur={(e) => {
@@ -941,14 +961,16 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   padding: "2px 7px",
                   display: "inline-block",
                   marginBottom: "11px",
-                  border: "2px solid #0A0A0A",
-                  background: "#FFFFFF",
-                  color: "rgba(10, 10, 10, 0.72)",
+                  border: `2px solid ${tokens.borderPrimary}`,
+                  background: tokens.sidebarBg,
+                  color: tokens.textSecondary,
                 }}
               >
                 {block.v1Title || "DRAFT 1 · TYPED FAST"}
               </span>
               <p
+                role={onUpdateBlock ? "textbox" : undefined}
+                aria-label={onUpdateBlock ? "First draft text" : undefined}
                 contentEditable={!!onUpdateBlock}
                 suppressContentEditableWarning
                 onBlur={(e) => {
@@ -959,7 +981,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   fontSize: "16.5px",
                   lineHeight: "1.55",
                   margin: 0,
-                  color: "#0A0A0A",
+                  color: tokens.textPrimary,
                   whiteSpace: "pre-wrap",
                 }}
               >
@@ -984,13 +1006,13 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               style={{
                 display: "grid",
                 placeItems: "center",
-                borderLeft: "2px solid rgba(10,10,10,0.14)",
-                borderRight: "2px solid rgba(10,10,10,0.14)",
+                borderLeft: `2px solid ${tokens.borderSubtle}`,
+                borderRight: `2px solid ${tokens.borderSubtle}`,
                 fontFamily: "var(--mono, monospace)",
                 fontWeight: 700,
                 fontSize: "16px",
-                background: "#EBE7DC",
-                color: "#0A0A0A",
+                background: tokens.sidebarBg,
+                color: tokens.textPrimary,
               }}
             >
               →
@@ -999,6 +1021,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             {/* Draft 2 */}
             <div style={{ padding: "15px 16px" }}>
               <span
+                role={onUpdateBlock ? "textbox" : undefined}
+                aria-label={onUpdateBlock ? "Revised draft label" : undefined}
                 contentEditable={!!onUpdateBlock}
                 suppressContentEditableWarning
                 onBlur={(e) => {
@@ -1012,7 +1036,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   padding: "2px 7px",
                   display: "inline-block",
                   marginBottom: "11px",
-                  border: "2px solid #0A0A0A",
+                  border: `2px solid ${tokens.borderPrimary}`,
                   background: "#B8F04A",
                   color: "#0A0A0A",
                 }}
@@ -1020,6 +1044,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 {block.v2Title || "DRAFT 2 · AFTER REREADING"}
               </span>
               <p
+                role={onUpdateBlock ? "textbox" : undefined}
+                aria-label={onUpdateBlock ? "Revised draft text" : undefined}
                 contentEditable={!!onUpdateBlock}
                 suppressContentEditableWarning
                 onBlur={(e) => {
@@ -1030,7 +1056,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   fontSize: "16.5px",
                   lineHeight: "1.55",
                   margin: 0,
-                  color: "#0A0A0A",
+                  color: tokens.textPrimary,
                   whiteSpace: "pre-wrap",
                 }}
               >
@@ -1058,13 +1084,13 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               gap: "16px",
               flexWrap: "wrap",
               padding: "10px 14px",
-              borderTop: "2px solid rgba(10,10,10,0.14)",
+              borderTop: `2px solid ${tokens.borderSubtle}`,
               fontFamily: "var(--mono, monospace)",
               fontSize: "9px",
               fontWeight: 700,
               letterSpacing: "0.1em",
-              opacity: 0.65,
-              background: "#FAFAFA",
+              color: tokens.textSecondary,
+              background: tokens.sidebarBg,
             }}
           >
             <span>
@@ -1075,7 +1101,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   display: "inline-block",
                   marginRight: "6px",
                   verticalAlign: "-1px",
-                  border: "2px solid #0A0A0A",
+                  border: `2px solid ${tokens.borderPrimary}`,
                   background: "#FF2D8A",
                 }}
               />
@@ -1089,14 +1115,14 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   display: "inline-block",
                   marginRight: "6px",
                   verticalAlign: "-1px",
-                  border: "2px solid #0A0A0A",
+                  border: `2px solid ${tokens.borderPrimary}`,
                   background: "#B8F04A",
                 }}
               />
               {block.fixedLegend || "WHAT THE REVISION FIXED"}
             </span>
             {block.summaryPill && (
-              <span style={{ marginLeft: "auto", opacity: 0.9 }}>{block.summaryPill}</span>
+              <span style={{ marginLeft: "auto" }}>{block.summaryPill}</span>
             )}
           </div>
         </div>
@@ -1107,15 +1133,17 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
       return (
         <div
           style={{
-            border: "3px solid #0A0A0A",
-            background: "#FFFFFF",
-            color: "#0A0A0A",
-            boxShadow: "5px 5px 0 #0A0A0A",
+            border: `3px solid ${tokens.borderPrimary}`,
+            background: tokens.cardBg,
+            color: tokens.textPrimary,
+            boxShadow: tokens.boxShadow,
             margin: "18px 0 22px",
             overflow: "hidden",
           }}
         >
           <div
+            role={onUpdateBlock ? "textbox" : undefined}
+            aria-label={onUpdateBlock ? "Scale block title" : undefined}
             contentEditable={!!onUpdateBlock}
             suppressContentEditableWarning
             onBlur={(e) => {
@@ -1127,8 +1155,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               fontWeight: 700,
               letterSpacing: "0.17em",
               padding: "8px 14px",
-              background: "#EBE7DC",
-              borderBottom: "3px solid #0A0A0A",
+              background: tokens.sidebarBg,
+              borderBottom: `3px solid ${tokens.borderPrimary}`,
             }}
           >
             {block.title || "HIS WORDS, NOT MEASUREMENTS"}
@@ -1147,6 +1175,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 }}
               >
                 <span
+                  role={onUpdateBlock ? "textbox" : undefined}
+                  aria-label={onUpdateBlock ? `Scale label ${idx + 1}` : undefined}
                   contentEditable={!!onUpdateBlock}
                   suppressContentEditableWarning
                   onBlur={(e) => {
@@ -1168,8 +1198,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 <div
                   style={{
                     height: "20px",
-                    border: "2px solid #0A0A0A",
-                    background: "#FFFFFF",
+                    border: `2px solid ${tokens.borderPrimary}`,
+                    background: tokens.sidebarBg,
                     overflow: "hidden",
                   }}
                 >
@@ -1184,7 +1214,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                           ? "#FCE94F"
                           : item.color === "pink"
                           ? "#FF2D8A"
-                          : "#EBE7DC",
+                          : tokens.borderSubtle,
                     }}
                   />
                 </div>
@@ -1192,6 +1222,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             ))}
             {block.footer && (
               <div
+                role={onUpdateBlock ? "textbox" : undefined}
+                aria-label={onUpdateBlock ? "Scale footer note" : undefined}
                 contentEditable={!!onUpdateBlock}
                 suppressContentEditableWarning
                 onBlur={(e) => {
@@ -1201,9 +1233,9 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "9.5px",
                   letterSpacing: "0.07em",
-                  opacity: 0.55,
+                  color: tokens.textMuted,
                   paddingTop: "11px",
-                  borderTop: "2px dashed rgba(10,10,10,0.14)",
+                  borderTop: `2px dashed ${tokens.borderSubtle}`,
                   lineHeight: 1.75,
                   marginTop: "6px",
                 }}
@@ -1259,11 +1291,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                   alignItems: "center",
                   padding: "9px 14px",
                   borderBottom: idx === block.items.length - 1 ? "none" : (isInk ? "1.5px solid rgba(255,255,255,0.12)" : "2px solid rgba(10,10,10,0.14)"),
-                  cursor: "pointer",
-                  transition: "background 0.1s ease",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
                 <span
                   style={{
@@ -1313,11 +1341,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             boxShadow: isInk ? "4px 4px 0 rgba(0,0,0,0.6)" : "4px 4px 0 #0A0A0A",
             padding: "12px 15px",
             margin: "20px 0",
-            cursor: "pointer",
-            transition: "background 0.15s ease",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = isInk ? "#252A36" : "#FCE94F")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = isInk ? "#181B24" : "#FFFFFF")}
         >
           <div
             style={{
@@ -1344,7 +1368,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 fontSize: "9px",
                 fontWeight: 700,
                 letterSpacing: "0.1em",
-                opacity: 0.55,
+                color: tokens.textMuted,
               }}
             >
               {block.meta}
@@ -1561,6 +1585,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               ▸
             </button>
             <span
+              role={onUpdateBlock ? "textbox" : undefined}
+              aria-label={onUpdateBlock ? "Toggle summary" : undefined}
               contentEditable={!!onUpdateBlock}
               suppressContentEditableWarning
               onBlur={(e) => {
@@ -1584,8 +1610,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
                 padding: "9px 0 3px",
                 fontSize: "16px",
                 lineHeight: "1.62",
-                color: "inherit",
-                opacity: 0.65,
+                color: tokens.textSecondary,
                 animation: "fadeIn 0.15s ease",
               }}
               placeholder="Toggle details…"

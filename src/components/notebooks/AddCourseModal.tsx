@@ -228,6 +228,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
             </div>
             <input
               type="text"
+              className="nb-mobile-16px"
               value={provider}
               onChange={(e) => setProvider(e.target.value.toUpperCase())}
               placeholder="e.g. HARVARD CS50, ANTHROPIC"

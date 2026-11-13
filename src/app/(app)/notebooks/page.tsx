@@ -206,6 +206,14 @@ export default function NotebooksPage() {
     icon?: string;
     coverUrl?: string;
   } | null>(null);
+  const pendingNewLessonRef = useRef<{
+    courseId: string;
+    moduleId: string;
+    moduleIdx: number;
+    title: string;
+    icon?: string;
+    coverUrl?: string;
+  } | null>(null);
   const explainTargetRef = useRef<{ courseId: string; lessonId: string } | null>(null);
   const urlModalDialogRef = useRef<HTMLDivElement>(null);
   const mobileDrawerRef = useRef<HTMLDivElement | null>(null);
@@ -308,6 +316,12 @@ export default function NotebooksPage() {
       el.inert = isMobile && !mobileSidebarOpen;
     }
   }, [isMobile, mobileSidebarOpen]);
+
+  useModalFocusTrap({
+    isOpen: isMobile && mobileSidebarOpen && !isFocusMode,
+    onClose: () => setMobileSidebarOpen(false),
+    containerRef: mobileDrawerRef,
+  });
 
   useModalFocusTrap({
     isOpen: showUrlModal,
@@ -1843,48 +1857,22 @@ export default function NotebooksPage() {
     if (!currentCourse || !currentModule) return;
 
     if (result.destination === "new") {
-      const targetMod = currentModule;
-      const newLessonId = generateBlockId();
-      const wc = computeWordCount(result.blocks);
-      const newLesson: SeedCourseLesson = {
-        id: newLessonId,
+      pendingTopicMetaRef.current = null;
+      diffTargetRef.current = null;
+      pendingNewLessonRef.current = {
+        courseId: currentCourse.id,
+        moduleId: currentModule.id,
+        moduleIdx: currentModuleIdx,
         title: result.title,
         icon: result.icon,
         coverUrl: result.coverUrl,
-        blocks: result.blocks,
-        watched: false,
-        meta: `${wc.toLocaleString()} WORDS · AI DRAFT`,
       };
-
-      const updated = courses.map((c) => {
-        if (c.id === currentCourse.id) {
-          return {
-            ...c,
-            modules: c.modules.map((m, mIdx) => {
-              if (mIdx === currentModuleIdx) {
-                return {
-                  ...m,
-                  lessons: [...m.lessons, newLesson],
-                };
-              }
-              return m;
-            }),
-          };
-        }
-        return c;
-      });
-
-      saveStoredCourses(updated);
-      setCourses(updated);
-      setCurrentLessonIdx(targetMod.lessons.length);
-
-      createLessonInDbApi(targetMod.id, result.title, result.blocks, undefined, {
-        id: newLessonId,
-        coverUrl: result.coverUrl,
-        icon: result.icon,
-      });
+      setDiffOriginal([]);
+      setDiffProposed(result.blocks);
+      setDiffSummary(`AI Draft (new page): "${result.title}" — review blocks before creating this page.`);
     } else {
       if (!currentLesson) return;
+      pendingNewLessonRef.current = null;
       const isFreshOrUntitled =
         !hasCurrentLessonContent &&
         (!currentLesson.title ||
@@ -2058,6 +2046,64 @@ export default function NotebooksPage() {
     ? "Analyzing transcript against your notes…"
     : null;
 
+  const renderAiErrorBanner = () =>
+    aiError ? (
+      <div
+        role="alert"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+          padding: "9px 12px",
+          background: tokens.isDark ? "rgba(239, 68, 68, 0.18)" : "#FFF1F2",
+          border: `2px solid ${tokens.dangerText}`,
+          color: tokens.isDark ? "#FECACA" : "#991B1B",
+          fontFamily: "var(--mono, monospace)",
+          fontSize: "10px",
+          fontWeight: 700,
+        }}
+      >
+        <span>{aiError.message}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+          {aiError.retry && (
+            <button
+              type="button"
+              onClick={() => aiError.retry?.()}
+              style={{
+                border: "1.5px solid #B91C1C",
+                background: "#B91C1C",
+                color: "#FFFFFF",
+                padding: "4px 9px",
+                fontFamily: "var(--mono, monospace)",
+                fontSize: "9.5px",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              RETRY
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setAiError(null)}
+            style={{
+              border: "1.5px solid currentColor",
+              background: "transparent",
+              color: "inherit",
+              padding: "4px 8px",
+              fontFamily: "var(--mono, monospace)",
+              fontSize: "9.5px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            DISMISS
+          </button>
+        </div>
+      </div>
+    ) : null;
+
   return (
     <div
       className="page-scroll nb-scope"
@@ -2127,6 +2173,7 @@ export default function NotebooksPage() {
             )}
             <button
               type="button"
+              className="nb-touch-target"
               onClick={() => setView("index")}
               style={{
                 background: "transparent",
@@ -2170,7 +2217,7 @@ export default function NotebooksPage() {
                         <button
                           type="button"
                           onClick={() => navigateToLesson(anc.id)}
-                          className="nb-breadcrumb-title"
+                          className="nb-breadcrumb-title nb-touch-target"
                           style={{
                             background: "transparent",
                             border: "none",
@@ -2198,6 +2245,7 @@ export default function NotebooksPage() {
           {/* Quick Jump / Switcher Button (Cmd + K) */}
           <button
             type="button"
+            className="nb-touch-target"
             onClick={() => setShowQuickSwitcher(true)}
             title="Quick Jump across all notes (Cmd+K)"
             style={{
@@ -2241,6 +2289,7 @@ export default function NotebooksPage() {
           <div ref={appearanceMenuRef} style={{ position: "relative", flex: "none" }}>
             <button
               type="button"
+              className="nb-touch-target"
               onClick={() => {
                 playSound.click();
                 setShowAppearanceMenu((prev) => !prev);
@@ -2388,6 +2437,7 @@ export default function NotebooksPage() {
           <div ref={helpMenuRef} style={{ position: "relative", flex: "none" }}>
             <button
               type="button"
+              className="nb-touch-target"
               onClick={() => {
                 playSound.click();
                 setShowHelpMenu((prev) => !prev);
@@ -2474,6 +2524,11 @@ export default function NotebooksPage() {
       {/* ══════════ 1. INDEX VIEW ══════════ */}
       {view === "index" && (
         <div style={{ maxWidth: "1180px", width: "100%", margin: "0 auto", padding: "34px clamp(16px, 3vw, 30px) 110px" }}>
+          {aiError && (
+            <div className="no-print" style={{ marginBottom: "18px" }}>
+              {renderAiErrorBanner()}
+            </div>
+          )}
           <div
             style={{
               display: "flex",
@@ -2609,11 +2664,11 @@ export default function NotebooksPage() {
                 <div
                   style={{
                     padding: "40px 20px",
-                    border: "2px dashed rgba(10,10,10,0.25)",
+                    border: `2px dashed ${tokens.borderSubtle}`,
                     textAlign: "center",
                     fontFamily: "var(--mono, monospace)",
                     fontSize: "11px",
-                    opacity: 0.5,
+                    color: tokens.textMuted,
                   }}
                 >
                   NO NOTES FOUND MATCHING &quot;{globalSearchQuery}&quot;
@@ -2896,6 +2951,7 @@ export default function NotebooksPage() {
             </p>
             <button
               type="button"
+              className="nb-touch-target"
               onClick={() => setView("index")}
               style={{
                 fontFamily: "var(--mono, monospace)",
@@ -2934,16 +2990,16 @@ export default function NotebooksPage() {
               type="button"
               onClick={() => setIsFocusMode(false)}
               title="Exit Focus Mode (ESC)"
-              className="no-print"
+              className="no-print nb-touch-target"
               style={{
                 position: "fixed",
                 top: "18px",
                 right: "24px",
                 zIndex: 99999,
-                background: "#0A0A0A",
-                color: "#F3F0E8",
-                border: "2px solid #0A0A0A",
-                boxShadow: "3px 3px 0 rgba(0,0,0,0.2)",
+                background: tokens.popoverBg,
+                color: tokens.textPrimary,
+                border: `2px solid ${tokens.borderPrimary}`,
+                boxShadow: tokens.boxShadow,
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "9.5px",
                 fontWeight: 800,
@@ -2960,13 +3016,13 @@ export default function NotebooksPage() {
                 e.currentTarget.style.color = "#0A0A0A";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#0A0A0A";
-                e.currentTarget.style.color = "#F3F0E8";
+                e.currentTarget.style.background = tokens.popoverBg;
+                e.currentTarget.style.color = tokens.textPrimary;
               }}
             >
               <Minimize2 size={12} />
               <span>EXIT FOCUS</span>
-              <span style={{ opacity: 0.5, fontSize: "8.5px" }}>ESC</span>
+              <span style={{ color: tokens.textMuted, fontSize: "8.5px" }}>ESC</span>
             </button>
           )}
 
@@ -3205,7 +3261,6 @@ export default function NotebooksPage() {
                         handleUpdateBlocks([...currentBlocks, embedBlock]);
                       }}
                       theme={paperTheme}
-                      accentColor={currentCourse.accent}
                     />
                   )}
 
@@ -3226,7 +3281,7 @@ export default function NotebooksPage() {
                         fontSize: "9.5px",
                         fontWeight: 700,
                         letterSpacing: "0.14em",
-                        opacity: 0.45,
+                        color: tokens.textMuted,
                         minWidth: 0,
                         overflowWrap: "anywhere",
                       }}
@@ -3270,8 +3325,8 @@ export default function NotebooksPage() {
                               fontSize: "9px",
                               fontWeight: 700,
                               padding: "2px 7px",
-                              border: "1.5px solid #EF4444",
-                              color: "#EF4444",
+                              border: `1.5px solid ${tokens.dangerText}`,
+                              color: tokens.dangerText,
                             }}
                           >
                             INVALID SOURCE URL
@@ -3279,6 +3334,7 @@ export default function NotebooksPage() {
                         )}
                         <button
                           type="button"
+                          className="nb-touch-target"
                           onClick={() => {
                             setUrlDraft(currentLesson.lessonUrl || "");
                             setUrlError(null);
@@ -3289,9 +3345,8 @@ export default function NotebooksPage() {
                           style={{
                             border: "none",
                             background: "transparent",
-                            color: "inherit",
+                            color: tokens.textMuted,
                             cursor: "pointer",
-                            opacity: 0.45,
                             padding: "2px",
                           }}
                         >
@@ -3467,62 +3522,7 @@ export default function NotebooksPage() {
                     </div>
                   )}
 
-                  {aiError && (
-                    <div
-                      role="alert"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "12px",
-                        padding: "9px 12px",
-                        background: tokens.isDark ? "rgba(239, 68, 68, 0.18)" : "#FFF1F2",
-                        border: "2px solid #EF4444",
-                        color: tokens.isDark ? "#FECACA" : "#991B1B",
-                        fontFamily: "var(--mono, monospace)",
-                        fontSize: "10px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      <span>{aiError.message}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                        {aiError.retry && (
-                          <button
-                            type="button"
-                            onClick={() => aiError.retry?.()}
-                            style={{
-                              border: "1.5px solid #EF4444",
-                              background: "#EF4444",
-                              color: "#FFFFFF",
-                              padding: "4px 9px",
-                              fontFamily: "var(--mono, monospace)",
-                              fontSize: "9.5px",
-                              fontWeight: 800,
-                              cursor: "pointer",
-                            }}
-                          >
-                            RETRY
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setAiError(null)}
-                          style={{
-                            border: "1.5px solid currentColor",
-                            background: "transparent",
-                            color: "inherit",
-                            padding: "4px 8px",
-                            fontFamily: "var(--mono, monospace)",
-                            fontSize: "9.5px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                          }}
-                        >
-                          DISMISS
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  {renderAiErrorBanner()}
                 </div>
               )}
 
@@ -3546,6 +3546,7 @@ export default function NotebooksPage() {
                   <span>·</span>
                   <button
                     type="button"
+                    className="nb-touch-target"
                     aria-pressed={Boolean(currentLesson.watched)}
                     onClick={() => {
                       playSound.pop();
@@ -3587,6 +3588,7 @@ export default function NotebooksPage() {
                   <div ref={aiMenuRef} style={{ position: "relative" }}>
                     <button
                       type="button"
+                      className="nb-touch-target"
                       aria-expanded={showAiMenu}
                       aria-haspopup="menu"
                       onClick={() => {
@@ -3618,6 +3620,8 @@ export default function NotebooksPage() {
 
                     {showAiMenu && (
                       <div
+                        role="menu"
+                        aria-label="AI study tools"
                         style={{
                           position: "absolute",
                           top: "calc(100% + 6px)",
@@ -3636,6 +3640,7 @@ export default function NotebooksPage() {
                       >
                         <button
                           type="button"
+                          role="menuitem"
                           onClick={() => {
                             setShowAiMenu(false);
                             setTopicModalInitialQuery(currentLesson?.title && currentLesson.title !== "Untitled Page" ? currentLesson.title : "");
@@ -3665,6 +3670,7 @@ export default function NotebooksPage() {
 
                         <button
                           type="button"
+                          role="menuitem"
                           onClick={() => {
                             setShowAiMenu(false);
                             handleTidyNotes();
@@ -3693,6 +3699,7 @@ export default function NotebooksPage() {
 
                         <button
                           type="button"
+                          role="menuitem"
                           onClick={() => {
                             setShowAiMenu(false);
                             handleQuizMe();
@@ -3721,6 +3728,7 @@ export default function NotebooksPage() {
 
                         <button
                           type="button"
+                          role="menuitem"
                           onClick={() => {
                             setShowAiMenu(false);
                             handleExplain();
@@ -3749,6 +3757,7 @@ export default function NotebooksPage() {
 
                         <button
                           type="button"
+                          role="menuitem"
                           onClick={() => {
                             setShowAiMenu(false);
                             if (currentLesson.transcript) {
@@ -3785,6 +3794,7 @@ export default function NotebooksPage() {
                   {/* Zen Focus Mode Button */}
                   <button
                     type="button"
+                    className="nb-touch-target"
                     onClick={() => {
                       playSound.click();
                       setIsFocusMode(!isFocusMode);
@@ -3823,6 +3833,7 @@ export default function NotebooksPage() {
                   {/* Flashcards Button */}
                   <button
                     type="button"
+                    className="nb-touch-target"
                     onClick={() => {
                       playSound.click();
                       setShowFlashcardModal(true);
@@ -3852,6 +3863,7 @@ export default function NotebooksPage() {
                   <div ref={pageMoreMenuRef} style={{ position: "relative" }}>
                     <button
                       type="button"
+                      className="nb-touch-target"
                       aria-label="More page actions"
                       aria-expanded={showPageMoreMenu}
                       aria-haspopup="menu"
@@ -3884,6 +3896,8 @@ export default function NotebooksPage() {
 
                     {showPageMoreMenu && (
                       <div
+                        role="menu"
+                        aria-label="More page actions"
                         style={{
                           position: "absolute",
                           top: "calc(100% + 6px)",
@@ -3900,6 +3914,7 @@ export default function NotebooksPage() {
                       >
                         <button
                           type="button"
+                          role="menuitem"
                           onClick={() => {
                             setShowPageMoreMenu(false);
                             playSound.click();
@@ -3928,6 +3943,7 @@ export default function NotebooksPage() {
 
                         <button
                           type="button"
+                          role="menuitem"
                           onClick={() => {
                             setShowPageMoreMenu(false);
                             handleCopyAsMarkdown();
@@ -3955,6 +3971,7 @@ export default function NotebooksPage() {
 
                         <button
                           type="button"
+                          role="menuitem"
                           onClick={() => {
                             setShowPageMoreMenu(false);
                             handleDuplicateLesson(currentModuleIdx, currentLessonIdx);
@@ -3983,6 +4000,7 @@ export default function NotebooksPage() {
                         {currentBlocks.some((b) => b.type === "heading") && (
                           <button
                             type="button"
+                            role="menuitem"
                             onClick={() => {
                               setShowPageMoreMenu(false);
                               setShowToc(!showToc);
@@ -4011,6 +4029,7 @@ export default function NotebooksPage() {
 
                         <button
                           type="button"
+                          role="menuitem"
                           onClick={() => {
                             setShowPageMoreMenu(false);
                             handleCreateLessonAbove(currentModuleIdx, currentLessonIdx);
@@ -4038,6 +4057,7 @@ export default function NotebooksPage() {
 
                         <button
                           type="button"
+                          role="menuitem"
                           onClick={() => {
                             setShowPageMoreMenu(false);
                             handleCreateLessonBelow(currentModuleIdx, currentLessonIdx);
@@ -4068,6 +4088,7 @@ export default function NotebooksPage() {
                         {currentBlocks.length > 0 && (
                           <button
                             type="button"
+                            role="menuitem"
                             onClick={() => {
                               setShowPageMoreMenu(false);
                               handleClearCurrentNotes();
@@ -4080,8 +4101,7 @@ export default function NotebooksPage() {
                               fontFamily: "var(--mono, monospace)",
                               fontSize: "9.5px",
                               fontWeight: 700,
-                              color: "inherit",
-                              opacity: 0.7,
+                              color: tokens.textSecondary,
                               cursor: "pointer",
                               display: "flex",
                               alignItems: "center",
@@ -4096,6 +4116,7 @@ export default function NotebooksPage() {
 
                         <button
                           type="button"
+                          role="menuitem"
                           onClick={() => {
                             setShowPageMoreMenu(false);
                             handleDeleteLesson(currentModuleIdx, currentLessonIdx);
@@ -4108,19 +4129,19 @@ export default function NotebooksPage() {
                             fontFamily: "var(--mono, monospace)",
                             fontSize: "9.5px",
                             fontWeight: 700,
-                            color: "#DC2626",
+                            color: tokens.dangerText,
                             cursor: "pointer",
                             display: "flex",
                             alignItems: "center",
                             gap: "8px",
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.background = "#DC2626";
+                            e.currentTarget.style.background = "#B91C1C";
                             e.currentTarget.style.color = "#FFFFFF";
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.background = "transparent";
-                            e.currentTarget.style.color = "#DC2626";
+                            e.currentTarget.style.color = tokens.dangerText;
                           }}
                         >
                           <Trash2 size={12} />
@@ -4223,7 +4244,6 @@ export default function NotebooksPage() {
                     ]);
                   }}
                   onPasteTranscript={() => setShowTranscriptModal(true)}
-                  onDraftFromSlides={() => setShowTranscriptModal(true)}
                   onDraftFromTopic={() => {
                     setTopicModalInitialQuery(currentLesson?.title && currentLesson.title !== "Untitled Page" ? currentLesson.title : "");
                     setShowTopicModal(true);
@@ -4400,9 +4420,49 @@ export default function NotebooksPage() {
       {/* 1. DiffSheet (Tidy My Notes) */}
       {diffOriginal && diffProposed && (() => {
         const applyAcceptedDiff = (nextBlocks: Block[]) => {
+          const pendingNew = pendingNewLessonRef.current;
           const target = diffTargetRef.current;
           const pendingMeta = pendingTopicMetaRef.current;
-          if (target) {
+          if (pendingNew) {
+            const newLessonId = generateBlockId();
+            const wc = computeWordCount(nextBlocks);
+            const newLesson: SeedCourseLesson = {
+              id: newLessonId,
+              title: pendingNew.title,
+              icon: pendingNew.icon,
+              coverUrl: pendingNew.coverUrl,
+              blocks: nextBlocks,
+              watched: false,
+              meta: `${wc.toLocaleString()} WORDS · AI DRAFT`,
+            };
+            const targetCourse = coursesRef.current.find((c) => isSameId(c.id, pendingNew.courseId));
+            const targetMod = targetCourse?.modules[pendingNew.moduleIdx];
+            const nextLessonIndex = targetMod ? targetMod.lessons.length : 0;
+
+            setCourses((prev) => {
+              const next = prev.map((c) =>
+                isSameId(c.id, pendingNew.courseId)
+                  ? {
+                      ...c,
+                      modules: c.modules.map((m, mIdx) =>
+                        mIdx === pendingNew.moduleIdx
+                          ? { ...m, lessons: [...m.lessons, newLesson] }
+                          : m
+                      ),
+                    }
+                  : c
+              );
+              saveStoredCourses(next);
+              return next;
+            });
+            setCurrentModuleIdx(pendingNew.moduleIdx);
+            setCurrentLessonIdx(nextLessonIndex);
+            createLessonInDbApi(pendingNew.moduleId, pendingNew.title, nextBlocks, undefined, {
+              id: newLessonId,
+              coverUrl: pendingNew.coverUrl,
+              icon: pendingNew.icon,
+            });
+          } else if (target) {
             handleApplyBlocksForLesson(target.courseId, target.lessonId, nextBlocks);
             if (pendingMeta && isSameId(pendingMeta.lessonId, target.lessonId)) {
               setCourses((prev) => {
@@ -4438,6 +4498,7 @@ export default function NotebooksPage() {
           } else {
             handleUpdateBlocks(nextBlocks);
           }
+          pendingNewLessonRef.current = null;
           pendingTopicMetaRef.current = null;
           diffTargetRef.current = null;
           setDiffOriginal(null);
@@ -4452,6 +4513,7 @@ export default function NotebooksPage() {
             onApplyAll={() => applyAcceptedDiff(diffProposed)}
             onApplySelected={applyAcceptedDiff}
             onDiscard={() => {
+              pendingNewLessonRef.current = null;
               pendingTopicMetaRef.current = null;
               diffTargetRef.current = null;
               setDiffOriginal(null);
@@ -4470,7 +4532,6 @@ export default function NotebooksPage() {
           notEnough={quizNotEnough}
           explanation={quizExplanation}
           onClose={() => setQuizQuestions(null)}
-          accentColor={currentCourse?.accent}
           theme={paperTheme}
         />
       )}
@@ -4508,7 +4569,6 @@ export default function NotebooksPage() {
             explainTargetRef.current = null;
             setExplainSelection(null);
           }}
-          accentColor={currentCourse?.accent}
           theme={paperTheme}
         />
       )}
@@ -4664,7 +4724,7 @@ export default function NotebooksPage() {
                 padding: "10px 12px",
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "16px",
-                border: `2px solid ${urlError ? "#EF4444" : tokens.borderPrimary}`,
+                border: `2px solid ${urlError ? tokens.dangerText : tokens.borderPrimary}`,
                 background: tokens.sidebarBg,
                 color: tokens.textPrimary,
                 marginBottom: urlError ? "8px" : "18px",
@@ -4678,7 +4738,7 @@ export default function NotebooksPage() {
                   fontFamily: "var(--mono, monospace)",
                   fontSize: "10px",
                   fontWeight: 700,
-                  color: "#EF4444",
+                  color: tokens.dangerText,
                   marginBottom: "14px",
                 }}
               >
@@ -4748,7 +4808,6 @@ export default function NotebooksPage() {
           onClose={() => setShowFlashcardModal(false)}
           lessonTitle={currentLesson.title}
           blocks={currentBlocks}
-          accentColor={currentCourse?.accent}
           theme={paperTheme}
         />
       )}

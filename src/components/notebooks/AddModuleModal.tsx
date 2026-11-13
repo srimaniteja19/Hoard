@@ -154,6 +154,7 @@ export const AddModuleModal: React.FC<AddModuleModalProps> = ({
               ref={inputRef}
               id="module-title-input"
               type="text"
+              className="nb-mobile-16px"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. MODULE 3 · ADVANCED PROMPTING"

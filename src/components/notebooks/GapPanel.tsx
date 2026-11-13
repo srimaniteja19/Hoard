@@ -57,7 +57,7 @@ export const GapPanel: React.FC<GapPanelProps> = ({ gaps, onAddStub }) => {
             borderBottom: idx < gaps.length - 1 ? "2px solid rgba(240,237,228,0.13)" : "none",
           }}
         >
-          <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 700, opacity: 0.45, flex: "none" }}>
+          <span style={{ fontFamily: "var(--mono, monospace)", fontSize: "10px", fontWeight: 700, color: "rgba(240, 237, 228, 0.78)", flex: "none" }}>
             {g.timestamp}
           </span>
           <span style={{ flex: 1, minWidth: 0, fontSize: "15.5px", lineHeight: "1.4" }}>
@@ -105,7 +105,7 @@ export const GapPanel: React.FC<GapPanelProps> = ({ gaps, onAddStub }) => {
           fontFamily: "var(--mono, monospace)",
           fontSize: "9.5px",
           lineHeight: "1.8",
-          opacity: 0.55,
+          color: "rgba(240, 237, 228, 0.78)",
         }}
       >
         MATCHED AGAINST THE LESSON TRANSCRIPT YOU ATTACHED. THESE ARE THINGS SAID THAT YOUR PAGE NEVER MENTIONS — NOT NECESSARILY THINGS WORTH WRITING DOWN.

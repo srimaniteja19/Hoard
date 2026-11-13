@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { NotebookTheme, getThemeTokens } from "@/lib/notebooks/theme";
-import { getEmbedInfo, getFaviconUrl, EmbedInfo } from "@/lib/notebooks/embeds";
+import { getEmbedInfo, EmbedInfo } from "@/lib/notebooks/embeds";
 import { playSound } from "@/lib/sound";
 import {
   Play,
@@ -30,7 +30,6 @@ interface PageEmbeddedMediaProps {
   onRemoveUrl?: () => void;
   onInsertIntoNotes?: (url: string, title?: string) => void;
   theme?: NotebookTheme;
-  accentColor?: string;
 }
 
 export const PageEmbeddedMedia: React.FC<PageEmbeddedMediaProps> = ({
@@ -39,7 +38,6 @@ export const PageEmbeddedMedia: React.FC<PageEmbeddedMediaProps> = ({
   onRemoveUrl,
   onInsertIntoNotes,
   theme = "cream",
-  accentColor = "#7B5CF0",
 }) => {
   const tokens = getThemeTokens(theme);
   const isInk = tokens.isDark;
@@ -52,7 +50,6 @@ export const PageEmbeddedMedia: React.FC<PageEmbeddedMediaProps> = ({
   if (!lessonUrl) return null;
 
   const embedInfo: EmbedInfo = getEmbedInfo(lessonUrl);
-  const faviconUrl = getFaviconUrl(lessonUrl);
 
   const handleToggleOpen = () => {
     playSound.click();
@@ -192,7 +189,9 @@ export const PageEmbeddedMedia: React.FC<PageEmbeddedMediaProps> = ({
           {/* Edit URL */}
           <button
             type="button"
+            className="nb-touch-target"
             onClick={onEditUrl}
+            aria-label="Edit source URL"
             title="Edit source URL"
             style={{
               background: "transparent",
@@ -200,10 +199,12 @@ export const PageEmbeddedMedia: React.FC<PageEmbeddedMediaProps> = ({
               color: tokens.textPrimary,
               cursor: "pointer",
               padding: "4px",
-              opacity: 0.6,
+              opacity: 0.72,
+              display: "grid",
+              placeItems: "center",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.72")}
           >
             <Pencil size={11} />
           </button>
@@ -212,18 +213,19 @@ export const PageEmbeddedMedia: React.FC<PageEmbeddedMediaProps> = ({
           {onRemoveUrl && (
             <button
               type="button"
+              className="nb-touch-target"
               onClick={onRemoveUrl}
+              aria-label="Remove source link"
               title="Remove source link"
               style={{
                 background: "transparent",
                 border: "none",
-                color: "#EF4444",
+                color: tokens.dangerText,
                 cursor: "pointer",
                 padding: "4px",
-                opacity: 0.6,
+                display: "grid",
+                placeItems: "center",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
             >
               <Trash2 size={11} />
             </button>
@@ -232,6 +234,7 @@ export const PageEmbeddedMedia: React.FC<PageEmbeddedMediaProps> = ({
           {/* Watch / Play Media Toggle Button */}
           <button
             type="button"
+            className="nb-touch-target"
             onClick={handleToggleOpen}
             style={{
               fontFamily: "var(--mono, monospace)",
@@ -281,7 +284,9 @@ export const PageEmbeddedMedia: React.FC<PageEmbeddedMediaProps> = ({
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <button
                 type="button"
+                className="nb-touch-target"
                 onClick={() => setIframeKey((k) => k + 1)}
+                aria-label="Reload player"
                 title="Reload player"
                 style={{
                   background: "transparent",
@@ -289,13 +294,17 @@ export const PageEmbeddedMedia: React.FC<PageEmbeddedMediaProps> = ({
                   color: "inherit",
                   cursor: "pointer",
                   padding: "2px 4px",
+                  display: "grid",
+                  placeItems: "center",
                 }}
               >
                 <RefreshCw size={10} />
               </button>
               <button
                 type="button"
+                className="nb-touch-target"
                 onClick={() => setIsFullWidth(!isFullWidth)}
+                aria-label={isFullWidth ? "Restore standard player width" : "Expand player width"}
                 title={isFullWidth ? "Standard size" : "Expand width"}
                 style={{
                   background: "transparent",
@@ -303,6 +312,8 @@ export const PageEmbeddedMedia: React.FC<PageEmbeddedMediaProps> = ({
                   color: "inherit",
                   cursor: "pointer",
                   padding: "2px 4px",
+                  display: "grid",
+                  placeItems: "center",
                 }}
               >
                 {isFullWidth ? <Minimize2 size={10} /> : <Maximize2 size={10} />}

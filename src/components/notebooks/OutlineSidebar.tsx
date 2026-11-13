@@ -226,24 +226,26 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             {onEditCourse && (
               <button
                 type="button"
+                className="nb-touch-target"
                 onClick={(e) => {
                   e.stopPropagation();
                   playSound.click();
                   onEditCourse();
                 }}
+                aria-label="Edit course metadata"
                 title="Edit course metadata"
                 style={{
                   border: "none",
                   background: "transparent",
                   cursor: "pointer",
                   padding: "2px",
-                  opacity: 0.72,
+                  opacity: 0.78,
                   color: tokens.textPrimary,
                   display: "grid",
                   placeItems: "center",
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.72")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.78")}
               >
                 <Pencil size={11} />
               </button>
@@ -251,24 +253,23 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             {onDeleteCourse && (
               <button
                 type="button"
+                className="nb-touch-target"
                 onClick={(e) => {
                   e.stopPropagation();
                   playSound.click();
                   onDeleteCourse();
                 }}
+                aria-label="Delete course"
                 title="Delete course"
                 style={{
                   border: "none",
                   background: "transparent",
                   cursor: "pointer",
                   padding: "2px",
-                  opacity: 0.6,
-                  color: "#EF4444",
+                  color: tokens.dangerText,
                   display: "grid",
                   placeItems: "center",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
               >
                 <Trash2 size={11} />
               </button>
@@ -277,7 +278,9 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
             {onClose && (
               <button
                 type="button"
+                className="nb-touch-target"
                 onClick={onClose}
+                aria-label="Close outline drawer"
                 title="Close outline drawer"
                 style={{
                   border: `1.5px solid ${tokens.borderPrimary}`,
@@ -393,6 +396,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
         <div style={{ marginTop: "12px" }}>
           <input
             type="text"
+            className="nb-mobile-16px"
             aria-label="Filter pages"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -465,6 +469,8 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "8px" }}>
                   <input
                     type="text"
+                    className="nb-mobile-16px"
+                    aria-label="Rename module"
                     autoFocus
                     value={moduleTitleDraft}
                     onChange={(e) => setModuleTitleDraft(e.target.value)}
@@ -662,7 +668,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                         fontFamily: "var(--mono, monospace)",
                         fontSize: "9.5px",
                         letterSpacing: "0.1em",
-                        opacity: 0.45,
+                        color: tokens.textMuted,
                         margin: "4px 0 8px",
                       }}
                     >
@@ -755,10 +761,6 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
 
                             <div
                               className="nb-outline-row"
-                              role="button"
-                              tabIndex={0}
-                              aria-current={isSelected ? "page" : undefined}
-                              aria-label={`${les.title} (${state === "written" ? "written" : state === "stub" ? "draft" : "empty"}${les.watched ? ", watched" : ""})`}
                               draggable
                               onDragStart={(e) => {
                                 e.dataTransfer.setData("text/plain", les.id);
@@ -770,27 +772,14 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                                 setDraggingInfo(null);
                                 setDropTarget(null);
                               }}
-                              onClick={() => {
-                                playSound.click();
-                                onSelectLesson(modIdx, lesIdx);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.target !== e.currentTarget) return;
-                                if (e.key === "Enter" || e.key === " ") {
-                                  e.preventDefault();
-                                  playSound.click();
-                                  onSelectLesson(modIdx, lesIdx);
-                                }
-                              }}
                               onContextMenu={(e) => {
                                 e.preventDefault();
                                 playSound.click();
-                                const rect = e.currentTarget.getBoundingClientRect();
                                 setActionMenu({
                                   modIdx,
                                   lesIdx,
                                   top: Math.min(e.clientY, window.innerHeight - 200),
-                                  left: Math.min(e.clientX, window.innerWidth - 180),
+                                  left: Math.max(8, Math.min(e.clientX, window.innerWidth - 180)),
                                 });
                               }}
                               style={{
@@ -798,7 +787,6 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                                 alignItems: "center",
                                 gap: "7px",
                                 padding: "6px 8px",
-                                cursor: "pointer",
                                 border: "2px solid",
                                 borderColor: isSelected ? (isInk ? "#FCE94F" : "#0A0A0A") : "transparent",
                                 background: isSelected ? (isInk ? "#242A38" : "#0A0A0A") : "transparent",
@@ -824,6 +812,13 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                               {hasChildren ? (
                                 <button
                                   type="button"
+                                  className="nb-touch-target"
+                                  aria-expanded={!isSubpagesCollapsed}
+                                  aria-label={
+                                    isSubpagesCollapsed
+                                      ? `Expand subpages of ${les.title}`
+                                      : `Collapse subpages of ${les.title}`
+                                  }
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     playSound.click();
@@ -854,69 +849,94 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                                 <div style={{ width: "14px", flexShrink: 0 }} />
                               )}
 
-                              {/* State Status Square (Always preserved even when page has a custom emoji) */}
-                              <span
+                              {/* Primary Lesson Selection Button */}
+                              <button
+                                type="button"
+                                aria-current={isSelected ? "page" : undefined}
+                                aria-label={`${les.title} (${state === "written" ? "written" : state === "stub" ? "draft" : "empty"}${les.watched ? ", watched" : ""})`}
+                                onClick={() => {
+                                  playSound.click();
+                                  onSelectLesson(modIdx, lesIdx);
+                                }}
                                 style={{
-                                  display: "inline-flex",
+                                  flex: 1,
+                                  minWidth: 0,
+                                  display: "flex",
                                   alignItems: "center",
-                                  gap: "5px",
-                                  flexShrink: 0,
-                                  userSelect: "none",
+                                  gap: "7px",
+                                  border: "none",
+                                  background: "transparent",
+                                  color: "inherit",
+                                  padding: 0,
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  font: "inherit",
                                 }}
                               >
+                                {/* State Status Square (Always preserved even when page has a custom emoji) */}
                                 <span
-                                  aria-label={state === "written" ? "Written" : state === "stub" ? "Draft" : "Empty"}
-                                  title={state === "written" ? "Written" : state === "stub" ? "Draft" : "Empty"}
                                   style={{
-                                    width: "10px",
-                                    height: "10px",
-                                    border: isSelected ? "2px solid #F3F0E8" : (isInk ? "2px solid rgba(255,255,255,0.45)" : "2px solid #0A0A0A"),
-                                    background:
-                                      state === "written"
-                                        ? "#B8F04A"
-                                        : state === "stub"
-                                        ? "repeating-linear-gradient(45deg, #FCE94F 0 3px, transparent 3px 6px)"
-                                        : "transparent",
-                                    display: "inline-block",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                    flexShrink: 0,
+                                    userSelect: "none",
                                   }}
-                                />
-                                {les.icon && (
-                                  <span style={{ fontSize: "12px", lineHeight: 1 }} aria-hidden="true">
-                                    {les.icon}
+                                >
+                                  <span
+                                    aria-hidden="true"
+                                    title={state === "written" ? "Written" : state === "stub" ? "Draft" : "Empty"}
+                                    style={{
+                                      width: "10px",
+                                      height: "10px",
+                                      border: isSelected ? "2px solid #F3F0E8" : (isInk ? "2px solid rgba(255,255,255,0.45)" : "2px solid #0A0A0A"),
+                                      background:
+                                        state === "written"
+                                          ? "#B8F04A"
+                                          : state === "stub"
+                                          ? "repeating-linear-gradient(45deg, #FCE94F 0 3px, transparent 3px 6px)"
+                                          : "transparent",
+                                      display: "inline-block",
+                                    }}
+                                  />
+                                  {les.icon && (
+                                    <span style={{ fontSize: "12px", lineHeight: 1 }} aria-hidden="true">
+                                      {les.icon}
+                                    </span>
+                                  )}
+                                </span>
+
+                                <span style={{ flex: 1, minWidth: 0, fontSize: "13.5px", lineHeight: "1.3", fontWeight: isSelected ? 700 : 500 }}>
+                                  <span
+                                    style={{
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                      display: "block",
+                                    }}
+                                  >
+                                    {les.title}
+                                  </span>
+                                </span>
+
+                                {/* Child count pill if has subpages */}
+                                {hasChildren && (
+                                  <span
+                                    style={{
+                                      fontFamily: "var(--mono, monospace)",
+                                      fontSize: "8px",
+                                      fontWeight: 800,
+                                      padding: "0 4px",
+                                      borderRadius: "2px",
+                                      background: isInk ? "rgba(255,255,255,0.12)" : "rgba(10,10,10,0.08)",
+                                      color: isSelected ? "#F3F0E8" : tokens.textSecondary,
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {directChildren.length}
                                   </span>
                                 )}
-                              </span>
-
-                              <div style={{ flex: 1, minWidth: 0, fontSize: "13.5px", lineHeight: "1.3", fontWeight: isSelected ? 700 : 500 }}>
-                                <span
-                                  style={{
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    display: "block",
-                                  }}
-                                >
-                                  {les.title}
-                                </span>
-                              </div>
-
-                              {/* Child count pill if has subpages */}
-                              {hasChildren && (
-                                <span
-                                  style={{
-                                    fontFamily: "var(--mono, monospace)",
-                                    fontSize: "8px",
-                                    fontWeight: 800,
-                                    padding: "0 4px",
-                                    borderRadius: "2px",
-                                    background: isInk ? "rgba(255,255,255,0.12)" : "rgba(10,10,10,0.08)",
-                                    color: isSelected ? "#F3F0E8" : tokens.textSecondary,
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  {directChildren.length}
-                                </span>
-                              )}
+                              </button>
 
                               {/* Row Actions (hover, focus-within, and always accessible on touch/mobile) */}
                               <div
@@ -970,7 +990,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                                       modIdx,
                                       lesIdx,
                                       top: rect.bottom + 4,
-                                      left: Math.min(rect.left - 130, window.innerWidth - 180),
+                                      left: Math.max(8, Math.min(rect.left - 130, window.innerWidth - 180)),
                                     });
                                   }}
                                   style={{
@@ -1134,7 +1154,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 padding: "6px 12px",
                 border: "none",
                 background: "transparent",
-                color: isInk ? "#FCE94F" : "#7B5CF0",
+                color: isInk ? "#FCE94F" : tokens.linkColor,
                 fontWeight: 800,
                 cursor: "pointer",
                 display: "flex",
@@ -1236,7 +1256,7 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
                 padding: "6px 12px",
                 border: "none",
                 background: "transparent",
-                color: "#EF4444",
+                color: tokens.dangerText,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",

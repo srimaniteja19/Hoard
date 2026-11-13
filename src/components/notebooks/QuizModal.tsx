@@ -17,7 +17,6 @@ interface QuizModalProps {
   notEnough?: boolean;
   explanation?: string;
   onClose: () => void;
-  accentColor?: string;
   theme?: NotebookTheme;
 }
 

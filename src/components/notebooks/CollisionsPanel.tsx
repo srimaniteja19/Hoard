@@ -45,6 +45,7 @@ export const CollisionsPanel: React.FC<CollisionsPanelProps> = ({
       {collisions.map((col, idx) => (
         <div
           key={col.id || idx}
+          className="nb-collisions-row"
           style={{
             display: "grid",
             gridTemplateColumns: "minmax(0, 1fr) auto",
@@ -86,11 +87,12 @@ export const CollisionsPanel: React.FC<CollisionsPanelProps> = ({
                 </span>
               )}
             </div>
-            <p style={{ margin: "5px 0 0", fontSize: "14.5px", lineHeight: 1.5, opacity: 0.65 }}>
+            <p style={{ margin: "5px 0 0", fontSize: "14.5px", lineHeight: 1.5, color: "rgba(240, 237, 228, 0.82)" }}>
               {col.description}
             </p>
           </div>
           <div
+            className="nb-collisions-links"
             style={{
               display: "flex",
               gap: "7px",
@@ -163,7 +165,7 @@ export const CollisionsPanel: React.FC<CollisionsPanelProps> = ({
           fontFamily: "var(--mono, monospace)",
           fontSize: "9.5px",
           lineHeight: 1.8,
-          opacity: 0.55,
+          color: "rgba(240, 237, 228, 0.78)",
         }}
       >
         FOUND BY MATCHING YOUR OWN WORDS ACROSS NOTEBOOKS — NOT THE SYLLABI. THIS IS THE REASON TWO COURSES LIVE IN ONE SYSTEM RATHER THAN TWO APPS.

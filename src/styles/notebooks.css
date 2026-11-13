@@ -368,8 +368,18 @@
 
 @media (max-width: 640px) {
   .nb-responsive-two-col,
-  .nb-responsive-anchors {
+  .nb-responsive-anchors,
+  .nb-collisions-row {
     grid-template-columns: 1fr !important;
+  }
+  .nb-collisions-links {
+    justify-content: flex-start !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .nb-mobile-16px {
+    font-size: 16px !important;
   }
 }
 

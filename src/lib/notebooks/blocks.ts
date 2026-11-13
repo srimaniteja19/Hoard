@@ -168,6 +168,7 @@ export const BlockSchema = z.discriminatedUnion("type", [
     caption: z.string().optional(),
     width: z.number().optional(),
     height: z.number().optional(),
+    size: z.enum(["compact", "standard", "full"]).optional(),
   }),
   z.object({
     id: z.string(),

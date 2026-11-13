@@ -81,7 +81,7 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   // `code`, etc. would just sit there as literal asterisks/backticks forever,
   // since a plain <textarea> has no way to render rich text inside itself.
   const [isEditing, setIsEditing] = useState(autoFocus && !readOnly);
-  const pendingFocusPosRef = useRef<"start" | "end" | null>(null);
+  const pendingFocusPosRef = useRef<"start" | "end" | number | null>(null);
 
   // Auto-resize textarea to fit text naturally without scrollbars
   const adjustHeight = () => {
@@ -108,9 +108,15 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   // Resolve a focus() request against the actual textarea once it mounts
   // (switching into edit mode is what makes the textarea exist at all).
   useEffect(() => {
-    if (isEditing && pendingFocusPosRef.current && textareaRef.current) {
+    if (isEditing && pendingFocusPosRef.current !== null && textareaRef.current) {
       const el = textareaRef.current;
-      const pos = pendingFocusPosRef.current === "start" ? 0 : el.value.length;
+      const requested = pendingFocusPosRef.current;
+      const pos =
+        typeof requested === "number"
+          ? Math.max(0, Math.min(requested, el.value.length))
+          : requested === "start"
+          ? 0
+          : el.value.length;
       el.focus();
       el.setSelectionRange(pos, pos);
       pendingFocusPosRef.current = null;
@@ -303,15 +309,50 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
     ...style,
   };
 
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Computes character offset from click coordinates inside the rendered preview so
+  // clicking mid-sentence places the raw-markdown caret near that spot instead of jumping to end.
+  const getClickCharOffset = (container: HTMLElement, clientX: number, clientY: number): number | "end" => {
+    try {
+      const doc = document as Document & {
+        caretRangeFromPoint?: (x: number, y: number) => Range | null;
+        caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+      };
+      let node: Node | null = null;
+      let offset = 0;
 
-  useEffect(() => {
-    return () => {
-      if (clickTimeoutRef.current) {
-        clearTimeout(clickTimeoutRef.current);
+      if (doc.caretRangeFromPoint) {
+        const range = doc.caretRangeFromPoint(clientX, clientY);
+        if (range && container.contains(range.startContainer)) {
+          node = range.startContainer;
+          offset = range.startOffset;
+        }
+      } else if (doc.caretPositionFromPoint) {
+        const pos = doc.caretPositionFromPoint(clientX, clientY);
+        if (pos && container.contains(pos.offsetNode)) {
+          node = pos.offsetNode;
+          offset = pos.offset;
+        }
       }
-    };
-  }, []);
+
+      if (!node) return "end";
+
+      const measureRange = document.createRange();
+      measureRange.selectNodeContents(container);
+      measureRange.setEnd(node, offset);
+      const renderedPrefix = measureRange.toString();
+      const targetCharCount = renderedPrefix.length;
+
+      // Map rendered index roughly onto raw markdown text if inline syntax shifted length.
+      if (!renderedPrefix) return 0;
+      const approxRatio =
+        container.innerText.length > 0
+          ? Math.round((targetCharCount / container.innerText.length) * value.length)
+          : targetCharCount;
+      return Math.max(0, Math.min(value.length, approxRatio));
+    } catch {
+      return "end";
+    }
+  };
 
   // Read-only (e.g. the "Tidy My Notes" diff preview), or simply not the block
   // currently being edited: show the rendered/formatted view. **bold**,
@@ -320,20 +361,22 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
     return React.createElement(
       as,
       {
-        onMouseUp: readOnly
+        tabIndex: readOnly ? undefined : 0,
+        role: readOnly ? undefined : "textbox",
+        "aria-multiline": readOnly ? undefined : true,
+        "aria-label": readOnly ? undefined : placeholder,
+        onKeyDown: readOnly
           ? undefined
-          : () => {
-              const sel = window.getSelection();
-              if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) {
-                if (clickTimeoutRef.current) {
-                  clearTimeout(clickTimeoutRef.current);
-                  clickTimeoutRef.current = null;
-                }
+          : (e: React.KeyboardEvent<HTMLElement>) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                pendingFocusPosRef.current = "end";
+                setIsEditing(true);
               }
             },
         onClick: readOnly
           ? undefined
-          : (e: React.MouseEvent) => {
+          : (e: React.MouseEvent<HTMLElement>) => {
               if (e.target instanceof Element && e.target.closest("a")) {
                 return;
               }
@@ -341,17 +384,8 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
               if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) {
                 return;
               }
-              if (clickTimeoutRef.current) {
-                clearTimeout(clickTimeoutRef.current);
-              }
-              clickTimeoutRef.current = setTimeout(() => {
-                const currentSel = window.getSelection();
-                if (currentSel && !currentSel.isCollapsed && currentSel.toString().trim().length > 0) {
-                  return;
-                }
-                pendingFocusPosRef.current = "end";
-                setIsEditing(true);
-              }, 180);
+              pendingFocusPosRef.current = getClickCharOffset(e.currentTarget, e.clientX, e.clientY);
+              setIsEditing(true);
             },
         // A subtle hover tint is the only signal this text is editable at
         // all — without it, clicking into a block to edit it is invisible
@@ -389,7 +423,15 @@ export const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       onFocus={() => setIsEditing(true)}
-      onBlur={() => setIsEditing(false)}
+      onBlur={(e) => {
+        if (
+          e.relatedTarget instanceof HTMLElement &&
+          e.relatedTarget.closest("[data-floating-selection-toolbar]")
+        ) {
+          return;
+        }
+        setIsEditing(false);
+      }}
       placeholder={placeholder}
       rows={1}
       style={{

@@ -45,7 +45,7 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
   const coverPickerRef = useRef<HTMLDivElement>(null);
   const iconPickerRef = useRef<HTMLDivElement>(null);
 
-  // Close popovers on click outside
+  // Close popovers on click outside or Escape key
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (coverPickerRef.current && !coverPickerRef.current.contains(e.target as Node)) {
@@ -55,9 +55,21 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
         setShowIconPicker(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && (showCoverPicker || showIconPicker)) {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowCoverPicker(false);
+        setShowIconPicker(false);
+      }
+    };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [showCoverPicker, showIconPicker]);
 
   const hasCover = Boolean(coverUrl);
   const hasIcon = Boolean(icon);
@@ -127,13 +139,14 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
                 playSound.click();
                 onChangeCover(undefined);
               }}
+              aria-label="Remove cover"
               title="Remove Cover"
               style={{
                 fontFamily: "var(--mono, monospace)",
                 fontSize: "9px",
                 fontWeight: 700,
                 background: tokens.cardBg,
-                color: "#EF4444",
+                color: tokens.dangerText,
                 border: `1.5px solid ${tokens.borderPrimary}`,
                 boxShadow: tokens.boxShadow,
                 padding: "5px 8px",
@@ -190,7 +203,7 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
             {/* Direct ✕ Remove Icon Button */}
             <button
               type="button"
-              className="nb-touch-always-visible"
+              className="nb-touch-always-visible nb-touch-target"
               aria-label="Remove page icon"
               onClick={(e) => {
                 e.stopPropagation();
@@ -320,6 +333,7 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
             </span>
             <button
               type="button"
+              aria-label="Close cover picker"
               onClick={() => setShowCoverPicker(false)}
               style={{ border: "none", background: "transparent", cursor: "pointer", color: tokens.textPrimary }}
             >
@@ -381,8 +395,8 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
                 width: "100%",
                 padding: "8px",
                 background: tokens.isDark ? "rgba(239, 68, 68, 0.15)" : "#FEE2E2",
-                border: `1.5px solid #EF4444`,
-                color: "#EF4444",
+                border: `1.5px solid ${tokens.dangerText}`,
+                color: tokens.dangerText,
                 fontSize: "9.5px",
                 fontWeight: 800,
                 letterSpacing: "0.08em",
@@ -425,6 +439,7 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
             </span>
             <button
               type="button"
+              aria-label="Close icon picker"
               onClick={() => setShowIconPicker(false)}
               style={{ border: "none", background: "transparent", cursor: "pointer", color: tokens.textPrimary }}
             >
@@ -480,8 +495,8 @@ export const PageCoverBanner: React.FC<PageCoverBannerProps> = ({
                 width: "100%",
                 padding: "8px",
                 background: tokens.isDark ? "rgba(239, 68, 68, 0.15)" : "#FEE2E2",
-                border: `1.5px solid #EF4444`,
-                color: "#EF4444",
+                border: `1.5px solid ${tokens.dangerText}`,
+                color: tokens.dangerText,
                 fontSize: "9.5px",
                 fontWeight: 800,
                 letterSpacing: "0.08em",

@@ -34,28 +34,18 @@ export interface BgColorOption {
 
 export const NOTION_TEXT_COLORS: ColorOption[] = [
   { id: "default", label: "Default", color: "inherit", dotColor: "#9CA3AF" },
-  { id: "gray", label: "Gray", color: "#9CA3AF", dotColor: "#9CA3AF" },
-  { id: "brown", label: "Brown", color: "#D97706", dotColor: "#D97706" },
-  { id: "orange", label: "Orange", color: "#F97316", dotColor: "#F97316" },
-  { id: "yellow", label: "Yellow", color: "#EAB308", dotColor: "#EAB308" },
-  { id: "green", label: "Green", color: "#10B981", dotColor: "#10B981" },
-  { id: "blue", label: "Blue", color: "#3B82F6", dotColor: "#3B82F6" },
-  { id: "purple", label: "Purple", color: "#8B5CF6", dotColor: "#8B5CF6" },
-  { id: "pink", label: "Pink", color: "#EC4899", dotColor: "#EC4899" },
-  { id: "red", label: "Red", color: "#EF4444", dotColor: "#EF4444" },
+  { id: "gray", label: "Muted", color: "#6B7280", dotColor: "#6B7280" },
+  { id: "purple", label: "Purple", color: "#7C3AED", dotColor: "#7C3AED" },
+  { id: "blue", label: "Blue", color: "#2563EB", dotColor: "#2563EB" },
+  { id: "red", label: "Red", color: "#DC2626", dotColor: "#DC2626" },
 ];
 
 export const NOTION_BG_COLORS: BgColorOption[] = [
-  { id: "default", label: "Default (No background)", bg: "transparent", border: "transparent", lightFg: "inherit", darkFg: "inherit" },
-  { id: "gray", label: "Gray background", bg: "rgba(156, 163, 175, 0.22)", border: "#9CA3AF", lightFg: "#374151", darkFg: "#E5E7EB" },
-  { id: "brown", label: "Brown background", bg: "rgba(180, 83, 9, 0.22)", border: "#D97706", lightFg: "#78350F", darkFg: "#FDE68A" },
-  { id: "orange", label: "Orange background", bg: "rgba(249, 115, 22, 0.22)", border: "#F97316", lightFg: "#7C2D12", darkFg: "#FED7AA" },
-  { id: "yellow", label: "Yellow background", bg: "rgba(234, 179, 8, 0.22)", border: "#EAB308", lightFg: "#713F12", darkFg: "#FEF08A" },
-  { id: "green", label: "Green background", bg: "rgba(16, 185, 129, 0.22)", border: "#10B981", lightFg: "#064E3B", darkFg: "#A7F3D0" },
-  { id: "blue", label: "Blue background", bg: "rgba(59, 130, 246, 0.22)", border: "#3B82F6", lightFg: "#1E3A8A", darkFg: "#BFDBFE" },
-  { id: "purple", label: "Purple background", bg: "rgba(139, 92, 246, 0.28)", border: "#A78BFA", lightFg: "#4C1D95", darkFg: "#F3E8FF" },
-  { id: "pink", label: "Pink background", bg: "rgba(236, 72, 153, 0.22)", border: "#EC4899", lightFg: "#831843", darkFg: "#FBCFE8" },
-  { id: "red", label: "Red background", bg: "rgba(239, 68, 68, 0.22)", border: "#EF4444", lightFg: "#7F1D1D", darkFg: "#FECACA" },
+  { id: "default", label: "Default (No highlight)", bg: "transparent", border: "transparent", lightFg: "inherit", darkFg: "inherit" },
+  { id: "yellow", label: "Yellow highlight", bg: "rgba(234, 179, 8, 0.22)", border: "#EAB308", lightFg: "#713F12", darkFg: "#FEF08A" },
+  { id: "green", label: "Green highlight", bg: "rgba(16, 185, 129, 0.22)", border: "#10B981", lightFg: "#064E3B", darkFg: "#A7F3D0" },
+  { id: "blue", label: "Blue highlight", bg: "rgba(59, 130, 246, 0.22)", border: "#3B82F6", lightFg: "#1E3A8A", darkFg: "#BFDBFE" },
+  { id: "purple", label: "Purple highlight", bg: "rgba(139, 92, 246, 0.28)", border: "#A78BFA", lightFg: "#4C1D95", darkFg: "#F3E8FF" },
 ];
 
 interface FloatingSelectionToolbarProps {
@@ -258,6 +248,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
   return (
     <div
       ref={toolbarRef}
+      data-floating-selection-toolbar="true"
       className="no-print"
       onMouseDown={(e) => e.preventDefault()} // prevent blur/loss of selection
       style={{
@@ -286,6 +277,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
           playSound.pop();
           onFormat("**", "**", savedSelectionRef.current.text, savedSelectionRef.current.blockIdx);
         }}
+        aria-label="Bold"
         title="Bold (Cmd+B)"
         style={{
           background: "transparent",
@@ -311,6 +303,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
           playSound.pop();
           onFormat("*", "*", savedSelectionRef.current.text, savedSelectionRef.current.blockIdx);
         }}
+        aria-label="Italic"
         title="Italic (Cmd+I)"
         style={{
           background: "transparent",
@@ -336,6 +329,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
           playSound.pop();
           onFormat("~~", "~~", savedSelectionRef.current.text, savedSelectionRef.current.blockIdx);
         }}
+        aria-label="Strikethrough"
         title="Strikethrough"
         style={{
           background: "transparent",
@@ -361,7 +355,8 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
           playSound.pop();
           onFormat("`", "`", savedSelectionRef.current.text, savedSelectionRef.current.blockIdx);
         }}
-        title="Inline Code"
+        aria-label="Inline code"
+        title="Inline Code (Cmd+E)"
         style={{
           background: "transparent",
           border: "none",
@@ -386,7 +381,8 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
           playSound.pop();
           onFormat("==", "==", savedSelectionRef.current.text, savedSelectionRef.current.blockIdx);
         }}
-        title="Quick Highlight (Cyber Lavender)"
+        aria-label="Highlight selection"
+        title="Highlight selection"
         style={{
           background: "transparent",
           border: "none",
@@ -413,7 +409,9 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
           setShowLinkInput(!showLinkInput);
           setTimeout(() => linkInputRef.current?.focus(), 50);
         }}
-        title="Link (Cmd+K)"
+        aria-label="Add or edit link"
+        aria-expanded={showLinkInput}
+        title="Add or edit link"
         style={{
           background: showLinkInput ? tokens.popoverHoverBg : "transparent",
           border: "none",
@@ -441,7 +439,9 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
           playSound.click();
           setShowColorPicker(!showColorPicker);
         }}
-        title="Text & Background Color Palette (Notion style)"
+        aria-label="Text and highlight color palette"
+        aria-expanded={showColorPicker}
+        title="Text & Background Color Palette"
         style={{
           background: showColorPicker ? tokens.popoverHoverBg : "transparent",
           border: "none",
@@ -474,6 +474,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
             setPosition(null);
             setShowColorPicker(false);
           }}
+          aria-label="Explain selected text with AI"
           title="Explain selected text with AI"
           style={{
             background: "transparent",
@@ -491,7 +492,7 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
           onMouseEnter={(e) => (e.currentTarget.style.background = tokens.popoverHoverBg)}
           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
         >
-          <Sparkles size={11} color="#7B5CF0" />
+          <Sparkles size={11} color={tokens.linkColor} />
           <span>✦ ASK AI</span>
         </button>
       )}
@@ -513,6 +514,8 @@ export const FloatingSelectionToolbar: React.FC<FloatingSelectionToolbarProps> =
           <Link2 size={11} style={{ opacity: 0.6, flex: "none" }} />
           <input
             ref={linkInputRef}
+            className="nb-mobile-16px"
+            aria-label="Link URL"
             type="url"
             value={linkUrl}
             onChange={(e) => setLinkUrl(e.target.value)}
