@@ -78,7 +78,7 @@ export function useBookmarks() {
   const [activeTopicCluster, setActiveTopicCluster] = useState<string | null>(null);
   const [time, setTime]           = useState(180);
   const [ctx, setCtx]             = useState<ContextType>("all");
-  const [view, setView]           = useState<ViewMode>("masonry");
+  const [view, setView]           = useState<ViewMode>("grid");
   const [sort, setSort]           = useState<SortMode>("recent");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [neverOpenedOnly, setNeverOpenedOnly] = useState(false);

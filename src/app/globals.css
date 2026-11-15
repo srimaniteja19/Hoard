@@ -7,6 +7,7 @@
 @import "../styles/channel100.css";
 @import "../styles/studio.css";
 @import "../styles/til.css";
+@import "../styles/library.css";
 
 :root, [data-theme="default"] {
   --cream: #F4F0EA;

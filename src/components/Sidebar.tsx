@@ -2,33 +2,28 @@
 
 import React, { useMemo, useState } from "react";
 import { Bookmark, Collection, KindType, ViewMode } from "@/types";
-import { TYPES } from "@/data/initialBookmarks";
 import { inColl } from "@/hooks/useBookmarks";
 import { sigil } from "@/lib/sigil";
 import { usePWA } from "@/components/PWAProvider";
 import Link from "next/link";
 import {
-  FileText,
-  Film,
-  Headphones,
-  FolderGit2,
-  AppWindow,
-  GraduationCap,
-  BookOpen,
-  Layers,
+  Zap,
+  Search,
+  Plus,
+  Archive,
+  Inbox,
   Sparkles,
+  Upload,
+  Download,
+  Printer,
+  Newspaper,
+  Share2,
+  Check,
+  ChevronRight,
+  ChevronDown,
+  AlertCircle,
 } from "lucide-react";
 import { buildLivingTopicClusters, LivingTopicCluster } from "@/lib/library/topicClustering";
-
-const KIND_GLYPHS: Record<KindType, React.ReactNode> = {
-  ART: <FileText size={12} strokeWidth={2.5} />,
-  VID: <Film size={12} strokeWidth={2.5} />,
-  PLY: <Headphones size={12} strokeWidth={2.5} />,
-  GIT: <FolderGit2 size={12} strokeWidth={2.5} />,
-  APP: <AppWindow size={12} strokeWidth={2.5} />,
-  PPR: <GraduationCap size={12} strokeWidth={2.5} />,
-  DOC: <BookOpen size={12} strokeWidth={2.5} />,
-};
 
 interface SidebarProps {
   bookmarks: Bookmark[];
@@ -92,6 +87,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { isInstallable, promptInstall } = usePWA();
   const [shareCopied, setShareCopied] = useState(false);
   const [showAllCollections, setShowAllCollections] = useState(false);
+  const [showAllTags, setShowAllTags] = useState(false);
+  const [tagFilterQuery, setTagFilterQuery] = useState("");
+  const [topicsExpanded, setTopicsExpanded] = useState(true);
+
   const isColdStart = bookmarks.length > 0 && bookmarks.length < 15;
 
   const livingClusters = useMemo(() => {
@@ -104,19 +103,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const cnt = (cId: string) => activeBookmarks.filter((x) => inColl(x, cId, collections)).length;
 
-  const typeCounts = useMemo(() => {
-    const map: Partial<Record<KindType, number>> = {};
-    activeBookmarks.forEach((x) => {
-      map[x.ty] = (map[x.ty] || 0) + 1;
-    });
-    return map;
-  }, [activeBookmarks]);
-
-  const maxTypeCount = useMemo(() => {
-    const vals = Object.values(typeCounts);
-    return Math.max(...vals, 1);
-  }, [typeCounts]);
-
   const tagCounts = useMemo(() => {
     const map: Record<string, number> = {};
     activeBookmarks.forEach((x) => {
@@ -127,6 +113,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [activeBookmarks]);
 
+  const filteredTagCounts = useMemo(() => {
+    const q = tagFilterQuery.trim().toLowerCase().replace(/^#/, "");
+    if (!q) return tagCounts;
+    return tagCounts.filter(([t]) => t.toLowerCase().includes(q));
+  }, [tagCounts, tagFilterQuery]);
+
+  const visibleTags = useMemo(() => {
+    if (showAllTags || tagFilterQuery.trim().length > 0) return filteredTagCounts;
+    return filteredTagCounts.slice(0, 12);
+  }, [filteredTagCounts, showAllTags, tagFilterQuery]);
+
   const unreadCount = useMemo(() => {
     return bookmarks.filter((x) => !x.isDeleted && x.unread).length;
   }, [bookmarks]);
@@ -136,45 +133,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [bookmarks]);
 
   const neverOpenedCount = useMemo(() => {
-    return bookmarks.filter((x) => !x.isDeleted && x.itemType === "REFERENCE" && (x.useCount ?? 0) === 0).length;
+    return bookmarks.filter(
+      (x) => !x.isDeleted && x.itemType === "REFERENCE" && (x.useCount ?? 0) === 0
+    ).length;
   }, [bookmarks]);
 
-  const duplicateCount = useMemo(() => {
-    const seen = new Set<string>();
-    let dups = 0;
-    bookmarks.forEach((b) => {
-      if (b.isDeleted) return;
-      const norm = b.url.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
-      if (seen.has(norm)) dups++;
-      else seen.add(norm);
-    });
-    return dups;
-  }, [bookmarks]);
-
-  const handleSelectCollection = (cId: string) => {
-    setColl(cId);
+  const handleSelectAll = () => {
+    setColl("all");
     setTy(null);
     setTag(null);
+    if (setActiveTopicCluster) setActiveTopicCluster(null);
+    setUnreadOnly(false);
+    setNeverOpenedOnly(false);
+    if (view === "archive" && setView) setView("grid");
     if (onCloseMobile) onCloseMobile();
   };
 
-  const handleSelectType = (k: KindType) => {
-    setTy(ty === k ? null : k);
+  const handleSelectCollection = (cId: string) => {
+    setColl(cId);
+    if (view === "archive" && setView) setView("grid");
     if (onCloseMobile) onCloseMobile();
   };
 
   const handleSelectTag = (t: string) => {
     setTag(tag === t ? null : t);
+    if (view === "archive" && setView) setView("grid");
     if (onCloseMobile) onCloseMobile();
   };
 
   const handleSelectUnread = () => {
     setUnreadOnly(!unreadOnly);
+    setNeverOpenedOnly(false);
+    if (view === "archive" && setView) setView("grid");
     if (onCloseMobile) onCloseMobile();
   };
 
   const handleSelectNeverOpened = () => {
     setNeverOpenedOnly(!neverOpenedOnly);
+    setUnreadOnly(false);
+    if (view === "archive" && setView) setView("grid");
     if (onCloseMobile) onCloseMobile();
   };
 
@@ -189,8 +186,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return list.map((c) => (
       <React.Fragment key={c.id}>
         <div
-          className={`ci ${depth > 0 ? "child" : ""} ${coll === c.id ? "on" : ""}`}
-          style={{ paddingLeft: depth > 0 ? `${14 + depth * 14}px` : undefined }}
+          className={`ci ${depth > 0 ? "child" : ""} ${coll === c.id && view !== "archive" ? "on" : ""}`}
+          style={{ paddingLeft: depth > 0 ? `${12 + depth * 14}px` : undefined }}
           onClick={() => handleSelectCollection(c.id)}
           title={c.query ? `Smart Collection Query: ${c.query}` : undefined}
         >
@@ -202,13 +199,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span
               className="ic"
               style={{ overflow: "hidden" }}
-              dangerouslySetInnerHTML={{ __html: sigil(c.name, 22).svg }}
+              dangerouslySetInnerHTML={{ __html: sigil(c.name, 20).svg }}
             />
           )}
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+          <span
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              flex: 1,
+            }}
+          >
             {c.name}
           </span>
-          {c.query && <span style={{ fontSize: "9px", opacity: 0.6, marginRight: "4px" }}>LIVE</span>}
+          {c.query && (
+            <span style={{ fontSize: "8.5px", opacity: 0.6, marginRight: "4px", fontFamily: "var(--mono)" }}>
+              LIVE
+            </span>
+          )}
           <span className="n">{cnt(c.id)}</span>
         </div>
         {c.kids && renderCollectionTree(c.kids, depth + 1)}
@@ -216,100 +224,168 @@ export const Sidebar: React.FC<SidebarProps> = ({
     ));
   };
 
+  const isAllActive =
+    coll === "all" &&
+    ty === null &&
+    tag === null &&
+    !activeTopicCluster &&
+    !unreadOnly &&
+    !neverOpenedOnly &&
+    view !== "archive";
+
   return (
     <>
-      {/* Mobile Drawer Backdrop */}
-      {isMobileOpen && (
-        <div
-          className="sidebar-backdrop"
-          onClick={onCloseMobile}
-        />
-      )}
+      {isMobileOpen && <div className="sidebar-backdrop" onClick={onCloseMobile} />}
 
       <aside className={`side ${isMobileOpen ? "mobile-open" : ""}`}>
-        <div className="logo">
-          <Link
-            href="/library"
-            className="logo-home"
-            onClick={() => {
-              setColl("all");
-              setTy(null);
-              setTag(null);
-              setUnreadOnly(false);
-              setNeverOpenedOnly(false);
-              onCloseMobile?.();
+        {/* Mobile-only close header */}
+        {isMobileOpen && onCloseMobile && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 12px",
+              borderBottom: "2px solid var(--ink)",
+              background: "var(--yel)",
+              fontFamily: "var(--mono)",
+              fontWeight: 800,
+              fontSize: "12px",
             }}
           >
-            <b>HOARD</b>
-          </Link>
-          <span>{unreadCount}</span>
-          {onCloseMobile && (
+            <span>LIBRARY NAVIGATION</span>
             <button
-              className="mobile-side-close"
               onClick={onCloseMobile}
+              style={{
+                border: "1.5px solid var(--ink)",
+                background: "var(--paper)",
+                padding: "2px 7px",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
               aria-label="Close menu"
             >
               ✕
             </button>
-          )}
+          </div>
+        )}
+
+        {/* Top Primary Actions: Save Link + Focus Session */}
+        <div className="side-top-actions">
+          <button
+            type="button"
+            className="side-save-btn"
+            onClick={() => {
+              onOpenCapture();
+              if (onCloseMobile) onCloseMobile();
+            }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+              <Plus size={13} strokeWidth={2.8} /> SAVE LINK
+            </span>
+            <kbd>⌘N</kbd>
+          </button>
+
+          <Link
+            href="/session"
+            className="side-session-btn"
+            title="Start distraction-free Focus Session"
+          >
+            <Zap size={12} fill="currentColor" /> FOCUS
+          </Link>
         </div>
 
-        <button
-          className="addbtn"
-          onClick={() => {
-            onOpenCapture();
-            if (onCloseMobile) onCloseMobile();
-          }}
-        >
-          SAVE A LINK <kbd>⌘N</kbd>
-        </button>
-
         <div className="sidescroll">
-          <div className="slbl" style={{ justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
-              COLLECTIONS<i></i>
+          {/* 1. Smart Scopes */}
+          <div className="slbl">
+            <span>VIEWS & SCOPES</span>
+          </div>
+
+          <div id="scopes">
+            <div className={`ci ${isAllActive ? "on" : ""}`} onClick={handleSelectAll}>
+              <span className="ic" style={{ background: "var(--yel)", color: "#000" }}>
+                <Inbox size={11} strokeWidth={2.5} />
+              </span>
+              <span style={{ flex: 1 }}>All Bookmarks</span>
+              <span
+                key={`unread-${dischargePulseNonce}`}
+                className={`n ${dischargePulseNonce > 0 ? (dischargeReducedMotion ? "counter-crossfade" : "counter-pulse") : ""}`}
+              >
+                {unreadCount}
+              </span>
             </div>
+
+            <div className={`ci ${unreadOnly ? "on" : ""}`} onClick={handleSelectUnread}>
+              <span className="ic" style={{ background: "var(--pink)", color: "#fff" }}>
+                ●
+              </span>
+              <span style={{ flex: 1 }}>Unread Queue</span>
+              <span className="n">{unreadCount}</span>
+            </div>
+
+            <div className={`ci ${neverOpenedOnly ? "on" : ""}`} onClick={handleSelectNeverOpened}>
+              <span className="ic" style={{ background: "var(--orange, #FF6B00)", color: "#000" }}>
+                <AlertCircle size={11} strokeWidth={2.5} />
+              </span>
+              <span style={{ flex: 1 }}>Never Opened</span>
+              <span className="n">{neverOpenedCount}</span>
+            </div>
+
+            <div
+              className={`ci ${view === "archive" ? "on" : ""}`}
+              onClick={() => {
+                if (setView) setView(view === "archive" ? "grid" : "archive");
+                if (onCloseMobile) onCloseMobile();
+              }}
+            >
+              <span className="ic" style={{ background: "var(--cyan)", color: "#000" }}>
+                <Archive size={11} strokeWidth={2.5} />
+              </span>
+              <span style={{ flex: 1 }}>Archive Vault</span>
+              <span className="n">{archiveCount}</span>
+            </div>
+
+            {dischargeCount > 0 && (
+              <div
+                className="ci"
+                id="til-gains-counter"
+                title="Bookmarks discharged into TIL entries this session"
+              >
+                <span className="ic" style={{ background: "var(--lime, #B6FF3C)", color: "#000" }}>
+                  💡
+                </span>
+                <span style={{ flex: 1 }}>TIL Gains (Session)</span>
+                <span
+                  key={`gains-${dischargePulseNonce}`}
+                  className={`n ${dischargePulseNonce > 0 ? (dischargeReducedMotion ? "counter-crossfade" : "counter-pulse") : ""}`}
+                >
+                  {dischargeCount}
+                </span>
+              </div>
+            )}
+
+            {/* Hidden anchor for FLIP animation when dischargeCount is 0 */}
+            {dischargeCount === 0 && (
+              <div id="til-gains-counter" style={{ height: 0, overflow: "hidden" }} aria-hidden="true" />
+            )}
+          </div>
+
+          {/* 2. Collections / Folders */}
+          <div className="slbl">
+            <span>COLLECTIONS</span>
             <button
+              type="button"
+              className="slbl-action"
               onClick={() => {
                 onOpenNewFolder();
                 if (onCloseMobile) onCloseMobile();
               }}
-              style={{
-                fontFamily: "var(--mono)",
-                fontSize: "9px",
-                fontWeight: 800,
-                border: "2px solid var(--ink)",
-                background: "#FFE600",
-                padding: "6px 8px",
-                cursor: "pointer",
-                marginLeft: "4px",
-                minHeight: "36px",
-              }}
             >
-              + FOLDER
+              + NEW
             </button>
           </div>
+
           <div id="colls">
-            <div
-              className={`ci ${coll === "all" && ty === null && tag === null && !unreadOnly && !neverOpenedOnly ? "on" : ""}`}
-              onClick={() => {
-                setColl("all");
-                setTy(null);
-                setTag(null);
-                setUnreadOnly(false);
-                setNeverOpenedOnly(false);
-                if (onCloseMobile) onCloseMobile();
-              }}
-              style={{ fontWeight: 800 }}
-            >
-              <span className="ic" style={{ background: "var(--ink)", color: "#FFE600", fontWeight: 900 }}>
-                ⚡
-              </span>
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
-                All Bookmarks (Full Shelf)
-              </span>
-              <span className="n">{activeBookmarks.length}</span>
-            </div>
             {renderCollectionTree(
               isColdStart && !showAllCollections
                 ? collections.filter((c) => cnt(c.id) > 0)
@@ -319,390 +395,256 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {isColdStart && !showAllCollections && collections.some((c) => cnt(c.id) === 0) && (
             <button
+              type="button"
               onClick={() => setShowAllCollections(true)}
               style={{
-                width: "100%",
+                width: "calc(100% - 16px)",
+                margin: "4px 8px",
                 fontFamily: "var(--mono)",
-                fontSize: "9px",
-                fontWeight: 800,
-                border: "2px solid var(--fg)",
-                background: "var(--paper)",
-                color: "var(--fg)",
+                fontSize: "9.5px",
+                fontWeight: 700,
+                border: "1px dashed var(--ink)",
+                background: "transparent",
+                color: "var(--ink)",
                 padding: "4px 8px",
                 cursor: "pointer",
-                margin: "2px 0 8px 0",
-                opacity: 0.7,
+                opacity: 0.65,
               }}
             >
-              SHOW {collections.filter((c) => cnt(c.id) === 0).length} EMPTY COLLECTION
-              {collections.filter((c) => cnt(c.id) === 0).length === 1 ? "" : "S"}
+              + Show {collections.filter((c) => cnt(c.id) === 0).length} empty folders
             </button>
           )}
 
-          {/* Share Collection Button if a specific collection is selected */}
           {coll !== "all" && (
-            <button
-              onClick={handleShareCurrentCollection}
-              style={{
-                width: "100%",
-                fontFamily: "var(--mono)",
-                fontSize: "10px",
-                fontWeight: 800,
-                border: "2px solid var(--ink)",
-                background: shareCopied ? "#B6FF3C" : "#00F0FF",
-                padding: "5px 8px",
-                cursor: "pointer",
-                margin: "4px 0 10px 0",
-                boxShadow: "2px 2px 0 var(--ink)",
-              }}
-            >
-              {shareCopied ? "✓ SHARE LINK COPIED!" : "🔗 SHARE COLLECTION"}
-            </button>
+            <div style={{ padding: "4px 8px" }}>
+              <button
+                type="button"
+                onClick={handleShareCurrentCollection}
+                style={{
+                  width: "100%",
+                  fontFamily: "var(--mono)",
+                  fontSize: "10px",
+                  fontWeight: 800,
+                  border: "1.5px solid var(--ink)",
+                  background: shareCopied ? "var(--lime)" : "var(--paper)",
+                  color: "var(--ink)",
+                  padding: "5px 8px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "5px",
+                  boxShadow: "1.5px 1.5px 0 var(--ink)",
+                }}
+              >
+                {shareCopied ? <Check size={11} /> : <Share2 size={11} />}
+                {shareCopied ? "SHARE LINK COPIED" : "SHARE COLLECTION"}
+              </button>
+            </div>
           )}
 
-          <button
-            onClick={() => window.print()}
-            style={{
-              width: "100%",
-              fontFamily: "var(--mono)",
-              fontSize: "10px",
-              fontWeight: 800,
-              border: "2px solid var(--fg)",
-              background: "var(--paper)",
-              color: "var(--fg)",
-              padding: "5px 8px",
-              cursor: "pointer",
-              margin: "4px 0 10px 0",
-              boxShadow: "2px 2px 0 var(--fg)",
-            }}
-          >
-            🖨️ PRINT COLLECTION
-          </button>
-
-          <div className="slbl">
-            KIND<i></i>
-          </div>
-          <div id="kinds">
-            {(Object.keys(TYPES) as KindType[]).map((k) => {
-              const v = TYPES[k];
-              const count = typeCounts[k] || 0;
-              const isZero = count === 0;
-
-              const barWidthPct = count > 0 ? Math.round(18 + (count / maxTypeCount) * 82) : 0;
-              const trailingLabel = count > 0 ? `${count}` : "0";
-
-              return (
-                <div
-                  key={k}
-                  className={`ci kind-row ${ty === k ? "on" : ""} ${isZero ? "dimmed" : ""}`}
-                  data-kind={k}
-                  onClick={() => handleSelectType(k)}
-                >
-                  {barWidthPct > 0 && (
-                    <div
-                      className="occupancy-bar"
-                      style={{ width: `${barWidthPct}%` }}
-                    />
-                  )}
-                  <span className="ic" data-kind={k}>
-                    {KIND_GLYPHS[k]}
-                  </span>
-                  <span style={{ position: "relative", zIndex: 1, flex: 1 }}>{v.name}</span>
-                  <span className="n" style={{ position: "relative", zIndex: 1 }}>{trailingLabel}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* 🏷️ Living Topic Clusters */}
+          {/* 3. Living Topic Clusters */}
           {livingClusters.length > 0 && (
             <>
-              <div className="slbl" style={{ justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  TOPIC CLUSTERS<i></i>
-                </div>
-                <span style={{ fontSize: "9px", fontFamily: "var(--mono)", opacity: 0.6 }}>LIVING HUBS</span>
+              <div
+                className="slbl"
+                style={{ cursor: "pointer" }}
+                onClick={() => setTopicsExpanded(!topicsExpanded)}
+              >
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  {topicsExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+                  TOPIC HUBS
+                </span>
+                <span style={{ fontSize: "9px", opacity: 0.6 }}>{livingClusters.length}</span>
               </div>
 
-              <div id="topic-clusters" style={{ display: "grid", gap: "2px", marginBottom: "8px" }}>
-                {livingClusters.slice(0, 5).map((c) => {
-                  const isSelected = activeTopicCluster === c.title;
-
-                  return (
-                    <div
-                      key={c.id}
-                      className={`ci ${isSelected ? "on" : ""}`}
-                      onClick={() => {
-                        if (setActiveTopicCluster) {
-                          setActiveTopicCluster(isSelected ? null : c.title);
-                        }
-                        if (onCloseMobile) onCloseMobile();
-                      }}
-                      style={{
-                        position: "relative",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                      }}
-                    >
-                      <span className="ic" style={{ background: c.color, color: "#000", fontWeight: 800 }}>
-                        {c.icon}
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "11px", fontWeight: isSelected ? 800 : 700 }}>
-                          {c.title}
-                        </div>
-                        <div style={{ display: "flex", gap: "4px", alignItems: "center", fontSize: "9px", opacity: 0.75 }}>
-                          <span>{c.densityLevel}</span>
-                          <span>·</span>
-                          <span>{c.unreadCount > 0 ? `🔥 ${c.unreadCount} unread` : "✓ Explored"}</span>
-                        </div>
-                      </div>
-
-                      {onOpenTopicHub && (
-                        <button
-                          className="cluster-hub-open-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenTopicHub(c);
-                          }}
-                          title="Open Topic Hub Details"
+              {topicsExpanded && (
+                <div id="topic-clusters">
+                  {livingClusters.slice(0, 5).map((c) => {
+                    const isSelected = activeTopicCluster === c.title;
+                    return (
+                      <div
+                        key={c.id}
+                        className={`ci ${isSelected ? "on" : ""}`}
+                        onClick={() => {
+                          if (setActiveTopicCluster) {
+                            setActiveTopicCluster(isSelected ? null : c.title);
+                          }
+                          if (onCloseMobile) onCloseMobile();
+                        }}
+                      >
+                        <span
+                          className="ic"
+                          style={{ background: c.color, color: "#000", fontWeight: 800 }}
+                        >
+                          {c.icon}
+                        </span>
+                        <span
                           style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            padding: "2px 4px",
-                            opacity: 0.6,
+                            flex: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            fontSize: "12px",
                           }}
                         >
-                          ↗
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                          {c.title}
+                        </span>
+                        <span className="n">{c.unreadCount}</span>
+                        {onOpenTopicHub && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenTopicHub(c);
+                            }}
+                            title="Open Topic Hub Synthesis"
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: "0 2px",
+                              fontSize: "11px",
+                              opacity: 0.65,
+                            }}
+                          >
+                            ↗
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </>
           )}
 
+          {/* 4. Searchable & Collapsible Tags */}
           <div className="slbl">
-            TAGS<i></i>
+            <span>TAGS ({tagCounts.length})</span>
+            {tag && (
+              <button
+                type="button"
+                className="slbl-action"
+                onClick={() => setTag(null)}
+              >
+                CLEAR
+              </button>
+            )}
           </div>
+
+          {tagCounts.length > 8 && (
+            <div className="side-tag-search">
+              <Search size={11} />
+              <input
+                type="text"
+                value={tagFilterQuery}
+                onChange={(e) => setTagFilterQuery(e.target.value)}
+                placeholder="Filter #tags..."
+                aria-label="Filter tags"
+              />
+            </div>
+          )}
+
           <div className="tagwrap" id="tags">
-            {tagCounts.map(([t, n]) => (
+            {visibleTags.map(([t, n]) => (
               <span
                 key={t}
                 className={`tg ${tag === t ? "on" : ""}`}
                 onClick={() => handleSelectTag(t)}
               >
-                #{t} {n}
+                <span>#{t}</span>
+                <span className="tg-count">{n}</span>
               </span>
             ))}
           </div>
 
-          <div className="slbl">
-            TOOLS & FILTERS<i></i>
-          </div>
-          <div id="filters">
-            <div
-              className={`ci ${unreadOnly ? "on" : ""}`}
-              onClick={handleSelectUnread}
-            >
-              <span className="ic" style={{ background: "#FF007A" }}></span>
-              Unread only
-              <span
-                key={`unread-${dischargePulseNonce}`}
-                className={`n ${dischargePulseNonce > 0 ? (dischargeReducedMotion ? "counter-crossfade" : "counter-pulse") : ""}`}
-              >
-                {unreadCount}
-              </span>
-            </div>
-
-            <div
-              className={`ci ${neverOpenedOnly ? "on" : ""}`}
-              onClick={handleSelectNeverOpened}
-            >
-              <span className="ic" style={{ background: "var(--orange, #FF6B00)" }}></span>
-              Never opened
-              <span className="n">{neverOpenedCount}</span>
-            </div>
-
-            <div className="ci" id="til-gains-counter" title="Bookmarks discharged into TIL entries this session">
-              <span className="ic" style={{ background: "var(--lime, #B6FF3C)" }}>💡</span>
-              TIL gains (session)
-              <span
-                key={`gains-${dischargePulseNonce}`}
-                className={`n ${dischargePulseNonce > 0 ? (dischargeReducedMotion ? "counter-crossfade" : "counter-pulse") : ""}`}
-              >
-                {dischargeCount}
-              </span>
-            </div>
-
-            <div
-              className={`ci ${view === "archive" ? "on" : ""}`}
-              onClick={() => {
-                if (setView) setView(view === "archive" ? "masonry" : "archive");
-                if (onCloseMobile) onCloseMobile();
-              }}
-              style={{
-                background: view === "archive" ? "var(--yel, #FFE600)" : undefined,
-                color: view === "archive" ? "#000" : undefined,
-                fontWeight: view === "archive" ? 800 : undefined,
-              }}
-            >
-              <span className="ic" style={{ background: "var(--yel, #FFE600)", color: "#000", fontWeight: 800 }}>
-                🗄️
-              </span>
-              Archive Vault
-              <span className="n">{archiveCount}</span>
-            </div>
-
-            <div
-              className="ci"
-              onClick={() => {
-                if (onOpenGazette) onOpenGazette();
-                if (onCloseMobile) onCloseMobile();
-              }}
-              style={{
-                background: "var(--cream)",
-                border: "1.5px solid var(--ink)",
-                boxShadow: "2px 2px 0 var(--ink)",
-                margin: "4px 0",
-              }}
-            >
-              <span className="ic" style={{ background: "var(--yel)", color: "#000", fontWeight: 900 }}>
-                📰
-              </span>
-              The Hoard Gazette
-              <span className="n" style={{ background: "var(--lime)", color: "#000", fontSize: "9px" }}>
-                SUNDAY ZINE
-              </span>
-            </div>
-
-            <div className="ci">
-              <span className="ic" style={{ background: "#FFE600", color: "#000", fontWeight: 800 }}>
-                ⚠️
-              </span>
-              Duplicates
-              <span className="n">{duplicateCount}</span>
-            </div>
-
-            <Link
-              href="/scratch"
-              style={{ textDecoration: "none", color: "inherit" }}
-              onClick={() => {
-                if (onCloseMobile) onCloseMobile();
-              }}
-            >
-              <div
-                className="ci"
-                style={{ marginTop: "10px", background: "#FFE94A", color: "#000", borderColor: "var(--ink)", fontWeight: "800" }}
-              >
-                <span className="ic" style={{ background: "var(--ink)", color: "#FFE94A" }}>
-                  ✎
-                </span>
-                SCRATCH
-              </div>
-            </Link>
-
-            <Link
-              href="/todos"
-              style={{ textDecoration: "none", color: "inherit" }}
-              onClick={() => {
-                if (onCloseMobile) onCloseMobile();
-              }}
-            >
-              <div
-                className="ci"
-                style={{ marginTop: "6px", background: "#B6FF3C", color: "#000", borderColor: "var(--ink)", fontWeight: "800" }}
-              >
-                <span className="ic" style={{ background: "var(--ink)", color: "#B6FF3C" }}>
-                  ✓
-                </span>
-                TODOS
-              </div>
-            </Link>
-
-            <Link
-              href="/til"
-              style={{ textDecoration: "none", color: "inherit" }}
-              onClick={() => {
-                if (onCloseMobile) onCloseMobile();
-              }}
-            >
-              <div
-                className="ci"
-                style={{ marginTop: "6px", background: "#FFE600", color: "#000", borderColor: "var(--ink)", fontWeight: "800" }}
-              >
-                <span className="ic" style={{ background: "var(--ink)", color: "#FFE600" }}>
-                  💡
-                </span>
-                TODAY I LEARNED (TIL)
-              </div>
-            </Link>
-
-            <Link
-              href="/stats"
-              style={{ textDecoration: "none", color: "inherit" }}
-              onClick={() => {
-                if (onCloseMobile) onCloseMobile();
-              }}
-            >
-              <div
-                className="ci"
-                style={{ marginTop: "6px", background: "#00F0FF", borderColor: "var(--ink)", fontWeight: "800" }}
-              >
-                <span className="ic" style={{ background: "var(--ink)", color: "#00F0FF" }}>
-                  📊
-                </span>
-                ANALYTICS DASHBOARD
-              </div>
-            </Link>
-
-            <div
-              className="ci"
-              onClick={() => {
-                onOpenImport();
-                if (onCloseMobile) onCloseMobile();
-              }}
-              style={{ marginTop: "6px", background: "#FFE600", borderColor: "var(--ink)", fontWeight: "800" }}
-            >
-              <span className="ic" style={{ background: "var(--ink)", color: "#FFE600" }}>
-                ↑
-              </span>
-              IMPORT BOOKMARKS
-            </div>
-
-            {isInstallable && (
-              <div
-                className="ci"
-                onClick={() => {
-                  promptInstall();
-                  if (onCloseMobile) onCloseMobile();
+          {!tagFilterQuery && tagCounts.length > 12 && (
+            <div style={{ padding: "2px 12px 8px" }}>
+              <button
+                type="button"
+                onClick={() => setShowAllTags(!showAllTags)}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  fontFamily: "var(--mono)",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  color: "var(--ink)",
+                  opacity: 0.68,
+                  cursor: "pointer",
+                  padding: "2px 0",
+                  textDecoration: "underline",
                 }}
-                style={{ marginTop: "6px", background: "#B6FF3C", borderColor: "var(--ink)", fontWeight: "800" }}
               >
-                <span className="ic" style={{ background: "var(--ink)", color: "#B6FF3C" }}>
-                  ⚡
-                </span>
-                INSTALL APP
-              </div>
-            )}
+                {showAllTags ? "Show fewer tags" : `+ Show all ${tagCounts.length} tags`}
+              </button>
+            </div>
+          )}
+        </div>
 
-            <div
-              className="ci"
+        {/* Quiet Library Utilities Footer */}
+        <div className="side-footer">
+          {onOpenGazette && (
+            <button
+              type="button"
+              className="side-util-btn"
               onClick={() => {
-                window.open("/api/export", "_blank");
+                onOpenGazette();
                 if (onCloseMobile) onCloseMobile();
               }}
-              style={{ marginTop: "6px", background: "var(--paper)", borderColor: "var(--ink)" }}
+              title="Open The Hoard Gazette (Weekly Micro-Zine)"
             >
-              <span className="ic" style={{ background: "var(--ink)", color: "#fff" }}>
-                ↓
-              </span>
-              EXPORT DATA
-            </div>
-          </div>
+              <Newspaper size={11} /> GAZETTE
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="side-util-btn"
+            onClick={() => {
+              onOpenImport();
+              if (onCloseMobile) onCloseMobile();
+            }}
+            title="Import Bookmarks"
+          >
+            <Upload size={11} /> IMPORT
+          </button>
+
+          <button
+            type="button"
+            className="side-util-btn"
+            onClick={() => {
+              window.open("/api/export", "_blank");
+              if (onCloseMobile) onCloseMobile();
+            }}
+            title="Export Library Data"
+          >
+            <Download size={11} /> EXPORT
+          </button>
+
+          <button
+            type="button"
+            className="side-util-btn"
+            onClick={() => window.print()}
+            title="Print Current Shelf"
+          >
+            <Printer size={11} />
+          </button>
+
+          {isInstallable && (
+            <button
+              type="button"
+              className="side-util-btn"
+              onClick={() => {
+                promptInstall();
+                if (onCloseMobile) onCloseMobile();
+              }}
+              title="Install PWA"
+            >
+              <Sparkles size={11} />
+            </button>
+          )}
         </div>
       </aside>
     </>

@@ -3,7 +3,16 @@
 import React from "react";
 import { Bookmark } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
-import { Layers, ShieldCheck, AlertTriangle, Zap, Sparkles } from "lucide-react";
+import {
+  Layers,
+  ShieldCheck,
+  AlertTriangle,
+  Zap,
+  Sparkles,
+  BookOpen,
+  ExternalLink,
+  SlidersHorizontal,
+} from "lucide-react";
 
 import { CoverCanvas } from "@/components/covers/CoverCanvas";
 import { calculateSunFadeOpacity } from "@/components/covers/lib/cover-geometry";
@@ -11,12 +20,6 @@ import { formatDuration } from "@/lib/format";
 import { formatRelativeTime } from "@/lib/library/formatRelativeTime";
 import { extractYouTubeVideoId } from "@/lib/cleanTitle";
 import { YouTubeDigestButton } from "@/components/youtube/YouTubeDigestButton";
-import {
-  classifyHorizon,
-  getBookmarkDate,
-  getDaysAgo,
-  getHorizonMetadata,
-} from "@/lib/library/timeCapsule";
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -26,6 +29,8 @@ interface BookmarkCardProps {
   cardWidthPx?: number;
   onToggleSelect: (id: number, e: React.MouseEvent) => void;
   onOpen: (id: number) => void;
+  onRecordUse?: (id: number) => void;
+  onSelectTag?: (tag: string) => void;
   onOpenDiff?: (bookmark: Bookmark) => void;
   onDischarge?: (bookmark: Bookmark, sourceRect: DOMRect) => void;
   onGhostRead?: (bookmark: Bookmark) => void;
@@ -40,17 +45,25 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   cardWidthPx,
   onToggleSelect,
   onOpen,
+  onRecordUse,
+  onSelectTag,
   onOpenDiff,
   onDischarge,
   onGhostRead,
   onOpenSynapse,
 }) => {
-  const typeMeta = TYPES[bookmark.ty] || { name: bookmark.ty, c: "#00F0FF", fg: "#000", verb: "READ" };
+  const typeMeta = TYPES[bookmark.ty] || {
+    name: bookmark.ty,
+    c: "#00F0FF",
+    fg: "#000",
+    verb: "READ",
+  };
   const e = bookmark.ex || {};
   const durationText =
     e.Runtime || (e.Stars ? `${e.Stars}★` : e.Pages || (e.Words ? `${e.Words}w` : ""));
 
-  const handleClick = (evt: React.MouseEvent) => {
+  // Clicking the card body or Inspector icon opens the Inspector Drawer
+  const handleCardClick = (evt: React.MouseEvent) => {
     if (evt.metaKey || evt.ctrlKey) {
       onToggleSelect(bookmark.id, evt);
     } else {
@@ -58,46 +71,43 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
     }
   };
 
+  // Clicking the Title or Open button launches the URL directly and records usage
+  const handleLaunchUrl = (evt: React.MouseEvent) => {
+    evt.stopPropagation();
+    if (evt.metaKey || evt.ctrlKey) {
+      onToggleSelect(bookmark.id, evt);
+      return;
+    }
+    window.open(bookmark.url, "_blank", "noopener,noreferrer");
+    onRecordUse?.(bookmark.id);
+  };
+
   const is404 = bookmark.driftStatus === "404_preserved";
   const isChanged = bookmark.driftStatus === "changed";
   const sunFadeOpacity = calculateSunFadeOpacity(bookmark.lastFetchedAt || bookmark.when);
   const neverOpened = bookmark.itemType === "REFERENCE" && (bookmark.useCount ?? 0) === 0;
 
-  const bookmarkDate = getBookmarkDate(bookmark);
-  const daysAgo = getDaysAgo(bookmarkDate);
-  const horizon = bookmark.unread ? classifyHorizon(daysAgo) : null;
-  const horizonMeta = horizon ? getHorizonMetadata(horizon, daysAgo) : null;
+  const hasValidNote = Boolean(
+    bookmark.note &&
+      bookmark.note.trim().length > 0 &&
+      bookmark.note !== "Saved via HOARD Extension"
+  );
 
   return (
     <article
       className={`card ${isSelected ? "sel" : ""}`}
-      onClick={handleClick}
+      onClick={handleCardClick}
       tabIndex={0}
       style={{
         position: "relative",
         ...(sunFadeOpacity < 1 ? { opacity: sunFadeOpacity } : {}),
-        ...(cardWidthPx ? { width: `${cardWidthPx}px`, minWidth: `${cardWidthPx}px`, flexShrink: 0 } : {}),
-        ...(neverOpened ? { borderLeft: "4px solid var(--orange)" } : {}),
+        ...(cardWidthPx
+          ? { width: `${cardWidthPx}px`, minWidth: `${cardWidthPx}px`, flexShrink: 0 }
+          : {}),
+        ...(neverOpened ? { borderLeft: "3px solid var(--orange)" } : {}),
       }}
     >
-      {/* Paper Pin Memory Nudge Badge */}
-      {horizonMeta && (
-        <div
-          className={`card-paper-pin card-paper-pin-${horizon}`}
-          style={{
-            background: horizonMeta.color,
-            color: horizonMeta.accent,
-          }}
-          title={`${horizonMeta.headline}: ${horizonMeta.prompt} — Click to open!`}
-          onClick={(evt) => {
-            evt.stopPropagation();
-            onOpen(bookmark.id);
-          }}
-        >
-          <span className="pin-symbol">📌</span>
-          <span className="pin-text">{horizonMeta.badge}</span>
-        </div>
-      )}
+      {/* Slimmer, Cleaner Cover Header */}
       <div
         className={`cover ${heightClass}`}
         data-kind={bookmark.ty}
@@ -114,229 +124,230 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
           height={heightPx}
         />
 
-        <button
-          type="button"
-          className="open-affordance"
-          onClick={(evt) => {
-            evt.stopPropagation();
-            onOpen(bookmark.id);
-          }}
-          title="Open bookmark"
-          aria-label="Open bookmark"
-        >
-          ↗
-        </button>
-
-        {onGhostRead && (
-          <button
-            type="button"
-            className="ghost-read-card-btn"
-            onClick={(evt) => {
-              evt.stopPropagation();
-              onGhostRead(bookmark);
-            }}
-            title="Read in Ghost Reader"
-            aria-label="Open in Ghost Reader"
-          >
-            <span>📖</span> READ
-          </button>
-        )}
-
-        {/* READ Stamp Overlay */}
-        {!bookmark.unread && (
-          <div
-            className="read-stamp"
-            style={{
-              position: "absolute",
-              bottom: "10px",
-              right: "10px",
-              fontFamily: "var(--mono)",
-              fontSize: "11px",
-              fontWeight: 900,
-              letterSpacing: "0.1em",
-              color: "currentColor",
-              opacity: 0.35,
-              transform: "rotate(-6deg)",
-              border: "2px solid currentColor",
-              padding: "1px 5px",
-              pointerEvents: "none",
-              zIndex: 3,
-            }}
-          >
-            [READ]
-          </div>
-        )}
-
+        {/* Top-left Multi-select Checkbox */}
         <span
           className="chk"
           onClick={(evt) => {
             evt.stopPropagation();
             onToggleSelect(bookmark.id, evt);
           }}
+          title="Select bookmark (⌘+Click)"
         >
-          {isSelected ? "✕" : ""}
+          {isSelected ? "✓" : ""}
         </span>
-        <span className="tybadge">{bookmark.ty}</span>
-        {Boolean(extractYouTubeVideoId(bookmark.url)) && (
-          <YouTubeDigestButton
-            url={bookmark.url}
-            title={bookmark.t}
-            variant="badge"
-            style={{
-              position: "absolute",
-              top: "8px",
-              right: "8px",
-              zIndex: 4,
-              boxShadow: "2px 2px 0 #000",
-            }}
-          />
-        )}
-        {bookmark.isQuote && <span className="quote-badge">QUOTE</span>}
-        {durationText && <span className="dur">{durationText}</span>}
-      </div>
 
-      <div className="cbody">
-        {/* Parent Chapter Badge */}
-        {bookmark.parentTitle && (
-          <div
-            style={{
-              background: "#FFE600",
-              border: "1px solid #000",
-              padding: "1px 6px",
-              fontSize: "10px",
-              fontWeight: 800,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              marginBottom: "6px",
-              fontFamily: "var(--mono)",
-            }}
-          >
-            <Zap size={10} /> CHAPTER: {bookmark.parentTitle.slice(0, 30)}...
-          </div>
-        )}
-
-        {/* Cluster Badge */}
-        {bookmark.clusterTitle && (
-          <div
-            style={{
-              background: "#7C4DFF",
-              color: "#fff",
-              border: "1px solid #000",
-              padding: "1px 6px",
-              fontSize: "10px",
-              fontWeight: 800,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              marginBottom: "6px",
-              fontFamily: "var(--mono)",
-            }}
-          >
-            <Layers size={10} /> CLUSTER: {bookmark.clusterTitle}
-          </div>
-        )}
-
-        <div className="ct">{bookmark.t}</div>
-        <div className="print-url">{bookmark.url}</div>
-        {Boolean(bookmark.note && bookmark.note.trim().length > 0 && bookmark.note !== "Saved via HOARD Extension") && (
-          <p className={`cex ${bookmark.excerptSource || "user-note"}`}>{bookmark.note}</p>
-        )}
-        
-        <div className="cmeta">
-          {e.Platform && <span>{e.Platform} · </span>}
-          <span>{bookmark.src}</span>
-          {bookmark.ty === "ART" && bookmark.mins > 0 && (
-            <>
-              <span>·</span>
-              <span>READ {formatDuration(bookmark.mins)}</span>
-            </>
+        {/* Unified Top-right Hover Action Dock */}
+        <div className="card-hover-dock" onClick={(evt) => evt.stopPropagation()}>
+          {onGhostRead && (
+            <button
+              type="button"
+              className="card-dock-btn"
+              onClick={(evt) => {
+                evt.stopPropagation();
+                onGhostRead(bookmark);
+              }}
+              title="Read in distraction-free Ghost Reader"
+            >
+              <BookOpen size={11} /> READ
+            </button>
           )}
-          <span>·</span>
-          <span>
-            {bookmark.useCount ?? 0}× · {formatRelativeTime(bookmark.lastUsedAt)}
-          </span>
-        </div>
 
-        {/* Drift & Badges Row */}
-        <div className="ctags" style={{ flexWrap: "wrap", gap: "4px", alignItems: "center" }}>
-          <span className="ctag" style={{ background: typeMeta.c, color: typeMeta.fg }}>
-            #{bookmark.tag}
-          </span>
-
-          {Boolean(extractYouTubeVideoId(bookmark.url)) && (
-            <YouTubeDigestButton url={bookmark.url} title={bookmark.t} variant="badge" />
+          {bookmark.unread && onDischarge && (
+            <button
+              type="button"
+              className="card-dock-btn"
+              onClick={(evt) => {
+                evt.stopPropagation();
+                const cardEl = (evt.currentTarget as HTMLElement).closest("article");
+                const rect =
+                  cardEl?.getBoundingClientRect() ??
+                  evt.currentTarget.getBoundingClientRect();
+                onDischarge(bookmark, rect);
+              }}
+              title="Discharge into a TIL entry"
+            >
+              <Zap size={11} /> TIL
+            </button>
           )}
 
           {onOpenSynapse && (
             <button
               type="button"
-              className="card-synapse-btn"
+              className="card-dock-btn"
               onClick={(evt) => {
                 evt.stopPropagation();
                 onOpenSynapse(bookmark);
               }}
-              title="Explore Synapse Trail (Connected Hoards)"
+              title="Explore Synapse Trail (Semantic Connections)"
             >
-              <Sparkles size={9} /> SYNAPSE
+              <Sparkles size={11} />
             </button>
           )}
 
-          {bookmark.unread && (
-            <span className="ctag" style={{ background: "#FF007A", color: "#fff" }}>
-              UNREAD
-            </span>
-          )}
+          <button
+            type="button"
+            className="card-dock-btn"
+            onClick={(evt) => {
+              evt.stopPropagation();
+              onOpen(bookmark.id);
+            }}
+            title="Inspect & Edit Details"
+          >
+            <SlidersHorizontal size={11} />
+          </button>
 
-          {bookmark.unread && onDischarge && (
-            <span
-              className="ctag discharge-btn"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                const cardEl = (e.currentTarget as HTMLElement).closest("article");
-                const rect = cardEl?.getBoundingClientRect() ?? e.currentTarget.getBoundingClientRect();
-                onDischarge(bookmark, rect);
-              }}
-              style={{
-                background: "var(--lime, #B6FF3C)",
-                color: "#000",
-                cursor: "pointer",
-                fontWeight: 800,
-              }}
-              title="Turn this into a TIL entry"
-            >
-              DISCHARGE ↦
-            </span>
-          )}
+          <button
+            type="button"
+            className="card-dock-btn"
+            onClick={handleLaunchUrl}
+            title="Open original URL in new tab"
+          >
+            <ExternalLink size={11} />
+          </button>
+        </div>
 
-          {isChanged && (
-            <span
-              className="ctag"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onOpenDiff) onOpenDiff(bookmark);
-              }}
-              style={{ background: "#FFE600", color: "#000", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "2px" }}
-              title="Click to view rendered text diff"
-            >
-              <AlertTriangle size={10} /> DRIFT &gt;{bookmark.driftPercent || 15}%
-            </span>
-          )}
+        {/* Bottom-left Kind Pill */}
+        <span className="tybadge">{typeMeta.name.toUpperCase()}</span>
+        {bookmark.isQuote && <span className="quote-badge">QUOTE</span>}
 
-          {is404 && (
-            <span
-              className="ctag"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onOpenDiff) onOpenDiff(bookmark);
-              }}
-              style={{ background: "#FF007A", color: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "2px" }}
-              title="Click to view preserved copy"
-            >
-              <ShieldCheck size={10} /> 404 PRESERVED
-            </span>
+        {/* Bottom-right Duration or YouTube Digest */}
+        {Boolean(extractYouTubeVideoId(bookmark.url)) ? (
+          <div
+            onClick={(evt) => evt.stopPropagation()}
+            style={{ position: "absolute", right: "8px", bottom: "8px", zIndex: 4 }}
+          >
+            <YouTubeDigestButton url={bookmark.url} title={bookmark.t} variant="badge" />
+          </div>
+        ) : (
+          durationText && <span className="dur">{durationText}</span>
+        )}
+      </div>
+
+      {/* Editorial Card Body */}
+      <div className="cbody">
+        {/* Eyebrow: Source Domain + Reading Time */}
+        <div className="card-eyebrow">
+          <span className="card-domain">
+            {bookmark.unread && <span className="card-unread-dot" title="Unread" />}
+            <span>{bookmark.src}</span>
+            {e.Platform && <span>· {e.Platform}</span>}
+          </span>
+          {bookmark.ty === "ART" && bookmark.mins > 0 && (
+            <span>{formatDuration(bookmark.mins)}</span>
           )}
+        </div>
+
+        {/* Optional Parent Chapter or Topic Cluster Context */}
+        {(bookmark.parentTitle || bookmark.clusterTitle) && (
+          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+            {bookmark.parentTitle && (
+              <span
+                style={{
+                  fontSize: "9.5px",
+                  fontFamily: "var(--mono)",
+                  fontWeight: 700,
+                  background: "color-mix(in oklab, var(--yel) 35%, var(--paper))",
+                  border: "1px solid var(--ink)",
+                  padding: "0 5px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "3px",
+                }}
+              >
+                <Zap size={9} /> {bookmark.parentTitle.slice(0, 26)}
+              </span>
+            )}
+            {bookmark.clusterTitle && (
+              <span
+                style={{
+                  fontSize: "9.5px",
+                  fontFamily: "var(--mono)",
+                  fontWeight: 700,
+                  background: "var(--cream)",
+                  border: "1px solid color-mix(in oklab, var(--ink) 35%, transparent)",
+                  padding: "0 5px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "3px",
+                }}
+              >
+                <Layers size={9} /> {bookmark.clusterTitle}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Primary Title — Clicking opens URL directly & logs use */}
+        <a
+          href={bookmark.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="card-title-link"
+          onClick={handleLaunchUrl}
+          title={`Open ${bookmark.url}`}
+        >
+          {bookmark.t}
+        </a>
+
+        <div className="print-url">{bookmark.url}</div>
+
+        {/* Quiet Excerpt or Highlighted User Note */}
+        {hasValidNote && (
+          <p className={`cex ${bookmark.excerptSource || "user-note"}`}>{bookmark.note}</p>
+        )}
+
+        {/* Quiet Footer: Tag Pill + Drift Alerts + Usage Count */}
+        <div className="card-footer">
+          <div className="card-footer-left">
+            {bookmark.tag && (
+              <span
+                className="card-tag-pill"
+                onClick={(evt) => {
+                  if (onSelectTag) {
+                    evt.stopPropagation();
+                    onSelectTag(bookmark.tag);
+                  }
+                }}
+                title={onSelectTag ? `Filter by #${bookmark.tag}` : undefined}
+              >
+                #{bookmark.tag}
+              </span>
+            )}
+
+            {isChanged && (
+              <span
+                className="card-status-badge"
+                onClick={(evt) => {
+                  evt.stopPropagation();
+                  if (onOpenDiff) onOpenDiff(bookmark);
+                }}
+                style={{ background: "var(--yel)", color: "#000", cursor: "pointer" }}
+                title="Content changed — click to view diff"
+              >
+                <AlertTriangle size={9} /> DRIFT
+              </span>
+            )}
+
+            {is404 && (
+              <span
+                className="card-status-badge"
+                onClick={(evt) => {
+                  evt.stopPropagation();
+                  if (onOpenDiff) onOpenDiff(bookmark);
+                }}
+                style={{ background: "var(--pink)", color: "#fff", cursor: "pointer" }}
+                title="404 Preserved — click to view snapshot"
+              >
+                <ShieldCheck size={9} /> 404 SAVED
+              </span>
+            )}
+          </div>
+
+          <div className="card-footer-right">
+            <span>
+              {bookmark.useCount ?? 0}× · {formatRelativeTime(bookmark.lastUsedAt)}
+            </span>
+          </div>
         </div>
       </div>
     </article>

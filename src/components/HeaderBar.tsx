@@ -1,9 +1,38 @@
 "use client";
 
-import React, { useState } from "react";
-import { SortMode, ViewMode } from "@/types";
-import { Zap, Search } from "lucide-react";
+import React, { useMemo } from "react";
+import { Bookmark, Collection, KindType, SortMode, ViewMode } from "@/types";
+import { TYPES } from "@/data/initialBookmarks";
+import {
+  Search,
+  PanelLeftClose,
+  PanelLeftOpen,
+  LayoutGrid,
+  Columns3,
+  List,
+  Table2,
+  Archive,
+  ChevronDown,
+  X,
+  FileText,
+  Film,
+  Headphones,
+  FolderGit2,
+  AppWindow,
+  GraduationCap,
+  BookOpen,
+} from "lucide-react";
 import Link from "next/link";
+
+const KIND_ICONS: Record<KindType, React.ReactNode> = {
+  ART: <FileText size={11} strokeWidth={2.3} />,
+  VID: <Film size={11} strokeWidth={2.3} />,
+  PLY: <Headphones size={11} strokeWidth={2.3} />,
+  GIT: <FolderGit2 size={11} strokeWidth={2.3} />,
+  APP: <AppWindow size={11} strokeWidth={2.3} />,
+  PPR: <GraduationCap size={11} strokeWidth={2.3} />,
+  DOC: <BookOpen size={11} strokeWidth={2.3} />,
+};
 
 interface HeaderBarProps {
   query: string;
@@ -15,6 +44,26 @@ interface HeaderBarProps {
   onOpenCaptureWithUrl: (url: string) => void;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
   onOpenCapture?: () => void;
+  // Enhanced Unified Workbench Facet & Filter Props
+  bookmarks?: Bookmark[];
+  filteredCount?: number;
+  collections?: Collection[];
+  coll?: string;
+  setColl?: (c: string) => void;
+  ty?: KindType | null;
+  setTy?: (t: KindType | null) => void;
+  tag?: string | null;
+  setTag?: (t: string | null) => void;
+  activeTopicCluster?: string | null;
+  setActiveTopicCluster?: (c: string | null) => void;
+  unreadOnly?: boolean;
+  setUnreadOnly?: (u: boolean) => void;
+  neverOpenedOnly?: boolean;
+  setNeverOpenedOnly?: (u: boolean) => void;
+  sidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
+  guessedCount?: number;
+  onResetFilters?: () => void;
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
@@ -26,10 +75,26 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   setSort,
   onOpenCaptureWithUrl,
   searchInputRef,
-  onOpenCapture,
+  bookmarks = [],
+  filteredCount,
+  collections = [],
+  coll = "all",
+  setColl,
+  ty = null,
+  setTy,
+  tag = null,
+  setTag,
+  activeTopicCluster = null,
+  setActiveTopicCluster,
+  unreadOnly = false,
+  setUnreadOnly,
+  neverOpenedOnly = false,
+  setNeverOpenedOnly,
+  sidebarCollapsed = false,
+  onToggleSidebar,
+  guessedCount = 0,
+  onResetFilters,
 }) => {
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
-
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
     if (/^https?:\/\//i.test(v.trim())) {
@@ -40,139 +105,327 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
     setQuery(v);
   };
 
+  // Compute active collection name for filter chip
+  const activeCollectionName = useMemo(() => {
+    if (!coll || coll === "all") return null;
+    const flatten = (list: Collection[]): Collection[] => {
+      let acc: Collection[] = [];
+      list.forEach((c) => {
+        acc.push(c);
+        if (c.kids) acc = acc.concat(flatten(c.kids));
+      });
+      return acc;
+    };
+    const found = flatten(collections).find((c) => c.id === coll);
+    return found?.name || coll;
+  }, [coll, collections]);
+
+  // Compute Kind counts across active bookmarks
+  const kindCounts = useMemo(() => {
+    const map: Partial<Record<KindType, number>> = {};
+    bookmarks.forEach((b) => {
+      if (b.isDeleted || !b.unread) return;
+      map[b.ty] = (map[b.ty] || 0) + 1;
+    });
+    return map;
+  }, [bookmarks]);
+
+  const totalActiveCount = useMemo(
+    () => bookmarks.filter((b) => !b.isDeleted && b.unread).length,
+    [bookmarks]
+  );
+
+  const hasAnyFilter =
+    coll !== "all" ||
+    ty !== null ||
+    Boolean(tag) ||
+    Boolean(activeTopicCluster) ||
+    unreadOnly ||
+    neverOpenedOnly ||
+    Boolean(query.trim());
+
   return (
-    <div className="bar">
-      <div className="mobile-header-strip">
-        <button
-          onClick={() => setShowMobileFilters(!showMobileFilters)}
-          className="mobile-find-btn"
-          style={{
-            background: showMobileFilters ? "var(--lime)" : "var(--paper)",
-            border: "2px solid var(--ink)",
-            color: "var(--ink)",
-            height: "32px",
-            padding: "0 10px",
-            fontWeight: 800,
-            fontSize: "11px",
-            fontFamily: "var(--mono)",
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "5px",
-            boxShadow: "2px 2px 0 var(--ink)",
-            whiteSpace: "nowrap",
-          }}
-          title="Search & View Settings"
-        >
-          <Search size={13} /> {showMobileFilters ? "✕ CLOSE" : "FIND"}
-        </button>
-
-        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-          <Link
-            href="/session"
-            style={{
-              background: "#FFE600",
-              color: "#000",
-              border: "2px solid var(--ink)",
-              height: "32px",
-              padding: "0 10px",
-              fontWeight: 900,
-              fontSize: "11px",
-              fontFamily: "var(--mono)",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              boxShadow: "2px 2px 0 var(--ink)",
-              textDecoration: "none",
-              whiteSpace: "nowrap",
-            }}
+    <div className="lib-workbench-header">
+      {/* Row 1: Rail Toggle + Omnibox with Active Filter Chips + Sort Dropdown + View Switcher */}
+      <div className="lib-command-row">
+        {onToggleSidebar && (
+          <button
+            type="button"
+            className="lib-rail-toggle"
+            onClick={onToggleSidebar}
+            title={sidebarCollapsed ? "Expand navigation rail" : "Collapse navigation rail"}
+            aria-label={sidebarCollapsed ? "Expand navigation rail" : "Collapse navigation rail"}
           >
-            <Zap size={12} fill="#000" /> SESSION
-          </Link>
+            {sidebarCollapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
+          </button>
+        )}
 
-          {onOpenCapture && (
+        <div className="lib-omnibox" onClick={() => searchInputRef.current?.focus()}>
+          <span className="lib-omnibox-icon">
+            <Search size={14} strokeWidth={2.5} />
+          </span>
+
+          {/* Active Filter Chips inside Omnibox */}
+          {activeCollectionName && setColl && (
             <button
-              className="mobile-add-btn"
-              onClick={onOpenCapture}
-              style={{
-                height: "32px",
-                padding: "0 10px",
-                fontSize: "11px",
-                fontWeight: 900,
-                display: "inline-flex",
-                alignItems: "center",
-                whiteSpace: "nowrap",
+              type="button"
+              className="lib-filter-chip"
+              onClick={(e) => {
+                e.stopPropagation();
+                setColl("all");
               }}
-              aria-label="Save link"
+              title="Clear collection filter"
             >
-              + LINK
+              <span>📁 {activeCollectionName}</span>
+              <X size={11} />
             </button>
           )}
-        </div>
-      </div>
 
-      <div className={`mobile-collapsible-controls ${showMobileFilters ? "open" : ""}`}>
-        <div className="searchbox">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <path d="M20 20l-4-4" />
-          </svg>
+          {activeTopicCluster && setActiveTopicCluster && (
+            <button
+              type="button"
+              className="lib-filter-chip"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveTopicCluster(null);
+              }}
+              title="Clear topic cluster filter"
+            >
+              <span>🏷️ {activeTopicCluster}</span>
+              <X size={11} />
+            </button>
+          )}
+
+          {ty && setTy && (
+            <button
+              type="button"
+              className="lib-filter-chip"
+              onClick={(e) => {
+                e.stopPropagation();
+                setTy(null);
+              }}
+              title="Clear kind filter"
+            >
+              <span>{TYPES[ty]?.name || ty}</span>
+              <X size={11} />
+            </button>
+          )}
+
+          {tag && setTag && (
+            <button
+              type="button"
+              className="lib-filter-chip"
+              onClick={(e) => {
+                e.stopPropagation();
+                setTag(null);
+              }}
+              title="Clear tag filter"
+            >
+              <span>#{tag}</span>
+              <X size={11} />
+            </button>
+          )}
+
+          {unreadOnly && setUnreadOnly && (
+            <button
+              type="button"
+              className="lib-filter-chip"
+              onClick={(e) => {
+                e.stopPropagation();
+                setUnreadOnly(false);
+              }}
+              title="Clear unread filter"
+            >
+              <span>Unread Queue</span>
+              <X size={11} />
+            </button>
+          )}
+
+          {neverOpenedOnly && setNeverOpenedOnly && (
+            <button
+              type="button"
+              className="lib-filter-chip"
+              onClick={(e) => {
+                e.stopPropagation();
+                setNeverOpenedOnly(false);
+              }}
+              title="Clear never opened filter"
+            >
+              <span>Never Opened</span>
+              <X size={11} />
+            </button>
+          )}
+
           <input
             ref={searchInputRef}
             value={query}
             onChange={handleInput}
-            placeholder="Search — try  is:video  #ai  lang:ts"
+            placeholder={
+              hasAnyFilter
+                ? "Refine results or paste URL to save..."
+                : "Search titles, domains, notes (is:video #tag) or paste a URL..."
+            }
             autoComplete="off"
           />
+
+          {query && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setQuery("");
+              }}
+              style={{
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                padding: "2px 4px",
+                opacity: 0.6,
+                display: "flex",
+                alignItems: "center",
+              }}
+              title="Clear search text"
+              aria-label="Clear search text"
+            >
+              <X size={13} />
+            </button>
+          )}
+
+          <span className="lib-omnibox-kbd">/ · ⌘K</span>
         </div>
 
-        <div className="bar-controls-row">
-          <Link href="/session" className="desktop-start-session-btn">
-            <Zap size={13} fill="#000" /> START SESSION
-          </Link>
-
-          <div className="grp view-grp">
-            <button className={view === "masonry" ? "on" : ""} onClick={() => setView("masonry")}>
-              MASONRY
-            </button>
-            <button className={view === "grid" ? "on" : ""} onClick={() => setView("grid")}>
-              GRID
-            </button>
-            <button className={view === "list" ? "on" : ""} onClick={() => setView("list")}>
-              LIST
-            </button>
-            <button className={view === "heads" ? "on" : ""} onClick={() => setView("heads")}>
-              HEADLINES
-            </button>
-            <button className={view === "archive" ? "on" : ""} onClick={() => setView("archive")}>
-              ARCHIVE
-            </button>
+        <div className="lib-controls-group">
+          {/* Compact Sort Select */}
+          <div className="lib-sort-select-wrap">
+            <select
+              className="lib-sort-select"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortMode)}
+              aria-label="Sort bookmarks"
+            >
+              <option value="recent">SORT: RECENTLY SAVED</option>
+              <option value="mostUsed">SORT: MOST USED</option>
+              <option value="recentlyUsed">SORT: RECENTLY USED</option>
+              <option value="az">SORT: A–Z</option>
+            </select>
+            <ChevronDown size={13} className="lib-sort-caret" />
           </div>
 
-          <div className="grp sort-grp">
-            <button className={sort === "recent" ? "on" : ""} onClick={() => setSort("recent")}>
-              RECENTLY SAVED
+          {/* Segmented View Switcher */}
+          <div className="lib-view-seg" role="group" aria-label="View layout">
+            <button
+              type="button"
+              className={`lib-view-btn ${view === "grid" ? "on" : ""}`}
+              onClick={() => setView("grid")}
+              title="Grid View (Uniform Cards)"
+            >
+              <LayoutGrid size={13} /> <span className="nb-hide-mobile">GRID</span>
             </button>
-            <button className={sort === "mostUsed" ? "on" : ""} onClick={() => setSort("mostUsed")}>
-              MOST USED
+            <button
+              type="button"
+              className={`lib-view-btn ${view === "masonry" ? "on" : ""}`}
+              onClick={() => setView("masonry")}
+              title="Masonry View"
+            >
+              <Columns3 size={13} /> <span className="nb-hide-mobile">MASONRY</span>
             </button>
-            <button className={sort === "recentlyUsed" ? "on" : ""} onClick={() => setSort("recentlyUsed")}>
-              RECENTLY USED
+            <button
+              type="button"
+              className={`lib-view-btn ${view === "list" ? "on" : ""}`}
+              onClick={() => setView("list")}
+              title="Compact List View"
+            >
+              <List size={13} /> <span className="nb-hide-mobile">LIST</span>
             </button>
-            <button className={sort === "az" ? "on" : ""} onClick={() => setSort("az")}>
-              A–Z
+            <button
+              type="button"
+              className={`lib-view-btn ${view === "heads" ? "on" : ""}`}
+              onClick={() => setView("heads")}
+              title="High-Density Table / Headlines"
+            >
+              <Table2 size={13} /> <span className="nb-hide-mobile">TABLE</span>
+            </button>
+            <button
+              type="button"
+              className={`lib-view-btn ${view === "archive" ? "on" : ""}`}
+              onClick={() => setView("archive")}
+              title="Archive Vault & Snapshots"
+            >
+              <Archive size={13} /> <span className="nb-hide-mobile">VAULT</span>
             </button>
           </div>
         </div>
       </div>
+
+      {/* Row 2: Horizontal 1-Click Kind Facet Strip + Item Counts + Review Pill */}
+      {view !== "archive" && (
+        <div className="lib-facet-row">
+          <div className="lib-kind-strip" role="tablist" aria-label="Filter by content kind">
+            <button
+              type="button"
+              className={`lib-kind-pill ${ty === null ? "on" : ""}`}
+              onClick={() => setTy?.(null)}
+            >
+              <span>ALL KINDS</span>
+              <span className="k-cnt">{totalActiveCount}</span>
+            </button>
+
+            {(Object.keys(TYPES) as KindType[]).map((k) => {
+              const meta = TYPES[k];
+              const count = kindCounts[k] || 0;
+              const isSelected = ty === k;
+
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  data-kind={k}
+                  className={`lib-kind-pill ${isSelected ? "on" : ""} ${count === 0 ? "zero" : ""}`}
+                  onClick={() => setTy?.(isSelected ? null : k)}
+                >
+                  {KIND_ICONS[k]}
+                  <span>{meta.name.toUpperCase()}</span>
+                  <span className="k-cnt">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="lib-facet-meta">
+            {guessedCount > 0 && (
+              <Link href="/library/review" className="lib-review-pill">
+                <span>⚡ {guessedCount} GUESSED TYPE{guessedCount === 1 ? "" : "S"}</span>
+                <span style={{ textDecoration: "underline" }}>REVIEW →</span>
+              </Link>
+            )}
+
+            {hasAnyFilter && onResetFilters && (
+              <button
+                type="button"
+                onClick={onResetFilters}
+                style={{
+                  border: "1.5px solid var(--ink)",
+                  background: "var(--paper)",
+                  color: "var(--ink)",
+                  padding: "3px 8px",
+                  fontFamily: "var(--mono)",
+                  fontSize: "9.5px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                RESET FILTERS
+              </button>
+            )}
+
+            {typeof filteredCount === "number" && (
+              <span className="lib-count-badge">
+                <b>{filteredCount}</b> {filteredCount === 1 ? "ITEM" : "ITEMS"}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -4,8 +4,6 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { Sidebar } from "@/components/Sidebar";
 import { HeaderBar } from "@/components/HeaderBar";
-import { CrumbBar } from "@/components/CrumbBar";
-import { ItemTypeReviewBanner } from "@/components/ItemTypeReviewBanner";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { InspectorDrawer } from "@/components/InspectorDrawer";
 import { CaptureModal } from "@/components/CaptureModal";
@@ -91,6 +89,7 @@ export default function Home() {
   const { sharedContent, clearSharedContent } = usePWA();
   const [captureUrl, setCaptureUrl] = useState("");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isGazetteOpen, setIsGazetteOpen] = useState(false);
   const [ghostReaderBookmark, setGhostReaderBookmark] = useState<Bookmark | null>(null);
@@ -186,10 +185,10 @@ export default function Home() {
 
       await dischargeBookmark(target.id, input);
 
-      // Real balance, not a hardcoded string — one fewer unread than before
-      // this discharge, since dischargeBookmark already flipped it locally.
       const unreadBalance = bookmarks.filter((b) => b.unread && b.id !== target.id).length;
-      setDischargeReceiptLines((prev) => [formatReceiptLine(target.t, unreadBalance), ...prev].slice(0, 10));
+      setDischargeReceiptLines((prev) =>
+        [formatReceiptLine(target.t, unreadBalance), ...prev].slice(0, 10)
+      );
 
       setDischargeCount((c) => c + 1);
       setDischargePulseNonce((n) => n + 1);
@@ -202,7 +201,12 @@ export default function Home() {
           const flyerId = `${target.id}-${Date.now()}`;
           setDischargeFlyers((prev) => [
             ...prev,
-            { id: flyerId, rect: sourceRect, title: target.t, arrivalTransform: flipArrivalTransform(delta) },
+            {
+              id: flyerId,
+              rect: sourceRect,
+              title: target.t,
+              arrivalTransform: flipArrivalTransform(delta),
+            },
           ]);
           setTimeout(() => {
             setDischargeFlyers((prev) => prev.filter((f) => f.id !== flyerId));
@@ -221,14 +225,11 @@ export default function Home() {
     const action = params.get("action");
 
     if (action === "capture") {
-      // Must run post-mount: window.location is unavailable during SSR, so this
-      // can't be a lazy useState initializer without a hydration mismatch.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCaptureUrl("");
       setIsCaptureOpen(true);
       window.history.replaceState({}, "", window.location.pathname);
     } else if (sharedUrl) {
-      // Find URL match if text contains extra string
       const urlMatch = sharedUrl.match(/https?:\/\/[^\s]+/i);
       const targetUrl = urlMatch ? urlMatch[0] : sharedUrl;
       if (/^https?:\/\//i.test(targetUrl.trim())) {
@@ -246,6 +247,10 @@ export default function Home() {
         setCaptureUrl("");
         setIsCaptureOpen(true);
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
+        e.preventDefault();
+        setSidebarCollapsed((prev) => !prev);
+      }
       if (e.key === "Escape") {
         setIsCaptureOpen(false);
         setIsNewFolderOpen(false);
@@ -254,7 +259,11 @@ export default function Home() {
         setIsDiffOpen(false);
         setOpenId(null);
       }
-      if (e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
         e.preventDefault();
         searchInputRef.current?.focus();
       }
@@ -264,365 +273,388 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [setIsCaptureOpen, setIsNewFolderOpen, setOpenId, setIsDiffOpen]);
 
+  const handleResetFilters = useCallback(() => {
+    setColl("all");
+    setTy(null);
+    setTag(null);
+    setActiveTopicCluster(null);
+    setQuery("");
+    setUnreadOnly(false);
+    setNeverOpenedOnly(false);
+  }, [setColl, setTy, setTag, setActiveTopicCluster, setQuery, setUnreadOnly, setNeverOpenedOnly]);
+
   if (!isLoaded) {
     return <AppLoading />;
   }
 
+  const guessedCount = bookmarks.filter((b) => b.itemTypeGuessed).length;
+
   return (
     <AppPage variant="flush">
-    <div className="app-container">
-      <ChromeSlot name="leading">
-        <button
-          className="mobile-menu-btn"
-          onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-          aria-label="Open navigation menu"
-        >
-          <span>☰</span> <span className="mobile-menu-btn-label">MENU</span>
-        </button>
-      </ChromeSlot>
-      <ChromeSlot name="toolbar">
-        <HeaderBar
-          query={query}
-          setQuery={setQuery}
+      <div className={`app-container ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+        <ChromeSlot name="leading">
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+            aria-label="Open navigation menu"
+          >
+            <span>☰</span> <span className="mobile-menu-btn-label">MENU</span>
+          </button>
+        </ChromeSlot>
+        <ChromeSlot name="footer">
+          <StatusLine bookmarks={bookmarks} />
+        </ChromeSlot>
+
+        {/* Left Workbench Sidebar Rail */}
+        <Sidebar
+          bookmarks={bookmarks}
+          collections={collections}
+          coll={coll}
+          setColl={setColl}
+          ty={ty}
+          setTy={setTy}
+          tag={tag}
+          setTag={setTag}
+          unreadOnly={unreadOnly}
+          setUnreadOnly={setUnreadOnly}
+          neverOpenedOnly={neverOpenedOnly}
+          setNeverOpenedOnly={setNeverOpenedOnly}
           view={view}
           setView={setView}
-          sort={sort}
-          setSort={setSort}
-          onOpenCaptureWithUrl={handleOpenCaptureWithUrl}
-          searchInputRef={searchInputRef}
           onOpenCapture={() => {
             setCaptureUrl("");
             setIsCaptureOpen(true);
           }}
-        />
-      </ChromeSlot>
-      <ChromeSlot name="footer">
-        <StatusLine bookmarks={bookmarks} />
-      </ChromeSlot>
-      {/* Sidebar */}
-      <Sidebar
-        bookmarks={bookmarks}
-        collections={collections}
-        coll={coll}
-        setColl={setColl}
-        ty={ty}
-        setTy={setTy}
-        tag={tag}
-        setTag={setTag}
-        unreadOnly={unreadOnly}
-        setUnreadOnly={setUnreadOnly}
-        neverOpenedOnly={neverOpenedOnly}
-        setNeverOpenedOnly={setNeverOpenedOnly}
-        view={view}
-        setView={setView}
-        onOpenCapture={() => {
-          setCaptureUrl("");
-          setIsCaptureOpen(true);
-        }}
-        onOpenNewFolder={() => setIsNewFolderOpen(true)}
-        onOpenImport={() => setIsImportOpen(true)}
-        isMobileOpen={isMobileSidebarOpen}
-        onCloseMobile={() => setIsMobileSidebarOpen(false)}
-        activeTopicCluster={activeTopicCluster}
-        setActiveTopicCluster={setActiveTopicCluster}
-        onOpenTopicHub={(cluster) => setTopicHubCluster(cluster)}
-        onOpenGazette={() => setIsGazetteOpen(true)}
-        dischargeCount={dischargeCount}
-        dischargePulseNonce={dischargePulseNonce}
-        dischargeReducedMotion={dischargeReducedMotion}
-      />
-
-      {/* Main Content Area */}
-      <main className="main">
-        <ItemTypeReviewBanner guessedCount={bookmarks.filter((b) => b.itemTypeGuessed).length} />
-
-        <CrumbBar
-          items={filteredBookmarks}
-          collections={collections}
-          coll={coll}
-          ty={ty}
-          tag={tag}
+          onOpenNewFolder={() => setIsNewFolderOpen(true)}
+          onOpenImport={() => setIsImportOpen(true)}
+          isMobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
           activeTopicCluster={activeTopicCluster}
-          onReset={() => {
-            setColl("all");
-            setTy(null);
-            setTag(null);
-            setActiveTopicCluster(null);
-            setQuery("");
-            setUnreadOnly(false);
-            setNeverOpenedOnly(false);
-          }}
+          setActiveTopicCluster={setActiveTopicCluster}
+          onOpenTopicHub={(cluster) => setTopicHubCluster(cluster)}
+          onOpenGazette={() => setIsGazetteOpen(true)}
+          dischargeCount={dischargeCount}
+          dischargePulseNonce={dischargePulseNonce}
+          dischargeReducedMotion={dischargeReducedMotion}
         />
 
-        <div className={`scroll ${bookmarks.length > 0 && bookmarks.length < 15 ? "cold-start-view" : ""}`}>
-          {view === "archive" ? (
-            <ArchiveView
-              bookmarks={bookmarks}
-              collections={collections}
-              onOpen={(id) => setOpenId(id)}
-              onToggleRead={(id) => toggleReadStatus(id)}
-              onRestore={(id) => restoreBookmark(id)}
-              onPurge={(id) => purgeBookmark(id)}
-              onOpenDiff={handleOpenDiffModal}
-              onDischarge={handleOpenDischargeModal}
-              onRecordUse={recordBookmarkUse}
-            />
-          ) : bookmarks.length === 0 ? (
-            <ColdStart onOpenImport={() => setIsImportOpen(true)} />
-          ) : filteredBookmarks.length === 0 ? (
-            <div className="empty" style={{ padding: "60px 20px", textAlign: "center" }}>
-              <div
-                style={{
-                  display: "inline-block",
-                  fontFamily: "var(--mono)",
-                  fontWeight: 800,
-                  fontSize: "18px",
-                  background: "#FFE600",
-                  border: "3px solid var(--ink)",
-                  boxShadow: "4px 4px 0 var(--ink)",
-                  padding: "6px 16px",
-                  marginBottom: "12px",
-                }}
-              >
-                NO MATCHING BOOKMARKS
-              </div>
-              <div style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "var(--fg)", opacity: 0.8, marginBottom: "16px" }}>
-                No bookmarks match the current filter or search query.
-              </div>
-              <button
-                onClick={() => {
-                  setColl("all");
-                  setTy(null);
-                  setTag(null);
-                  setActiveTopicCluster(null);
-                  setQuery("");
-                  setUnreadOnly(false);
-                  setNeverOpenedOnly(false);
-                }}
-                style={{
-                  fontFamily: "var(--mono)",
-                  fontSize: "11px",
-                  fontWeight: 800,
-                  border: "2px solid var(--ink)",
-                  background: "var(--lime, #B6FF3C)",
-                  color: "#000",
-                  padding: "8px 16px",
-                  cursor: "pointer",
-                  boxShadow: "3px 3px 0 var(--ink)",
-                }}
-              >
-                ← BACK TO FULL SHELF
-              </button>
-            </div>
-          ) : view === "masonry" ? (
-            <MasonryView
-              items={filteredBookmarks}
-              selectedIds={selectedIds}
-              onToggleSelect={(id) => toggleSelect(id)}
-              onOpen={(id) => setOpenId(id)}
-              onOpenDiff={handleOpenDiffModal}
-              onDischarge={handleOpenDischargeModal}
-              onGhostRead={(bm) => setGhostReaderBookmark(bm)}
-              onOpenSynapse={(bm) => setSynapseBookmark(bm)}
-            />
-          ) : view === "grid" ? (
-            <GridView
-              items={filteredBookmarks}
-              selectedIds={selectedIds}
-              onToggleSelect={(id) => toggleSelect(id)}
-              onOpen={(id) => setOpenId(id)}
-              onOpenDiff={handleOpenDiffModal}
-              onDischarge={handleOpenDischargeModal}
-              onGhostRead={(bm) => setGhostReaderBookmark(bm)}
-              onOpenSynapse={(bm) => setSynapseBookmark(bm)}
-            />
-          ) : view === "list" ? (
-            <ListView
-              items={filteredBookmarks}
-              selectedIds={selectedIds}
-              onToggleSelect={(id) => toggleSelect(id)}
-              onOpen={(id) => setOpenId(id)}
-            />
-          ) : (
-            <HeadlinesView
-              items={filteredBookmarks}
-              selectedIds={selectedIds}
-              onToggleSelect={(id) => toggleSelect(id)}
-              onOpen={(id) => setOpenId(id)}
-            />
-          )}
-        </div>
+        {/* Main Workbench Content Area */}
+        <main className="main">
+          <HeaderBar
+            query={query}
+            setQuery={setQuery}
+            view={view}
+            setView={setView}
+            sort={sort}
+            setSort={setSort}
+            onOpenCaptureWithUrl={handleOpenCaptureWithUrl}
+            searchInputRef={searchInputRef}
+            onOpenCapture={() => {
+              setCaptureUrl("");
+              setIsCaptureOpen(true);
+            }}
+            bookmarks={bookmarks}
+            filteredCount={filteredBookmarks.length}
+            collections={collections}
+            coll={coll}
+            setColl={setColl}
+            ty={ty}
+            setTy={setTy}
+            tag={tag}
+            setTag={setTag}
+            activeTopicCluster={activeTopicCluster}
+            setActiveTopicCluster={setActiveTopicCluster}
+            unreadOnly={unreadOnly}
+            setUnreadOnly={setUnreadOnly}
+            neverOpenedOnly={neverOpenedOnly}
+            setNeverOpenedOnly={setNeverOpenedOnly}
+            sidebarCollapsed={sidebarCollapsed}
+            onToggleSidebar={() => setSidebarCollapsed((prev) => !prev)}
+            guessedCount={guessedCount}
+            onResetFilters={handleResetFilters}
+          />
 
-        {/* Floating Bulk Actions Bar */}
-        <BulkActionBar
-          selectedCount={selectedIds.size}
-          onClear={clearSelection}
-          onMarkRead={bulkMarkRead}
-          onDelete={bulkDelete}
-        />
+          <div
+            className={`scroll ${bookmarks.length > 0 && bookmarks.length < 15 ? "cold-start-view" : ""}`}
+          >
+            {view === "archive" ? (
+              <ArchiveView
+                bookmarks={bookmarks}
+                collections={collections}
+                onOpen={(id) => setOpenId(id)}
+                onToggleRead={(id) => toggleReadStatus(id)}
+                onRestore={(id) => restoreBookmark(id)}
+                onPurge={(id) => purgeBookmark(id)}
+                onOpenDiff={handleOpenDiffModal}
+                onDischarge={handleOpenDischargeModal}
+                onRecordUse={recordBookmarkUse}
+              />
+            ) : bookmarks.length === 0 ? (
+              <ColdStart onOpenImport={() => setIsImportOpen(true)} />
+            ) : filteredBookmarks.length === 0 ? (
+              <div className="empty" style={{ padding: "60px 20px", textAlign: "center" }}>
+                <div
+                  style={{
+                    display: "inline-block",
+                    fontFamily: "var(--mono)",
+                    fontWeight: 800,
+                    fontSize: "15px",
+                    background: "var(--paper)",
+                    border: "2px solid var(--ink)",
+                    boxShadow: "3px 3px 0 var(--ink)",
+                    padding: "6px 16px",
+                    marginBottom: "10px",
+                  }}
+                >
+                  NO MATCHING BOOKMARKS
+                </div>
+                <div
+                  style={{
+                    fontFamily: "var(--mono)",
+                    fontSize: "11.5px",
+                    color: "var(--fg)",
+                    opacity: 0.72,
+                    marginBottom: "16px",
+                  }}
+                >
+                  No saved items match the active filter or search query.
+                </div>
+                <button
+                  onClick={handleResetFilters}
+                  style={{
+                    fontFamily: "var(--mono)",
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    border: "2px solid var(--ink)",
+                    background: "var(--yel)",
+                    color: "#000",
+                    padding: "7px 14px",
+                    cursor: "pointer",
+                    boxShadow: "2px 2px 0 var(--ink)",
+                  }}
+                >
+                  ← CLEAR FILTERS & VIEW ALL
+                </button>
+              </div>
+            ) : view === "masonry" ? (
+              <MasonryView
+                items={filteredBookmarks}
+                selectedIds={selectedIds}
+                onToggleSelect={(id) => toggleSelect(id)}
+                onOpen={(id) => setOpenId(id)}
+                onRecordUse={recordBookmarkUse}
+                onSelectTag={(t) => setTag(tag === t ? null : t)}
+                onOpenDiff={handleOpenDiffModal}
+                onDischarge={handleOpenDischargeModal}
+                onGhostRead={(bm) => setGhostReaderBookmark(bm)}
+                onOpenSynapse={(bm) => setSynapseBookmark(bm)}
+              />
+            ) : view === "grid" ? (
+              <GridView
+                items={filteredBookmarks}
+                selectedIds={selectedIds}
+                onToggleSelect={(id) => toggleSelect(id)}
+                onOpen={(id) => setOpenId(id)}
+                onRecordUse={recordBookmarkUse}
+                onSelectTag={(t) => setTag(tag === t ? null : t)}
+                onOpenDiff={handleOpenDiffModal}
+                onDischarge={handleOpenDischargeModal}
+                onGhostRead={(bm) => setGhostReaderBookmark(bm)}
+                onOpenSynapse={(bm) => setSynapseBookmark(bm)}
+              />
+            ) : view === "list" ? (
+              <ListView
+                items={filteredBookmarks}
+                selectedIds={selectedIds}
+                onToggleSelect={(id) => toggleSelect(id)}
+                onOpen={(id) => setOpenId(id)}
+                onRecordUse={recordBookmarkUse}
+                onSelectTag={(t) => setTag(tag === t ? null : t)}
+                onGhostRead={(bm) => setGhostReaderBookmark(bm)}
+                onDischarge={handleOpenDischargeModal}
+                onOpenSynapse={(bm) => setSynapseBookmark(bm)}
+              />
+            ) : (
+              <HeadlinesView
+                items={filteredBookmarks}
+                selectedIds={selectedIds}
+                onToggleSelect={(id) => toggleSelect(id)}
+                onOpen={(id) => setOpenId(id)}
+                onRecordUse={recordBookmarkUse}
+                onSelectTag={(t) => setTag(tag === t ? null : t)}
+                onGhostRead={(bm) => setGhostReaderBookmark(bm)}
+              />
+            )}
+          </div>
 
-        {/* Slide-over Inspector Drawer */}
-        <InspectorDrawer
-          bookmark={openBookmark}
-          allBookmarks={bookmarks}
+          {/* Floating Bulk Actions Bar */}
+          <BulkActionBar
+            selectedCount={selectedIds.size}
+            onClear={clearSelection}
+            onMarkRead={bulkMarkRead}
+            onDelete={bulkDelete}
+          />
+
+          {/* Slide-over Inspector Drawer */}
+          <InspectorDrawer
+            bookmark={openBookmark}
+            allBookmarks={bookmarks}
+            collections={collections}
+            onClose={() => setOpenId(null)}
+            onToggleRead={toggleReadStatus}
+            onUpdateNote={updateNote}
+            onChangeCollection={changeBookmarkCollection}
+            onChangeKind={changeBookmarkKind}
+            onChangeTag={changeBookmarkTag}
+            onAddChapter={addChapter}
+            onCheckDrift={checkDrift}
+            onOpenDiff={handleOpenDiffModal}
+            onSelectBookmark={(id) => setOpenId(id)}
+            onRecordUse={recordBookmarkUse}
+            onOpenGhostReader={(bm) => setGhostReaderBookmark(bm)}
+            onOpenSynapse={(bm) => setSynapseBookmark(bm)}
+          />
+        </main>
+
+        {/* Save Link Modal */}
+        <CaptureModal
+          isOpen={isCaptureOpen}
           collections={collections}
-          onClose={() => setOpenId(null)}
-          onToggleRead={toggleReadStatus}
-          onUpdateNote={updateNote}
-          onChangeCollection={changeBookmarkCollection}
-          onChangeKind={changeBookmarkKind}
-          onChangeTag={changeBookmarkTag}
-          onAddChapter={addChapter}
-          onCheckDrift={checkDrift}
-          onOpenDiff={handleOpenDiffModal}
-          onSelectBookmark={(id) => setOpenId(id)}
-          onRecordUse={recordBookmarkUse}
-          onOpenGhostReader={(bm) => setGhostReaderBookmark(bm)}
-          onOpenSynapse={(bm) => setSynapseBookmark(bm)}
+          bookmarks={bookmarks}
+          initialUrl={captureUrl}
+          onClose={() => setIsCaptureOpen(false)}
+          onSave={addBookmark}
+          onSelectExisting={(id) => setOpenId(id)}
         />
 
-      </main>
+        {/* Create New Folder / Smart Collection Modal */}
+        <NewFolderModal
+          isOpen={isNewFolderOpen}
+          collections={collections}
+          onClose={() => setIsNewFolderOpen(false)}
+          onAddCollection={addCollection}
+        />
 
-      {/* Save Link Modal */}
-      <CaptureModal
-        isOpen={isCaptureOpen}
-        collections={collections}
-        bookmarks={bookmarks}
-        initialUrl={captureUrl}
-        onClose={() => setIsCaptureOpen(false)}
-        onSave={addBookmark}
-        onSelectExisting={(id) => setOpenId(id)}
-      />
+        {/* One-Click Import Modal */}
+        <ImportModal
+          isOpen={isImportOpen}
+          onClose={() => setIsImportOpen(false)}
+          onImportComplete={() => window.location.reload()}
+        />
 
-      {/* Create New Folder / Smart Collection Modal */}
-      <NewFolderModal
-        isOpen={isNewFolderOpen}
-        collections={collections}
-        onClose={() => setIsNewFolderOpen(false)}
-        onAddCollection={addCollection}
-      />
+        {/* ⚡ Content Drift & Preserved Copy Reader Modal */}
+        <DiffViewerModal
+          isOpen={isDiffOpen}
+          onClose={() => setIsDiffOpen(false)}
+          bookmark={diffBookmark}
+          onRecheckDrift={checkDrift}
+          onRecordUse={recordBookmarkUse}
+        />
 
-      {/* One-Click Import Modal */}
-      <ImportModal
-        isOpen={isImportOpen}
-        onClose={() => setIsImportOpen(false)}
-        onImportComplete={() => window.location.reload()}
-      />
+        {/* 💡 Discharge: turn a queued bookmark into the TIL entry it produced */}
+        <DischargeModal
+          bookmark={dischargeTarget}
+          onClose={() => setDischargeTarget(null)}
+          onSubmit={handleDischargeSubmit}
+        />
 
-      {/* ⚡ Content Drift & Preserved Copy Reader Modal */}
-      <DiffViewerModal
-        isOpen={isDiffOpen}
-        onClose={() => setIsDiffOpen(false)}
-        bookmark={diffBookmark}
-        onRecheckDrift={checkDrift}
-        onRecordUse={recordBookmarkUse}
-      />
-
-      {/* 💡 Discharge: turn a queued bookmark into the TIL entry it produced */}
-      <DischargeModal
-        bookmark={dischargeTarget}
-        onClose={() => setDischargeTarget(null)}
-        onSubmit={handleDischargeSubmit}
-      />
-
-      {/* ⚡ Ghost Reader Modal */}
-      <GhostReaderModal
-        bookmark={ghostReaderBookmark}
-        onClose={() => setGhostReaderBookmark(null)}
-        onToggleRead={toggleReadStatus}
-        onDischargeQuote={(quote, bm) => {
-          setDischargeTarget({ ...bm, note: quote });
-        }}
-        onDischargeFull={(bm) => {
-          setDischargeTarget(bm);
-        }}
-        onSaveQuoteBookmark={handleSaveQuoteBookmark}
-        onRecordUse={recordBookmarkUse}
-      />
-
-      {/* 🏷️ Living Topic Cluster Hub Modal */}
-      <TopicClusterHubModal
-        cluster={topicHubCluster}
-        onClose={() => setTopicHubCluster(null)}
-        onOpenBookmark={(id) => setOpenId(id)}
-        onGhostRead={(bm) => setGhostReaderBookmark(bm)}
-        onToggleRead={toggleReadStatus}
-        onDischarge={handleOpenDischargeModal}
-        onCreateCollectionFromCluster={handleCreateCollectionFromCluster}
-      />
-
-      {/* 📰 The Hoard Gazette Weekly Micro-Zine Modal */}
-      <HoardGazetteModal
-        isOpen={isGazetteOpen}
-        bookmarks={bookmarks}
-        onClose={() => setIsGazetteOpen(false)}
-        onOpenBookmark={(id) => setOpenId(id)}
-        onGhostRead={(bm) => setGhostReaderBookmark(bm)}
-        onDischarge={handleOpenDischargeModal}
-      />
-
-      {/* 🌌 Synapse Trail (Semantic Serendipity) Modal */}
-      <SynapseTrailModal
-        targetBookmark={synapseBookmark}
-        allBookmarks={bookmarks}
-        onClose={() => setSynapseBookmark(null)}
-        onOpenBookmark={(id) => setOpenId(id)}
-        onGhostRead={(bm) => setGhostReaderBookmark(bm)}
-        onDischarge={handleOpenDischargeModal}
-      />
-
-      {/* Discharge FLIP flyers — one per in-flight discharge, independently
-          timed and removed, so rapid discharges never collide (SPECTACLE.md §4). */}
-      {dischargeFlyers.map((f) => (
-        <div
-          key={f.id}
-          className="discharge-flyer"
-          style={
-            {
-              position: "fixed",
-              left: f.rect.left,
-              top: f.rect.top,
-              width: f.rect.width,
-              zIndex: 999,
-              pointerEvents: "none",
-              border: "var(--bd)",
-              background: "var(--yel, #FFE600)",
-              boxShadow: "var(--sh)",
-              padding: "10px 12px",
-              fontSize: "13px",
-              fontWeight: 700,
-              fontFamily: "var(--grot)",
-              color: "#000",
-              "--flyer-start": "translate(0px, 0px) scale(1) rotate(0deg)",
-              "--flyer-end": f.arrivalTransform,
-            } as React.CSSProperties
-          }
-        >
-          {f.title}
-        </div>
-      ))}
-
-      {/* Discharge receipt — running log printed from real state, newest first. */}
-      {dischargeReceiptLines.length > 0 && (
-        <div
-          className="discharge-receipt"
-          style={{
-            fontFamily: "var(--mono)",
-            fontSize: "10.5px",
-            fontWeight: 700,
-            border: "2px dashed var(--ink)",
-            background: "var(--cream)",
-            color: "var(--ink)",
-            padding: "9px 11px",
-            lineHeight: 1.7,
+        {/* ⚡ Ghost Reader Modal */}
+        <GhostReaderModal
+          bookmark={ghostReaderBookmark}
+          onClose={() => setGhostReaderBookmark(null)}
+          onToggleRead={toggleReadStatus}
+          onDischargeQuote={(quote, bm) => {
+            setDischargeTarget({ ...bm, note: quote });
           }}
-        >
-          {dischargeReceiptLines.map((line, i) => (
-            <div key={i}>{line}</div>
-          ))}
-        </div>
-      )}
-    </div>
+          onDischargeFull={(bm) => {
+            setDischargeTarget(bm);
+          }}
+          onSaveQuoteBookmark={handleSaveQuoteBookmark}
+          onRecordUse={recordBookmarkUse}
+        />
+
+        {/* 🏷️ Living Topic Cluster Hub Modal */}
+        <TopicClusterHubModal
+          cluster={topicHubCluster}
+          onClose={() => setTopicHubCluster(null)}
+          onOpenBookmark={(id) => setOpenId(id)}
+          onGhostRead={(bm) => setGhostReaderBookmark(bm)}
+          onToggleRead={toggleReadStatus}
+          onDischarge={handleOpenDischargeModal}
+          onCreateCollectionFromCluster={handleCreateCollectionFromCluster}
+        />
+
+        {/* 📰 The Hoard Gazette Weekly Micro-Zine Modal */}
+        <HoardGazetteModal
+          isOpen={isGazetteOpen}
+          bookmarks={bookmarks}
+          onClose={() => setIsGazetteOpen(false)}
+          onOpenBookmark={(id) => setOpenId(id)}
+          onGhostRead={(bm) => setGhostReaderBookmark(bm)}
+          onDischarge={handleOpenDischargeModal}
+        />
+
+        {/* 🌌 Synapse Trail (Semantic Serendipity) Modal */}
+        <SynapseTrailModal
+          targetBookmark={synapseBookmark}
+          allBookmarks={bookmarks}
+          onClose={() => setSynapseBookmark(null)}
+          onOpenBookmark={(id) => setOpenId(id)}
+          onGhostRead={(bm) => setGhostReaderBookmark(bm)}
+          onDischarge={handleOpenDischargeModal}
+        />
+
+        {/* Discharge FLIP flyers */}
+        {dischargeFlyers.map((f) => (
+          <div
+            key={f.id}
+            className="discharge-flyer"
+            style={
+              {
+                position: "fixed",
+                left: f.rect.left,
+                top: f.rect.top,
+                width: f.rect.width,
+                zIndex: 999,
+                pointerEvents: "none",
+                border: "var(--bd)",
+                background: "var(--yel, #FFE600)",
+                boxShadow: "var(--sh)",
+                padding: "10px 12px",
+                fontSize: "13px",
+                fontWeight: 700,
+                fontFamily: "var(--grot)",
+                color: "#000",
+                "--flyer-start": "translate(0px, 0px) scale(1) rotate(0deg)",
+                "--flyer-end": f.arrivalTransform,
+              } as React.CSSProperties
+            }
+          >
+            {f.title}
+          </div>
+        ))}
+
+        {/* Discharge receipt */}
+        {dischargeReceiptLines.length > 0 && (
+          <div
+            className="discharge-receipt"
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "10.5px",
+              fontWeight: 700,
+              border: "2px dashed var(--ink)",
+              background: "var(--cream)",
+              color: "var(--ink)",
+              padding: "9px 11px",
+              lineHeight: 1.7,
+            }}
+          >
+            {dischargeReceiptLines.map((line, i) => (
+              <div key={i}>{line}</div>
+            ))}
+          </div>
+        )}
+      </div>
     </AppPage>
   );
 }
