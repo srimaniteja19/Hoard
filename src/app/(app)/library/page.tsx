@@ -11,26 +11,19 @@ import { NewFolderModal } from "@/components/NewFolderModal";
 import { ImportModal } from "@/components/ImportModal";
 import { DiffViewerModal } from "@/components/DiffViewerModal";
 import { DischargeModal } from "@/components/DischargeModal";
-import { MasonryView } from "@/components/views/MasonryView";
 import { GridView } from "@/components/views/GridView";
 import { ListView } from "@/components/views/ListView";
 import { HeadlinesView } from "@/components/views/HeadlinesView";
 import { ArchiveView } from "@/components/views/ArchiveView";
-import { StatusLine } from "@/components/StatusLine";
 import { ColdStart } from "@/components/ColdStart";
 import { GhostReaderModal } from "@/components/library/GhostReaderModal";
-import { TopicClusterHubModal } from "@/components/library/TopicClusterHubModal";
-import { HoardGazetteModal } from "@/components/gazette/HoardGazetteModal";
-import { SynapseTrailModal } from "@/components/synapse/SynapseTrailModal";
-import { LivingTopicCluster } from "@/lib/library/topicClustering";
 import { AppLoading } from "@/components/chrome/AppLoading";
 import { AppPage } from "@/components/chrome/AppPage";
 import { ChromeSlot } from "@/components/chrome/slots";
 import { Bookmark } from "@/types";
 import { TilType } from "@/db/schema";
-import { useReducedMotion } from "@/lib/useReducedMotion";
-import { computeFlipDelta, flipArrivalTransform, formatReceiptLine } from "@/lib/til/flipAnimation";
 import { usePWA } from "@/components/PWAProvider";
+import { Menu } from "lucide-react";
 
 export default function Home() {
   const {
@@ -46,8 +39,6 @@ export default function Home() {
     setTy,
     tag,
     setTag,
-    activeTopicCluster,
-    setActiveTopicCluster,
     view,
     setView,
     sort,
@@ -91,19 +82,8 @@ export default function Home() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
-  const [isGazetteOpen, setIsGazetteOpen] = useState(false);
   const [ghostReaderBookmark, setGhostReaderBookmark] = useState<Bookmark | null>(null);
-  const [topicHubCluster, setTopicHubCluster] = useState<LivingTopicCluster | null>(null);
-  const [synapseBookmark, setSynapseBookmark] = useState<Bookmark | null>(null);
   const [dischargeTarget, setDischargeTarget] = useState<Bookmark | null>(null);
-  const [dischargeSourceRect, setDischargeSourceRect] = useState<DOMRect | null>(null);
-  const [dischargeCount, setDischargeCount] = useState(0);
-  const [dischargePulseNonce, setDischargePulseNonce] = useState(0);
-  const [dischargeFlyers, setDischargeFlyers] = useState<
-    Array<{ id: string; rect: DOMRect; title: string; arrivalTransform: string }>
-  >([]);
-  const [dischargeReceiptLines, setDischargeReceiptLines] = useState<string[]>([]);
-  const dischargeReducedMotion = useReducedMotion();
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -135,13 +115,9 @@ export default function Home() {
     [setDiffBookmark, setIsDiffOpen]
   );
 
-  const handleOpenDischargeModal = useCallback(
-    (bookmark: Bookmark, sourceRect?: DOMRect) => {
-      setDischargeTarget(bookmark);
-      setDischargeSourceRect(sourceRect ?? null);
-    },
-    []
-  );
+  const handleOpenDischargeModal = useCallback((bookmark: Bookmark) => {
+    setDischargeTarget(bookmark);
+  }, []);
 
   const handleSaveQuoteBookmark = useCallback(
     async (parentId: number, quoteText: string) => {
@@ -156,7 +132,7 @@ export default function Home() {
         mins: 0,
         tag: parent.tag,
         coll: parent.coll,
-        unread: false,
+        unread: true,
         itemType: "REFERENCE",
         itemTypeGuessed: false,
         note: quoteText,
@@ -166,55 +142,12 @@ export default function Home() {
     [bookmarks, addBookmark]
   );
 
-  const handleCreateCollectionFromCluster = useCallback(
-    async (cluster: LivingTopicCluster) => {
-      await addCollection({
-        name: cluster.title,
-        ic: cluster.icon || "🏷️",
-        c: cluster.color || "#00F0FF",
-      });
-    },
-    [addCollection]
-  );
-
   const handleDischargeSubmit = React.useCallback(
     async (input: { type: TilType; body: string; tags: string[] }) => {
       if (!dischargeTarget) return;
-      const target = dischargeTarget;
-      const sourceRect = dischargeSourceRect;
-
-      await dischargeBookmark(target.id, input);
-
-      const unreadBalance = bookmarks.filter((b) => b.unread && b.id !== target.id).length;
-      setDischargeReceiptLines((prev) =>
-        [formatReceiptLine(target.t, unreadBalance), ...prev].slice(0, 10)
-      );
-
-      setDischargeCount((c) => c + 1);
-      setDischargePulseNonce((n) => n + 1);
-
-      if (!dischargeReducedMotion && sourceRect) {
-        const destEl = document.getElementById("til-gains-counter");
-        const destRect = destEl?.getBoundingClientRect();
-        if (destRect) {
-          const delta = computeFlipDelta(sourceRect, destRect);
-          const flyerId = `${target.id}-${Date.now()}`;
-          setDischargeFlyers((prev) => [
-            ...prev,
-            {
-              id: flyerId,
-              rect: sourceRect,
-              title: target.t,
-              arrivalTransform: flipArrivalTransform(delta),
-            },
-          ]);
-          setTimeout(() => {
-            setDischargeFlyers((prev) => prev.filter((f) => f.id !== flyerId));
-          }, 420);
-        }
-      }
+      await dischargeBookmark(dischargeTarget.id, input);
     },
-    [dischargeTarget, dischargeSourceRect, dischargeBookmark, bookmarks, dischargeReducedMotion]
+    [dischargeTarget, dischargeBookmark]
   );
 
   // Web Share Target & Query Parameter Listener
@@ -277,11 +210,10 @@ export default function Home() {
     setColl("all");
     setTy(null);
     setTag(null);
-    setActiveTopicCluster(null);
     setQuery("");
     setUnreadOnly(false);
     setNeverOpenedOnly(false);
-  }, [setColl, setTy, setTag, setActiveTopicCluster, setQuery, setUnreadOnly, setNeverOpenedOnly]);
+  }, [setColl, setTy, setTag, setQuery, setUnreadOnly, setNeverOpenedOnly]);
 
   if (!isLoaded) {
     return <AppLoading />;
@@ -298,11 +230,8 @@ export default function Home() {
             onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
             aria-label="Open navigation menu"
           >
-            <span>☰</span> <span className="mobile-menu-btn-label">MENU</span>
+            <Menu size={14} /> <span className="mobile-menu-btn-label">MENU</span>
           </button>
-        </ChromeSlot>
-        <ChromeSlot name="footer">
-          <StatusLine bookmarks={bookmarks} />
         </ChromeSlot>
 
         {/* Left Workbench Sidebar Rail */}
@@ -329,13 +258,6 @@ export default function Home() {
           onOpenImport={() => setIsImportOpen(true)}
           isMobileOpen={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
-          activeTopicCluster={activeTopicCluster}
-          setActiveTopicCluster={setActiveTopicCluster}
-          onOpenTopicHub={(cluster) => setTopicHubCluster(cluster)}
-          onOpenGazette={() => setIsGazetteOpen(true)}
-          dischargeCount={dischargeCount}
-          dischargePulseNonce={dischargePulseNonce}
-          dischargeReducedMotion={dischargeReducedMotion}
         />
 
         {/* Main Workbench Content Area */}
@@ -362,8 +284,6 @@ export default function Home() {
             setTy={setTy}
             tag={tag}
             setTag={setTag}
-            activeTopicCluster={activeTopicCluster}
-            setActiveTopicCluster={setActiveTopicCluster}
             unreadOnly={unreadOnly}
             setUnreadOnly={setUnreadOnly}
             neverOpenedOnly={neverOpenedOnly}
@@ -436,31 +356,18 @@ export default function Home() {
                   ← CLEAR FILTERS & VIEW ALL
                 </button>
               </div>
-            ) : view === "masonry" ? (
-              <MasonryView
-                items={filteredBookmarks}
-                selectedIds={selectedIds}
-                onToggleSelect={(id) => toggleSelect(id)}
-                onOpen={(id) => setOpenId(id)}
-                onRecordUse={recordBookmarkUse}
-                onSelectTag={(t) => setTag(tag === t ? null : t)}
-                onOpenDiff={handleOpenDiffModal}
-                onDischarge={handleOpenDischargeModal}
-                onGhostRead={(bm) => setGhostReaderBookmark(bm)}
-                onOpenSynapse={(bm) => setSynapseBookmark(bm)}
-              />
-            ) : view === "grid" ? (
+            ) : view === "grid" || view === "masonry" ? (
               <GridView
                 items={filteredBookmarks}
                 selectedIds={selectedIds}
                 onToggleSelect={(id) => toggleSelect(id)}
                 onOpen={(id) => setOpenId(id)}
+                onToggleRead={toggleReadStatus}
                 onRecordUse={recordBookmarkUse}
                 onSelectTag={(t) => setTag(tag === t ? null : t)}
                 onOpenDiff={handleOpenDiffModal}
                 onDischarge={handleOpenDischargeModal}
                 onGhostRead={(bm) => setGhostReaderBookmark(bm)}
-                onOpenSynapse={(bm) => setSynapseBookmark(bm)}
               />
             ) : view === "list" ? (
               <ListView
@@ -468,11 +375,11 @@ export default function Home() {
                 selectedIds={selectedIds}
                 onToggleSelect={(id) => toggleSelect(id)}
                 onOpen={(id) => setOpenId(id)}
+                onToggleRead={toggleReadStatus}
                 onRecordUse={recordBookmarkUse}
                 onSelectTag={(t) => setTag(tag === t ? null : t)}
                 onGhostRead={(bm) => setGhostReaderBookmark(bm)}
                 onDischarge={handleOpenDischargeModal}
-                onOpenSynapse={(bm) => setSynapseBookmark(bm)}
               />
             ) : (
               <HeadlinesView
@@ -480,6 +387,7 @@ export default function Home() {
                 selectedIds={selectedIds}
                 onToggleSelect={(id) => toggleSelect(id)}
                 onOpen={(id) => setOpenId(id)}
+                onToggleRead={toggleReadStatus}
                 onRecordUse={recordBookmarkUse}
                 onSelectTag={(t) => setTag(tag === t ? null : t)}
                 onGhostRead={(bm) => setGhostReaderBookmark(bm)}
@@ -512,7 +420,6 @@ export default function Home() {
             onSelectBookmark={(id) => setOpenId(id)}
             onRecordUse={recordBookmarkUse}
             onOpenGhostReader={(bm) => setGhostReaderBookmark(bm)}
-            onOpenSynapse={(bm) => setSynapseBookmark(bm)}
           />
         </main>
 
@@ -551,7 +458,7 @@ export default function Home() {
           onRecordUse={recordBookmarkUse}
         />
 
-        {/* 💡 Discharge: turn a queued bookmark into the TIL entry it produced */}
+        {/* 💡 Log TIL Note from Bookmark Modal */}
         <DischargeModal
           bookmark={dischargeTarget}
           onClose={() => setDischargeTarget(null)}
@@ -572,88 +479,6 @@ export default function Home() {
           onSaveQuoteBookmark={handleSaveQuoteBookmark}
           onRecordUse={recordBookmarkUse}
         />
-
-        {/* 🏷️ Living Topic Cluster Hub Modal */}
-        <TopicClusterHubModal
-          cluster={topicHubCluster}
-          onClose={() => setTopicHubCluster(null)}
-          onOpenBookmark={(id) => setOpenId(id)}
-          onGhostRead={(bm) => setGhostReaderBookmark(bm)}
-          onToggleRead={toggleReadStatus}
-          onDischarge={handleOpenDischargeModal}
-          onCreateCollectionFromCluster={handleCreateCollectionFromCluster}
-        />
-
-        {/* 📰 The Hoard Gazette Weekly Micro-Zine Modal */}
-        <HoardGazetteModal
-          isOpen={isGazetteOpen}
-          bookmarks={bookmarks}
-          onClose={() => setIsGazetteOpen(false)}
-          onOpenBookmark={(id) => setOpenId(id)}
-          onGhostRead={(bm) => setGhostReaderBookmark(bm)}
-          onDischarge={handleOpenDischargeModal}
-        />
-
-        {/* 🌌 Synapse Trail (Semantic Serendipity) Modal */}
-        <SynapseTrailModal
-          targetBookmark={synapseBookmark}
-          allBookmarks={bookmarks}
-          onClose={() => setSynapseBookmark(null)}
-          onOpenBookmark={(id) => setOpenId(id)}
-          onGhostRead={(bm) => setGhostReaderBookmark(bm)}
-          onDischarge={handleOpenDischargeModal}
-        />
-
-        {/* Discharge FLIP flyers */}
-        {dischargeFlyers.map((f) => (
-          <div
-            key={f.id}
-            className="discharge-flyer"
-            style={
-              {
-                position: "fixed",
-                left: f.rect.left,
-                top: f.rect.top,
-                width: f.rect.width,
-                zIndex: 999,
-                pointerEvents: "none",
-                border: "var(--bd)",
-                background: "var(--yel, #FFE600)",
-                boxShadow: "var(--sh)",
-                padding: "10px 12px",
-                fontSize: "13px",
-                fontWeight: 700,
-                fontFamily: "var(--grot)",
-                color: "#000",
-                "--flyer-start": "translate(0px, 0px) scale(1) rotate(0deg)",
-                "--flyer-end": f.arrivalTransform,
-              } as React.CSSProperties
-            }
-          >
-            {f.title}
-          </div>
-        ))}
-
-        {/* Discharge receipt */}
-        {dischargeReceiptLines.length > 0 && (
-          <div
-            className="discharge-receipt"
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: "10.5px",
-              fontWeight: 700,
-              border: "2px dashed var(--ink)",
-              background: "var(--cream)",
-              color: "var(--ink)",
-              padding: "9px 11px",
-              lineHeight: 1.7,
-            }}
-          >
-            {dischargeReceiptLines.map((line, i) => (
-              <div key={i}>{line}</div>
-            ))}
-          </div>
-        )}
       </div>
     </AppPage>
   );

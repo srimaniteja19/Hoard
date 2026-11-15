@@ -5,18 +5,18 @@ import { Bookmark } from "@/types";
 import { formatRelativeTime } from "@/lib/library/formatRelativeTime";
 import { extractYouTubeVideoId } from "@/lib/cleanTitle";
 import { YouTubeDigestButton } from "@/components/youtube/YouTubeDigestButton";
-import { BookOpen, ExternalLink, Zap, Sparkles, SlidersHorizontal } from "lucide-react";
+import { BookOpen, Zap, Archive } from "lucide-react";
 
 interface ListViewProps {
   items: Bookmark[];
   selectedIds: Set<number>;
   onToggleSelect: (id: number, e: React.MouseEvent) => void;
   onOpen: (id: number) => void;
+  onToggleRead?: (id: number) => void;
   onRecordUse?: (id: number) => void;
   onSelectTag?: (tag: string) => void;
   onGhostRead?: (bookmark: Bookmark) => void;
   onDischarge?: (bookmark: Bookmark, sourceRect: DOMRect) => void;
-  onOpenSynapse?: (bookmark: Bookmark) => void;
 }
 
 export const ListView: React.FC<ListViewProps> = ({
@@ -24,11 +24,11 @@ export const ListView: React.FC<ListViewProps> = ({
   selectedIds,
   onToggleSelect,
   onOpen,
+  onToggleRead,
   onRecordUse,
   onSelectTag,
   onGhostRead,
   onDischarge,
-  onOpenSynapse,
 }) => {
   const getMetaBits = (x: Bookmark) => {
     const bits: string[] = [x.src];
@@ -46,7 +46,6 @@ export const ListView: React.FC<ListViewProps> = ({
       {items.map((x) => {
         const isSel = selectedIds.has(x.id);
         const metaBits = getMetaBits(x);
-        const neverOpened = x.itemType === "REFERENCE" && (x.useCount ?? 0) === 0;
         const hasValidNote = Boolean(
           x.note && x.note.trim().length > 0 && x.note !== "Saved via HOARD Extension"
         );
@@ -64,6 +63,7 @@ export const ListView: React.FC<ListViewProps> = ({
         return (
           <div
             key={x.id}
+            tabIndex={0}
             className={`row ${isSel ? "sel" : ""}`}
             onClick={(evt) => {
               if (evt.metaKey || evt.ctrlKey) {
@@ -72,11 +72,20 @@ export const ListView: React.FC<ListViewProps> = ({
                 onOpen(x.id);
               }
             }}
-            style={neverOpened ? { borderLeft: "3px solid var(--orange)" } : undefined}
+            onKeyDown={(evt) => {
+              if (evt.target !== evt.currentTarget) return;
+              if (evt.key === "Enter" || evt.key === " ") {
+                evt.preventDefault();
+                onOpen(x.id);
+              }
+            }}
           >
-            <div
+            <button
+              type="button"
               className="swatch"
               data-kind={x.ty}
+              aria-pressed={isSel}
+              aria-label={isSel ? `Deselect ${x.t}` : `Select ${x.t}`}
               onClick={(evt) => {
                 evt.stopPropagation();
                 onToggleSelect(x.id, evt);
@@ -84,7 +93,7 @@ export const ListView: React.FC<ListViewProps> = ({
               title="Click swatch to select row"
             >
               {isSel ? "✓" : x.ty}
-            </div>
+            </button>
 
             <div style={{ minWidth: 0 }}>
               <div className="rt">
@@ -133,7 +142,10 @@ export const ListView: React.FC<ListViewProps> = ({
                   <>
                     <span style={{ opacity: 0.4 }}>·</span>
                     <span
-                      style={{ cursor: onSelectTag ? "pointer" : undefined, textDecoration: onSelectTag ? "underline" : undefined }}
+                      style={{
+                        cursor: onSelectTag ? "pointer" : undefined,
+                        textDecoration: onSelectTag ? "underline" : undefined,
+                      }}
                       onClick={(evt) => {
                         if (onSelectTag) {
                           evt.stopPropagation();
@@ -190,40 +202,22 @@ export const ListView: React.FC<ListViewProps> = ({
                       evt.currentTarget.getBoundingClientRect();
                     onDischarge(x, rect);
                   }}
-                  title="Discharge to TIL"
+                  title="Log TIL from this bookmark"
                 >
                   <Zap size={11} /> TIL
                 </button>
               )}
-              {onOpenSynapse && (
+              {onToggleRead && (
                 <button
                   type="button"
                   className="card-dock-btn"
                   style={{ border: "1.5px solid var(--ink)", background: "var(--paper)" }}
-                  onClick={() => onOpenSynapse(x)}
-                  title="Synapse Trail"
+                  onClick={() => onToggleRead(x.id)}
+                  title="Move to Vault (Mark Read)"
                 >
-                  <Sparkles size={11} />
+                  <Archive size={11} /> VAULT
                 </button>
               )}
-              <button
-                type="button"
-                className="card-dock-btn"
-                style={{ border: "1.5px solid var(--ink)", background: "var(--paper)" }}
-                onClick={() => onOpen(x.id)}
-                title="Inspect Details"
-              >
-                <SlidersHorizontal size={11} />
-              </button>
-              <button
-                type="button"
-                className="card-dock-btn"
-                style={{ border: "1.5px solid var(--ink)", background: "var(--paper)" }}
-                onClick={handleLaunchUrl}
-                title="Open URL"
-              >
-                <ExternalLink size={11} />
-              </button>
             </div>
           </div>
         );

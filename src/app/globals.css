@@ -1494,62 +1494,7 @@ input[type=range]::-moz-range-thumb {
   background: var(--lime);
 }
 
-/* ---------- headlines view ---------- */
-.heads {
-  border: var(--bd);
-  box-shadow: var(--sh);
-  background: var(--paper);
-}
-
-.heads .hrow {
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) minmax(0, 120px) 56px 92px;
-  gap: 12px;
-  align-items: center;
-  border-bottom: 2px solid var(--ink);
-  padding: 9px 12px;
-  cursor: pointer;
-  font-size: 13.5px;
-}
-
-.heads .hrow:last-child {
-  border-bottom: 0;
-}
-
-.heads .hrow:hover {
-  background: var(--cyan);
-}
-
-.heads .hrow.sel {
-  background: var(--yel);
-}
-
-.heads .ht {
-  font-weight: 600;
-  letter-spacing: -.015em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.heads .hb {
-  font-family: var(--mono);
-  font-size: 9px;
-  font-weight: 800;
-  border: 2px solid var(--ink);
-  padding: 2px 0;
-  text-align: center;
-}
-
-.heads .hm {
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 600;
-  opacity: .72;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* ---------- headlines view (see src/styles/library.css) ---------- */
 
 /* ---------- bulk bar ---------- */
 .bulk {

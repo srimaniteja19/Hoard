@@ -302,16 +302,10 @@ export async function POST(req: Request) {
 
     let inserted: typeof tilEntries.$inferSelect;
     if (data.dischargesBookmarkId) {
-      const [insertedRows] = await db.batch([
-        db.insert(tilEntries).values(insertValues).returning(),
-        db
-          .update(bookmarks)
-          .set({ unread: false, updatedAt: now })
-          .where(and(eq(bookmarks.id, data.dischargesBookmarkId), eq(bookmarks.userId, userId))),
-      ]);
-      inserted = insertedRows[0];
+      const [row] = await db.insert(tilEntries).values(insertValues).returning();
+      inserted = row;
       // A TIL entry citing this bookmark is itself a "use" (LIBRARY.md §2) —
-      // doesn't need the same atomicity as the batch above, this is informational.
+      // doesn't move the bookmark to Vault automatically; only explicit "Move to Vault" / "Mark Read" does.
       await recordUse(data.dischargesBookmarkId, userId);
     } else {
       const [row] = await db.insert(tilEntries).values(insertValues).returning();

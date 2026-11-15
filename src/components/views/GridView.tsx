@@ -9,12 +9,12 @@ interface GridViewProps {
   selectedIds: Set<number>;
   onToggleSelect: (id: number, e: React.MouseEvent) => void;
   onOpen: (id: number) => void;
+  onToggleRead?: (id: number) => void;
   onRecordUse?: (id: number) => void;
   onSelectTag?: (tag: string) => void;
   onOpenDiff?: (bookmark: Bookmark) => void;
   onDischarge?: (bookmark: Bookmark, sourceRect: DOMRect) => void;
   onGhostRead?: (bookmark: Bookmark) => void;
-  onOpenSynapse?: (bookmark: Bookmark) => void;
 }
 
 export const GridView: React.FC<GridViewProps> = ({
@@ -22,12 +22,12 @@ export const GridView: React.FC<GridViewProps> = ({
   selectedIds,
   onToggleSelect,
   onOpen,
+  onToggleRead,
   onRecordUse,
   onSelectTag,
   onOpenDiff,
   onDischarge,
   onGhostRead,
-  onOpenSynapse,
 }) => {
   return (
     <div className="grid">
@@ -39,12 +39,12 @@ export const GridView: React.FC<GridViewProps> = ({
           heightClass=""
           onToggleSelect={onToggleSelect}
           onOpen={onOpen}
+          onToggleRead={onToggleRead}
           onRecordUse={onRecordUse}
           onSelectTag={onSelectTag}
           onOpenDiff={onOpenDiff}
           onDischarge={onDischarge}
           onGhostRead={onGhostRead}
-          onOpenSynapse={onOpenSynapse}
         />
       ))}
     </div>

@@ -8,10 +8,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LayoutGrid,
-  Columns3,
   List,
   Table2,
-  Archive,
   ChevronDown,
   X,
   FileText,
@@ -21,6 +19,9 @@ import {
   AppWindow,
   GraduationCap,
   BookOpen,
+  Folder,
+  Tag,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -176,7 +177,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               }}
               title="Clear collection filter"
             >
-              <span>📁 {activeCollectionName}</span>
+              <Folder size={11} />
+              <span>{activeCollectionName}</span>
               <X size={11} />
             </button>
           )}
@@ -191,7 +193,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               }}
               title="Clear topic cluster filter"
             >
-              <span>🏷️ {activeTopicCluster}</span>
+              <Tag size={11} />
+              <span>{activeTopicCluster}</span>
               <X size={11} />
             </button>
           )}
@@ -291,7 +294,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </button>
           )}
 
-          <span className="lib-omnibox-kbd">/ · ⌘K</span>
+          <span className="lib-omnibox-kbd" title="Press / to focus search">
+            /
+          </span>
         </div>
 
         <div className="lib-controls-group">
@@ -315,19 +320,11 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           <div className="lib-view-seg" role="group" aria-label="View layout">
             <button
               type="button"
-              className={`lib-view-btn ${view === "grid" ? "on" : ""}`}
+              className={`lib-view-btn ${view === "grid" || view === "masonry" ? "on" : ""}`}
               onClick={() => setView("grid")}
-              title="Grid View (Uniform Cards)"
+              title="Cards Grid View"
             >
-              <LayoutGrid size={13} /> <span className="nb-hide-mobile">GRID</span>
-            </button>
-            <button
-              type="button"
-              className={`lib-view-btn ${view === "masonry" ? "on" : ""}`}
-              onClick={() => setView("masonry")}
-              title="Masonry View"
-            >
-              <Columns3 size={13} /> <span className="nb-hide-mobile">MASONRY</span>
+              <LayoutGrid size={13} /> <span className="nb-hide-mobile">CARDS</span>
             </button>
             <button
               type="button"
@@ -341,17 +338,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               type="button"
               className={`lib-view-btn ${view === "heads" ? "on" : ""}`}
               onClick={() => setView("heads")}
-              title="High-Density Table / Headlines"
+              title="High-Density Table"
             >
               <Table2 size={13} /> <span className="nb-hide-mobile">TABLE</span>
-            </button>
-            <button
-              type="button"
-              className={`lib-view-btn ${view === "archive" ? "on" : ""}`}
-              onClick={() => setView("archive")}
-              title="Archive Vault & Snapshots"
-            >
-              <Archive size={13} /> <span className="nb-hide-mobile">VAULT</span>
             </button>
           </div>
         </div>
@@ -363,6 +352,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           <div className="lib-kind-strip" role="tablist" aria-label="Filter by content kind">
             <button
               type="button"
+              role="tab"
+              aria-selected={ty === null}
               className={`lib-kind-pill ${ty === null ? "on" : ""}`}
               onClick={() => setTy?.(null)}
             >
@@ -379,6 +370,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 <button
                   key={k}
                   type="button"
+                  role="tab"
+                  aria-selected={isSelected}
                   data-kind={k}
                   className={`lib-kind-pill ${isSelected ? "on" : ""} ${count === 0 ? "zero" : ""}`}
                   onClick={() => setTy?.(isSelected ? null : k)}
@@ -394,7 +387,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           <div className="lib-facet-meta">
             {guessedCount > 0 && (
               <Link href="/library/review" className="lib-review-pill">
-                <span>⚡ {guessedCount} GUESSED TYPE{guessedCount === 1 ? "" : "S"}</span>
+                <Zap size={11} />
+                <span>
+                  {guessedCount} AUTO-CLASSIFIED
+                </span>
                 <span style={{ textDecoration: "underline" }}>REVIEW →</span>
               </Link>
             )}
@@ -409,7 +405,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                   color: "var(--ink)",
                   padding: "3px 8px",
                   fontFamily: "var(--mono)",
-                  fontSize: "9.5px",
+                  fontSize: "11px",
                   fontWeight: 800,
                   cursor: "pointer",
                 }}

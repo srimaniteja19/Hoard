@@ -4,13 +4,14 @@ import React from "react";
 import { Bookmark } from "@/types";
 import { extractYouTubeVideoId } from "@/lib/cleanTitle";
 import { YouTubeDigestButton } from "@/components/youtube/YouTubeDigestButton";
-import { ExternalLink, BookOpen } from "lucide-react";
+import { ExternalLink, BookOpen, Archive } from "lucide-react";
 
 interface HeadlinesViewProps {
   items: Bookmark[];
   selectedIds: Set<number>;
   onToggleSelect: (id: number, e: React.MouseEvent) => void;
   onOpen: (id: number) => void;
+  onToggleRead?: (id: number) => void;
   onRecordUse?: (id: number) => void;
   onSelectTag?: (tag: string) => void;
   onGhostRead?: (bookmark: Bookmark) => void;
@@ -21,6 +22,7 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
   selectedIds,
   onToggleSelect,
   onOpen,
+  onToggleRead,
   onRecordUse,
   onSelectTag,
   onGhostRead,
@@ -29,7 +31,6 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
     <div className="heads">
       {items.map((x) => {
         const isSel = selectedIds.has(x.id);
-        const neverOpened = x.itemType === "REFERENCE" && (x.useCount ?? 0) === 0;
 
         const handleLaunchUrl = (evt: React.MouseEvent) => {
           evt.stopPropagation();
@@ -44,6 +45,7 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
         return (
           <div
             key={x.id}
+            tabIndex={0}
             className={`hrow ${isSel ? "sel" : ""}`}
             onClick={(evt) => {
               if (evt.metaKey || evt.ctrlKey) {
@@ -52,11 +54,20 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
                 onOpen(x.id);
               }
             }}
-            style={neverOpened ? { borderLeft: "3px solid var(--orange)" } : undefined}
+            onKeyDown={(evt) => {
+              if (evt.target !== evt.currentTarget) return;
+              if (evt.key === "Enter" || evt.key === " ") {
+                evt.preventDefault();
+                onOpen(x.id);
+              }
+            }}
           >
-            <span
+            <button
+              type="button"
               className="hb"
               data-kind={x.ty}
+              aria-pressed={isSel}
+              aria-label={isSel ? `Deselect ${x.t}` : `Select ${x.t}`}
               onClick={(evt) => {
                 evt.stopPropagation();
                 onToggleSelect(x.id, evt);
@@ -64,7 +75,7 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
               title="Click badge to select"
             >
               {isSel ? "✓" : x.ty}
-            </span>
+            </button>
 
             <span className="ht" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               {x.unread && <span className="card-unread-dot" title="Unread" />}
@@ -118,34 +129,33 @@ export const HeadlinesView: React.FC<HeadlinesViewProps> = ({
               {onGhostRead && (
                 <button
                   type="button"
+                  className="hact-btn"
                   onClick={() => onGhostRead(x)}
-                  style={{
-                    border: "1px solid var(--ink)",
-                    background: "var(--paper)",
-                    padding: "2px 5px",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                  }}
-                  title="Ghost Reader"
+                  title="Read in Ghost Reader"
+                  aria-label="Read in Ghost Reader"
                 >
-                  <BookOpen size={10} />
+                  <BookOpen size={11} />
+                </button>
+              )}
+              {onToggleRead && (
+                <button
+                  type="button"
+                  className="hact-btn"
+                  onClick={() => onToggleRead(x.id)}
+                  title="Move to Vault (Mark Read)"
+                  aria-label="Move to Vault"
+                >
+                  <Archive size={11} />
                 </button>
               )}
               <button
                 type="button"
+                className="hact-btn"
                 onClick={handleLaunchUrl}
-                style={{
-                  border: "1px solid var(--ink)",
-                  background: "var(--paper)",
-                  padding: "2px 5px",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                }}
                 title="Open URL"
+                aria-label="Open URL"
               >
-                <ExternalLink size={10} />
+                <ExternalLink size={11} />
               </button>
             </span>
           </div>

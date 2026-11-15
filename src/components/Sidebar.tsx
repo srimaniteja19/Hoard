@@ -16,14 +16,10 @@ import {
   Upload,
   Download,
   Printer,
-  Newspaper,
   Share2,
   Check,
-  ChevronRight,
-  ChevronDown,
   AlertCircle,
 } from "lucide-react";
-import { buildLivingTopicClusters, LivingTopicCluster } from "@/lib/library/topicClustering";
 
 interface SidebarProps {
   bookmarks: Bookmark[];
@@ -45,15 +41,6 @@ interface SidebarProps {
   onOpenImport: () => void;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
-  activeTopicCluster?: string | null;
-  setActiveTopicCluster?: (c: string | null) => void;
-  onOpenTopicHub?: (cluster: LivingTopicCluster) => void;
-  onOpenGazette?: () => void;
-  /** Session count of bookmarks discharged into TIL entries (SPECTACLE.md §4). */
-  dischargeCount?: number;
-  /** Bumped on each discharge to retrigger the counter pulse/cross-fade via key remount. */
-  dischargePulseNonce?: number;
-  dischargeReducedMotion?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -76,26 +63,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenImport,
   isMobileOpen = false,
   onCloseMobile,
-  activeTopicCluster,
-  setActiveTopicCluster,
-  onOpenTopicHub,
-  onOpenGazette,
-  dischargeCount = 0,
-  dischargePulseNonce = 0,
-  dischargeReducedMotion = false,
 }) => {
   const { isInstallable, promptInstall } = usePWA();
   const [shareCopied, setShareCopied] = useState(false);
   const [showAllCollections, setShowAllCollections] = useState(false);
   const [showAllTags, setShowAllTags] = useState(false);
   const [tagFilterQuery, setTagFilterQuery] = useState("");
-  const [topicsExpanded, setTopicsExpanded] = useState(true);
 
   const isColdStart = bookmarks.length > 0 && bookmarks.length < 15;
-
-  const livingClusters = useMemo(() => {
-    return buildLivingTopicClusters(bookmarks);
-  }, [bookmarks]);
 
   const activeBookmarks = useMemo(() => {
     return bookmarks.filter((x) => !x.isDeleted && x.unread);
@@ -142,7 +117,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setColl("all");
     setTy(null);
     setTag(null);
-    if (setActiveTopicCluster) setActiveTopicCluster(null);
     setUnreadOnly(false);
     setNeverOpenedOnly(false);
     if (view === "archive" && setView) setView("grid");
@@ -182,18 +156,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setTimeout(() => setShareCopied(false), 2000);
   };
 
+  const handleRowKeyDown = (e: React.KeyboardEvent, action: () => void) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      action();
+    }
+  };
+
   const renderCollectionTree = (list: Collection[], depth = 0) => {
     return list.map((c) => (
       <React.Fragment key={c.id}>
         <div
+          role="button"
+          tabIndex={0}
           className={`ci ${depth > 0 ? "child" : ""} ${coll === c.id && view !== "archive" ? "on" : ""}`}
           style={{ paddingLeft: depth > 0 ? `${12 + depth * 14}px` : undefined }}
           onClick={() => handleSelectCollection(c.id)}
+          onKeyDown={(e) => handleRowKeyDown(e, () => handleSelectCollection(c.id))}
           title={c.query ? `Smart Collection Query: ${c.query}` : undefined}
         >
           {c.query ? (
-            <span className="ic" style={{ background: c.c }}>
-              ⚡
+            <span className="ic" style={{ background: c.c, color: "#000" }}>
+              <Zap size={11} strokeWidth={2.5} />
             </span>
           ) : (
             <span
@@ -213,7 +197,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {c.name}
           </span>
           {c.query && (
-            <span style={{ fontSize: "8.5px", opacity: 0.6, marginRight: "4px", fontFamily: "var(--mono)" }}>
+            <span
+              style={{
+                fontSize: "11px",
+                opacity: 0.68,
+                marginRight: "4px",
+                fontFamily: "var(--mono)",
+              }}
+            >
               LIVE
             </span>
           )}
@@ -228,7 +219,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     coll === "all" &&
     ty === null &&
     tag === null &&
-    !activeTopicCluster &&
     !unreadOnly &&
     !neverOpenedOnly &&
     view !== "archive";
@@ -238,7 +228,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {isMobileOpen && <div className="sidebar-backdrop" onClick={onCloseMobile} />}
 
       <aside className={`side ${isMobileOpen ? "mobile-open" : ""}`}>
-        {/* Mobile-only close header */}
         {isMobileOpen && onCloseMobile && (
           <div
             style={{
@@ -298,32 +287,53 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="sidescroll">
           {/* 1. Smart Scopes */}
           <div className="slbl">
-            <span>VIEWS & SCOPES</span>
+            <span>SCOPES</span>
           </div>
 
           <div id="scopes">
-            <div className={`ci ${isAllActive ? "on" : ""}`} onClick={handleSelectAll}>
+            <div
+              role="button"
+              tabIndex={0}
+              className={`ci ${isAllActive ? "on" : ""}`}
+              onClick={handleSelectAll}
+              onKeyDown={(e) => handleRowKeyDown(e, handleSelectAll)}
+            >
               <span className="ic" style={{ background: "var(--yel)", color: "#000" }}>
                 <Inbox size={11} strokeWidth={2.5} />
               </span>
               <span style={{ flex: 1 }}>All Bookmarks</span>
-              <span
-                key={`unread-${dischargePulseNonce}`}
-                className={`n ${dischargePulseNonce > 0 ? (dischargeReducedMotion ? "counter-crossfade" : "counter-pulse") : ""}`}
-              >
-                {unreadCount}
-              </span>
+              <span className="n">{unreadCount}</span>
             </div>
 
-            <div className={`ci ${unreadOnly ? "on" : ""}`} onClick={handleSelectUnread}>
+            <div
+              role="button"
+              tabIndex={0}
+              className={`ci ${unreadOnly && view !== "archive" ? "on" : ""}`}
+              onClick={handleSelectUnread}
+              onKeyDown={(e) => handleRowKeyDown(e, handleSelectUnread)}
+            >
               <span className="ic" style={{ background: "var(--pink)", color: "#fff" }}>
-                ●
+                <span
+                  style={{
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    background: "currentColor",
+                    display: "inline-block",
+                  }}
+                />
               </span>
               <span style={{ flex: 1 }}>Unread Queue</span>
               <span className="n">{unreadCount}</span>
             </div>
 
-            <div className={`ci ${neverOpenedOnly ? "on" : ""}`} onClick={handleSelectNeverOpened}>
+            <div
+              role="button"
+              tabIndex={0}
+              className={`ci ${neverOpenedOnly && view !== "archive" ? "on" : ""}`}
+              onClick={handleSelectNeverOpened}
+              onKeyDown={(e) => handleRowKeyDown(e, handleSelectNeverOpened)}
+            >
               <span className="ic" style={{ background: "var(--orange, #FF6B00)", color: "#000" }}>
                 <AlertCircle size={11} strokeWidth={2.5} />
               </span>
@@ -332,11 +342,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             <div
+              role="button"
+              tabIndex={0}
               className={`ci ${view === "archive" ? "on" : ""}`}
               onClick={() => {
                 if (setView) setView(view === "archive" ? "grid" : "archive");
                 if (onCloseMobile) onCloseMobile();
               }}
+              onKeyDown={(e) =>
+                handleRowKeyDown(e, () => {
+                  if (setView) setView(view === "archive" ? "grid" : "archive");
+                  if (onCloseMobile) onCloseMobile();
+                })
+              }
             >
               <span className="ic" style={{ background: "var(--cyan)", color: "#000" }}>
                 <Archive size={11} strokeWidth={2.5} />
@@ -344,30 +362,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span style={{ flex: 1 }}>Archive Vault</span>
               <span className="n">{archiveCount}</span>
             </div>
-
-            {dischargeCount > 0 && (
-              <div
-                className="ci"
-                id="til-gains-counter"
-                title="Bookmarks discharged into TIL entries this session"
-              >
-                <span className="ic" style={{ background: "var(--lime, #B6FF3C)", color: "#000" }}>
-                  💡
-                </span>
-                <span style={{ flex: 1 }}>TIL Gains (Session)</span>
-                <span
-                  key={`gains-${dischargePulseNonce}`}
-                  className={`n ${dischargePulseNonce > 0 ? (dischargeReducedMotion ? "counter-crossfade" : "counter-pulse") : ""}`}
-                >
-                  {dischargeCount}
-                </span>
-              </div>
-            )}
-
-            {/* Hidden anchor for FLIP animation when dischargeCount is 0 */}
-            {dischargeCount === 0 && (
-              <div id="til-gains-counter" style={{ height: 0, overflow: "hidden" }} aria-hidden="true" />
-            )}
           </div>
 
           {/* 2. Collections / Folders */}
@@ -443,91 +437,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* 3. Living Topic Clusters */}
-          {livingClusters.length > 0 && (
-            <>
-              <div
-                className="slbl"
-                style={{ cursor: "pointer" }}
-                onClick={() => setTopicsExpanded(!topicsExpanded)}
-              >
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                  {topicsExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-                  TOPIC HUBS
-                </span>
-                <span style={{ fontSize: "9px", opacity: 0.6 }}>{livingClusters.length}</span>
-              </div>
-
-              {topicsExpanded && (
-                <div id="topic-clusters">
-                  {livingClusters.slice(0, 5).map((c) => {
-                    const isSelected = activeTopicCluster === c.title;
-                    return (
-                      <div
-                        key={c.id}
-                        className={`ci ${isSelected ? "on" : ""}`}
-                        onClick={() => {
-                          if (setActiveTopicCluster) {
-                            setActiveTopicCluster(isSelected ? null : c.title);
-                          }
-                          if (onCloseMobile) onCloseMobile();
-                        }}
-                      >
-                        <span
-                          className="ic"
-                          style={{ background: c.color, color: "#000", fontWeight: 800 }}
-                        >
-                          {c.icon}
-                        </span>
-                        <span
-                          style={{
-                            flex: 1,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            fontSize: "12px",
-                          }}
-                        >
-                          {c.title}
-                        </span>
-                        <span className="n">{c.unreadCount}</span>
-                        {onOpenTopicHub && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onOpenTopicHub(c);
-                            }}
-                            title="Open Topic Hub Synthesis"
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              padding: "0 2px",
-                              fontSize: "11px",
-                              opacity: 0.65,
-                            }}
-                          >
-                            ↗
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* 4. Searchable & Collapsible Tags */}
+          {/* 3. Searchable & Collapsible Tags */}
           <div className="slbl">
             <span>TAGS ({tagCounts.length})</span>
             {tag && (
-              <button
-                type="button"
-                className="slbl-action"
-                onClick={() => setTag(null)}
-              >
+              <button type="button" className="slbl-action" onClick={() => setTag(null)}>
                 CLEAR
               </button>
             )}
@@ -550,8 +464,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {visibleTags.map(([t, n]) => (
               <span
                 key={t}
+                role="button"
+                tabIndex={0}
                 className={`tg ${tag === t ? "on" : ""}`}
                 onClick={() => handleSelectTag(t)}
+                onKeyDown={(e) => handleRowKeyDown(e, () => handleSelectTag(t))}
               >
                 <span>#{t}</span>
                 <span className="tg-count">{n}</span>
@@ -568,10 +485,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   border: "none",
                   background: "transparent",
                   fontFamily: "var(--mono)",
-                  fontSize: "10px",
+                  fontSize: "11px",
                   fontWeight: 700,
                   color: "var(--ink)",
-                  opacity: 0.68,
+                  opacity: 0.72,
                   cursor: "pointer",
                   padding: "2px 0",
                   textDecoration: "underline",
@@ -585,20 +502,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Quiet Library Utilities Footer */}
         <div className="side-footer">
-          {onOpenGazette && (
-            <button
-              type="button"
-              className="side-util-btn"
-              onClick={() => {
-                onOpenGazette();
-                if (onCloseMobile) onCloseMobile();
-              }}
-              title="Open The Hoard Gazette (Weekly Micro-Zine)"
-            >
-              <Newspaper size={11} /> GAZETTE
-            </button>
-          )}
-
           <button
             type="button"
             className="side-util-btn"
@@ -629,7 +532,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => window.print()}
             title="Print Current Shelf"
           >
-            <Printer size={11} />
+            <Printer size={11} /> PRINT
           </button>
 
           {isInstallable && (

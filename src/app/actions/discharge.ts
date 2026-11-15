@@ -80,10 +80,6 @@ export async function dischargeBookmarkAction(input: DischargeInput): Promise<Di
         nextReviewAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
       })
       .returning(),
-    db
-      .update(bookmarks)
-      .set({ unread: false, updatedAt: now })
-      .where(and(eq(bookmarks.id, data.bookmarkId), eq(bookmarks.userId, userId))),
   ]);
 
   const inserted = insertedRows[0];

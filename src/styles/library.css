@@ -34,7 +34,7 @@
 }
 
 /* ─── Left Workbench Sidebar Rail ────────────────────────────────────────── */
-.side {
+.app-container .side {
   border-right: 2px solid var(--ink);
   background: color-mix(in oklab, var(--shelf, #E7E2D8) 28%, var(--cream));
   display: flex;
@@ -44,7 +44,7 @@
   z-index: 35;
 }
 
-.side-top-actions {
+.app-container .side-top-actions {
   padding: 12px 12px 10px;
   display: flex;
   gap: 8px;
@@ -52,7 +52,7 @@
   border-bottom: 1.5px solid color-mix(in oklab, var(--ink) 16%, transparent);
 }
 
-.side-save-btn {
+.app-container .side-save-btn {
   flex: 1;
   border: 2px solid var(--ink);
   background: var(--ink);
@@ -70,27 +70,27 @@
   transition: transform 0.1s ease, background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
 }
 
-.side-save-btn:hover {
+.app-container .side-save-btn:hover {
   background: var(--yel);
   color: #000;
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0 var(--ink);
 }
 
-.side-save-btn:active {
+.app-container .side-save-btn:active {
   transform: translate(1px, 1px);
   box-shadow: 0 0 0 var(--ink);
 }
 
-.side-save-btn kbd {
-  font-size: 9.5px;
+.app-container .side-save-btn kbd {
+  font-size: 11px;
   font-family: var(--mono);
-  opacity: 0.75;
+  opacity: 0.82;
   border: 1px solid currentColor;
   padding: 1px 4px;
 }
 
-.side-session-btn {
+.app-container .side-session-btn {
   border: 2px solid var(--ink);
   background: var(--paper);
   color: var(--ink);
@@ -99,7 +99,7 @@
   padding: 0 9px;
   font-family: var(--mono);
   font-weight: 800;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   display: inline-flex;
   align-items: center;
@@ -109,42 +109,42 @@
   transition: transform 0.1s ease, background 0.12s ease;
 }
 
-.side-session-btn:hover {
+.app-container .side-session-btn:hover {
   background: var(--yel);
   color: #000;
   transform: translate(-1px, -1px);
 }
 
 /* Scrollable Rail Body */
-.sidescroll {
+.app-container .sidescroll {
   flex: 1;
   overflow-y: auto;
   padding: 8px 0 16px;
 }
 
-.sidescroll::-webkit-scrollbar {
+.app-container .sidescroll::-webkit-scrollbar {
   width: 6px;
 }
 
-.sidescroll::-webkit-scrollbar-track {
+.app-container .sidescroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.sidescroll::-webkit-scrollbar-thumb {
+.app-container .sidescroll::-webkit-scrollbar-thumb {
   background: color-mix(in oklab, var(--ink) 28%, transparent);
 }
 
-.sidescroll::-webkit-scrollbar-thumb:hover {
+.app-container .sidescroll::-webkit-scrollbar-thumb:hover {
   background: var(--ink);
 }
 
 /* Section Labels */
-.slbl {
+.app-container .slbl {
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.12em;
-  color: color-mix(in oklab, var(--ink) 56%, transparent);
+  letter-spacing: 0.1em;
+  color: color-mix(in oklab, var(--ink) 66%, transparent);
   padding: 10px 14px 4px;
   margin: 4px 0 2px;
   display: flex;
@@ -155,13 +155,13 @@
   user-select: none;
 }
 
-.slbl i {
+.app-container .slbl i {
   display: none;
 }
 
-.slbl-action {
+.app-container .slbl-action {
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 800;
   border: 1.5px solid var(--ink);
   background: var(--paper);
@@ -172,13 +172,13 @@
   transition: background 0.1s ease;
 }
 
-.slbl-action:hover {
+.app-container .slbl-action:hover {
   background: var(--yel);
   color: #000;
 }
 
 /* Sidebar Nav Rows */
-.ci {
+.app-container .ci {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -192,21 +192,31 @@
   user-select: none;
   color: var(--ink);
   position: relative;
+  background: transparent;
+  width: calc(100% - 16px);
+  text-align: left;
 }
 
-.ci:hover {
+.app-container .ci:hover,
+.app-container .ci:focus-visible {
   background: var(--paper);
-  border-color: color-mix(in oklab, var(--ink) 35%, transparent);
+  border-color: color-mix(in oklab, var(--ink) 45%, transparent);
+  outline: none;
 }
 
-.ci.on {
+.app-container .ci:focus-visible {
+  border-color: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.app-container .ci.on {
   background: var(--paper);
   border-color: var(--ink);
   box-shadow: 2px 2px 0 var(--ink);
   font-weight: 800;
 }
 
-.ci.on::before {
+.app-container .ci.on::before {
   content: "";
   position: absolute;
   left: -1.5px;
@@ -217,7 +227,7 @@
   border-right: 1.5px solid var(--ink);
 }
 
-.ci .ic {
+.app-container .ci .ic {
   width: 20px;
   height: 20px;
   border: 1.5px solid var(--ink);
@@ -226,72 +236,76 @@
   display: grid;
   place-items: center;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
   z-index: 1;
 }
 
-.ci .n {
+.app-container .ci .n {
   margin-left: auto;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  opacity: 0.58;
+  opacity: 0.68;
   font-variant-numeric: tabular-nums;
 }
 
-.ci.on .n {
+.app-container .ci.on .n {
   opacity: 1;
   background: var(--ink);
   color: var(--paper);
   padding: 0 5px;
-  font-size: 9.5px;
+  font-size: 11px;
 }
 
 /* Sidebar Tag Search & List */
-.side-tag-search {
+.app-container .side-tag-search {
   margin: 2px 12px 6px;
   position: relative;
 }
 
-.side-tag-search input {
+.app-container .side-tag-search input {
   width: 100%;
   border: 1.5px solid color-mix(in oklab, var(--ink) 35%, transparent);
   background: var(--paper);
-  padding: 4px 8px 4px 24px;
+  padding: 5px 8px 5px 24px;
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--ink);
   outline: none;
 }
 
-.side-tag-search input:focus {
+.app-container .side-tag-search input::placeholder {
+  color: color-mix(in oklab, var(--ink) 66%, transparent);
+}
+
+.app-container .side-tag-search input:focus {
   border-color: var(--ink);
   box-shadow: 2px 2px 0 var(--ink);
 }
 
-.side-tag-search svg {
+.app-container .side-tag-search svg {
   position: absolute;
   left: 7px;
   top: 50%;
   transform: translateY(-50%);
-  opacity: 0.5;
+  opacity: 0.6;
   pointer-events: none;
 }
 
-.tagwrap {
+.app-container .tagwrap {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   padding: 2px 12px 6px;
 }
 
-.tg {
+.app-container .tg {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  border: 1.5px solid color-mix(in oklab, var(--ink) 30%, transparent);
-  padding: 2px 6px;
+  border: 1.5px solid color-mix(in oklab, var(--ink) 32%, transparent);
+  padding: 2px 7px;
   cursor: pointer;
   background: var(--paper);
   color: var(--ink);
@@ -302,29 +316,31 @@
   gap: 4px;
 }
 
-.tg .tg-count {
-  opacity: 0.5;
-  font-size: 9px;
+.app-container .tg .tg-count {
+  opacity: 0.65;
+  font-size: 11px;
 }
 
-.tg:hover {
+.app-container .tg:hover,
+.app-container .tg:focus-visible {
   border-color: var(--ink);
   background: color-mix(in oklab, var(--yel) 35%, var(--paper));
+  outline: none;
 }
 
-.tg.on {
+.app-container .tg.on {
   background: var(--ink);
   color: var(--yel);
   border-color: var(--ink);
   box-shadow: 1.5px 1.5px 0 var(--ink);
 }
 
-.tg.on .tg-count {
-  opacity: 0.85;
+.app-container .tg.on .tg-count {
+  opacity: 0.9;
 }
 
 /* Sidebar Footer Utility Bar */
-.side-footer {
+.app-container .side-footer {
   border-top: 1.5px solid color-mix(in oklab, var(--ink) 18%, transparent);
   padding: 8px 10px;
   display: flex;
@@ -334,34 +350,36 @@
   background: color-mix(in oklab, var(--shelf, #E7E2D8) 45%, var(--cream));
 }
 
-.side-util-btn {
+.app-container .side-util-btn {
   flex: 1;
   border: 1.5px solid transparent;
   background: transparent;
   color: var(--ink);
   padding: 5px 6px;
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  opacity: 0.78;
+  opacity: 0.82;
   transition: all 0.1s ease;
   white-space: nowrap;
 }
 
-.side-util-btn:hover {
+.app-container .side-util-btn:hover,
+.app-container .side-util-btn:focus-visible {
   opacity: 1;
   background: var(--paper);
   border-color: var(--ink);
   box-shadow: 1.5px 1.5px 0 var(--ink);
+  outline: none;
 }
 
 /* ─── Main Workbench Area & Command Bar ──────────────────────────────────── */
-.main {
+.app-container .main {
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -370,7 +388,7 @@
   background: var(--cream);
 }
 
-.lib-workbench-header {
+.app-container .lib-workbench-header {
   border-bottom: 2px solid var(--ink);
   background: var(--paper);
   padding: 10px 18px;
@@ -381,14 +399,14 @@
   z-index: 20;
 }
 
-.lib-command-row {
+.app-container .lib-command-row {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.lib-rail-toggle {
+.app-container .lib-rail-toggle {
   width: 34px;
   height: 34px;
   border: 1.5px solid var(--ink);
@@ -401,14 +419,16 @@
   transition: background 0.1s ease, box-shadow 0.1s ease;
 }
 
-.lib-rail-toggle:hover {
+.app-container .lib-rail-toggle:hover,
+.app-container .lib-rail-toggle:focus-visible {
   background: var(--yel);
   color: #000;
   box-shadow: 2px 2px 0 var(--ink);
+  outline: none;
 }
 
 /* Search Omnibox with Inline Filter Chips */
-.lib-omnibox {
+.app-container .lib-omnibox {
   flex: 1;
   min-width: 220px;
   min-height: 36px;
@@ -423,25 +443,25 @@
   transition: background 0.12s ease, box-shadow 0.12s ease;
 }
 
-.lib-omnibox:focus-within {
+.app-container .lib-omnibox:focus-within {
   background: var(--paper);
   box-shadow: 3px 3px 0 var(--ink);
 }
 
-.lib-omnibox-icon {
+.app-container .lib-omnibox-icon {
   color: var(--ink);
-  opacity: 0.6;
+  opacity: 0.68;
   flex-shrink: 0;
   display: flex;
   align-items: center;
 }
 
-.lib-filter-chip {
+.app-container .lib-filter-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   background: var(--ink);
   color: var(--yel);
@@ -452,12 +472,12 @@
   line-height: 1.2;
 }
 
-.lib-filter-chip:hover {
+.app-container .lib-filter-chip:hover {
   background: var(--pink);
   color: #fff;
 }
 
-.lib-omnibox input {
+.app-container .lib-omnibox input {
   flex: 1;
   min-width: 140px;
   border: none;
@@ -470,36 +490,36 @@
   font-family: var(--grot), sans-serif;
 }
 
-.lib-omnibox input::placeholder {
-  color: color-mix(in oklab, var(--ink) 48%, transparent);
+.app-container .lib-omnibox input::placeholder {
+  color: color-mix(in oklab, var(--ink) 66%, transparent);
 }
 
-.lib-omnibox-kbd {
+.app-container .lib-omnibox-kbd {
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
-  opacity: 0.5;
-  border: 1px solid color-mix(in oklab, var(--ink) 35%, transparent);
+  opacity: 0.68;
+  border: 1px solid color-mix(in oklab, var(--ink) 38%, transparent);
   padding: 1px 5px;
   pointer-events: none;
   white-space: nowrap;
 }
 
 /* Right Controls in Command Row: Sort Select + View Icons */
-.lib-controls-group {
+.app-container .lib-controls-group {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
 
-.lib-sort-select-wrap {
+.app-container .lib-sort-select-wrap {
   position: relative;
   display: inline-flex;
   align-items: center;
 }
 
-.lib-sort-select {
+.app-container .lib-sort-select {
   appearance: none;
   -webkit-appearance: none;
   height: 36px;
@@ -509,19 +529,19 @@
   box-shadow: 2px 2px 0 var(--ink);
   padding: 0 28px 0 10px;
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.03em;
   cursor: pointer;
   outline: none;
 }
 
-.lib-sort-select:hover,
-.lib-sort-select:focus {
+.app-container .lib-sort-select:hover,
+.app-container .lib-sort-select:focus {
   background: color-mix(in oklab, var(--yel) 25%, var(--paper));
 }
 
-.lib-sort-caret {
+.app-container .lib-sort-caret {
   position: absolute;
   right: 9px;
   pointer-events: none;
@@ -529,7 +549,7 @@
 }
 
 /* View Switcher Segmented Control */
-.lib-view-seg {
+.app-container .lib-view-seg {
   display: inline-flex;
   height: 36px;
   border: 2px solid var(--ink);
@@ -537,7 +557,7 @@
   box-shadow: 2px 2px 0 var(--ink);
 }
 
-.lib-view-btn {
+.app-container .lib-view-btn {
   border: 0;
   border-right: 1.5px solid var(--ink);
   background: transparent;
@@ -546,7 +566,7 @@
   height: 100%;
   cursor: pointer;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
@@ -554,21 +574,21 @@
   transition: background 0.1s ease, color 0.1s ease;
 }
 
-.lib-view-btn:last-child {
+.app-container .lib-view-btn:last-child {
   border-right: 0;
 }
 
-.lib-view-btn:hover:not(.on) {
+.app-container .lib-view-btn:hover:not(.on) {
   background: color-mix(in oklab, var(--yel) 30%, var(--paper));
 }
 
-.lib-view-btn.on {
+.app-container .lib-view-btn.on {
   background: var(--ink);
   color: var(--yel);
 }
 
 /* ─── Second Row: Facet & Kind Strip + Active Scope Title ────────────────── */
-.lib-facet-row {
+.app-container .lib-facet-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -577,7 +597,7 @@
   padding-top: 2px;
 }
 
-.lib-kind-strip {
+.app-container .lib-kind-strip {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -586,17 +606,17 @@
   padding: 2px 0;
 }
 
-.lib-kind-strip::-webkit-scrollbar {
+.app-container .lib-kind-strip::-webkit-scrollbar {
   display: none;
 }
 
-.lib-kind-pill {
+.app-container .lib-kind-pill {
   border: 1.5px solid color-mix(in oklab, var(--ink) 28%, transparent);
   background: var(--cream);
   color: var(--ink);
   padding: 4px 9px;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.03em;
   cursor: pointer;
@@ -607,12 +627,14 @@
   transition: all 0.1s ease;
 }
 
-.lib-kind-pill:hover {
+.app-container .lib-kind-pill:hover,
+.app-container .lib-kind-pill:focus-visible {
   border-color: var(--ink);
   background: var(--paper);
+  outline: none;
 }
 
-.lib-kind-pill.on {
+.app-container .lib-kind-pill.on {
   border-color: var(--ink);
   background: var(--ink);
   color: var(--yel);
@@ -620,43 +642,31 @@
   font-weight: 800;
 }
 
-.lib-kind-pill .k-dot {
-  width: 7px;
-  height: 7px;
-  border: 1px solid var(--ink);
-  background: var(--kind-color, var(--cyan));
-  flex-shrink: 0;
+.app-container .lib-kind-pill .k-cnt {
+  opacity: 0.65;
+  font-size: 11px;
 }
 
-.lib-kind-pill.on .k-dot {
-  border-color: var(--yel);
+.app-container .lib-kind-pill.on .k-cnt {
+  opacity: 0.92;
 }
 
-.lib-kind-pill .k-cnt {
-  opacity: 0.55;
-  font-size: 9.5px;
-}
-
-.lib-kind-pill.on .k-cnt {
-  opacity: 0.9;
-}
-
-.lib-kind-pill.zero {
-  opacity: 0.4;
+.app-container .lib-kind-pill.zero {
+  opacity: 0.45;
 }
 
 /* Telemetry & Review Pill on Right of Facet Row */
-.lib-facet-meta {
+.app-container .lib-facet-meta {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-left: auto;
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
 }
 
-.lib-review-pill {
+.app-container .lib-review-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -665,49 +675,49 @@
   color: var(--ink);
   padding: 3px 9px;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   text-decoration: none;
   box-shadow: 1.5px 1.5px 0 var(--ink);
   transition: transform 0.1s ease, background 0.1s ease;
 }
 
-.lib-review-pill:hover {
+.app-container .lib-review-pill:hover {
   background: var(--yel);
   transform: translate(-1px, -1px);
 }
 
-.lib-count-badge {
-  color: color-mix(in oklab, var(--ink) 65%, transparent);
+.app-container .lib-count-badge {
+  color: color-mix(in oklab, var(--ink) 68%, transparent);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.lib-count-badge b {
+.app-container .lib-count-badge b {
   color: var(--ink);
   font-weight: 800;
 }
 
 /* ─── Scroll Canvas & Card Grids ─────────────────────────────────────────── */
-.scroll {
+.app-container .scroll {
   flex: 1;
   overflow-y: auto;
   padding: 18px 20px 64px;
 }
 
-.grid {
+.app-container .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
   gap: 16px;
   align-items: stretch;
 }
 
-.masonry {
+.app-container .masonry {
   columns: 4 260px;
   column-gap: 16px;
 }
 
-.masonry .card {
+.app-container .masonry .card {
   break-inside: avoid;
   margin-bottom: 16px;
   display: inline-block;
@@ -715,7 +725,7 @@
 }
 
 /* ─── Redesigned BookmarkCard: Tactile Frame, Editorial Interior ─────────── */
-.card {
+.app-container .card {
   border: 2px solid var(--ink);
   background: var(--paper);
   box-shadow: 3px 3px 0 var(--ink);
@@ -726,18 +736,20 @@
   flex-direction: column;
 }
 
-.card:hover {
+.app-container .card:hover,
+.app-container .card:focus-visible {
   transform: translate(-2px, -2px);
   box-shadow: 5px 5px 0 var(--ink);
+  outline: none;
 }
 
-.card.sel {
+.app-container .card.sel {
   background: color-mix(in oklab, var(--yel) 22%, var(--paper));
   outline: 2px solid var(--ink);
 }
 
 /* Cover Area — Slimmer, Uniform in Grid, Uncluttered */
-.card .cover {
+.app-container .card .cover {
   border-bottom: 2px solid var(--ink);
   height: 92px;
   position: relative;
@@ -749,49 +761,52 @@
   background: color-mix(in oklab, var(--kc) 55%, var(--surface));
 }
 
-.card .cover.tall {
+.app-container .card .cover.tall {
   height: 124px;
 }
 
-.card .cover.short {
+.app-container .card .cover.short {
   height: 76px;
 }
 
-/* Top-left selection checkbox (appears on hover or when selected) */
-.card .chk {
+/* Top-left selection checkbox (appears on hover, focus-within, or when selected) */
+.app-container .card .chk {
   position: absolute;
   left: 8px;
   top: 8px;
   z-index: 5;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border: 1.5px solid var(--ink);
   background: var(--paper);
   color: var(--ink);
   display: grid;
   place-items: center;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s ease, transform 0.1s ease;
   box-shadow: 1.5px 1.5px 0 var(--ink);
+  padding: 0;
+  cursor: pointer;
 }
 
-.card:hover .chk,
-.card:focus-within .chk,
-.card.sel .chk {
+.app-container .card:hover .chk,
+.app-container .card:focus-within .chk,
+.app-container .card.sel .chk {
+  display: grid;
   opacity: 1;
   pointer-events: auto;
 }
 
-.card.sel .chk {
+.app-container .card.sel .chk {
   background: var(--pink);
   color: #fff;
 }
 
-/* Top-right Hover Quick Action Dock */
-.card-hover-dock {
+/* Top-right Hover Quick Action Dock (3 Focused Actions: READ, TIL, VAULT) */
+.app-container .card-hover-dock {
   position: absolute;
   top: 7px;
   right: 8px;
@@ -807,14 +822,14 @@
   transition: opacity 0.12s ease, transform 0.12s ease;
 }
 
-.card:hover .card-hover-dock,
-.card:focus-within .card-hover-dock {
+.app-container .card:hover .card-hover-dock,
+.app-container .card:focus-within .card-hover-dock {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
 }
 
-.card-dock-btn {
+.app-container .card-dock-btn {
   border: 0;
   border-right: 1px solid color-mix(in oklab, var(--ink) 25%, transparent);
   background: transparent;
@@ -822,30 +837,32 @@
   height: 24px;
   padding: 0 7px;
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 800;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   white-space: nowrap;
 }
 
-.card-dock-btn:last-child {
+.app-container .card-dock-btn:last-child {
   border-right: 0;
 }
 
-.card-dock-btn:hover {
+.app-container .card-dock-btn:hover,
+.app-container .card-dock-btn:focus-visible {
   background: var(--yel);
   color: #000;
+  outline: none;
 }
 
 /* Bottom-left Kind Pill inside Cover */
-.card .tybadge {
+.app-container .card .tybadge {
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   border: 1.5px solid var(--ink);
   padding: 1px 6px;
   background: var(--paper);
@@ -855,13 +872,13 @@
   box-shadow: 1.5px 1.5px 0 var(--ink);
 }
 
-.card .dur {
+.app-container .card .dur {
   position: absolute;
   right: 8px;
   bottom: 8px;
   z-index: 2;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
   border: 1.5px solid var(--ink);
   background: var(--paper);
@@ -869,8 +886,8 @@
   padding: 1px 5px;
 }
 
-/* Card Body — Clean Editorial Typography */
-.card .cbody {
+/* Card Body — Clean Editorial Typography (Title first, Source subline below) */
+.app-container .card .cbody {
   padding: 12px 14px 13px;
   display: flex;
   flex-direction: column;
@@ -878,38 +895,8 @@
   gap: 6px;
 }
 
-/* Source Domain + Reading Time Row */
-.card-eyebrow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-  color: color-mix(in oklab, var(--ink) 62%, transparent);
-}
-
-.card-domain {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-unread-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--pink);
-  flex-shrink: 0;
-  display: inline-block;
-}
-
 /* Title Link — Clicking opens URL directly & logs use */
-.card-title-link {
+.app-container .card-title-link {
   font-size: 15px;
   font-weight: 800;
   line-height: 1.28;
@@ -923,35 +910,64 @@
   transition: color 0.1s ease;
 }
 
-.card-title-link:hover {
+.app-container .card-title-link:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-thickness: 2px;
 }
 
-/* Excerpt / Personal Note */
-.card .cex {
+/* Source Domain + Reading Time Subline (placed below title per craft-floor) */
+.app-container .card-subline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: color-mix(in oklab, var(--ink) 66%, transparent);
+}
+
+.app-container .card-domain {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-container .card-unread-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pink);
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* Excerpt / Personal Note (No >1px colored left border per craft-floor) */
+.app-container .card .cex {
   font-size: 12.5px;
   line-height: 1.45;
   margin: 0;
-  color: color-mix(in oklab, var(--ink) 74%, transparent);
+  color: color-mix(in oklab, var(--ink) 76%, transparent);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.card .cex.user-note {
-  border: none;
-  border-left: 2.5px solid var(--yel);
+.app-container .card .cex.user-note {
+  border: 1px solid color-mix(in oklab, var(--ink) 22%, transparent);
   background: color-mix(in oklab, var(--yel) 12%, var(--cream));
-  padding: 4px 8px;
+  padding: 5px 8px;
   font-style: italic;
   color: var(--ink);
 }
 
 /* Card Footer — Quiet Tag + Usage Telemetry */
-.card-footer {
+.app-container .card-footer {
   margin-top: auto;
   padding-top: 8px;
   border-top: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
@@ -960,11 +976,11 @@
   justify-content: space-between;
   gap: 8px;
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
 }
 
-.card-footer-left {
+.app-container .card-footer-left {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -972,27 +988,27 @@
   flex-wrap: wrap;
 }
 
-.card-tag-pill {
+.app-container .card-tag-pill {
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
   padding: 1px 6px;
-  border: 1px solid color-mix(in oklab, var(--ink) 28%, transparent);
+  border: 1px solid color-mix(in oklab, var(--ink) 30%, transparent);
   background: var(--cream);
   color: var(--ink);
   cursor: pointer;
   transition: all 0.1s ease;
 }
 
-.card-tag-pill:hover {
+.app-container .card-tag-pill:hover {
   border-color: var(--ink);
   background: var(--yel);
   color: #000;
 }
 
-.card-status-badge {
+.app-container .card-status-badge {
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
   padding: 1px 5px;
   border: 1px solid var(--ink);
@@ -1001,8 +1017,8 @@
   gap: 3px;
 }
 
-.card-footer-right {
-  color: color-mix(in oklab, var(--ink) 56%, transparent);
+.app-container .card-footer-right {
+  color: color-mix(in oklab, var(--ink) 62%, transparent);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   display: inline-flex;
@@ -1011,15 +1027,15 @@
 }
 
 /* ─── High-Density Workbench List & Headlines Views ──────────────────────── */
-.list {
+.app-container .list {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.list .row {
+.app-container .list .row {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
   border: 1.5px solid var(--ink);
@@ -1031,27 +1047,33 @@
   transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
 }
 
-.list .row:hover {
+.app-container .list .row:hover,
+.app-container .list .row:focus-visible {
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0 var(--ink);
+  outline: none;
 }
 
-.list .row.sel {
+.app-container .list .row.sel {
   background: color-mix(in oklab, var(--yel) 22%, var(--paper));
 }
 
-.list .swatch {
+.app-container .list .swatch {
   align-self: stretch;
   margin: -10px 0;
+  border: 0;
   border-right: 1.5px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
   display: grid;
   place-items: center;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
+  cursor: pointer;
 }
 
-.list .rt {
+.app-container .list .rt {
   font-size: 14px;
   font-weight: 700;
   padding: 0;
@@ -1060,24 +1082,28 @@
   gap: 8px;
 }
 
-.list .rt-link {
+.app-container .list .rt-link {
   color: var(--ink);
   text-decoration: none;
 }
 
-.list .rt-link:hover {
+.app-container .list .rt-link:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.list .rm {
+.app-container .list .rm {
   padding: 4px 0 0;
-  font-size: 10px;
-  opacity: 0.68;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.72;
+  display: flex;
+  flex-wrap: wrap;
   gap: 7px;
 }
 
-.list-row-actions {
+.app-container .list-row-actions {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1085,21 +1111,21 @@
   transition: opacity 0.1s ease;
 }
 
-.list .row:hover .list-row-actions,
-.list .row:focus-within .list-row-actions {
+.app-container .list .row:hover .list-row-actions,
+.app-container .list .row:focus-within .list-row-actions {
   opacity: 1;
 }
 
-/* Headlines Compact Table */
-.heads {
+/* Headlines Compact Table (6 Columns) */
+.app-container .heads {
   border: 2px solid var(--ink);
   box-shadow: 3px 3px 0 var(--ink);
   background: var(--paper);
 }
 
-.heads .hrow {
+.app-container .heads .hrow {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 90px 130px 76px 86px;
+  grid-template-columns: 52px minmax(0, 1fr) 96px 140px 84px 96px;
   gap: 10px;
   align-items: center;
   border-bottom: 1px solid color-mix(in oklab, var(--ink) 20%, transparent);
@@ -1109,28 +1135,292 @@
   transition: background 0.08s ease;
 }
 
-.heads .hrow:hover {
-  background: color-mix(in oklab, var(--yel) 22%, var(--paper));
+.app-container .heads .hrow:last-child {
+  border-bottom: 0;
 }
 
-.heads .hrow.sel {
+.app-container .heads .hrow:hover,
+.app-container .heads .hrow:focus-visible {
+  background: color-mix(in oklab, var(--yel) 22%, var(--paper));
+  outline: none;
+}
+
+.app-container .heads .hrow.sel {
   background: var(--yel);
 }
 
+.app-container .heads .hb {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  border: 1.5px solid var(--ink);
+  background: var(--cream);
+  color: var(--ink);
+  padding: 2px 0;
+  text-align: center;
+  cursor: pointer;
+}
+
+.app-container .heads .ht {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-container .heads .hm {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-container .heads .hact-btn {
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 3px 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.app-container .heads .hact-btn:hover {
+  background: var(--yel);
+  color: #000;
+}
+
+/* ─── Inspector Closed State Accessibility ───────────────────────────────── */
+.app-container .insp:not(.on) {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.app-container .insp.on {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* ─── Streamlined Archive Vault Workbench ────────────────────────────────── */
+.app-container .vault-workbench {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.app-container .vault-toolbar {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.app-container .vault-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.app-container .vault-tab {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 11px;
+  border: 1.5px solid var(--ink);
+  background: var(--cream);
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.1s ease;
+}
+
+.app-container .vault-tab:hover {
+  background: var(--paper);
+}
+
+.app-container .vault-tab.on {
+  background: var(--ink);
+  color: var(--yel);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.app-container .vault-tab-count {
+  font-size: 11px;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-container .vault-tab.on .vault-tab-count {
+  opacity: 1;
+}
+
+.app-container .vault-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.app-container .vault-btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+  padding: 5px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  transition: background 0.1s ease, transform 0.1s ease;
+}
+
+.app-container .vault-btn:hover {
+  background: var(--yel);
+  color: #000;
+}
+
+.app-container .vault-btn.primary {
+  background: var(--yel);
+  color: #000;
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+}
+
+.app-container .vault-btn.danger {
+  background: var(--pink);
+  color: #fff;
+}
+
+.app-container .vault-card {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.app-container .vault-card.active {
+  outline: 2px solid var(--yel);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.app-container .vault-card-cover {
+  height: 88px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1.5px solid var(--ink);
+}
+
+.app-container .vault-card-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.app-container .vault-card-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.28;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.app-container .vault-card-title:hover {
+  text-decoration: underline;
+}
+
+.app-container .vault-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: color-mix(in oklab, var(--ink) 66%, transparent);
+}
+
+.app-container .vault-card-note {
+  font-size: 12px;
+  line-height: 1.45;
+  background: color-mix(in oklab, var(--ink) 5%, var(--paper));
+  border: 1px solid color-mix(in oklab, var(--ink) 18%, transparent);
+  padding: 5px 8px;
+  color: var(--ink);
+}
+
+.app-container .vault-card-foot {
+  padding: 8px 12px;
+  background: color-mix(in oklab, var(--ink) 3%, var(--paper));
+  border-top: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.app-container .vault-reader-pane {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.app-container .vault-reader-text {
+  font-family: var(--grot);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink);
+  background: color-mix(in oklab, var(--ink) 3%, var(--paper));
+  padding: 16px;
+  border: 1px solid color-mix(in oklab, var(--ink) 15%, transparent);
+  white-space: pre-wrap;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
 @media (max-width: 768px) {
-  .lib-workbench-header {
+  .app-container .lib-workbench-header {
     padding: 8px 12px;
   }
-  .scroll {
+  .app-container .scroll {
     padding: 12px 12px 64px;
   }
-  .heads .hrow {
-    grid-template-columns: 44px minmax(0, 1fr) 80px;
+  .app-container .heads .hrow {
+    grid-template-columns: 48px minmax(0, 1fr) 86px;
   }
-  .heads .hrow .huses,
-  .heads .hrow .hdur,
-  .heads .hrow .htag {
+  .app-container .heads .hrow .huses,
+  .app-container .heads .hrow .hdur,
+  .app-container .heads .hrow .htag {
     display: none;
   }
 }
-

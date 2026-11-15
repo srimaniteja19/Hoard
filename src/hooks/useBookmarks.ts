@@ -441,8 +441,13 @@ export function useBookmarks() {
   const dischargeBookmark = useCallback(
     async (bookmarkId: number, input: { type: TilType; body: string; tags: string[] }): Promise<DischargeResult> => {
       const result = await dischargeBookmarkAction({ bookmarkId, ...input });
+      // Increment useCount locally; do NOT set unread=false automatically (only explicit Move to Vault / Mark Read moves to Vault)
       setBookmarks((prev) =>
-        prev.map((b) => (b.id === bookmarkId ? { ...b, unread: false } : b))
+        prev.map((b) =>
+          b.id === bookmarkId
+            ? { ...b, useCount: (b.useCount ?? 0) + 1, lastUsedAt: new Date().toISOString() }
+            : b
+        )
       );
       return result;
     },

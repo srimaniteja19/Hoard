@@ -4,14 +4,11 @@ import React from "react";
 import { Bookmark } from "@/types";
 import { TYPES } from "@/data/initialBookmarks";
 import {
-  Layers,
   ShieldCheck,
   AlertTriangle,
   Zap,
-  Sparkles,
   BookOpen,
-  ExternalLink,
-  SlidersHorizontal,
+  Archive,
 } from "lucide-react";
 
 import { CoverCanvas } from "@/components/covers/CoverCanvas";
@@ -29,12 +26,12 @@ interface BookmarkCardProps {
   cardWidthPx?: number;
   onToggleSelect: (id: number, e: React.MouseEvent) => void;
   onOpen: (id: number) => void;
+  onToggleRead?: (id: number) => void;
   onRecordUse?: (id: number) => void;
   onSelectTag?: (tag: string) => void;
   onOpenDiff?: (bookmark: Bookmark) => void;
   onDischarge?: (bookmark: Bookmark, sourceRect: DOMRect) => void;
   onGhostRead?: (bookmark: Bookmark) => void;
-  onOpenSynapse?: (bookmark: Bookmark) => void;
 }
 
 export const BookmarkCard: React.FC<BookmarkCardProps> = ({
@@ -45,16 +42,16 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   cardWidthPx,
   onToggleSelect,
   onOpen,
+  onToggleRead,
   onRecordUse,
   onSelectTag,
   onOpenDiff,
   onDischarge,
   onGhostRead,
-  onOpenSynapse,
 }) => {
   const typeMeta = TYPES[bookmark.ty] || {
     name: bookmark.ty,
-    c: "#00F0FF",
+    c: "var(--cyan)",
     fg: "#000",
     verb: "READ",
   };
@@ -62,7 +59,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   const durationText =
     e.Runtime || (e.Stars ? `${e.Stars}★` : e.Pages || (e.Words ? `${e.Words}w` : ""));
 
-  // Clicking the card body or Inspector icon opens the Inspector Drawer
+  // Clicking the card body opens the Inspector Drawer
   const handleCardClick = (evt: React.MouseEvent) => {
     if (evt.metaKey || evt.ctrlKey) {
       onToggleSelect(bookmark.id, evt);
@@ -71,7 +68,15 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
     }
   };
 
-  // Clicking the Title or Open button launches the URL directly and records usage
+  const handleCardKeyDown = (evt: React.KeyboardEvent) => {
+    if (evt.target !== evt.currentTarget) return;
+    if (evt.key === "Enter" || evt.key === " ") {
+      evt.preventDefault();
+      onOpen(bookmark.id);
+    }
+  };
+
+  // Clicking the Title launches the URL directly and records usage
   const handleLaunchUrl = (evt: React.MouseEvent) => {
     evt.stopPropagation();
     if (evt.metaKey || evt.ctrlKey) {
@@ -85,7 +90,6 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
   const is404 = bookmark.driftStatus === "404_preserved";
   const isChanged = bookmark.driftStatus === "changed";
   const sunFadeOpacity = calculateSunFadeOpacity(bookmark.lastFetchedAt || bookmark.when);
-  const neverOpened = bookmark.itemType === "REFERENCE" && (bookmark.useCount ?? 0) === 0;
 
   const hasValidNote = Boolean(
     bookmark.note &&
@@ -97,14 +101,15 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
     <article
       className={`card ${isSelected ? "sel" : ""}`}
       onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
       tabIndex={0}
+      aria-label={`${bookmark.t} (${bookmark.src})`}
       style={{
         position: "relative",
         ...(sunFadeOpacity < 1 ? { opacity: sunFadeOpacity } : {}),
         ...(cardWidthPx
           ? { width: `${cardWidthPx}px`, minWidth: `${cardWidthPx}px`, flexShrink: 0 }
           : {}),
-        ...(neverOpened ? { borderLeft: "3px solid var(--orange)" } : {}),
       }}
     >
       {/* Slimmer, Cleaner Cover Header */}
@@ -125,8 +130,11 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         />
 
         {/* Top-left Multi-select Checkbox */}
-        <span
+        <button
+          type="button"
           className="chk"
+          aria-pressed={isSelected}
+          aria-label={isSelected ? `Deselect ${bookmark.t}` : `Select ${bookmark.t}`}
           onClick={(evt) => {
             evt.stopPropagation();
             onToggleSelect(bookmark.id, evt);
@@ -134,9 +142,9 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
           title="Select bookmark (⌘+Click)"
         >
           {isSelected ? "✓" : ""}
-        </span>
+        </button>
 
-        {/* Unified Top-right Hover Action Dock */}
+        {/* Focused 3-Action Hover Dock (READ, TIL, VAULT) */}
         <div className="card-hover-dock" onClick={(evt) => evt.stopPropagation()}>
           {onGhostRead && (
             <button
@@ -164,46 +172,25 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
                   evt.currentTarget.getBoundingClientRect();
                 onDischarge(bookmark, rect);
               }}
-              title="Discharge into a TIL entry"
+              title="Log a TIL note from this bookmark"
             >
               <Zap size={11} /> TIL
             </button>
           )}
 
-          {onOpenSynapse && (
+          {onToggleRead && (
             <button
               type="button"
               className="card-dock-btn"
               onClick={(evt) => {
                 evt.stopPropagation();
-                onOpenSynapse(bookmark);
+                onToggleRead(bookmark.id);
               }}
-              title="Explore Synapse Trail (Semantic Connections)"
+              title={bookmark.unread ? "Move to Vault (Mark Read)" : "Restore from Vault"}
             >
-              <Sparkles size={11} />
+              <Archive size={11} /> VAULT
             </button>
           )}
-
-          <button
-            type="button"
-            className="card-dock-btn"
-            onClick={(evt) => {
-              evt.stopPropagation();
-              onOpen(bookmark.id);
-            }}
-            title="Inspect & Edit Details"
-          >
-            <SlidersHorizontal size={11} />
-          </button>
-
-          <button
-            type="button"
-            className="card-dock-btn"
-            onClick={handleLaunchUrl}
-            title="Open original URL in new tab"
-          >
-            <ExternalLink size={11} />
-          </button>
         </div>
 
         {/* Bottom-left Kind Pill */}
@@ -223,60 +210,8 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         )}
       </div>
 
-      {/* Editorial Card Body */}
+      {/* Editorial Card Body — Title first, Source subline below */}
       <div className="cbody">
-        {/* Eyebrow: Source Domain + Reading Time */}
-        <div className="card-eyebrow">
-          <span className="card-domain">
-            {bookmark.unread && <span className="card-unread-dot" title="Unread" />}
-            <span>{bookmark.src}</span>
-            {e.Platform && <span>· {e.Platform}</span>}
-          </span>
-          {bookmark.ty === "ART" && bookmark.mins > 0 && (
-            <span>{formatDuration(bookmark.mins)}</span>
-          )}
-        </div>
-
-        {/* Optional Parent Chapter or Topic Cluster Context */}
-        {(bookmark.parentTitle || bookmark.clusterTitle) && (
-          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-            {bookmark.parentTitle && (
-              <span
-                style={{
-                  fontSize: "9.5px",
-                  fontFamily: "var(--mono)",
-                  fontWeight: 700,
-                  background: "color-mix(in oklab, var(--yel) 35%, var(--paper))",
-                  border: "1px solid var(--ink)",
-                  padding: "0 5px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "3px",
-                }}
-              >
-                <Zap size={9} /> {bookmark.parentTitle.slice(0, 26)}
-              </span>
-            )}
-            {bookmark.clusterTitle && (
-              <span
-                style={{
-                  fontSize: "9.5px",
-                  fontFamily: "var(--mono)",
-                  fontWeight: 700,
-                  background: "var(--cream)",
-                  border: "1px solid color-mix(in oklab, var(--ink) 35%, transparent)",
-                  padding: "0 5px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "3px",
-                }}
-              >
-                <Layers size={9} /> {bookmark.clusterTitle}
-              </span>
-            )}
-          </div>
-        )}
-
         {/* Primary Title — Clicking opens URL directly & logs use */}
         <a
           href={bookmark.url}
@@ -288,6 +223,39 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
         >
           {bookmark.t}
         </a>
+
+        {/* Source Domain + Reading Time Subline */}
+        <div className="card-subline">
+          <span className="card-domain">
+            {bookmark.unread && <span className="card-unread-dot" title="Unread" />}
+            <span>{bookmark.src}</span>
+            {e.Platform && <span>· {e.Platform}</span>}
+          </span>
+          {bookmark.ty === "ART" && bookmark.mins > 0 && (
+            <span>{formatDuration(bookmark.mins)}</span>
+          )}
+        </div>
+
+        {/* Optional Parent Chapter Context */}
+        {bookmark.parentTitle && (
+          <div>
+            <span
+              style={{
+                fontSize: "11px",
+                fontFamily: "var(--mono)",
+                fontWeight: 700,
+                background: "color-mix(in oklab, var(--yel) 35%, var(--paper))",
+                border: "1px solid var(--ink)",
+                padding: "1px 6px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <Zap size={10} /> {bookmark.parentTitle.slice(0, 28)}
+            </span>
+          </div>
+        )}
 
         <div className="print-url">{bookmark.url}</div>
 
@@ -324,7 +292,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
                 style={{ background: "var(--yel)", color: "#000", cursor: "pointer" }}
                 title="Content changed — click to view diff"
               >
-                <AlertTriangle size={9} /> DRIFT
+                <AlertTriangle size={10} /> DRIFT
               </span>
             )}
 
@@ -338,7 +306,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
                 style={{ background: "var(--pink)", color: "#fff", cursor: "pointer" }}
                 title="404 Preserved — click to view snapshot"
               >
-                <ShieldCheck size={9} /> 404 SAVED
+                <ShieldCheck size={10} /> 404 SAVED
               </span>
             )}
           </div>

@@ -409,7 +409,7 @@ export const GhostReaderModal: React.FC<GhostReaderModalProps> = ({
                   onClick={() => onToggleRead(bookmark.id)}
                 >
                   <Check size={12} />
-                  {!bookmark.unread ? "MARKED AS READ" : "MARK AS READ"}
+                  {!bookmark.unread ? "IN VAULT (READ)" : "🗄️ MOVE TO VAULT (MARK READ)"}
                 </button>
               </div>
             </div>
