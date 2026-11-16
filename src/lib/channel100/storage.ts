@@ -2,12 +2,14 @@ import {
   Channel100Store,
   Channel100StatsData,
   ChannelMediaItem,
+  CustomMediaItem,
+  CustomMediaKind,
   ShowUserRecord,
   ViewFilterState,
   ViewSort,
   CatalogConfig,
 } from "./types";
-import { CATALOGS } from "./data";
+import { CATALOGS, customItemToChannelItem } from "./data";
 
 export const PRIMARY_LS_KEY = "hoard.ch100.v1";
 export const LEGACY_LS_KEY = "ch100.v1";
@@ -243,7 +245,12 @@ export function filterAndSortMedia(
     if (filters.genre !== "all" && item.genre !== filters.genre) return false;
     if (filters.where !== "all" && item.where !== filters.where) return false;
     if (filters.lang && filters.lang !== "all" && item.lang !== filters.lang) return false;
-    if (filters.customKind && filters.customKind !== "all" && item.customKind !== filters.customKind) return false;
+    if (filters.customKind && filters.customKind !== "all") {
+      const effectiveKind: CustomMediaKind =
+        item.customKind ||
+        (item.kind === "tv" ? (item.limited ? "mini" : "tv") : "film");
+      if (effectiveKind !== filters.customKind) return false;
+    }
 
     if (filters.len && filters.len !== "all") {
       const band = catalog.band(item);
@@ -280,6 +287,65 @@ export function filterAndSortMedia(
   };
 
   return filtered.sort(sorters[filters.sort] || sorters.rank);
+}
+
+export function normalizePersonalLogKey(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s*\([^)]*\)\s*/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Build the deduplicated Personal Log list:
+ * - Includes all custom logged titles (`store.custom`)
+ * - Automatically includes any title marked "seen" across IMDb Top 250 TV, Letterboxd 500, or Very Good Films
+ * - Deduplicates by normalized title so each title appears only once
+ */
+export function buildPersonalLogItems(
+  store: Channel100Store,
+  catalogLists: ChannelMediaItem[][]
+): ChannelMediaItem[] {
+  const result: ChannelMediaItem[] = [];
+  const seenKeys = new Set<string>();
+
+  // 1. Custom logged items first (keep most recently updated if duplicates exist in store.custom)
+  const customEntries: CustomMediaItem[] = Object.values(store.custom || {});
+  customEntries.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+  for (const customItem of customEntries) {
+    const key = normalizePersonalLogKey(customItem.title);
+    if (!key || seenKeys.has(key)) continue;
+    seenKeys.add(key);
+    result.push(customItemToChannelItem(customItem, result.length));
+  }
+
+  // 2. Any canonical item marked "seen" across TV / Film / Very Good Films
+  for (const list of catalogLists) {
+    for (const item of list) {
+      const rec = getMediaRecord(store, item.id);
+      if (rec.s !== "seen") continue;
+      const key = normalizePersonalLogKey(item.title);
+      if (!key || seenKeys.has(key)) continue;
+      seenKeys.add(key);
+
+      result.push({
+        ...item,
+        rank: result.length + 1,
+        customKind:
+          item.customKind ||
+          (item.kind === "tv" ? (item.limited ? "mini" : "tv") : "film"),
+        updatedAt: rec.updatedAt || item.updatedAt || 0,
+      });
+    }
+  }
+
+  return result.map((item, idx) => ({
+    ...item,
+    rank: idx + 1,
+  }));
 }
 
 export function formatListForClipboard(store: Channel100Store): string {

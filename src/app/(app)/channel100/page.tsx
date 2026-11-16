@@ -37,6 +37,8 @@ import {
   saveCachedVgfCatalog,
   loadCachedLiveCatalogs,
   saveCachedLiveCatalogs,
+  buildPersonalLogItems,
+  normalizePersonalLogKey,
   getMediaRecord,
   computeStats,
   filterAndSortMedia,
@@ -94,12 +96,10 @@ export default function Channel100Page() {
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const trackerItems = useMemo(() => {
-    const customMap = store.custom || {};
-    return Object.values(customMap).map((item, idx) =>
-      customItemToChannelItem(item, idx)
-    );
-  }, [store.custom]);
+  const trackerItems = useMemo(
+    () => buildPersonalLogItems(store, [tvItems, filmItems, vgfItems]),
+    [store, tvItems, filmItems, vgfItems]
+  );
 
   const catalog = CATALOGS[filters.cat] || CATALOGS.tv;
   const catalogItems = useMemo(() => {
@@ -224,7 +224,12 @@ export default function Channel100Page() {
   const updateMediaRecord = useCallback(
     (id: string, patch: Partial<{ s: ShowStatus; r: number; n: string }>) => {
       setStore((prev) => {
-        const cur = { ...getMediaRecord(prev, id), ...patch };
+        const now = Date.now();
+        const cur: ShowUserRecord = {
+          ...getMediaRecord(prev, id),
+          ...patch,
+          updatedAt: now,
+        };
         const newShows = { ...prev.shows };
 
         if (!cur.s && !cur.r && !cur.n && !id.startsWith("c_")) {
@@ -242,6 +247,7 @@ export default function Channel100Page() {
               status: cur.s || prev.custom[id].status,
               rating: cur.r !== undefined ? cur.r : prev.custom[id].rating,
               notes: cur.n !== undefined ? cur.n : prev.custom[id].notes,
+              updatedAt: now,
             },
           };
         }
@@ -249,7 +255,7 @@ export default function Channel100Page() {
         const nextStore: Channel100Store = {
           shows: newShows,
           custom: nextCustom,
-          updated: Date.now(),
+          updated: now,
         };
         saveStore(nextStore);
         queueRemoteSync(id, cur, nextCustom ? nextCustom[id] : undefined);
@@ -261,29 +267,43 @@ export default function Channel100Page() {
 
   const handleSaveCustomItem = useCallback(
     (item: CustomMediaItem) => {
-      const normalizedTitle = item.title.trim().toLowerCase();
+      const normKey = normalizePersonalLogKey(item.title);
       const matchedCanonical =
-        tvItems.find((s) => s.title.toLowerCase() === normalizedTitle) ||
-        filmItems.find((f) => f.title.toLowerCase() === normalizedTitle) ||
-        vgfItems.find((v) => v.title.toLowerCase() === normalizedTitle);
+        tvItems.find((s) => normalizePersonalLogKey(s.title) === normKey) ||
+        filmItems.find((f) => normalizePersonalLogKey(f.title) === normKey) ||
+        vgfItems.find((v) => normalizePersonalLogKey(v.title) === normKey);
 
       setStore((prev) => {
         const nextCustom = { ...(prev.custom || {}) };
-        nextCustom[item.id] = item;
-
         const nextShows = { ...prev.shows };
-        nextShows[item.id] = {
-          s: item.status || "watching",
-          r: item.rating || 0,
-          n: item.notes || "",
+
+        // Deduplicate: if another custom entry shares the same normalized title, reuse its id or remove the duplicate
+        const duplicateCustom = Object.values(nextCustom).find(
+          (c) => c.id !== item.id && normalizePersonalLogKey(c.title) === normKey
+        );
+        const targetId = duplicateCustom ? duplicateCustom.id : item.id;
+        const savedItem: CustomMediaItem = { ...item, id: targetId };
+
+        nextCustom[targetId] = savedItem;
+        if (duplicateCustom && item.id !== targetId) {
+          delete nextCustom[item.id];
+          delete nextShows[item.id];
+        }
+
+        nextShows[targetId] = {
+          s: savedItem.status || "watching",
+          r: savedItem.rating || 0,
+          n: savedItem.notes || "",
+          updatedAt: savedItem.updatedAt,
         };
 
         if (matchedCanonical) {
           const prevCanon = nextShows[matchedCanonical.id] || {};
           nextShows[matchedCanonical.id] = {
-            s: item.status || prevCanon.s || "watching",
-            r: item.rating || prevCanon.r || 0,
-            n: item.notes || prevCanon.n || "",
+            s: savedItem.status || prevCanon.s || "watching",
+            r: savedItem.rating || prevCanon.r || 0,
+            n: savedItem.notes || prevCanon.n || "",
+            updatedAt: savedItem.updatedAt,
           };
         }
 
@@ -299,9 +319,9 @@ export default function Channel100Page() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "update",
-            id: item.id,
-            record: nextShows[item.id],
-            customMeta: item,
+            id: targetId,
+            record: nextShows[targetId],
+            customMeta: savedItem,
           }),
         }).catch(() => {});
 
@@ -582,7 +602,11 @@ export default function Channel100Page() {
         triggerToast(`Cleared: ${itemTitle}`);
       } else if (nextStatus === "seen") {
         playSound.promote();
-        triggerToast(`✓ Seen: ${itemTitle}`);
+        triggerToast(
+          filters.cat === "tracker"
+            ? `✓ Seen: ${itemTitle}`
+            : `✓ Seen & synced to Personal Log: ${itemTitle}`
+        );
       } else if (nextStatus === "watching") {
         playSound.click();
         triggerToast(`▶ Watching: ${itemTitle}`);
@@ -591,7 +615,7 @@ export default function Channel100Page() {
         triggerToast(`+ Want: ${itemTitle}`);
       }
     },
-    [store, itemLookup, updateMediaRecord, triggerToast]
+    [store, itemLookup, filters.cat, updateMediaRecord, triggerToast]
   );
 
   const handleSetRating = useCallback(
