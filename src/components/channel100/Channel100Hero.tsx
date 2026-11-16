@@ -2,6 +2,17 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import {
+  Dices,
+  MoreHorizontal,
+  Copy,
+  Download,
+  Upload,
+  Check,
+  Play,
+  Plus,
+  CircleDashed,
+} from "lucide-react";
+import {
   Channel100StatsData,
   ChannelMediaItem,
   CatalogConfig,
@@ -115,7 +126,8 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             onClick={onSurpriseMe}
             title="Pick a random recommendation from your queue or the list"
           >
-            🎲 Surprise me
+            <Dices size={14} strokeWidth={2.2} aria-hidden="true" />
+            Surprise me
           </button>
 
           <div className="ch100-menu-wrap" ref={menuRef}>
@@ -127,7 +139,8 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
               onClick={() => setMenuOpen((prev) => !prev)}
               title="Backup, export, import, and copy lists"
             >
-              ⋯ Backup / Share
+              <MoreHorizontal size={14} strokeWidth={2.2} aria-hidden="true" />
+              Backup / Share
             </button>
 
             {menuOpen && (
@@ -141,7 +154,8 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
                     onCopyList();
                   }}
                 >
-                  📋 Copy lists to clipboard
+                  <Copy size={13} strokeWidth={2.1} aria-hidden="true" />
+                  Copy lists to clipboard
                 </button>
                 <button
                   type="button"
@@ -152,7 +166,8 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
                     onExport();
                   }}
                 >
-                  💾 Export JSON backup
+                  <Download size={13} strokeWidth={2.1} aria-hidden="true" />
+                  Export JSON backup
                 </button>
                 <button
                   type="button"
@@ -163,7 +178,8 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
                     fileInputRef.current?.click();
                   }}
                 >
-                  📂 Import JSON backup
+                  <Upload size={13} strokeWidth={2.1} aria-hidden="true" />
+                  Import JSON backup
                 </button>
               </div>
             )}
@@ -185,7 +201,7 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
         </div>
       </div>
 
-      {/* 4 Colorful Tactile Status Cards + Time Summary */}
+      {/* Editorial Telemetry Strip: Status Filters + Progress */}
       <div className="ch100-metrics-row">
         <div
           className="ch100-counts"
@@ -201,8 +217,10 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             onClick={() => handleStatusClick("seen")}
             title="Filter by Seen (click again to show all)"
           >
+            <span className="ch100-count-dot" aria-hidden="true" />
+            <Check size={12} strokeWidth={2.5} aria-hidden="true" />
+            <span>Seen</span>
             <strong suppressHydrationWarning>{stats.seen}</strong>
-            <span>✓ Seen</span>
           </button>
 
           <button
@@ -214,8 +232,10 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             onClick={() => handleStatusClick("watching")}
             title="Filter by Watching (click again to show all)"
           >
+            <span className="ch100-count-dot" aria-hidden="true" />
+            <Play size={11} strokeWidth={2.5} aria-hidden="true" />
+            <span>Watching</span>
             <strong suppressHydrationWarning>{stats.watching}</strong>
-            <span>▶ Watching</span>
           </button>
 
           <button
@@ -227,8 +247,10 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             onClick={() => handleStatusClick("want")}
             title="Filter by Want to see (click again to show all)"
           >
+            <span className="ch100-count-dot" aria-hidden="true" />
+            <Plus size={12} strokeWidth={2.5} aria-hidden="true" />
+            <span>Want</span>
             <strong suppressHydrationWarning>{stats.want}</strong>
-            <span>+ Want to see</span>
           </button>
 
           <button
@@ -240,12 +262,14 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             onClick={() => handleStatusClick("none")}
             title="Filter by Unseen (click again to show all)"
           >
-            <strong suppressHydrationWarning>{stats.untouched}</strong>
+            <span className="ch100-count-dot" aria-hidden="true" />
+            <CircleDashed size={12} strokeWidth={2.2} aria-hidden="true" />
             <span>Unseen</span>
+            <strong suppressHydrationWarning>{stats.untouched}</strong>
           </button>
         </div>
 
-        {/* Progress & Time Box */}
+        {/* Inline Progress & Time Readout */}
         <div className="ch100-progress-card">
           <div className="ch100-time-summary">
             <span>

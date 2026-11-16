@@ -1,6 +1,16 @@
 "use client";
 
 import React, { useRef } from "react";
+import {
+  Tv,
+  Film,
+  Sparkles,
+  CalendarDays,
+  BookmarkCheck,
+  RefreshCw,
+  SlidersHorizontal,
+  Plus,
+} from "lucide-react";
 import { MediaKind } from "@/lib/channel100/types";
 
 interface Channel100HeaderProps {
@@ -101,7 +111,10 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               onClick={() => onSelectCat("tv")}
               onKeyDown={(e) => handleTabKeyDown(e, "tv")}
             >
-              <span>📺 TV 250</span>
+              <span>
+                <Tv size={14} strokeWidth={2.2} aria-hidden="true" />
+                TV 250
+              </span>
               <small id="tabTvN" suppressHydrationWarning>
                 {tvSeenCount}/{tvTotalCount}
               </small>
@@ -121,7 +134,10 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               onClick={() => onSelectCat("film")}
               onKeyDown={(e) => handleTabKeyDown(e, "film")}
             >
-              <span>🎬 Letterboxd 500</span>
+              <span>
+                <Film size={14} strokeWidth={2.2} aria-hidden="true" />
+                Letterboxd 500
+              </span>
               <small id="tabFilmN" suppressHydrationWarning>
                 {filmSeenCount}/{filmTotalCount}
               </small>
@@ -141,7 +157,10 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               onClick={() => onSelectCat("vgf")}
               onKeyDown={(e) => handleTabKeyDown(e, "vgf")}
             >
-              <span>🎞️ Very Good Films</span>
+              <span>
+                <Sparkles size={14} strokeWidth={2.2} aria-hidden="true" />
+                Very Good Films
+              </span>
               <small id="tabVgfN" suppressHydrationWarning>
                 {vgfSeenCount}/{vgfTotalCount}
               </small>
@@ -161,7 +180,10 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               onClick={() => onSelectCat("releases")}
               onKeyDown={(e) => handleTabKeyDown(e, "releases")}
             >
-              <span>📅 Releases</span>
+              <span>
+                <CalendarDays size={14} strokeWidth={2.2} aria-hidden="true" />
+                Releases
+              </span>
               <small id="tabReleasesN" suppressHydrationWarning>
                 {releasesCount}
               </small>
@@ -181,7 +203,10 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               onClick={() => onSelectCat("tracker")}
               onKeyDown={(e) => handleTabKeyDown(e, "tracker")}
             >
-              <span>⚡ Log</span>
+              <span>
+                <BookmarkCheck size={14} strokeWidth={2.2} aria-hidden="true" />
+                Log
+              </span>
               <small id="tabTrackerN" suppressHydrationWarning>
                 {trackerCount}
               </small>
@@ -199,7 +224,13 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               disabled={isSyncing}
               title="Sync latest rankings and entries from live sources"
             >
-              {isSyncing ? "⏳ Syncing…" : "↻ Sync Live"}
+              <RefreshCw
+                size={13}
+                strokeWidth={2.2}
+                className={isSyncing ? "ch100-spin" : undefined}
+                aria-hidden="true"
+              />
+              {isSyncing ? "Syncing…" : "Sync Live"}
             </button>
           )}
 
@@ -210,8 +241,8 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               onClick={onOpenTriageModal}
               title="Decision Matrix: Find what to watch tonight"
             >
-              <span className="ch100-pulse-dot" />
-              🎯 Decision Matrix
+              <SlidersHorizontal size={13} strokeWidth={2.2} aria-hidden="true" />
+              Decision Matrix
             </button>
           )}
 
@@ -222,7 +253,8 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               onClick={onOpenLogModal}
               title="Log a series, film, anime, or documentary"
             >
-              + Log Title
+              <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
+              Log Title
             </button>
           )}
         </nav>

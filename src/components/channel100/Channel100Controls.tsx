@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import { RotateCcw, LayoutGrid, List } from "lucide-react";
 import {
   Channel100Store,
   ChannelMediaItem,
@@ -267,7 +268,8 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
               onClick={handleClearAllFilters}
               title="Reset search and all active filters"
             >
-              ✕ Reset filters
+              <RotateCcw size={12} strokeWidth={2.3} aria-hidden="true" />
+              Reset
             </button>
           )}
         </div>
@@ -288,9 +290,10 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
               id="vGrid"
               aria-pressed={filters.layout === "grid"}
               onClick={() => onUpdateFilters({ layout: "grid" })}
-              title="Colorful cards view"
+              title="Poster cards view"
             >
-              ⊞ Cards
+              <LayoutGrid size={13} strokeWidth={2.2} aria-hidden="true" />
+              Cards
             </button>
             <button
               type="button"
@@ -299,7 +302,8 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
               onClick={() => onUpdateFilters({ layout: "list" })}
               title="Compact index rows"
             >
-              ☰ Index
+              <List size={13} strokeWidth={2.2} aria-hidden="true" />
+              Index
             </button>
           </div>
         </div>
