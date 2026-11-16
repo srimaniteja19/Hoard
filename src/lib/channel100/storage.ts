@@ -16,7 +16,7 @@ export const LEGACY_LS_KEY = "ch100.v1";
 export const VIEW_LS_KEY = "hoard.ch100.view";
 export const VGF_CACHE_LS_KEY = "hoard.ch100.vgf.v2";
 export const LIVE_CATALOGS_LS_KEY = "hoard.ch100.catalogs.v2";
-export const RELEASES_CACHE_LS_KEY = "hoard.ch100.releases.v1";
+export const RELEASES_CACHE_LS_KEY = "hoard.ch100.releases.v2";
 
 export interface CachedReleases {
   items: ChannelMediaItem[];
