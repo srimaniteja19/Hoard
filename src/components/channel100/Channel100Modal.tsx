@@ -187,7 +187,13 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
   if (!isOpen || !item || !art) return null;
 
   const evenings = item.hours ? bingeDays(item.hours) : 1;
-  const rankPre = item.custom ? "LOG" : item.kind === "film" ? "No." : "CH";
+  const rankPre = item.custom
+    ? "LOG"
+    : item.kind === "vgf"
+    ? "VGF"
+    : item.kind === "film"
+    ? "No."
+    : "CH";
 
   return (
     <div
@@ -375,8 +381,12 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
               </>
             ) : (
               <>
-                <dt>NYT rank</dt>
-                <dd>#{item.rank} of 100 movies</dd>
+                <dt>{item.kind === "vgf" ? "Curated pick" : "NYT rank"}</dt>
+                <dd>
+                  {item.kind === "vgf"
+                    ? `#${item.rank} on Very Good Films`
+                    : `#${item.rank} of 100 movies`}
+                </dd>
 
                 <dt>Released</dt>
                 <dd>{item.year}</dd>
@@ -398,7 +408,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
                 <dt>IMDb</dt>
                 <dd>{item.imdb.toFixed(1)} / 10 (approx.)</dd>
 
-                <dt>Genre</dt>
+                <dt>{item.kind === "vgf" ? "Curation" : "Genre"}</dt>
                 <dd>
                   {item.genre} <small>· {item.sub}</small>
                 </dd>
@@ -546,6 +556,16 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
                   🗑️ Delete
                 </button>
               )
+            )}
+            {item.kind === "vgf" && (
+              <a
+                className="ch100-btn btn"
+                href="https://verygoodfilms.co/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Very Good Films ↗
+              </a>
             )}
             <a
               className="ch100-btn btn c"

@@ -19,6 +19,9 @@ interface Channel100HeroProps {
   stats: Channel100StatsData;
   cat: MediaKind;
   activeStatus?: StatusFilter;
+  vgfSyncedAt?: number | null;
+  isSyncingVgf?: boolean;
+  onSyncVgf?: () => void;
   onOpenModal: (id: string) => void;
   onSurpriseMe: () => void;
   onCopyList: () => void;
@@ -36,6 +39,9 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
   stats,
   cat,
   activeStatus = "all",
+  vgfSyncedAt,
+  isSyncingVgf = false,
+  onSyncVgf,
   onOpenModal,
   onSurpriseMe,
   onCopyList,
@@ -288,7 +294,7 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             <b id="hWant" suppressHydrationWarning>{fmtH(stats.hoursWant)}</b> on your list
           </span>
           <span>
-            <b id="hAll" suppressHydrationWarning>{fmtH(stats.hoursTotal)}</b> for all 100
+            <b id="hAll" suppressHydrationWarning>{fmtH(stats.hoursTotal)}</b> for all {items.length}
           </span>
         </div>
 
@@ -303,6 +309,28 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
           >
             {catalog.icon} Surprise me
           </button>
+          {cat === "vgf" && onSyncVgf && (
+            <button
+              type="button"
+              className="ch100-btn btn c"
+              onClick={onSyncVgf}
+              disabled={isSyncingVgf}
+              title="Pull latest film recommendations from verygoodfilms.co"
+            >
+              {isSyncingVgf ? "⏳ Syncing…" : "↻ Sync Now"}
+            </button>
+          )}
+          {cat === "vgf" && (
+            <a
+              className="ch100-btn btn"
+              href="https://verygoodfilms.co/"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open verygoodfilms.co in a new tab"
+            >
+              ↗ verygoodfilms.co
+            </a>
+          )}
           <button
             type="button"
             className="ch100-btn btn"
@@ -342,6 +370,25 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             }}
           />
         </div>
+
+        {cat === "vgf" && vgfSyncedAt ? (
+          <p
+            style={{
+              marginTop: "10px",
+              fontFamily: "var(--ch-mono)",
+              fontSize: "11.5px",
+              color: "var(--ch-muted)",
+            }}
+            suppressHydrationWarning
+          >
+            Live feed synced from verygoodfilms.co · Last checked{" "}
+            {new Date(vgfSyncedAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}{" "}
+            (auto-refreshes hourly)
+          </p>
+        ) : null}
 
         {/* Watchlist Decision Matrix Prompt Banner */}
         {onOpenTriageModal && (

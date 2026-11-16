@@ -30,6 +30,8 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
   const status = record.s || "";
   const rankPre = item.custom
     ? "LOG"
+    : item.kind === "vgf"
+    ? "VGF"
     : item.kind === "film"
     ? "No."
     : "CH";

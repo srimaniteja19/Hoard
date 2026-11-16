@@ -1,4 +1,5 @@
 import { ChannelMediaItem, ArtMeta, CatalogConfig, MediaKind } from "./types";
+import { INITIAL_VGF_ITEMS } from "./verygoodfilms";
 
 export const RAW_SHOWS: [number, string, string, string, string, string, number, string, string, number?][] = [
   [1, "Breaking Bad", "2008–2013", "AMC", "Netflix", "Crime", 9.5, "flask", "A mild chemistry teacher with a cancer diagnosis cooks his way into the drug trade and becomes someone else entirely."],
@@ -367,7 +368,7 @@ export const FILMS: ChannelMediaItem[] = RAW_FILMS.map((r) => {
 });
 
 export const ALL_ITEMS: Record<string, ChannelMediaItem> = Object.fromEntries(
-  SHOWS.concat(FILMS).map((i) => [i.id, i])
+  SHOWS.concat(FILMS, INITIAL_VGF_ITEMS).map((i) => [i.id, i])
 );
 
 export const MOTIF_ICONS: Record<string, string> = {
@@ -530,7 +531,8 @@ export function customItemToChannelItem(
 }
 
 export function artFor(item: ChannelMediaItem): ArtMeta {
-  const isFilm = item.kind === "film" || item.customKind === "film";
+  const isFilm =
+    item.kind === "film" || item.kind === "vgf" || item.customKind === "film";
   const isTracker = item.kind === "tracker";
   const bg =
     (item as any).color ||
@@ -602,6 +604,24 @@ export const CATALOGS: Record<MediaKind, CatalogConfig> = {
       ["short", "Under 1h 50m"],
       ["medium", "1h 50m – 2h 20m"],
       ["long", "2h 20m or more"],
+    ],
+  },
+  vgf: {
+    items: INITIAL_VGF_ITEMS,
+    noun: "films",
+    one: "film",
+    eyebrow: "verygoodfilms.co · Live Curated Catalogue",
+    h1: 'Very Good Films <span class="hl">curated archive</span>',
+    lede: "Hand-picked world cinema, cult classics, and indie discoveries from verygoodfilms.co (founded by Beth Wilkinson & Emma Stevenson). Auto-synced with live updates.",
+    set: "Curated reel · Very Good Films",
+    rankPre: "VGF",
+    icon: "🎞️",
+    search: "Search title, director, country, language, curator…",
+    band: (i) => (i.mins < 100 ? "short" : i.mins < 135 ? "medium" : "long"),
+    bands: [
+      ["short", "Under 1h 40m"],
+      ["medium", "1h 40m – 2h 15m"],
+      ["long", "2h 15m or more"],
     ],
   },
   tracker: {

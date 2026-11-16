@@ -8,6 +8,8 @@ interface Channel100HeaderProps {
   onSelectCat: (cat: MediaKind) => void;
   tvSeenCount: number;
   filmSeenCount: number;
+  vgfSeenCount?: number;
+  vgfTotalCount?: number;
   trackerCount?: number;
   crtMode: boolean;
   onToggleCrt: () => void;
@@ -17,13 +19,15 @@ interface Channel100HeaderProps {
   onOpenTriageModal?: () => void;
 }
 
-const TAB_ORDER: MediaKind[] = ["tv", "film", "tracker"];
+const TAB_ORDER: MediaKind[] = ["tv", "film", "vgf", "tracker"];
 
 export const Channel100Header: React.FC<Channel100HeaderProps> = ({
   currentCat,
   onSelectCat,
   tvSeenCount,
   filmSeenCount,
+  vgfSeenCount = 0,
+  vgfTotalCount = 36,
   trackerCount = 0,
   crtMode,
   onToggleCrt,
@@ -35,6 +39,7 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
   const tabRefs = useRef<Record<MediaKind, HTMLButtonElement | null>>({
     tv: null,
     film: null,
+    vgf: null,
     tracker: null,
   });
 
@@ -110,6 +115,26 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
             onKeyDown={(e) => handleTabKeyDown(e, "film")}
           >
             Film <small id="tabFilmN" suppressHydrationWarning>{filmSeenCount}/100</small>
+          </button>
+          <button
+            ref={(el) => {
+              tabRefs.current.vgf = el;
+            }}
+            type="button"
+            role="tab"
+            id="tabVgf"
+            data-cat="vgf"
+            aria-selected={currentCat === "vgf"}
+            aria-controls="ch100-main-panel"
+            tabIndex={currentCat === "vgf" ? 0 : -1}
+            onClick={() => onSelectCat("vgf")}
+            onKeyDown={(e) => handleTabKeyDown(e, "vgf")}
+            title="Live-synced curated cinema from verygoodfilms.co"
+          >
+            🎞️ Very Good Films{" "}
+            <small id="tabVgfN" suppressHydrationWarning>
+              {vgfSeenCount}/{vgfTotalCount}
+            </small>
           </button>
           <button
             ref={(el) => {

@@ -1,5 +1,5 @@
 export type ShowStatus = "seen" | "watching" | "want" | "";
-export type MediaKind = "tv" | "film" | "tracker";
+export type MediaKind = "tv" | "film" | "vgf" | "tracker";
 export type CustomMediaKind = "tv" | "film" | "anime" | "mini" | "doc";
 
 export interface CustomMediaItem {

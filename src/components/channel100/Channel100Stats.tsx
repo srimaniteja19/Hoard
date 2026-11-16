@@ -105,7 +105,7 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
 
   const langGroups = useMemo(
     () =>
-      cat === "film" || cat === "tracker"
+      cat === "film" || cat === "vgf" || cat === "tracker"
         ? groupItems(
             items,
             store,
@@ -191,8 +191,8 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
           </div>
         )}
 
-        {/* Language panel (Film & Tracker) */}
-        {(cat === "film" || cat === "tracker") && (
+        {/* Language panel (Film, VGF & Tracker) */}
+        {(cat === "film" || cat === "vgf" || cat === "tracker") && (
           <div className="ch100-panel panel">
             <h3>By language</h3>
             {renderBarRows(langGroups)}

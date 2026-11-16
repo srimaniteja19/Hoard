@@ -25,11 +25,14 @@ import {
   CATALOGS,
   customItemToChannelItem,
 } from "@/lib/channel100/data";
+import { INITIAL_VGF_ITEMS } from "@/lib/channel100/verygoodfilms";
 import {
   loadStore,
   saveStore,
   loadSavedView,
   saveViewSettings,
+  loadCachedVgfCatalog,
+  saveCachedVgfCatalog,
   getMediaRecord,
   computeStats,
   filterAndSortMedia,
@@ -75,6 +78,9 @@ export default function Channel100Page() {
   const [crtMode, setCrtMode] = useState<boolean>(false);
   const [sfxEnabled, setSfxEnabled] = useState<boolean>(true);
   const [filters, setFilters] = useState<ViewFilterState>(DEFAULT_FILTERS);
+  const [vgfItems, setVgfItems] = useState<ChannelMediaItem[]>(INITIAL_VGF_ITEMS);
+  const [vgfSyncedAt, setVgfSyncedAt] = useState<number | null>(null);
+  const [isSyncingVgf, setIsSyncingVgf] = useState<boolean>(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Dynamic tracker custom items converted to ChannelMediaItem format
@@ -88,8 +94,9 @@ export default function Channel100Page() {
   const catalog = CATALOGS[filters.cat] || CATALOGS.tv;
   const catalogItems = useMemo(() => {
     if (filters.cat === "tracker") return trackerItems;
+    if (filters.cat === "vgf") return vgfItems;
     return catalog.items;
-  }, [filters.cat, catalog.items, trackerItems]);
+  }, [filters.cat, catalog.items, trackerItems, vgfItems]);
 
   // Toast trigger helper
   const triggerToast = useCallback((msg: string) => {
@@ -98,6 +105,40 @@ export default function Channel100Page() {
       setToastMessage((current) => (current === msg ? null : current));
     }, 2400);
   }, []);
+
+  // Live sync from verygoodfilms.co
+  const handleSyncVgf = useCallback(
+    async (force = false) => {
+      setIsSyncingVgf(true);
+      try {
+        const res = await fetch(
+          `/api/channel100/verygoodfilms${force ? "?force=1" : ""}`
+        );
+        if (!res.ok) throw new Error("Failed to sync Very Good Films");
+        const data = await res.json();
+        if (Array.isArray(data.items) && data.items.length > 0) {
+          setVgfItems(data.items);
+          const ts = Number(data.syncedAt) || Date.now();
+          setVgfSyncedAt(ts);
+          saveCachedVgfCatalog(data.items, ts, data.source);
+          if (force) {
+            playSound.promote();
+            triggerToast(
+              `🎞️ Synced ${data.items.length} curated films from verygoodfilms.co!`
+            );
+          }
+        }
+      } catch {
+        if (force) {
+          playSound.bury();
+          triggerToast("Could not reach verygoodfilms.co — using cached archive.");
+        }
+      } finally {
+        setIsSyncingVgf(false);
+      }
+    },
+    [triggerToast]
+  );
 
   // Sync to PostgreSQL DB (debounced for snappy offline-first feel)
   const queueRemoteSync = useCallback(
@@ -386,12 +427,23 @@ export default function Channel100Page() {
       const savedView = loadSavedView();
       const hash = (window.location.hash || "").slice(1);
       const initialCat: MediaKind =
-        hash === "film" || hash === "tv" || hash === "tracker"
+        hash === "film" || hash === "tv" || hash === "vgf" || hash === "tracker"
           ? (hash as MediaKind)
-          : savedView.cat === "film" || savedView.cat === "tracker"
+          : savedView.cat === "film" ||
+            savedView.cat === "vgf" ||
+            savedView.cat === "tracker"
           ? (savedView.cat as MediaKind)
           : "tv";
       setFilters((prev) => ({ ...prev, ...savedView, cat: initialCat }));
+
+      const cachedVgf = loadCachedVgfCatalog();
+      if (cachedVgf) {
+        setVgfItems(cachedVgf.items);
+        setVgfSyncedAt(cachedVgf.syncedAt);
+      }
+      if (!cachedVgf || Date.now() - cachedVgf.syncedAt > 60 * 60 * 1000) {
+        handleSyncVgf(false);
+      }
 
       if (localStorage.getItem("hoard_ch100_crt") === "true") {
         setCrtMode(true);
@@ -672,6 +724,7 @@ export default function Channel100Page() {
   // Computed statistics
   const tvStats = useMemo(() => computeStats(SHOWS, store), [store]);
   const filmStats = useMemo(() => computeStats(FILMS, store), [store]);
+  const vgfStats = useMemo(() => computeStats(vgfItems, store), [vgfItems, store]);
   const trackerStats = useMemo(
     () => computeStats(trackerItems, store),
     [trackerItems, store]
@@ -681,6 +734,8 @@ export default function Channel100Page() {
       ? tvStats
       : filters.cat === "film"
       ? filmStats
+      : filters.cat === "vgf"
+      ? vgfStats
       : trackerStats;
 
   // Filtered and sorted media list for current catalog
@@ -766,11 +821,13 @@ export default function Channel100Page() {
   const activeItem: ChannelMediaItem | null = useMemo(() => {
     if (!activeModalId) return null;
     if (ALL_ITEMS[activeModalId]) return ALL_ITEMS[activeModalId];
+    const fromVgf = vgfItems.find((i) => i.id === activeModalId);
+    if (fromVgf) return fromVgf;
     if (store.custom && store.custom[activeModalId]) {
       return customItemToChannelItem(store.custom[activeModalId]);
     }
     return null;
-  }, [activeModalId, store.custom]);
+  }, [activeModalId, store.custom, vgfItems]);
 
   const activeRecord = activeModalId
     ? getMediaRecord(store, activeModalId)
@@ -831,6 +888,8 @@ export default function Channel100Page() {
           onSelectCat={handleSelectCat}
           tvSeenCount={tvStats.seen}
           filmSeenCount={filmStats.seen}
+          vgfSeenCount={vgfStats.seen}
+          vgfTotalCount={vgfItems.length}
           trackerCount={trackerItems.length}
           crtMode={crtMode}
           onToggleCrt={handleToggleCrt}
@@ -848,6 +907,8 @@ export default function Channel100Page() {
               ? "tabTv"
               : filters.cat === "film"
               ? "tabFilm"
+              : filters.cat === "vgf"
+              ? "tabVgf"
               : "tabTracker"
           }
         >
@@ -859,6 +920,9 @@ export default function Channel100Page() {
             stats={currentStats}
             cat={filters.cat}
             activeStatus={filters.status}
+            vgfSyncedAt={vgfSyncedAt}
+            isSyncingVgf={isSyncingVgf}
+            onSyncVgf={() => handleSyncVgf(true)}
             onOpenModal={(id) => {
               playSound.pop();
               setActiveModalId(id);

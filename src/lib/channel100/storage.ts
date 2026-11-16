@@ -12,6 +12,48 @@ import { CATALOGS } from "./data";
 export const PRIMARY_LS_KEY = "hoard.ch100.v1";
 export const LEGACY_LS_KEY = "ch100.v1";
 export const VIEW_LS_KEY = "hoard.ch100.view";
+export const VGF_CACHE_LS_KEY = "hoard.ch100.vgf.v1";
+
+export interface CachedVgfCatalog {
+  items: ChannelMediaItem[];
+  syncedAt: number;
+  source?: string;
+}
+
+export function loadCachedVgfCatalog(): CachedVgfCatalog | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(VGF_CACHE_LS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+      return {
+        items: parsed.items,
+        syncedAt: Number(parsed.syncedAt) || 0,
+        source: parsed.source,
+      };
+    }
+  } catch {
+    // Ignore malformed cache
+  }
+  return null;
+}
+
+export function saveCachedVgfCatalog(
+  items: ChannelMediaItem[],
+  syncedAt: number,
+  source?: string
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      VGF_CACHE_LS_KEY,
+      JSON.stringify({ items, syncedAt, source })
+    );
+  } catch {
+    // Ignore quota errors
+  }
+}
 
 export function loadStore(): Channel100Store {
   if (typeof window === "undefined") {
@@ -209,7 +251,7 @@ export function formatListForClipboard(store: Channel100Store): string {
     );
   };
 
-  const getBlock = (k: "tv" | "film", heading: string) => {
+  const getBlock = (k: "tv" | "film" | "vgf", heading: string) => {
     const items = CATALOGS[k].items;
     const parts = [
       getSection(items, "Seen", "seen"),
@@ -223,6 +265,7 @@ export function formatListForClipboard(store: Channel100Store): string {
     "My Channel 100 Entertainment Tracker",
     getBlock("tv", "TV Shows (NYT 100)"),
     getBlock("film", "Movies (NYT 100)"),
+    getBlock("vgf", "Very Good Films (verygoodfilms.co)"),
   ];
 
   if (store.custom && Object.keys(store.custom).length > 0) {
@@ -266,7 +309,14 @@ export function importBackup(
       const validShows: Record<string, ShowUserRecord> = {};
       let count = 0;
       for (const [k, v] of Object.entries(parsed.shows)) {
-        if ((k.startsWith("s") || k.startsWith("f") || k.startsWith("c_")) && v && typeof v === "object") {
+        if (
+          (k.startsWith("s") ||
+            k.startsWith("f") ||
+            k.startsWith("vgf_") ||
+            k.startsWith("c_")) &&
+          v &&
+          typeof v === "object"
+        ) {
           validShows[k] = v as ShowUserRecord;
           count++;
         }

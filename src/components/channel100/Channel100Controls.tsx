@@ -300,7 +300,10 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
 
           {/* Result Counter */}
           <span className="ch100-result-note result-note" id="resnote" suppressHydrationWarning>
-            {resultCount} {cat === "tracker" ? `${catalog.noun}` : `of 100 ${catalog.noun}`}
+            {resultCount}{" "}
+            {cat === "tracker"
+              ? `${catalog.noun}`
+              : `of ${items.length} ${catalog.noun}`}
           </span>
         </div>
       </div>
