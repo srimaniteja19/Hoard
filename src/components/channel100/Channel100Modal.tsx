@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useRef, useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ChannelMediaItem, ShowUserRecord, ShowStatus } from "@/lib/channel100/types";
-import { artFor, fmtH, fmtM, bingeDays, jwUrl, imdbUrl } from "@/lib/channel100/data";
+import { fmtH, fmtM, bingeDays, jwUrl, imdbUrl } from "@/lib/channel100/data";
 
 interface Channel100ModalProps {
   item: ChannelMediaItem | null;
@@ -36,7 +36,6 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
   onIncrementEpisode,
 }) => {
   const modalRef = useRef<HTMLDivElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -44,22 +43,13 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
   const [noteSaveState, setNoteSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const art = useMemo(() => (item ? artFor(item) : null), [item]);
-
   const status = record.s || "";
-  const stampLabel: Record<string, string> = {
-    seen: "SEEN",
-    want: "WANT",
-    watching: "ON NOW",
-  };
 
-  // Reset per-item ephemeral modal states when switching items
   useEffect(() => {
     setConfirmDelete(false);
     setNoteSaveState("idle");
   }, [item?.id, isOpen]);
 
-  // Keyboard navigation, shortcuts, focus trap & Esc to close
   useEffect(() => {
     if (!isOpen || !item) return;
 
@@ -122,12 +112,11 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, item, record.r, onClose, onNavigateShow, onToggleStatus, onSetRating]);
 
-  // Focus trap / auto-focus on open and restore focus on close
   useEffect(() => {
     if (isOpen) {
       previousFocusRef.current = document.activeElement as HTMLElement | null;
       document.body.style.overflow = "hidden";
-      const t = setTimeout(() => closeBtnRef.current?.focus(), 50);
+      const t = setTimeout(() => closeBtnRef.current?.focus(), 40);
       return () => {
         clearTimeout(t);
         document.body.style.overflow = "";
@@ -141,59 +130,9 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
     }
   }, [isOpen]);
 
-  // CRT TV Static Noise Burst
-  useEffect(() => {
-    if (!isOpen || !item) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      canvas.style.display = "none";
-      return;
-    }
-
-    canvas.style.display = "block";
-    const w = (canvas.width = 160);
-    const h = (canvas.height = 120);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const context = ctx;
-    const img = context.createImageData(w, h);
-    let animId: number;
-    const t0 = performance.now();
-
-    function frame(now: number) {
-      const k = 1 - (now - t0) / 600;
-      if (k <= 0) {
-        if (canvas) canvas.style.display = "none";
-        return;
-      }
-      for (let i = 0; i < img.data.length; i += 4) {
-        const v = Math.random() * 255;
-        img.data[i] = v;
-        img.data[i + 1] = v;
-        img.data[i + 2] = v;
-        img.data[i + 3] = 255 * k;
-      }
-      context.putImageData(img, 0, 0);
-      animId = requestAnimationFrame(frame);
-    }
-
-    animId = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(animId);
-  }, [isOpen, item]);
-
-  if (!isOpen || !item || !art) return null;
+  if (!isOpen || !item) return null;
 
   const evenings = item.hours ? bingeDays(item.hours) : 1;
-  const rankPre = item.custom
-    ? "LOG"
-    : item.kind === "vgf"
-    ? "VGF"
-    : item.kind === "film"
-    ? "No."
-    : "CH";
 
   return (
     <div
@@ -207,85 +146,74 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
       aria-labelledby="ch100-mtitle"
     >
       <div ref={modalRef} className="ch100-modal modal">
-        {/* Left Visual Art Column */}
-        <div
-          className={`ch100-art art ${art.pat}`}
-          style={{ backgroundColor: art.bg }}
-        >
-          <span className="ch100-rank rank">
-            <small>{item.langFlag || rankPre}</small>
-            {String(item.rank).padStart(2, "0")}
-          </span>
-
-          {status && (
-            <span className={`ch100-stamp stamp ${status}`}>
-              {stampLabel[status] || status}
-            </span>
-          )}
-
-          <span
-            style={{ display: "contents" }}
-            dangerouslySetInnerHTML={{
-              __html: art.svg + (art.stripHtml || ""),
-            }}
-            aria-hidden="true"
-          />
-
-          <canvas ref={canvasRef} className="ch100-static static" id="static" />
-        </div>
-
-        {/* Right Info Column */}
         <div className="ch100-mbody mbody">
-          {/* Close button */}
-          <button
-            ref={closeBtnRef}
-            type="button"
-            className="ch100-x x"
-            id="mclose"
-            onClick={onClose}
-            aria-label="Close dialog"
-            title="Close (Esc)"
-          >
-            ✕
-          </button>
+          {/* Top Navigation & Close Row */}
+          <div className="ch100-modal-topbar">
+            <div className="ch100-modal-meta-badges">
+              <span className="ch100-rank-pill">
+                #{String(item.rank).padStart(3, "0")}
+              </span>
+              {item.genre && (
+                <span className="ch100-genre-pill">{item.genre}</span>
+              )}
+              {item.imdb > 0 && !item.custom && (
+                <span className="ch100-imdb-pill">★ {item.imdb.toFixed(1)}</span>
+              )}
+            </div>
 
-          {/* Quick item navigation bar (follows active filtered/sorted list) */}
-          {onNavigateShow && (prevLabel || nextLabel) && (
-            <div className="ch100-modal-nav">
+            <div className="ch100-modal-top-actions">
+              {onNavigateShow && (prevLabel || nextLabel) && (
+                <div className="ch100-modal-nav">
+                  <button
+                    type="button"
+                    className="ch100-modal-nav-btn"
+                    onClick={() => onNavigateShow(-1)}
+                    title="Previous title (Left Arrow)"
+                  >
+                    ← {prevLabel || "Prev"}
+                  </button>
+                  <button
+                    type="button"
+                    className="ch100-modal-nav-btn"
+                    onClick={() => onNavigateShow(1)}
+                    title="Next title (Right Arrow)"
+                  >
+                    {nextLabel || "Next"} →
+                  </button>
+                </div>
+              )}
+
               <button
+                ref={closeBtnRef}
                 type="button"
-                className="ch100-modal-nav-btn"
-                onClick={() => onNavigateShow(-1)}
-                title="Previous title in current view (Left Arrow)"
+                className="ch100-x x"
+                id="mclose"
+                onClick={onClose}
+                aria-label="Close dialog"
+                title="Close (Esc)"
               >
-                ◀ {prevLabel || "Prev"}
-              </button>
-              <button
-                type="button"
-                className="ch100-modal-nav-btn"
-                onClick={() => onNavigateShow(1)}
-                title="Next title in current view (Right Arrow)"
-              >
-                {nextLabel || "Next"} ▶
+                ✕
               </button>
             </div>
-          )}
+          </div>
 
-          <h2 id="ch100-mtitle">
-            {item.langFlag && <span>{item.langFlag} </span>}
-            {item.title}
-          </h2>
+          <h2 id="ch100-mtitle">{item.title}</h2>
           <p className="ch100-blurb blurb">{item.blurb}</p>
 
-          {/* Facts Definition List */}
+          {/* Structured Metadata Grid */}
           <dl className="ch100-facts facts">
             {item.custom ? (
               <>
                 <dt>Language</dt>
-                <dd>{item.langFlag || "🌐"} {item.lang || "Not specified"}</dd>
+                <dd>
+                  {item.langFlag || "🌐"} {item.lang || "Not specified"}
+                </dd>
 
                 <dt>Medium</dt>
-                <dd>{item.customKind ? item.customKind.toUpperCase() : "TITLE"} {item.genre ? `· ${item.genre}` : ""}</dd>
+                <dd>
+                  {item.customKind ? item.customKind.toUpperCase() : "TITLE"}{" "}
+                  {item.genre ? `· ${item.genre}` : ""}
+                </dd>
 
                 <dt>Platform</dt>
                 <dd>{item.where || "Personal library"}</dd>
@@ -293,27 +221,29 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
                 {item.customKind === "film" ? (
                   <>
                     <dt>Runtime</dt>
-                    <dd>{fmtM(item.mins || 120)} ({fmtH(item.hours)})</dd>
+                    <dd>
+                      {fmtM(item.mins || 120)} ({fmtH(item.hours)})
+                    </dd>
                   </>
                 ) : (
                   <>
                     <dt>Progress</dt>
-                    <dd style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <dd
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
                       <span>
-                        {item.season ? `Season ${item.season}, ` : ""}Episode {item.episode || 1} {item.totalEpisodes ? `of ${item.totalEpisodes}` : ""}
+                        {item.season ? `Season ${item.season}, ` : ""}Episode{" "}
+                        {item.episode || 1}{" "}
+                        {item.totalEpisodes ? `of ${item.totalEpisodes}` : ""}
                       </span>
                       {onIncrementEpisode && (
                         <button
                           type="button"
-                          className="ch100-chip chip"
-                          style={{
-                            padding: "2px 8px",
-                            fontSize: "11px",
-                            background: "var(--ch-green)",
-                            color: "#111",
-                            cursor: "pointer",
-                            fontWeight: 700,
-                          }}
+                          className="ch100-ep-step-btn"
                           onClick={() => onIncrementEpisode(item.id)}
                           title="Advance watched episode by 1"
                         >
@@ -333,90 +263,69 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
               </>
             ) : item.kind === "tv" ? (
               <>
-                <dt>NYT rank</dt>
-                <dd>#{item.rank} of 100 TV shows</dd>
+                <dt>Rank</dt>
+                <dd>#{item.rank} in IMDb Top 250 TV</dd>
 
                 <dt>Aired</dt>
                 <dd>
-                  {item.years}
-                  {item.limited ? " · limited run" : ""}
+                  {item.years || item.year}
+                  {item.limited ? " · limited series" : ""}
                 </dd>
 
-                <dt>Network</dt>
-                <dd>{item.network}</dd>
+                {item.network && (
+                  <>
+                    <dt>Network</dt>
+                    <dd>{item.network}</dd>
+                  </>
+                )}
 
-                <dt>Stream (US)</dt>
+                <dt>Where</dt>
                 <dd>{item.where}</dd>
 
-                <dt>IMDb</dt>
-                <dd>{item.imdb.toFixed(1)} / 10 (approx.)</dd>
-
-                <dt>Genre</dt>
+                <dt>Runtime</dt>
                 <dd>
-                  {item.genre} <small>· {item.sub}</small>
-                </dd>
-
-                <dt>Seasons</dt>
-                <dd>
-                  {item.seasons}
-                  {item.approx ? " " : ""}
-                  {item.approx && <small>(approx. as of 2026)</small>}
-                </dd>
-
-                <dt>Episodes</dt>
-                <dd>
-                  {item.approx ? "≈ " : ""}
-                  {item.eps} <small>· about {item.mins} min each</small>
-                </dd>
-
-                <dt>Total time</dt>
-                <dd>
-                  {item.approx ? "≈ " : ""}
+                  {item.eps ? `${item.eps} episodes · ` : ""}
                   {fmtH(item.hours)}{" "}
                   <small>
-                    · {evenings} {evenings === 1 ? "evening" : "evenings"} at 2 h
-                    a night
+                    ({evenings} {evenings === 1 ? "evening" : "evenings"} at 2h/night)
                   </small>
                 </dd>
               </>
             ) : (
               <>
-                <dt>{item.kind === "vgf" ? "Curated pick" : "NYT rank"}</dt>
+                <dt>Rank</dt>
                 <dd>
-                  {item.kind === "vgf"
-                    ? `#${item.rank} on Very Good Films`
-                    : `#${item.rank} of 100 movies`}
+                  #{item.rank} in{" "}
+                  {item.kind === "vgf" ? "Very Good Films" : "Letterboxd 500"}
                 </dd>
 
                 <dt>Released</dt>
                 <dd>{item.year}</dd>
 
-                <dt>Director</dt>
-                <dd>{item.director}</dd>
+                {item.director && (
+                  <>
+                    <dt>Director</dt>
+                    <dd>{item.director}</dd>
+                  </>
+                )}
 
                 <dt>Runtime</dt>
                 <dd>
-                  {fmtM(item.mins)} <small>· {item.mins} min</small>
+                  {fmtM(item.mins)} <small>({item.mins} min)</small>
                 </dd>
 
                 <dt>Language</dt>
-                <dd>{item.lang}</dd>
-
-                <dt>Stream (US)</dt>
-                <dd>{item.where}</dd>
-
-                <dt>IMDb</dt>
-                <dd>{item.imdb.toFixed(1)} / 10 (approx.)</dd>
-
-                <dt>{item.kind === "vgf" ? "Curation" : "Genre"}</dt>
                 <dd>
-                  {item.genre} <small>· {item.sub}</small>
+                  {item.langFlag} {item.lang || "English"}
                 </dd>
+
+                <dt>Where</dt>
+                <dd>{item.where}</dd>
               </>
             )}
           </dl>
 
-          {/* Status Buttons */}
+          {/* Status Controls */}
           <div className="ch100-acts acts">
             <button
               type="button"
@@ -425,7 +334,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
               onClick={() => onToggleStatus(item.id, "seen")}
               title="Shortcut: S"
             >
-              <span aria-hidden="true">✓</span> Seen
+              ✓ Seen
             </button>
             <button
               type="button"
@@ -434,7 +343,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
               onClick={() => onToggleStatus(item.id, "watching")}
               title="Shortcut: W"
             >
-              <span aria-hidden="true">▶</span> Watching
+              ▶ Watching
             </button>
             <button
               type="button"
@@ -443,49 +352,46 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
               onClick={() => onToggleStatus(item.id, "want")}
               title="Shortcut: Q"
             >
-              <span aria-hidden="true">+</span> Want
+              + Want
             </button>
           </div>
 
-          {/* User Star Rating */}
-          <div className="ch100-lbl lbl">Your Rating (Shortcuts: 1–5)</div>
-          <div className="ch100-stars stars" role="group" aria-label="Your rating">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                className={`ch100-star-btn star ${(record.r || 0) >= n ? "on" : ""}`}
-                onClick={() =>
-                  onSetRating(item.id, (record.r || 0) === n ? 0 : n)
-                }
-                aria-label={`${n} star${n > 1 ? "s" : ""}`}
-                aria-pressed={(record.r || 0) === n}
-              >
-                <svg viewBox="0 0 24 24">
-                  <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8Z" />
-                </svg>
-              </button>
-            ))}
-            {(record.r || 0) > 0 && (
-              <button
-                type="button"
-                className="ch100-chip chip"
-                onClick={() => onSetRating(item.id, 0)}
-                style={{
-                  marginLeft: "8px",
-                  padding: "4px 10px",
-                  fontSize: "12px",
-                }}
-              >
-                Clear
-              </button>
-            )}
+          {/* Star Rating */}
+          <div className="ch100-rating-row">
+            <span className="ch100-lbl lbl">Rating (1–5)</span>
+            <div className="ch100-stars stars" role="group" aria-label="Your rating">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={`ch100-star-btn star ${
+                    (record.r || 0) >= n ? "on" : ""
+                  }`}
+                  onClick={() =>
+                    onSetRating(item.id, (record.r || 0) === n ? 0 : n)
+                  }
+                  aria-label={`${n} star${n > 1 ? "s" : ""}`}
+                  aria-pressed={(record.r || 0) === n}
+                >
+                  ★
+                </button>
+              ))}
+              {(record.r || 0) > 0 && (
+                <button
+                  type="button"
+                  className="ch100-util-btn"
+                  onClick={() => onSetRating(item.id, 0)}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Notes Area with Auto-Save Status Indicator */}
+          {/* Notes Area */}
           <div className="ch100-note-header">
             <label className="ch100-lbl lbl" htmlFor="note">
-              Your Notes
+              Notes
             </label>
             {noteSaveState !== "idle" && (
               <span className="ch100-note-status" aria-live="polite">
@@ -496,13 +402,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
           <textarea
             id="note"
             className="ch100-note note"
-            placeholder={
-              item.custom
-                ? "Episode reactions, favorite scene, memorable quotes, where you left off…"
-                : item.kind === "tv"
-                ? "Favorite episode, who recommended it, where you left off…"
-                : "Who you watched it with, favorite scene, what it reminded you of…"
-            }
+            placeholder="Reflections, favorite episode or scene, where you left off…"
             value={record.n || ""}
             onChange={(e) => {
               const nextVal = e.target.value;
@@ -515,16 +415,15 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
             }}
           />
 
-          {/* Action Links & Two-Step Delete Confirmation */}
+          {/* External Links & Custom Actions */}
           <div className="ch100-links links">
             {item.custom && onEditCustom && (
               <button
                 type="button"
-                className="ch100-btn btn g"
+                className="ch100-nav-btn"
                 onClick={() => onEditCustom(item.id)}
-                title="Edit title details"
               >
-                ✏️ Edit Title
+                Edit Title
               </button>
             )}
             {item.custom && onDeleteCustom && (
@@ -532,15 +431,14 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
                 <>
                   <button
                     type="button"
-                    className="ch100-btn btn r"
+                    className="ch100-clear-btn"
                     onClick={() => onDeleteCustom(item.id)}
-                    title="Permanently remove this title"
                   >
-                    ⚠️ Confirm Delete
+                    Confirm Delete
                   </button>
                   <button
                     type="button"
-                    className="ch100-btn btn"
+                    className="ch100-util-btn"
                     onClick={() => setConfirmDelete(false)}
                   >
                     Cancel
@@ -549,34 +447,45 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
               ) : (
                 <button
                   type="button"
-                  className="ch100-btn btn r"
+                  className="ch100-util-btn"
                   onClick={() => setConfirmDelete(true)}
-                  title="Delete title from tracker"
                 >
-                  🗑️ Delete
+                  Delete
                 </button>
               )
             )}
+            {item.kind === "film" && (
+              <a
+                className="ch100-util-btn"
+                href={`https://letterboxd.com/search/${encodeURIComponent(
+                  `${item.title} ${item.year || ""}`.trim()
+                )}/`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Letterboxd ↗
+              </a>
+            )}
             {item.kind === "vgf" && (
               <a
-                className="ch100-btn btn"
+                className="ch100-util-btn"
                 href="https://verygoodfilms.co/"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Very Good Films ↗
+                verygoodfilms.co ↗
               </a>
             )}
             <a
-              className="ch100-btn btn c"
+              className="ch100-util-btn"
               href={jwUrl(item)}
               target="_blank"
               rel="noopener noreferrer"
             >
-              Where to watch ↗
+              JustWatch ↗
             </a>
             <a
-              className="ch100-btn btn y"
+              className="ch100-util-btn"
               href={imdbUrl(item)}
               target="_blank"
               rel="noopener noreferrer"
@@ -589,4 +498,3 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
     </div>
   );
 };
-

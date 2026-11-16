@@ -13,6 +13,54 @@ export const PRIMARY_LS_KEY = "hoard.ch100.v1";
 export const LEGACY_LS_KEY = "ch100.v1";
 export const VIEW_LS_KEY = "hoard.ch100.view";
 export const VGF_CACHE_LS_KEY = "hoard.ch100.vgf.v1";
+export const LIVE_CATALOGS_LS_KEY = "hoard.ch100.catalogs.v1";
+
+export interface CachedLiveCatalogs {
+  tv: ChannelMediaItem[];
+  film: ChannelMediaItem[];
+  syncedAt: number;
+}
+
+export function loadCachedLiveCatalogs(): CachedLiveCatalogs | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(LIVE_CATALOGS_LS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      Array.isArray(parsed.tv) &&
+      parsed.tv.length > 0 &&
+      Array.isArray(parsed.film) &&
+      parsed.film.length > 0
+    ) {
+      return {
+        tv: parsed.tv,
+        film: parsed.film,
+        syncedAt: Number(parsed.syncedAt) || 0,
+      };
+    }
+  } catch {
+    // Ignore malformed cache
+  }
+  return null;
+}
+
+export function saveCachedLiveCatalogs(
+  tv: ChannelMediaItem[],
+  film: ChannelMediaItem[],
+  syncedAt: number
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      LIVE_CATALOGS_LS_KEY,
+      JSON.stringify({ tv, film, syncedAt })
+    );
+  } catch {
+    // Ignore quota errors
+  }
+}
 
 export interface CachedVgfCatalog {
   items: ChannelMediaItem[];
@@ -312,6 +360,9 @@ export function importBackup(
         if (
           (k.startsWith("s") ||
             k.startsWith("f") ||
+            k.startsWith("tv_") ||
+            k.startsWith("film_") ||
+            k.startsWith("lb_") ||
             k.startsWith("vgf_") ||
             k.startsWith("c_")) &&
           v &&

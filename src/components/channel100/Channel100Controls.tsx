@@ -20,8 +20,6 @@ interface Channel100ControlsProps {
   onUpdateFilters: (patch: Partial<ViewFilterState>) => void;
   resultCount: number;
   cat?: MediaKind;
-  onOpenLogModal?: () => void;
-  onOpenTriageModal?: () => void;
 }
 
 export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
@@ -32,10 +30,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
   onUpdateFilters,
   resultCount,
   cat = "tv",
-  onOpenLogModal,
-  onOpenTriageModal,
 }) => {
-  // Counts by status for the current catalog
   const counts = useMemo(() => {
     let seen = 0;
     let watching = 0;
@@ -50,12 +45,10 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
     return { seen, watching, want, none };
   }, [items, store]);
 
-  // Unique genres for current catalog
   const genres = useMemo(() => {
     return Array.from(new Set(items.map((s) => s.genre).filter(Boolean))).sort();
   }, [items]);
 
-  // Unique streamers sorted by count for current catalog
   const streamers = useMemo(() => {
     const countsMap: Record<string, number> = {};
     items.forEach((s) => {
@@ -68,7 +61,6 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
     );
   }, [items]);
 
-  // Unique languages for tracker mode or film
   const languages = useMemo(() => {
     const set = new Set<string>();
     items.forEach((i) => {
@@ -82,7 +74,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
     ["seen", "Seen", counts.seen],
     ["watching", "Watching", counts.watching],
     ["want", "Want", counts.want],
-    ["none", "Not yet", counts.none],
+    ["none", "Unseen", counts.none],
   ];
 
   const hasActiveFilters =
@@ -107,57 +99,50 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
   }
 
   return (
-    <section className="ch100-controls controls" id="browse" aria-label="Filter the list">
-      <div className="ch100-wrap wrap">
-        {/* Row 1: Search & Status Chips */}
-        <div className="ch100-ctl-row ctl-row">
-          <label className="ch100-search search">
-            <span aria-hidden="true">⌕</span>
-            <input
-              id="q"
-              type="search"
-              placeholder={`${catalog.search} (Press / to search)`}
-              aria-label="Search"
-              value={filters.q}
-              onChange={(e) => onUpdateFilters({ q: e.target.value })}
-            />
-          </label>
+    <section
+      className="ch100-controls controls"
+      id="browse"
+      aria-label="Filter and sort"
+    >
+      <div className="ch100-wrap wrap ch100-ctl-bar">
+        {/* Search Input */}
+        <label className="ch100-search search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            id="q"
+            type="search"
+            placeholder={`${catalog.search} (/)`}
+            aria-label="Search"
+            value={filters.q}
+            onChange={(e) => onUpdateFilters({ q: e.target.value })}
+          />
+        </label>
 
-          <div
-            className="ch100-chips chips"
-            id="statusChips"
-            role="group"
-            aria-label="Filter by status"
-          >
-            {statusChips.map(([key, label, count]) => (
-              <button
-                key={key}
-                type="button"
-                className="ch100-chip chip"
-                aria-pressed={filters.status === key}
-                onClick={() => onUpdateFilters({ status: key })}
-              >
-                {label}
-                <span className="n">{count}</span>
-              </button>
-            ))}
-          </div>
-
-          {hasActiveFilters && (
+        {/* Status Chips */}
+        <div
+          className="ch100-chips chips"
+          id="statusChips"
+          role="group"
+          aria-label="Filter by status"
+        >
+          {statusChips.map(([key, label, count]) => (
             <button
+              key={key}
               type="button"
-              className="ch100-chip chip ch100-clear-btn"
-              onClick={handleClearAllFilters}
-              title="Reset search and all active filters"
+              className="ch100-chip chip"
+              aria-pressed={filters.status === key}
+              onClick={() => onUpdateFilters({ status: key })}
             >
-              ✕ Clear filters
+              {label}
+              <span className="n" suppressHydrationWarning>
+                {count}
+              </span>
             </button>
-          )}
+          ))}
         </div>
 
-        {/* Row 2: Selects, Layout Toggle, and Results Note */}
-        <div className="ch100-ctl-row ctl-row">
-          {/* Language filter for tracker or international film */}
+        {/* Filter Selects */}
+        <div className="ch100-selects-group">
           {(cat === "tracker" || languages.length > 1) && (
             <select
               className="ch100-sel sel"
@@ -166,7 +151,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
               value={filters.lang || "all"}
               onChange={(e) => onUpdateFilters({ lang: e.target.value })}
             >
-              <option value="all">All languages</option>
+              <option value="all">Language</option>
               {languages.map((l) => (
                 <option key={l} value={l}>
                   {l}
@@ -175,7 +160,6 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
             </select>
           )}
 
-          {/* Medium filter for tracker mode */}
           {cat === "tracker" && (
             <select
               className="ch100-sel sel"
@@ -186,16 +170,15 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
                 onUpdateFilters({ customKind: e.target.value })
               }
             >
-              <option value="all">All media types</option>
-              <option value="tv">📺 TV Series</option>
-              <option value="film">🎬 Feature Film</option>
-              <option value="anime">⚔️ Anime</option>
-              <option value="mini">🎞️ Mini-Series</option>
-              <option value="doc">📽️ Documentary</option>
+              <option value="all">Medium</option>
+              <option value="tv">TV Series</option>
+              <option value="film">Feature Film</option>
+              <option value="anime">Anime</option>
+              <option value="mini">Mini-Series</option>
+              <option value="doc">Documentary</option>
             </select>
           )}
 
-          {/* Genre select */}
           <select
             className="ch100-sel sel"
             id="genre"
@@ -203,7 +186,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
             value={filters.genre}
             onChange={(e) => onUpdateFilters({ genre: e.target.value })}
           >
-            <option value="all">All genres</option>
+            <option value="all">Genre</option>
             {genres.map((g) => (
               <option key={g} value={g}>
                 {g}
@@ -211,31 +194,31 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
             ))}
           </select>
 
-          {/* Streamer select */}
-          <select
-            className="ch100-sel sel"
-            id="where"
-            aria-label="Filter by where to watch"
-            value={filters.where}
-            onChange={(e) => onUpdateFilters({ where: e.target.value })}
-          >
-            <option value="all">All streamers</option>
-            {streamers.map((w) => (
-              <option key={w} value={w}>
-                {w} ({items.filter((i) => i.where === w).length})
-              </option>
-            ))}
-          </select>
+          {streamers.length > 1 && (
+            <select
+              className="ch100-sel sel"
+              id="where"
+              aria-label="Filter by platform"
+              value={filters.where}
+              onChange={(e) => onUpdateFilters({ where: e.target.value })}
+            >
+              <option value="all">Platform</option>
+              {streamers.map((w) => (
+                <option key={w} value={w}>
+                  {w} ({items.filter((i) => i.where === w).length})
+                </option>
+              ))}
+            </select>
+          )}
 
-          {/* Length / Runtime select */}
           <select
             className="ch100-sel sel"
             id="len"
-            aria-label="Filter by time to watch"
+            aria-label="Filter by runtime"
             value={filters.len}
             onChange={(e) => onUpdateFilters({ len: e.target.value })}
           >
-            <option value="all">Any length</option>
+            <option value="all">Length</option>
             {catalog.bands.map(([val, label]) => (
               <option key={val} value={val}>
                 {label}
@@ -243,7 +226,6 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
             ))}
           </select>
 
-          {/* Sort select */}
           <select
             className="ch100-sel sel"
             id="sort"
@@ -255,56 +237,69 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
           >
             {cat === "tracker" ? (
               <>
-                <option value="recent">Sort: Recently updated</option>
-                <option value="progress">Sort: Episode progress</option>
+                <option value="recent">Sort: Recent</option>
+                <option value="progress">Sort: Progress</option>
                 <option value="mine">Sort: My rating</option>
-                <option value="az">Sort: Title A–Z</option>
-                <option value="short">Sort: Quickest to finish</option>
-                <option value="long">Sort: Longest to finish</option>
+                <option value="az">Sort: A–Z</option>
+                <option value="short">Sort: Shortest</option>
+                <option value="long">Sort: Longest</option>
               </>
             ) : (
               <>
-                <option value="rank">Sort: NYT rank</option>
-                <option value="imdb">Sort: IMDb rating</option>
-                <option value="short">Sort: Quickest to finish</option>
-                <option value="long">Sort: Longest to finish</option>
+                <option value="rank">Sort: Rank</option>
+                <option value="imdb">Sort: Rating</option>
+                <option value="short">Sort: Shortest</option>
+                <option value="long">Sort: Longest</option>
                 <option value="new">Sort: Newest</option>
                 <option value="old">Sort: Oldest</option>
-                <option value="az">Sort: Title A–Z</option>
+                <option value="az">Sort: A–Z</option>
                 <option value="mine">Sort: My rating</option>
               </>
             )}
           </select>
 
-          {/* Grid / List layout toggle */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="ch100-clear-btn"
+              onClick={handleClearAllFilters}
+              title="Reset search and all active filters"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+
+        {/* View Toggle & Result Counter */}
+        <div className="ch100-ctl-right">
+          <span
+            className="ch100-result-note result-note"
+            id="resnote"
+            suppressHydrationWarning
+          >
+            {resultCount} of {items.length}
+          </span>
+
           <div className="ch100-viewtog viewtog" role="group" aria-label="Layout">
             <button
               type="button"
               id="vGrid"
               aria-pressed={filters.layout === "grid"}
               onClick={() => onUpdateFilters({ layout: "grid" })}
-              title="Grid cards view"
+              title="Grid view"
             >
-              Grid
+              Cards
             </button>
             <button
               type="button"
               id="vList"
               aria-pressed={filters.layout === "list"}
               onClick={() => onUpdateFilters({ layout: "list" })}
-              title="Compact list view"
+              title="Compact index rows"
             >
-              List
+              Index
             </button>
           </div>
-
-          {/* Result Counter */}
-          <span className="ch100-result-note result-note" id="resnote" suppressHydrationWarning>
-            {resultCount}{" "}
-            {cat === "tracker"
-              ? `${catalog.noun}`
-              : `of ${items.length} ${catalog.noun}`}
-          </span>
         </div>
       </div>
     </section>

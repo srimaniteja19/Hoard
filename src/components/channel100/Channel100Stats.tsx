@@ -58,23 +58,51 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
   catalog,
   onOpenModal,
 }) => {
-  const tierGroups = useMemo(
-    () =>
-      groupItems(
+  const tierGroups = useMemo(() => {
+    if (items.length > 250) {
+      return groupItems(
         items,
         store,
         (s) =>
-          s.rank <= 25
-            ? "Top 25"
-            : s.rank <= 50
-            ? "26–50"
-            : s.rank <= 75
-            ? "51–75"
-            : "76–100",
-        ["Top 25", "26–50", "51–75", "76–100"]
-      ),
-    [items, store]
-  );
+          s.rank <= 100
+            ? "Top 100"
+            : s.rank <= 250
+            ? "101–250"
+            : s.rank <= 400
+            ? "251–400"
+            : "401–500",
+        ["Top 100", "101–250", "251–400", "401–500"]
+      );
+    }
+    if (items.length > 100) {
+      return groupItems(
+        items,
+        store,
+        (s) =>
+          s.rank <= 50
+            ? "Top 50"
+            : s.rank <= 100
+            ? "51–100"
+            : s.rank <= 175
+            ? "101–175"
+            : "176–250",
+        ["Top 50", "51–100", "101–175", "176–250"]
+      );
+    }
+    return groupItems(
+      items,
+      store,
+      (s) =>
+        s.rank <= 25
+          ? "Top 25"
+          : s.rank <= 50
+          ? "26–50"
+          : s.rank <= 75
+          ? "51–75"
+          : "76+",
+      ["Top 25", "26–50", "51–75", "76+"]
+    );
+  }, [items, store]);
 
   const lengthGroups = useMemo(() => {
     const bandMap = Object.fromEntries(catalog.bands);
@@ -92,14 +120,23 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
       groupItems(
         items,
         store,
-        (s) => (s.start < 2010 ? "2000s" : s.start < 2020 ? "2010s" : "2020s"),
-        ["2000s", "2010s", "2020s"]
+        (s) =>
+          s.start < 1980
+            ? "Pre-1980s"
+            : s.start < 2000
+            ? "1980s–90s"
+            : s.start < 2010
+            ? "2000s"
+            : s.start < 2020
+            ? "2010s"
+            : "2020s",
+        ["Pre-1980s", "1980s–90s", "2000s", "2010s", "2020s"]
       ),
     [items, store]
   );
 
   const genreGroups = useMemo(
-    () => groupItems(items, store, (s) => s.genre),
+    () => groupItems(items, store, (s) => s.genre).slice(0, 8),
     [items, store]
   );
 
@@ -110,17 +147,11 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
             items,
             store,
             (i) => (i.lang ? `${i.langFlag || "🌐"} ${i.lang}` : "English")
-          ).slice(0, 10)
+          ).slice(0, 8)
         : [],
     [items, store, cat]
   );
 
-  const streamerGroups = useMemo(
-    () => groupItems(items, store, (s) => s.where),
-    [items, store]
-  );
-
-  // Top rated items by user
   const topRated = useMemo(() => {
     return items
       .filter((s) => (getMediaRecord(store, s.id).r || 0) > 0)
@@ -132,7 +163,6 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
       .slice(0, 7);
   }, [items, store]);
 
-  // Next up queue (highest NYT ranked on user's want or watching list)
   const nextUp = useMemo(() => {
     return items
       .filter((s) => {
@@ -171,126 +201,100 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
 
   return (
     <section className="ch100-wrap wrap ch100-stats stats" id="stats">
-      <h2 className="ch100-h2 h2" id="statsTitle">
-        By the numbers
-      </h2>
-      <p className="ch100-subhead sub" id="statsSub">
-        {cat === "tv"
-          ? "Your progress through the TV list, broken down by rank, time to finish, premiere decade, genre and streaming home."
-          : cat === "film"
-          ? "Your progress through the movie list, broken down by rank, runtime, decade, genre, language and streaming home."
-          : "Your personal watch diary metrics, broken down by language, media type, streamers, and your top star ratings."}
-      </p>
+      <details className="ch100-stats-details">
+        <summary className="ch100-stats-summary">
+          <span>Breakdown by rank tier, era, genre, and queue</span>
+          <span className="ch100-stats-toggle-hint">Toggle analytics</span>
+        </summary>
 
-      <div className="ch100-panels panels" id="panels">
-        {/* Tier panel (TV/Film) */}
-        {cat !== "tracker" && (
+        <div className="ch100-panels panels" id="panels">
+          {cat !== "tracker" && (
+            <div className="ch100-panel panel">
+              <h3>By rank tier</h3>
+              {renderBarRows(tierGroups)}
+            </div>
+          )}
+
+          {(cat === "film" || cat === "vgf" || cat === "tracker") && (
+            <div className="ch100-panel panel">
+              <h3>By language</h3>
+              {renderBarRows(langGroups)}
+            </div>
+          )}
+
           <div className="ch100-panel panel">
-            <h3>By rank tier</h3>
-            {renderBarRows(tierGroups)}
+            <h3>{cat === "tv" ? "By total time" : "By runtime"}</h3>
+            {renderBarRows(lengthGroups)}
           </div>
-        )}
 
-        {/* Language panel (Film, VGF & Tracker) */}
-        {(cat === "film" || cat === "vgf" || cat === "tracker") && (
           <div className="ch100-panel panel">
-            <h3>By language</h3>
-            {renderBarRows(langGroups)}
+            <h3>By era</h3>
+            {renderBarRows(decadeGroups)}
           </div>
-        )}
 
-        {/* Time to finish / Runtime panel */}
-        <div className="ch100-panel panel">
-          <h3>{cat === "tv" ? "By time to finish" : "By runtime"}</h3>
-          {renderBarRows(lengthGroups)}
-        </div>
+          <div className="ch100-panel panel">
+            <h3>By genre</h3>
+            {renderBarRows(genreGroups)}
+          </div>
 
-        {/* Premiere decade panel */}
-        <div className="ch100-panel panel">
-          <h3>{cat === "tv" ? "By premiere decade" : "By decade"}</h3>
-          {renderBarRows(decadeGroups)}
-        </div>
+          <div className="ch100-panel panel">
+            <h3>Your top rated</h3>
+            <ul className="ch100-tops tops">
+              {topRated.length > 0 ? (
+                topRated.map((s) => {
+                  const rec = getMediaRecord(store, s.id);
+                  return (
+                    <li key={s.id}>
+                      <button
+                        type="button"
+                        className="ch100-top-btn"
+                        onClick={() => onOpenModal(s.id)}
+                      >
+                        <span>
+                          #{s.rank} {s.title}
+                        </span>
+                        <span aria-label={`${rec.r || 0} stars`}>
+                          {"★".repeat(rec.r || 0)}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })
+              ) : (
+                <li>
+                  <span>Rate a {catalog.one} to see your favorites here.</span>
+                </li>
+              )}
+            </ul>
+          </div>
 
-        {/* Genre panel */}
-        <div className="ch100-panel panel">
-          <h3>By genre</h3>
-          {renderBarRows(genreGroups)}
-        </div>
-
-
-        {/* Streaming home panel */}
-        <div className="ch100-panel panel">
-          <h3>By streaming home</h3>
-          {renderBarRows(streamerGroups.slice(0, 8))}
-        </div>
-
-        {/* Top rated panel */}
-        <div className="ch100-panel panel">
-          <h3>Your top rated</h3>
-          <ul className="ch100-tops tops">
-            {topRated.length > 0 ? (
-              topRated.map((s) => {
-                const rec = getMediaRecord(store, s.id);
-                return (
+          <div className="ch100-panel panel">
+            <h3>Next up in queue</h3>
+            <ul className="ch100-tops tops">
+              {nextUp.length > 0 ? (
+                nextUp.map((s) => (
                   <li key={s.id}>
                     <button
                       type="button"
                       className="ch100-top-btn"
                       onClick={() => onOpenModal(s.id)}
-                      title={`View details for ${s.title}`}
                     >
                       <span>
-                        {s.rank}. {s.title}
+                        #{s.rank} {s.title}
                       </span>
-                      <span style={{ color: "var(--ch-yellow)" }} aria-label={`${rec.r || 0} stars`}>
-                        {"★".repeat(rec.r || 0)}
-                      </span>
+                      <span>{s.where}</span>
                     </button>
                   </li>
-                );
-              })
-            ) : (
-              <li>
-                <span>
-                  Rate a {catalog.one} you&apos;ve seen and it shows up here.
-                </span>
-                <span />
-              </li>
-            )}
-          </ul>
-        </div>
-
-        {/* Next up queue panel */}
-        <div className="ch100-panel panel">
-          <h3>Next up (highest ranked in queue)</h3>
-          <ul className="ch100-tops tops">
-            {nextUp.length > 0 ? (
-              nextUp.map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    className="ch100-top-btn"
-                    onClick={() => onOpenModal(s.id)}
-                    title={`View details for ${s.title}`}
-                  >
-                    <span>
-                      #{s.rank}. {s.title}
-                    </span>
-                    <span>{s.where}</span>
-                  </button>
+                ))
+              ) : (
+                <li>
+                  <span>Mark {catalog.noun} as Want or Watching.</span>
                 </li>
-              ))
-            ) : (
-              <li>
-                <span>
-                  Mark {catalog.noun} as Want or Watching to build your queue.
-                </span>
-                <span />
-              </li>
-            )}
-          </ul>
+              )}
+            </ul>
+          </div>
         </div>
-      </div>
+      </details>
     </section>
   );
 };

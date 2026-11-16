@@ -33,6 +33,8 @@ import {
   saveViewSettings,
   loadCachedVgfCatalog,
   saveCachedVgfCatalog,
+  loadCachedLiveCatalogs,
+  saveCachedLiveCatalogs,
   getMediaRecord,
   computeStats,
   filterAndSortMedia,
@@ -40,7 +42,7 @@ import {
   exportBackup,
   importBackup,
 } from "@/lib/channel100/storage";
-import { playSound, sound } from "@/lib/sound";
+import { playSound } from "@/lib/sound";
 
 import { Channel100Header } from "@/components/channel100/Channel100Header";
 import { Channel100Hero } from "@/components/channel100/Channel100Hero";
@@ -75,15 +77,17 @@ export default function Channel100Page() {
   const [editingCustomItem, setEditingCustomItem] =
     useState<CustomMediaItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [crtMode, setCrtMode] = useState<boolean>(false);
-  const [sfxEnabled, setSfxEnabled] = useState<boolean>(true);
   const [filters, setFilters] = useState<ViewFilterState>(DEFAULT_FILTERS);
+
+  // Live-synced catalogs: IMDb Top 250 TV, Letterboxd 500 Films, and Very Good Films
+  const [tvItems, setTvItems] = useState<ChannelMediaItem[]>(SHOWS);
+  const [filmItems, setFilmItems] = useState<ChannelMediaItem[]>(FILMS);
   const [vgfItems, setVgfItems] = useState<ChannelMediaItem[]>(INITIAL_VGF_ITEMS);
-  const [vgfSyncedAt, setVgfSyncedAt] = useState<number | null>(null);
-  const [isSyncingVgf, setIsSyncingVgf] = useState<boolean>(false);
+  const [syncedAt, setSyncedAt] = useState<number | null>(null);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Dynamic tracker custom items converted to ChannelMediaItem format
   const trackerItems = useMemo(() => {
     const customMap = store.custom || {};
     return Object.values(customMap).map((item, idx) =>
@@ -93,12 +97,26 @@ export default function Channel100Page() {
 
   const catalog = CATALOGS[filters.cat] || CATALOGS.tv;
   const catalogItems = useMemo(() => {
-    if (filters.cat === "tracker") return trackerItems;
+    if (filters.cat === "tv") return tvItems;
+    if (filters.cat === "film") return filmItems;
     if (filters.cat === "vgf") return vgfItems;
-    return catalog.items;
-  }, [filters.cat, catalog.items, trackerItems, vgfItems]);
+    return trackerItems;
+  }, [filters.cat, tvItems, filmItems, vgfItems, trackerItems]);
 
-  // Toast trigger helper
+  const itemLookup = useMemo(() => {
+    const map: Record<string, ChannelMediaItem> = { ...ALL_ITEMS };
+    tvItems.forEach((i) => {
+      map[i.id] = i;
+    });
+    filmItems.forEach((i) => {
+      map[i.id] = i;
+    });
+    vgfItems.forEach((i) => {
+      map[i.id] = i;
+    });
+    return map;
+  }, [tvItems, filmItems, vgfItems]);
+
   const triggerToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -106,41 +124,72 @@ export default function Channel100Page() {
     }, 2400);
   }, []);
 
-  // Live sync from verygoodfilms.co
-  const handleSyncVgf = useCallback(
+  // Sync live catalogs (IMDb Top 250 TV, Letterboxd 500, and Very Good Films)
+  const handleSyncAllLive = useCallback(
     async (force = false) => {
-      setIsSyncingVgf(true);
+      setIsSyncing(true);
       try {
-        const res = await fetch(
-          `/api/channel100/verygoodfilms${force ? "?force=1" : ""}`
-        );
-        if (!res.ok) throw new Error("Failed to sync Very Good Films");
-        const data = await res.json();
-        if (Array.isArray(data.items) && data.items.length > 0) {
-          setVgfItems(data.items);
-          const ts = Number(data.syncedAt) || Date.now();
-          setVgfSyncedAt(ts);
-          saveCachedVgfCatalog(data.items, ts, data.source);
-          if (force) {
-            playSound.promote();
-            triggerToast(
-              `🎞️ Synced ${data.items.length} curated films from verygoodfilms.co!`
+        const qs = force ? "?force=1" : "";
+        const [catRes, vgfRes] = await Promise.allSettled([
+          fetch(`/api/channel100/catalogs${qs}`),
+          fetch(`/api/channel100/verygoodfilms${qs}`),
+        ]);
+
+        let nextTs = Date.now();
+        let tvCount = tvItems.length;
+        let filmCount = filmItems.length;
+        let vgfCount = vgfItems.length;
+
+        if (catRes.status === "fulfilled" && catRes.value.ok) {
+          const data = await catRes.value.json();
+          if (Array.isArray(data.tv) && data.tv.length > 0) {
+            setTvItems(data.tv);
+            tvCount = data.tv.length;
+          }
+          if (Array.isArray(data.film) && data.film.length > 0) {
+            setFilmItems(data.film);
+            filmCount = data.film.length;
+          }
+          nextTs = Number(data.syncedAt) || nextTs;
+          saveCachedLiveCatalogs(
+            data.tv || tvItems,
+            data.film || filmItems,
+            nextTs
+          );
+        }
+
+        if (vgfRes.status === "fulfilled" && vgfRes.value.ok) {
+          const vgfData = await vgfRes.value.json();
+          if (Array.isArray(vgfData.items) && vgfData.items.length > 0) {
+            setVgfItems(vgfData.items);
+            vgfCount = vgfData.items.length;
+            saveCachedVgfCatalog(
+              vgfData.items,
+              Number(vgfData.syncedAt) || nextTs,
+              vgfData.source
             );
           }
+        }
+
+        setSyncedAt(nextTs);
+        if (force) {
+          playSound.promote();
+          triggerToast(
+            `Synced ${tvCount} TV series, ${filmCount} Letterboxd films & ${vgfCount} Very Good Films`
+          );
         }
       } catch {
         if (force) {
           playSound.bury();
-          triggerToast("Could not reach verygoodfilms.co — using cached archive.");
+          triggerToast("Live sync unavailable — using cached lists.");
         }
       } finally {
-        setIsSyncingVgf(false);
+        setIsSyncing(false);
       }
     },
-    [triggerToast]
+    [tvItems, filmItems, vgfItems, triggerToast]
   );
 
-  // Sync to PostgreSQL DB (debounced for snappy offline-first feel)
   const queueRemoteSync = useCallback(
     (id: string, record: ShowUserRecord, customMeta?: CustomMediaItem) => {
       if (saveTimeoutRef.current) {
@@ -166,7 +215,6 @@ export default function Channel100Page() {
     []
   );
 
-  // Update a single item's user record (by id: "s1".."s100", "f1".."f100", or "c_...")
   const updateMediaRecord = useCallback(
     (id: string, patch: Partial<{ s: ShowStatus; r: number; n: string }>) => {
       setStore((prev) => {
@@ -205,13 +253,13 @@ export default function Channel100Page() {
     [queueRemoteSync]
   );
 
-  // Save or update a custom tracker title (and cross-sync if it matches a canonical NYT 100 title)
   const handleSaveCustomItem = useCallback(
     (item: CustomMediaItem) => {
       const normalizedTitle = item.title.trim().toLowerCase();
       const matchedCanonical =
-        SHOWS.find((s) => s.title.toLowerCase() === normalizedTitle) ||
-        FILMS.find((f) => f.title.toLowerCase() === normalizedTitle);
+        tvItems.find((s) => s.title.toLowerCase() === normalizedTitle) ||
+        filmItems.find((f) => f.title.toLowerCase() === normalizedTitle) ||
+        vgfItems.find((v) => v.title.toLowerCase() === normalizedTitle);
 
       setStore((prev) => {
         const nextCustom = { ...(prev.custom || {}) };
@@ -240,7 +288,6 @@ export default function Channel100Page() {
         };
         saveStore(nextStore);
 
-        // remote DB update
         fetch("/api/channel100", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -288,16 +335,15 @@ export default function Channel100Page() {
       playSound.promote();
       triggerToast(
         matchedCanonical
-          ? `⚡ Logged ${item.title} & synced with NYT #${matchedCanonical.rank}`
-          : `⚡ Logged: ${item.title}`
+          ? `Logged ${item.title} & synced with #${matchedCanonical.rank}`
+          : `Logged: ${item.title}`
       );
       setIsLogModalOpen(false);
       setEditingCustomItem(null);
     },
-    [triggerToast]
+    [tvItems, filmItems, vgfItems, triggerToast]
   );
 
-  // Delete a custom tracker title
   const handleDeleteCustomItem = useCallback(
     (id: string) => {
       setStore((prev) => {
@@ -327,13 +373,12 @@ export default function Channel100Page() {
       });
 
       playSound.bury();
-      triggerToast("🗑️ Removed title from tracker");
+      triggerToast("Removed title from personal log");
       setActiveModalId(null);
     },
     [triggerToast]
   );
 
-  // Quick increment episode
   const handleIncrementEpisode = useCallback(
     (id: string) => {
       setStore((prev) => {
@@ -382,8 +427,8 @@ export default function Channel100Page() {
         playSound.fileIt();
         triggerToast(
           nextStatus === "seen"
-            ? `🎉 Completed ${currentCustom.title} (${nextEp}/${currentCustom.totalEpisodes})!`
-            : `📺 ${currentCustom.title}: Ep ${nextEp}${
+            ? `Completed ${currentCustom.title} (${nextEp}/${currentCustom.totalEpisodes})`
+            : `${currentCustom.title}: Ep ${nextEp}${
                 currentCustom.totalEpisodes
                   ? ` of ${currentCustom.totalEpisodes}`
                   : ""
@@ -396,7 +441,6 @@ export default function Channel100Page() {
     [triggerToast]
   );
 
-  // Edit custom item in log modal
   const handleEditCustom = useCallback(
     (id: string) => {
       if (store.custom && store.custom[id]) {
@@ -408,11 +452,10 @@ export default function Channel100Page() {
     [store.custom]
   );
 
-  // Background Database Sync & Local Hydration on Mount
+  // Hydrate local store, cached live catalogs, and remote DB on mount
   useEffect(() => {
     let isCancelled = false;
 
-    // 1. Post-mount local hydration (avoids SSR hydration mismatch)
     try {
       const localStore = loadStore();
       if (
@@ -436,25 +479,30 @@ export default function Channel100Page() {
           : "tv";
       setFilters((prev) => ({ ...prev, ...savedView, cat: initialCat }));
 
+      const cachedLive = loadCachedLiveCatalogs();
+      if (cachedLive) {
+        setTvItems(cachedLive.tv);
+        setFilmItems(cachedLive.film);
+        setSyncedAt(cachedLive.syncedAt);
+      }
+
       const cachedVgf = loadCachedVgfCatalog();
       if (cachedVgf) {
         setVgfItems(cachedVgf.items);
-        setVgfSyncedAt(cachedVgf.syncedAt);
-      }
-      if (!cachedVgf || Date.now() - cachedVgf.syncedAt > 60 * 60 * 1000) {
-        handleSyncVgf(false);
+        if (!cachedLive) setSyncedAt(cachedVgf.syncedAt);
       }
 
-      if (localStorage.getItem("hoard_ch100_crt") === "true") {
-        setCrtMode(true);
+      const needsLiveRefresh =
+        !cachedLive ||
+        !cachedVgf ||
+        Date.now() - cachedLive.syncedAt > 60 * 60 * 1000;
+      if (needsLiveRefresh) {
+        handleSyncAllLive(false);
       }
-
-      setSfxEnabled(sound.isEnabled());
     } catch (e) {
       console.warn("[Channel100] Failed to hydrate local settings:", e);
     }
 
-    // 2. Background sync with remote PostgreSQL database
     async function initDatabaseSync() {
       try {
         const res = await fetch("/api/channel100");
@@ -472,7 +520,6 @@ export default function Channel100Page() {
             Object.keys(serverStore.custom || {}).length > 0;
 
           if (hasLocalItems) {
-            // Merge & sync local into PostgreSQL
             const syncRes = await fetch("/api/channel100", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -503,9 +550,9 @@ export default function Channel100Page() {
     return () => {
       isCancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Toggle status (seen, watching, want)
   const handleToggleStatus = useCallback(
     (id: string, targetStatus: ShowStatus) => {
       const curStatus = getMediaRecord(store, id).s;
@@ -513,7 +560,7 @@ export default function Channel100Page() {
       updateMediaRecord(id, { s: nextStatus });
 
       const item =
-        ALL_ITEMS[id] ||
+        itemLookup[id] ||
         (store.custom && store.custom[id]
           ? customItemToChannelItem(store.custom[id])
           : null);
@@ -524,25 +571,24 @@ export default function Channel100Page() {
         triggerToast(`Cleared: ${itemTitle}`);
       } else if (nextStatus === "seen") {
         playSound.promote();
-        triggerToast(`✓ Marked Seen: ${itemTitle}`);
+        triggerToast(`✓ Seen: ${itemTitle}`);
       } else if (nextStatus === "watching") {
         playSound.click();
         triggerToast(`▶ Watching: ${itemTitle}`);
       } else if (nextStatus === "want") {
         playSound.click();
-        triggerToast(`+ Want to see: ${itemTitle}`);
+        triggerToast(`+ Want: ${itemTitle}`);
       }
     },
-    [store, updateMediaRecord, triggerToast]
+    [store, itemLookup, updateMediaRecord, triggerToast]
   );
 
-  // Set 1-5 rating
   const handleSetRating = useCallback(
     (id: string, rating: number) => {
       updateMediaRecord(id, { r: rating });
       playSound.fileIt();
       const item =
-        ALL_ITEMS[id] ||
+        itemLookup[id] ||
         (store.custom && store.custom[id]
           ? customItemToChannelItem(store.custom[id])
           : null);
@@ -553,10 +599,9 @@ export default function Channel100Page() {
         triggerToast(`Cleared rating for ${itemTitle}`);
       }
     },
-    [store.custom, updateMediaRecord, triggerToast]
+    [store.custom, itemLookup, updateMediaRecord, triggerToast]
   );
 
-  // Update notes
   const handleUpdateNotes = useCallback(
     (id: string, notes: string) => {
       updateMediaRecord(id, { n: notes });
@@ -564,7 +609,6 @@ export default function Channel100Page() {
     [updateMediaRecord]
   );
 
-  // Switch Catalog (TV vs Film vs Tracker)
   const handleSelectCat = useCallback((cat: MediaKind) => {
     playSound.click(0.3);
     setFilters((prev) => {
@@ -586,7 +630,6 @@ export default function Channel100Page() {
     });
   }, []);
 
-  // Surprise Me recommendation generator
   const handleSurpriseMe = useCallback(() => {
     playSound.pop();
     let pool = catalogItems.filter(
@@ -604,33 +647,26 @@ export default function Channel100Page() {
     }
     const chosen = pool[Math.floor(Math.random() * pool.length)];
     setActiveModalId(chosen.id);
-    const prefix =
-      chosen.kind === "film" ? "No." : chosen.kind === "tracker" ? "⚡" : "#";
-    triggerToast(
-      `Surprise Recommendation: ${prefix}${chosen.rank} ${chosen.title}`
-    );
+    triggerToast(`Random Pick: #${chosen.rank} ${chosen.title}`);
   }, [catalogItems, store, triggerToast]);
 
-  // Copy lists to clipboard
   const handleCopyList = useCallback(async () => {
     playSound.copy();
     const formatted = formatListForClipboard(store);
     try {
       await navigator.clipboard.writeText(formatted);
-      triggerToast("📋 Copied your watch lists to clipboard!");
+      triggerToast("Copied your watch lists to clipboard");
     } catch {
-      triggerToast("Clipboard access denied. Please try again.");
+      triggerToast("Clipboard access denied.");
     }
   }, [store, triggerToast]);
 
-  // Export JSON backup
   const handleExport = useCallback(() => {
     playSound.click();
     exportBackup(store);
-    triggerToast("💾 Downloaded Channel 100 backup JSON");
+    triggerToast("Downloaded Channel 100 backup JSON");
   }, [store, triggerToast]);
 
-  // Import JSON backup (with overwrite confirmation when existing records exist)
   const handleImport = useCallback(
     (file: File) => {
       const hasExisting =
@@ -655,9 +691,8 @@ export default function Channel100Page() {
           const reloaded = loadStore();
           setStore(reloaded);
           playSound.promote();
-          triggerToast(`📂 Restored ${res.count} titles from backup!`);
+          triggerToast(`Restored ${res.count} titles from backup`);
 
-          // Sync restored backup to database as well
           fetch("/api/channel100", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -677,7 +712,6 @@ export default function Channel100Page() {
     [store.custom, store.shows, triggerToast]
   );
 
-  // Filter changes
   const handleUpdateFilters = useCallback(
     (patch: Partial<ViewFilterState>) => {
       playSound.click(0.2);
@@ -694,37 +728,20 @@ export default function Channel100Page() {
     []
   );
 
-  // Direct status filter pick from hero
-  const handleSelectStatusFilter = useCallback(
-    (status: StatusFilter) => {
-      playSound.click();
-      setFilters((prev) => ({ ...prev, status }));
-      const el = document.getElementById("browse");
-      el?.scrollIntoView({ behavior: "smooth" });
-    },
-    []
+  const handleSelectStatusFilter = useCallback((status: StatusFilter) => {
+    playSound.click();
+    setFilters((prev) => ({ ...prev, status }));
+  }, []);
+
+  const tvStats = useMemo(() => computeStats(tvItems, store), [tvItems, store]);
+  const filmStats = useMemo(
+    () => computeStats(filmItems, store),
+    [filmItems, store]
   );
-
-  // Toggle CRT Mode
-  const handleToggleCrt = useCallback(() => {
-    setCrtMode((prev) => {
-      const next = !prev;
-      localStorage.setItem("hoard_ch100_crt", String(next));
-      playSound.click();
-      return next;
-    });
-  }, []);
-
-  // Toggle SFX
-  const handleToggleSfx = useCallback(() => {
-    const next = sound.toggle();
-    setSfxEnabled(next);
-  }, []);
-
-  // Computed statistics
-  const tvStats = useMemo(() => computeStats(SHOWS, store), [store]);
-  const filmStats = useMemo(() => computeStats(FILMS, store), [store]);
-  const vgfStats = useMemo(() => computeStats(vgfItems, store), [vgfItems, store]);
+  const vgfStats = useMemo(
+    () => computeStats(vgfItems, store),
+    [vgfItems, store]
+  );
   const trackerStats = useMemo(
     () => computeStats(trackerItems, store),
     [trackerItems, store]
@@ -738,13 +755,11 @@ export default function Channel100Page() {
       ? vgfStats
       : trackerStats;
 
-  // Filtered and sorted media list for current catalog
   const filteredItems = useMemo(
     () => filterAndSortMedia(catalogItems, store, filters, catalog),
     [catalogItems, store, filters, catalog]
   );
 
-  // Modal Next/Prev Navigation (follows active filtered/sorted items)
   const navList = useMemo(
     () => (filteredItems.length > 0 ? filteredItems : catalogItems),
     [filteredItems, catalogItems]
@@ -772,13 +787,9 @@ export default function Channel100Page() {
     if (idx === -1) return { prevItemLabel: null, nextItemLabel: null };
     const prev = navList[(idx - 1 + navList.length) % navList.length];
     const next = navList[(idx + 1) % navList.length];
-    const fmtLabel = (it: ChannelMediaItem) => {
-      const pre = it.custom ? "LOG" : it.kind === "film" ? "No." : "CH";
-      return `${pre} ${String(it.rank).padStart(2, "0")}`;
-    };
     return {
-      prevItemLabel: prev ? fmtLabel(prev) : null,
-      nextItemLabel: next ? fmtLabel(next) : null,
+      prevItemLabel: prev ? `#${String(prev.rank).padStart(3, "0")}` : null,
+      nextItemLabel: next ? `#${String(next.rank).padStart(3, "0")}` : null,
     };
   }, [activeModalId, navList]);
 
@@ -794,7 +805,6 @@ export default function Channel100Page() {
     });
   }, [handleUpdateFilters]);
 
-  // Global "/" shortcut to focus search when no modal is open
   useEffect(() => {
     function handleSlashShortcut(e: KeyboardEvent) {
       if (e.key !== "/" || activeModalId || isLogModalOpen) return;
@@ -820,14 +830,12 @@ export default function Channel100Page() {
 
   const activeItem: ChannelMediaItem | null = useMemo(() => {
     if (!activeModalId) return null;
-    if (ALL_ITEMS[activeModalId]) return ALL_ITEMS[activeModalId];
-    const fromVgf = vgfItems.find((i) => i.id === activeModalId);
-    if (fromVgf) return fromVgf;
+    if (itemLookup[activeModalId]) return itemLookup[activeModalId];
     if (store.custom && store.custom[activeModalId]) {
       return customItemToChannelItem(store.custom[activeModalId]);
     }
     return null;
-  }, [activeModalId, store.custom, vgfItems]);
+  }, [activeModalId, itemLookup, store.custom]);
 
   const activeRecord = activeModalId
     ? getMediaRecord(store, activeModalId)
@@ -850,7 +858,6 @@ export default function Channel100Page() {
     setIsLogModalOpen(true);
   }, []);
 
-  // Compute watchlist titles for Triage prioritisation
   const userWatchlistTitles = useMemo(() => {
     const list: string[] = [];
     const customList = Object.values(store.custom || {});
@@ -860,41 +867,51 @@ export default function Channel100Page() {
       }
     });
     const showsRecord = store.shows || {};
-    SHOWS.forEach((s) => {
+    tvItems.forEach((s) => {
       const rec = showsRecord[s.id];
       if (rec?.s === "want" || rec?.s === "watching") {
         list.push(s.title);
       }
     });
-    FILMS.forEach((f) => {
+    filmItems.forEach((f) => {
       const rec = showsRecord[f.id];
       if (rec?.s === "want" || rec?.s === "watching") {
         list.push(f.title);
       }
     });
+    vgfItems.forEach((v) => {
+      const rec = showsRecord[v.id];
+      if (rec?.s === "want" || rec?.s === "watching") {
+        list.push(v.title);
+      }
+    });
     return list;
-  }, [store.custom, store.shows]);
+  }, [store.custom, store.shows, tvItems, filmItems, vgfItems]);
 
   return (
     <AppPage variant="flush">
       <div
-        className={`ch100-root ${crtMode ? "crt-mode" : ""}`}
+        className="ch100-root"
         data-cat={filters.cat}
-        style={{ height: "100%", overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch" }}
+        style={{
+          height: "100%",
+          overflowY: "auto",
+          overflowX: "hidden",
+          WebkitOverflowScrolling: "touch",
+        }}
       >
-        {/* Header with SMPTE 7-bar test pattern, brand & catalog switcher */}
         <Channel100Header
           currentCat={filters.cat}
           onSelectCat={handleSelectCat}
           tvSeenCount={tvStats.seen}
+          tvTotalCount={tvItems.length}
           filmSeenCount={filmStats.seen}
+          filmTotalCount={filmItems.length}
           vgfSeenCount={vgfStats.seen}
           vgfTotalCount={vgfItems.length}
           trackerCount={trackerItems.length}
-          crtMode={crtMode}
-          onToggleCrt={handleToggleCrt}
-          sfxEnabled={sfxEnabled}
-          onToggleSfx={handleToggleSfx}
+          isSyncing={isSyncing}
+          onSyncLive={() => handleSyncAllLive(true)}
           onOpenLogModal={openNewLogModal}
           onOpenTriageModal={openTriageModal}
         />
@@ -912,31 +929,20 @@ export default function Channel100Page() {
               : "tabTracker"
           }
         >
-          {/* Hero Section & 10x10 Test Card / Custom Entertainment Radar */}
           <Channel100Hero
             catalog={catalog}
             items={catalogItems}
-            store={store}
             stats={currentStats}
             cat={filters.cat}
             activeStatus={filters.status}
-            vgfSyncedAt={vgfSyncedAt}
-            isSyncingVgf={isSyncingVgf}
-            onSyncVgf={() => handleSyncVgf(true)}
-            onOpenModal={(id) => {
-              playSound.pop();
-              setActiveModalId(id);
-            }}
+            syncedAt={syncedAt}
             onSurpriseMe={handleSurpriseMe}
             onCopyList={handleCopyList}
             onExport={handleExport}
             onImport={handleImport}
             onSelectStatusFilter={handleSelectStatusFilter}
-            onOpenLogModal={openNewLogModal}
-            onOpenTriageModal={openTriageModal}
           />
 
-          {/* Sticky Filter Controls (hidden when tracker is brand-new & empty) */}
           {!(filters.cat === "tracker" && catalogItems.length === 0) && (
             <Channel100Controls
               items={catalogItems}
@@ -946,12 +952,9 @@ export default function Channel100Page() {
               onUpdateFilters={handleUpdateFilters}
               resultCount={filteredItems.length}
               cat={filters.cat}
-              onOpenLogModal={openNewLogModal}
-              onOpenTriageModal={openTriageModal}
             />
           )}
 
-          {/* Media Grid / List View */}
           <Channel100Grid
             items={filteredItems}
             store={store}
@@ -969,7 +972,6 @@ export default function Channel100Page() {
             onOpenTriageModal={openTriageModal}
           />
 
-          {/* "By the Numbers" Stats Analysis */}
           <Channel100Stats
             items={catalogItems}
             store={store}
@@ -982,10 +984,8 @@ export default function Channel100Page() {
           />
         </main>
 
-        {/* Footer with Attribution */}
         <Channel100Footer />
 
-        {/* Interactive Detail Modal with CRT Static */}
         <Channel100Modal
           item={activeItem}
           record={activeRecord}
@@ -1002,7 +1002,6 @@ export default function Channel100Page() {
           onIncrementEpisode={handleIncrementEpisode}
         />
 
-        {/* Universal Entertainment Log Modal */}
         <Channel100LogModal
           isOpen={isLogModalOpen}
           onClose={() => {
@@ -1013,19 +1012,15 @@ export default function Channel100Page() {
           initialData={editingCustomItem || undefined}
         />
 
-        {/* Watchlist Decision Matrix (Triage Mode) Modal */}
         <Channel100TriageModal
           isOpen={isTriageModalOpen}
           onClose={() => setIsTriageModalOpen(false)}
           watchlistTitles={userWatchlistTitles}
           onLogPrescription={handleLogPrescription}
-          sfxEnabled={sfxEnabled}
         />
 
-        {/* Toast Alerts */}
         <Channel100Toast message={toastMessage} />
       </div>
     </AppPage>
   );
 }
-
