@@ -3,7 +3,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Palette, Check, ChevronDown } from "lucide-react";
 
-export type ThemeId = "default" | "matcha" | "terracotta" | "obsidian" | "tokyo";
+export type ThemeId =
+  | "default"
+  | "matcha"
+  | "terracotta"
+  | "obsidian"
+  | "tokyo"
+  | "matte-black";
 
 export interface ThemeOption {
   id: ThemeId;
@@ -49,6 +55,13 @@ export const THEMES: ThemeOption[] = [
     badge: "DARK",
     swatches: ["#0E131B", "#E8EEF5", "#48BFE3"],
   },
+  {
+    id: "matte-black",
+    name: "Matte Black",
+    subtitle: "Carbon obsidian & brushed gold",
+    badge: "DARK",
+    swatches: ["#0B0B0C", "#F2F2F0", "#E5B84B"],
+  },
 ];
 
 const THEME_STORAGE_KEY = "hoard_theme_v1";
@@ -57,7 +70,8 @@ function normalizeLegacyTheme(raw: string | null): ThemeId {
   if (!raw) return "default";
   if (raw === "matcha") return "matcha";
   if (raw === "terracotta") return "terracotta";
-  if (raw === "obsidian" || raw === "matte_black" || raw === "matte-black") return "obsidian";
+  if (raw === "obsidian") return "obsidian";
+  if (raw === "matte_black" || raw === "matte-black") return "matte-black";
   if (raw === "tokyo" || raw === "nordic" || raw === "cyberpunk") return "tokyo";
   return "default";
 }
@@ -193,7 +207,7 @@ export const ThemePicker: React.FC = () => {
               gap: "5px",
             }}
           >
-            <Palette size={12} /> 5 EDITORIAL THEMES
+            <Palette size={12} /> {THEMES.length} EDITORIAL THEMES
           </div>
 
           {THEMES.map((t) => {

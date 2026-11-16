@@ -12,21 +12,84 @@ const MAJOR_PLATFORMS = new Set([
   "hbo",
   "hbo max",
   "disney+",
+  "disney+ hotstar",
+  "hotstar",
+  "jiocinema",
+  "sonyliv",
+  "zee5",
+  "aha",
+  "sun nxt",
   "paramount+",
   "peacock",
-  "crunchyroll",
   "fx",
   "amc",
   "amc+",
   "showtime",
   "starz",
-  "bbc one",
-  "bbc two",
-  "bbc iplayer",
-  "youtube",
   "tubi",
   "roku",
 ]);
+
+const INDIAN_LANGUAGES = new Set([
+  "hindi",
+  "telugu",
+  "tamil",
+  "malayalam",
+  "kannada",
+  "bengali",
+  "marathi",
+  "gujarati",
+  "punjabi",
+  "odia",
+  "assamese",
+  "urdu",
+  "konkani",
+  "bhojpuri",
+  "kashmiri",
+  "manipuri",
+  "sanskrit",
+  "sindhi",
+  "tulu",
+]);
+
+const INDIAN_PLATFORMS = new Set([
+  "disney+ hotstar",
+  "hotstar",
+  "jiocinema",
+  "sonyliv",
+  "zee5",
+  "aha",
+  "sun nxt",
+]);
+
+const HOLLYWOOD_COUNTRIES = new Set([
+  "",
+  "us",
+  "usa",
+  "united states",
+  "united states of america",
+]);
+
+export function isHollywoodOrIndianRelease(
+  countryName?: string,
+  language?: string,
+  platform?: string
+): boolean {
+  const c = (countryName || "").trim().toLowerCase();
+  const l = (language || "").trim().toLowerCase();
+  const p = (platform || "").trim().toLowerCase();
+
+  const isIndian =
+    c === "india" ||
+    c === "in" ||
+    INDIAN_LANGUAGES.has(l) ||
+    INDIAN_PLATFORMS.has(p);
+  if (isIndian) return true;
+
+  const isHollywood =
+    HOLLYWOOD_COUNTRIES.has(c) && (l === "" || l === "english");
+  return isHollywood;
+}
 
 function stripHtml(raw: string): string {
   return raw
@@ -96,7 +159,13 @@ export function normalizePlatformName(rawName?: string): string {
   const lower = rawName.trim().toLowerCase();
   if (lower.includes("amazon") || lower === "prime video") return "Prime Video";
   if (lower.includes("apple")) return "Apple TV+";
+  if (lower.includes("hotstar")) return "Disney+ Hotstar";
   if (lower.includes("disney")) return "Disney+";
+  if (lower.includes("jiocinema")) return "JioCinema";
+  if (lower.includes("sonyliv")) return "SonyLIV";
+  if (lower.includes("zee5")) return "ZEE5";
+  if (lower === "aha") return "Aha";
+  if (lower.includes("sun nxt")) return "Sun NXT";
   if (lower === "hbo" || lower === "max" || lower === "hbo max") return "Max";
   if (lower.includes("paramount")) return "Paramount+";
   if (lower.includes("peacock")) return "Peacock";
@@ -128,17 +197,23 @@ export function parseTvMazeScheduleEntries(
     // Keep major streaming/broadcast platforms first; skip obscure local feeds
     if (!isMajor) continue;
 
+    const rawCountryName =
+      show.webChannel?.country?.name ||
+      show.network?.country?.name ||
+      "";
+    const rawLanguage = show.language || "";
+
+    if (!isHollywoodOrIndianRelease(rawCountryName, rawLanguage, platform)) {
+      continue;
+    }
+
     const airdate: string = ep.airdate || formatIsoDate(anchor);
     const dedupeKey = `${show.id || show.name}_${airdate}`;
     if (seenShowDate.has(dedupeKey)) continue;
     seenShowDate.add(dedupeKey);
 
-    const countryName =
-      show.webChannel?.country?.name ||
-      show.network?.country?.name ||
-      show.language ||
-      "USA";
-    const { lang, langFlag } = resolveCountryMeta(countryName, show.language);
+    const countryName = rawCountryName || rawLanguage || "USA";
+    const { lang, langFlag } = resolveCountryMeta(countryName, rawLanguage);
     const genres: string[] = Array.isArray(show.genres) ? show.genres : [];
     const primaryGenre = genres[0] || "Series";
     const mins = Number(ep.runtime || show.averageRuntime || show.runtime) || 45;
@@ -208,6 +283,7 @@ export function parseWikidataReleaseFilms(
 
     const director = row.directorLabel?.value || "Feature Release";
     const country = row.countryLabel?.value || "USA";
+    if (!isHollywoodOrIndianRelease(country)) continue;
     const genre = row.genreLabel?.value || "Feature Film";
     const { lang, langFlag } = resolveCountryMeta(country);
     const year = parseInt(releaseDate.slice(0, 4), 10) || anchor.getFullYear();

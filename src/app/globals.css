@@ -9,12 +9,13 @@
 @import "../styles/library.css";
 
 /* ============================================================================
-   HOARD // 5 CURATED EDITORIAL THEMES
+   HOARD // 6 CURATED EDITORIAL THEMES
    1. Kinfolk Paper (`default` / `kinfolk`) — Warm Editorial Linen & Espresso Ink
    2. Kyoto Matcha (`matcha`)              — Botanical Washi, Celadon & Hinoki
    3. Atelier Terracotta (`terracotta`)    — Parisian Risograph, Blush Clay & Umber
    4. Nocturne Espresso (`obsidian`)       — Warm Walnut Study, Parchment & Brass
    5. Nordic Fjord (`tokyo` / `nordic`)    — Abyssal Slate, Glacier Mist & Aurora
+   6. Matte Black (`matte-black`)          — Carbon Obsidian, Bone Ink & Brushed Gold
    ============================================================================ */
 
 /* 1. Kinfolk Paper (Default Light — Warm Linen & Espresso Carbon) */
@@ -113,9 +114,7 @@
 }
 
 /* 4. Nocturne Espresso (Dark — Warm Walnut Study, Parchment & Brass) */
-[data-theme="obsidian"],
-[data-theme="matte_black"],
-[data-theme="matte-black"] {
+[data-theme="obsidian"] {
   --cream: #13110F;
   --paper: #1C1916;
   --surface: #1E1B17;
@@ -170,6 +169,35 @@
   --sh: 4px 4px 0 #05080C;
   --sh-lg: 6px 6px 0 #05080C;
   --sh-sm: 2px 2px 0 #05080C;
+}
+
+/* 6. Matte Black (Dark — Carbon Obsidian, Bone Ink & Brushed Gold) */
+[data-theme="matte-black"],
+[data-theme="matte_black"] {
+  --cream: #0B0B0C;
+  --paper: #131315;
+  --surface: #161618;
+  --card: #1A1A1D;
+  --shelf: #212125;
+  --fg: #F2F2F0;
+  --ink: #F2F2F0;
+  --border-ink: #323236;
+  --shadow-ink: #020203;
+  --cover-ink: #F2F2F0;
+  --cover-mix: 32%;
+  --yel: #E5B84B;
+  --yellow: #EFC96A;
+  --pink: #E86862;
+  --cyan: #5AB4C5;
+  --lime: #7DB87B;
+  --orange: #E68A45;
+  --violet: #A292E8;
+  --mint: #4EB89B;
+  --bd: 2px solid #323236;
+  --b: 2px;
+  --sh: 4px 4px 0 #020203;
+  --sh-lg: 6px 6px 0 #020203;
+  --sh-sm: 2px 2px 0 #020203;
 }
 
 /* ---------- kind color tokens & cover baseline ---------- */

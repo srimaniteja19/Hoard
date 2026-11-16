@@ -87,5 +87,93 @@ describe("Streaming Release Calendar (day / week / month / year)", () => {
     expect(sorted).toHaveLength(1);
     expect(sorted[0].rank).toBe(1);
   });
+
+  it("keeps only Hollywood (US/English) and Indian releases", () => {
+    const tvEntries = [
+      {
+        airdate: "2026-11-15",
+        season: 1,
+        number: 1,
+        _embedded: {
+          show: {
+            id: 1,
+            name: "US Thriller",
+            language: "English",
+            webChannel: { name: "Netflix", country: { name: "United States" } },
+          },
+        },
+      },
+      {
+        airdate: "2026-11-15",
+        season: 1,
+        number: 1,
+        _embedded: {
+          show: {
+            id: 2,
+            name: "Telugu Hit",
+            language: "Telugu",
+            webChannel: { name: "Aha", country: { name: "India" } },
+          },
+        },
+      },
+      {
+        airdate: "2026-11-15",
+        season: 1,
+        number: 1,
+        _embedded: {
+          show: {
+            id: 3,
+            name: "Norwegian Reality",
+            language: "Norwegian",
+            webChannel: { name: "Max" },
+          },
+        },
+      },
+      {
+        airdate: "2026-11-15",
+        season: 1,
+        number: 1,
+        _embedded: {
+          show: {
+            id: 4,
+            name: "Russian Show",
+            language: "Russian",
+            webChannel: { name: "YouTube" },
+          },
+        },
+      },
+    ];
+
+    const tvParsed = parseTvMazeScheduleEntries(tvEntries, anchor);
+    expect(tvParsed.map((i) => i.title)).toEqual(["US Thriller", "Telugu Hit"]);
+
+    const wdJson = {
+      results: {
+        bindings: [
+          {
+            filmLabel: { value: "Hollywood Blockbuster" },
+            pubDate: { value: "2026-11-20T00:00:00Z" },
+            countryLabel: { value: "United States of America" },
+          },
+          {
+            filmLabel: { value: "Indian Feature" },
+            pubDate: { value: "2026-11-21T00:00:00Z" },
+            countryLabel: { value: "India" },
+          },
+          {
+            filmLabel: { value: "French Indie" },
+            pubDate: { value: "2026-11-22T00:00:00Z" },
+            countryLabel: { value: "France" },
+          },
+        ],
+      },
+    };
+
+    const wdParsed = parseWikidataReleaseFilms(wdJson, anchor);
+    expect(wdParsed.map((i) => i.title)).toEqual([
+      "Hollywood Blockbuster",
+      "Indian Feature",
+    ]);
+  });
 });
 
