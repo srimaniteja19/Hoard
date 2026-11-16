@@ -20,14 +20,6 @@ import { sql } from "drizzle-orm";
 import { KindType } from "@/types";
 import type { AskSaveCitation } from "@/lib/library/askSave";
 import type { AskStoredMessage } from "@/lib/library/askThread";
-import type {
-  ReaderBlock,
-  ReaderLink,
-  ReaderCategoryKey,
-  ReaderKeepKind,
-  ReaderIssueStatus,
-  ReaderDensity,
-} from "@/types/reader";
 
 const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
 
@@ -1413,104 +1405,6 @@ export const notebookCollisions = pgTable(
 
 export type NotebookCollisionRow = typeof notebookCollisions.$inferSelect;
 export type NewNotebookCollisionRow = typeof notebookCollisions.$inferInsert;
-
-// ==========================================
-// READER FEATURE (Newsletters, Issues & Keeps)
-// ==========================================
-
-export const readerSenders = pgTable(
-  "reader_senders",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    email: text("email"),
-    issueCount: integer("issue_count").notNull().default(0),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  },
-  (table) => [
-    uniqueIndex("reader_sender_user_name_idx").on(table.userId, table.name),
-    index("reader_sender_email_idx").on(table.email),
-  ]
-);
-
-export type ReaderSenderRow = typeof readerSenders.$inferSelect;
-export type NewReaderSenderRow = typeof readerSenders.$inferInsert;
-
-export const readerIssues = pgTable(
-  "reader_issues",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    messageId: text("message_id").unique(),
-    sender: text("sender").notNull(),
-    senderId: text("sender_id").references(() => readerSenders.id, { onDelete: "set null" }),
-    subject: text("subject").notNull(),
-    dek: text("dek").notNull().default(""),
-    category: varchar("category", { length: 32 }).$type<ReaderCategoryKey>().notNull().default("unsorted"),
-    categoryConfidence: real("category_confidence").notNull().default(1.0),
-    arrivedAt: timestamp("arrived_at", { withTimezone: true }).notNull().defaultNow(),
-    closedAt: timestamp("closed_at", { withTimezone: true }),
-    density: varchar("density", { length: 16 }).$type<ReaderDensity>(),
-    deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    wordCount: integer("word_count").notNull().default(0),
-    readMinutes: integer("read_minutes").notNull().default(1),
-    bodyBlocks: jsonb("body_blocks").$type<ReaderBlock[] | null>(),
-    links: jsonb("links").$type<ReaderLink[]>().notNull().default([]),
-    status: varchar("status", { length: 24 }).$type<ReaderIssueStatus>().notNull().default("unread"),
-    keptCount: integer("kept_count").notNull().default(0),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  },
-  (table) => [
-    index("reader_issues_user_arrived_idx").on(table.userId, table.arrivedAt.desc()),
-    index("reader_issues_user_status_idx").on(table.userId, table.status),
-    index("reader_issues_user_category_idx").on(table.userId, table.category),
-    index("reader_issues_user_sender_idx").on(table.userId, table.sender),
-    index("reader_issues_message_id_idx").on(table.messageId),
-    index("reader_issues_deleted_at_idx").on(table.deletedAt),
-  ]
-);
-
-export type ReaderIssueRow = typeof readerIssues.$inferSelect;
-export type NewReaderIssueRow = typeof readerIssues.$inferInsert;
-
-export const readerKeeps = pgTable(
-  "reader_keeps",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    issueId: text("issue_id")
-      .references(() => readerIssues.id, { onDelete: "set null" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    kind: varchar("kind", { length: 16 }).$type<ReaderKeepKind>().notNull().default("CLAIM"),
-    quote: text("quote"),
-    reason: text("reason").notNull(),
-    sourceName: text("source_name").notNull().default(""),
-    sourceUrl: text("source_url"),
-    color: varchar("color", { length: 32 }),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    index("reader_keeps_issue_idx").on(table.issueId, table.createdAt.desc()),
-    index("reader_keeps_user_idx").on(table.userId, table.createdAt.desc()),
-  ]
-);
-
-export type ReaderKeepRow = typeof readerKeeps.$inferSelect;
-export type NewReaderKeepRow = typeof readerKeeps.$inferInsert;
 
 export const channel100Entries = pgTable(
   "channel100_entries",

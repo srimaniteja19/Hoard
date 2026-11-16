@@ -30,7 +30,6 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Library",
         match: (path) => path.startsWith("/library") || path.startsWith("/session"),
       },
-      { href: "/reader", label: "Reader", match: (path) => path.startsWith("/reader") },
       { href: "/marginalia", label: "Marginalia", match: (path) => path.startsWith("/marginalia") },
       { href: "/ask", label: "Ask", match: (path) => path === "/ask" || path.startsWith("/ask/") },
       { href: "/atlas", label: "Atlas", match: (path) => path.startsWith("/atlas") },
