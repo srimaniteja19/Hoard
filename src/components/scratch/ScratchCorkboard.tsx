@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useMemo } from "react";
+import React, { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { Pin } from "lucide-react";
 import { ScrapRow } from "@/db/schema";
 import { getPinnedScraps } from "@/lib/scratch/filters";
 import {
@@ -53,6 +54,13 @@ export const ScratchCorkboard: React.FC<ScratchCorkboardProps> = ({
   const didDragRef = useRef(false);
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const timers = saveTimersRef.current;
+    return () => {
+      Object.values(timers).forEach(clearTimeout);
+    };
+  }, []);
 
   const resolvePosition = useCallback(
     (scrap: ScrapRow, index: number) => positions[scrap.id] || getBoardPosition(scrap, index),
@@ -126,10 +134,12 @@ export const ScratchCorkboard: React.FC<ScratchCorkboardProps> = ({
   if (pinnedScraps.length === 0) {
     return (
       <div className="scratch-empty-state">
-        <div className="scratch-empty-icon">📌</div>
+        <div className="scratch-empty-icon" aria-hidden="true">
+          <Pin size={22} strokeWidth={2.2} />
+        </div>
         <div className="scratch-empty-title">NOTHING PINNED TO THE BOARD YET</div>
         <div className="scratch-empty-desc">
-          Click the paperclip 📎 icon on any card in The Shelf to pin it here.
+          Click the paperclip icon on any card in The Shelf to pin it here.
         </div>
       </div>
     );

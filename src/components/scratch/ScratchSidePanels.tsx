@@ -139,10 +139,19 @@ export const ScratchSidePanels: React.FC<ScratchSidePanelsProps> = ({
               return (
                 <React.Fragment key={node.tag}>
                   <div
+                    role="button"
+                    tabIndex={0}
                     className={`tree__r${isRootActive ? " active" : ""}`}
                     onClick={() => {
                       playSound.pop();
                       onSelectTag(isRootActive ? null : node.tag);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        playSound.pop();
+                        onSelectTag(isRootActive ? null : node.tag);
+                      }
                     }}
                   >
                     <i style={{ background: `var(--${node.color})` }} />
@@ -155,10 +164,19 @@ export const ScratchSidePanels: React.FC<ScratchSidePanelsProps> = ({
                     return (
                       <div
                         key={child.tag}
+                        role="button"
+                        tabIndex={0}
                         className={`tree__r kid${isChildActive ? " active" : ""}`}
                         onClick={() => {
                           playSound.pop();
                           onSelectTag(isChildActive ? null : child.tag);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            playSound.pop();
+                            onSelectTag(isChildActive ? null : child.tag);
+                          }
                         }}
                       >
                         <i style={{ background: `var(--${child.color})` }} />
@@ -194,8 +212,16 @@ export const ScratchSidePanels: React.FC<ScratchSidePanelsProps> = ({
             stats.openQuestionItems.slice(0, 4).map((q) => (
               <div
                 key={q.id}
+                role="button"
+                tabIndex={0}
                 className="q__r"
                 onClick={() => onSelectQuestion(q.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelectQuestion(q.id);
+                  }
+                }}
               >
                 <p>{q.content}</p>
                 <span>{q.meta}</span>

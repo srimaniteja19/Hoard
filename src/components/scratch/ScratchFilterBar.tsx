@@ -257,10 +257,24 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
           })}
         </div>
 
-        {/* Tags Row */}
-        {tags.length > 0 && (
+        {/* Tags & Date Row */}
+        {(tags.length > 0 || filters.date) && (
           <div className="scratch-tags-scroll">
-            <span className="tags-label">TAGS:</span>
+            {filters.date && (
+              <button
+                type="button"
+                className="scratch-date-filter-chip"
+                onClick={() => {
+                  playSound.click();
+                  onFilterChange({ date: null });
+                }}
+                title="Clear date filter"
+              >
+                DATE: {filters.date}
+                <X size={11} strokeWidth={2.4} aria-hidden="true" />
+              </button>
+            )}
+            {tags.length > 0 && <span className="tags-label">TAGS:</span>}
             {tags.slice(0, 10).map((t) => {
               const isActive = filters.tag === t.tag;
               return (

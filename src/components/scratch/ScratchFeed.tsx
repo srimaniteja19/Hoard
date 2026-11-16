@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import { Search, PenLine, X } from "lucide-react";
 import { ScrapRow } from "@/db/schema";
 import { ScratchCard } from "./ScratchCard";
 import { formatScrapDayHeader } from "@/lib/scratch/parse";
@@ -10,6 +11,7 @@ interface ScratchFeedProps {
   hasActiveFilters?: boolean;
   onResetFilters?: () => void;
   onUpdateNotes: (id: string, notes: string) => Promise<void> | void;
+  onUpdateScrap?: (updated: ScrapRow) => void;
   onPromoteTil: (id: string) => Promise<void> | void;
   onPromoteTodo: (id: string) => Promise<void> | void;
   onWeld: (id: string) => void;
@@ -22,6 +24,7 @@ export const ScratchFeed: React.FC<ScratchFeedProps> = ({
   hasActiveFilters = false,
   onResetFilters,
   onUpdateNotes,
+  onUpdateScrap,
   onPromoteTil,
   onPromoteTodo,
   onWeld,
@@ -60,7 +63,9 @@ export const ScratchFeed: React.FC<ScratchFeedProps> = ({
     if (hasActiveFilters) {
       return (
         <div className="scratch-empty-state">
-          <div className="scratch-empty-icon">🔍</div>
+          <div className="scratch-empty-icon" aria-hidden="true">
+            <Search size={22} strokeWidth={2.2} />
+          </div>
           <div className="scratch-empty-title">NO SCRAPS MATCH YOUR CURRENT FILTERS</div>
           <div className="scratch-empty-desc">
             Try adjusting your search query, category tabs, tag, or calendar date.
@@ -71,7 +76,8 @@ export const ScratchFeed: React.FC<ScratchFeedProps> = ({
               className="scratch-empty-reset-btn"
               onClick={onResetFilters}
             >
-              CLEAR ALL FILTERS ✕
+              CLEAR ALL FILTERS
+              <X size={12} strokeWidth={2.5} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -80,7 +86,9 @@ export const ScratchFeed: React.FC<ScratchFeedProps> = ({
 
     return (
       <div className="scratch-empty-state">
-        <div className="scratch-empty-icon">✍️</div>
+        <div className="scratch-empty-icon" aria-hidden="true">
+          <PenLine size={22} strokeWidth={2.2} />
+        </div>
         <div className="scratch-empty-title">SCRATCHPAD IS EMPTY</div>
         <div className="scratch-empty-desc">
           Type an idea, quote, question, or paste a screenshot in The Slab above to begin!
@@ -110,6 +118,7 @@ export const ScratchFeed: React.FC<ScratchFeedProps> = ({
               scrap={scrap}
               isOpenDefault={false}
               onUpdateNotes={onUpdateNotes}
+              onUpdateScrap={onUpdateScrap}
               onPromoteTil={onPromoteTil}
               onPromoteTodo={onPromoteTodo}
               onWeld={onWeld}

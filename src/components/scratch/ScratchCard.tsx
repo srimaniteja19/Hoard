@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { BookOpen, Copy, Check, Maximize2, FileText, Plus } from "lucide-react";
 import { ScrapRow, ScrapEntities } from "@/db/schema";
 import { ScratchMarkdown } from "./ScratchMarkdown";
 import {
@@ -18,6 +19,7 @@ interface ScratchCardProps {
   scrap: ScrapRow;
   isOpenDefault?: boolean;
   onUpdateNotes: (id: string, notes: string) => Promise<void> | void;
+  onUpdateScrap?: (updated: ScrapRow) => void;
   onPromoteTil: (id: string) => Promise<void> | void;
   onPromoteTodo: (id: string) => Promise<void> | void;
   onWeld: (id: string) => void;
@@ -31,6 +33,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
   scrap,
   isOpenDefault = false,
   onUpdateNotes,
+  onUpdateScrap,
   onPromoteTil,
   onPromoteTodo,
   onWeld,
@@ -188,7 +191,7 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
     const trimmed = transcriptionVal.trim();
     setEditingTranscription(false);
     try {
-      await fetch(`/api/scratch/${scrap.id}`, {
+      const res = await fetch(`/api/scratch/${scrap.id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -201,6 +204,10 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
           statusLabel: trimmed ? "OPEN · TRANSCRIBED" : "NOT SEARCHABLE — ADD A LINE",
         }),
       });
+      if (res.ok) {
+        const updated: ScrapRow = await res.json();
+        onUpdateScrap?.(updated);
+      }
       playSound.fileIt();
     } catch (err) {
       console.error("Failed to save transcription", err);
@@ -503,7 +510,8 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
             }}
             title="Read full note in dialog"
           >
-            📖 READ
+            <BookOpen size={11} strokeWidth={2.3} aria-hidden="true" />
+            READ
           </button>
           {!isInk && (
             <button
@@ -512,7 +520,17 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
               onClick={handleCopyContent}
               title="Copy note markdown"
             >
-              {copiedContent ? "✓ COPIED" : "📋 COPY"}
+              {copiedContent ? (
+                <>
+                  <Check size={11} strokeWidth={2.5} aria-hidden="true" />
+                  COPIED
+                </>
+              ) : (
+                <>
+                  <Copy size={11} strokeWidth={2.3} aria-hidden="true" />
+                  COPY
+                </>
+              )}
             </button>
           )}
           <button
@@ -525,7 +543,8 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
             }}
             title="Open in Note Studio"
           >
-            ⤢ STUDIO
+            <Maximize2 size={11} strokeWidth={2.3} aria-hidden="true" />
+            STUDIO
           </button>
         </div>
       </div>
@@ -631,17 +650,33 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
       {/* ── CARD NOTE PREVIEW BADGE (IF SCRAP HAS NOTES) ── */}
       {hasNotes && (
         <div
+          role="button"
+          tabIndex={0}
           className="scrap__note-preview"
           onClick={(e) => {
             e.stopPropagation();
             playSound.click();
             setIsModalOpen(true);
           }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              playSound.click();
+              setIsModalOpen(true);
+            }
+          }}
           title="Click to open Full Note Studio (Spacious View)"
         >
           <div className="scrap__note-preview-h">
-            <span>📝 NOTES ({wordCount} WORDS)</span>
-            <span className="expand-hint">STUDIO ⤢</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+              <FileText size={11} strokeWidth={2.2} aria-hidden="true" />
+              NOTES ({wordCount} WORDS)
+            </span>
+            <span className="expand-hint" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              STUDIO
+              <Maximize2 size={10} strokeWidth={2.3} aria-hidden="true" />
+            </span>
           </div>
           <div className="scrap__note-preview-t">
             {notes.slice(0, 160)}
@@ -659,8 +694,19 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
             setIsModalOpen(true);
           }}
           title="Open rich note studio & drawing board"
+          style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
         >
-          {hasNotes ? `📝 NOTES (${wordCount}w) ⤢` : "＋ NOTES ⤢"}
+          {hasNotes ? (
+            <>
+              <FileText size={11} strokeWidth={2.2} aria-hidden="true" />
+              NOTES ({wordCount}w)
+            </>
+          ) : (
+            <>
+              <Plus size={11} strokeWidth={2.4} aria-hidden="true" />
+              NOTES
+            </>
+          )}
         </button>
 
         {isInk && !hasTranscription ? (

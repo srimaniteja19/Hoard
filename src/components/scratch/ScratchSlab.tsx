@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { PenTool, ImagePlus, Loader2 } from "lucide-react";
 import { ScrapKind } from "@/db/schema";
 import { parseSlabText } from "@/lib/scratch/parse";
 import { findCollisions, CollisionHit, CollisionCandidate } from "@/lib/scratch/collision";
@@ -21,7 +22,7 @@ interface ScratchSlabProps {
       inkStrokes?: any[];
       transcription?: string;
     }
-  ) => Promise<void> | void;
+  ) => Promise<boolean | void> | boolean | void;
   existingScraps: CollisionCandidate[];
   onWeldCandidate?: (candidate: CollisionHit, currentSlabText: string) => void;
   submitting?: boolean;
@@ -103,25 +104,28 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
       const trans = transcription.trim();
       const content = trans || "Handwritten Ink Scrap";
 
-      engine.clear();
-      setInkDirty(false);
-      setStrokeCount(0);
-      setTranscription("");
-
-      await onFile(content, {
+      const result = await onFile(content, {
         kind: "INK",
         inkSvg: svg,
         inkStrokes: strokes,
         transcription: trans,
       });
+      if (result !== false) {
+        engine.clear();
+        setInkDirty(false);
+        setStrokeCount(0);
+        setTranscription("");
+      }
       return;
     }
 
     const trimmed = value.trim();
     if (!trimmed) return;
     playSound.fileIt();
-    setValue("");
-    await onFile(trimmed);
+    const result = await onFile(trimmed);
+    if (result !== false) {
+      setValue("");
+    }
   }, [mode, submitting, uploadingImage, value, transcription, onFile]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
@@ -223,7 +227,8 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
               requestAnimationFrame(() => inkEngineRef.current?.fit());
             }}
           >
-            ✎ WRITE BY HAND
+            <PenTool size={12} strokeWidth={2.2} aria-hidden="true" style={{ marginRight: 5 }} />
+            WRITE BY HAND
           </button>
           <span className="sp" />
           <span className="hintk">⌘↵ FILES IT · ESC CLEARS</span>
@@ -246,7 +251,10 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
         />
         {uploadingImage && (
           <div className="slab-upload-indicator">
-            <span>⏳ COMPRESSING &amp; UPLOADING IMAGE...</span>
+            <span>
+              <Loader2 size={13} strokeWidth={2.2} aria-hidden="true" style={{ marginRight: 5 }} />
+              COMPRESSING &amp; UPLOADING IMAGE...
+            </span>
           </div>
         )}
         {(() => {
@@ -384,7 +392,8 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
                 disabled={uploadingImage || submitting}
                 title="Upload or paste an image/screenshot"
               >
-                📷 {uploadingImage ? "UPLOADING..." : "IMAGE"}
+                <ImagePlus size={12} strokeWidth={2.2} aria-hidden="true" style={{ marginRight: 4 }} />
+                {uploadingImage ? "UPLOADING..." : "IMAGE"}
               </button>
               {parsed.chips.map((chip, idx) => (
                 <span
@@ -431,8 +440,16 @@ export const ScratchSlab: React.FC<ScratchSlabProps> = ({
             {collisions.map((hit) => (
               <div
                 key={hit.id}
+                role="button"
+                tabIndex={0}
                 className="hit__r"
                 onClick={() => onWeldCandidate?.(hit, value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onWeldCandidate?.(hit, value);
+                  }
+                }}
               >
                 <span className="ago">{hit.ago}</span>
                 <span

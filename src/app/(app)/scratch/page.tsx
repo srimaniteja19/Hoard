@@ -27,7 +27,7 @@ function ScratchPageContent() {
   const [stats, setStats] = useState<ScratchStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ msg: string; kind?: "ok" | "error" } | null>(null);
   const [viewMode, setViewMode] = useState<"stream" | "pinned" | "logbook" | "corkboard">("stream");
 
   // Filters state
@@ -104,8 +104,8 @@ function ScratchPageContent() {
     })();
   }, []);
 
-  const showToast = (msg: string) => {
-    setFeedback(msg);
+  const showToast = (msg: string, kind: "ok" | "error" = "ok") => {
+    setFeedback({ msg, kind });
     setTimeout(() => setFeedback(null), 3000);
   };
 
@@ -132,8 +132,8 @@ function ScratchPageContent() {
       inkStrokes?: any[];
       transcription?: string;
     }
-  ) => {
-    if (!text.trim()) return;
+  ): Promise<boolean> => {
+    if (!text.trim()) return false;
     setSubmitting(true);
     try {
       const clientDate = getLocalTodayIso();
@@ -162,9 +162,14 @@ function ScratchPageContent() {
             : "✓ Scrap filed to The Shelf"
         );
         void refreshStats();
+        return true;
       }
+      showToast("✕ Could not file scrap — please retry", "error");
+      return false;
     } catch (err) {
       console.error("Failed to file scrap", err);
+      showToast("✕ Network error filing scrap", "error");
+      return false;
     } finally {
       setSubmitting(false);
     }
@@ -183,10 +188,19 @@ function ScratchPageContent() {
       if (res.ok) {
         const updated: ScrapRow = await res.json();
         setScraps((prev) => prev.map((s) => (s.id === id ? { ...s, ...updated } : s)));
+      } else {
+        showToast("✕ Failed to save notes", "error");
       }
     } catch (err) {
       console.error("Failed to update notes", err);
+      showToast("✕ Network error saving notes", "error");
     }
+  };
+
+  // 2b. Sync full scrap update (e.g. inline transcription)
+  const handleUpdateScrap = (updated: ScrapRow) => {
+    setScraps((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
+    void refreshStats();
   };
 
   // 3. Promote to TIL
@@ -353,10 +367,23 @@ function ScratchPageContent() {
 
   // 11. Scroll to question scrap
   const handleSelectQuestion = (scrapId: string) => {
+    if (viewMode !== "stream") setViewMode("stream");
+    const scrollAndPulse = () => {
+      const el = document.getElementById(`scrap-${scrapId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("is-highlighted");
+        setTimeout(() => el.classList.remove("is-highlighted"), 2000);
+      }
+    };
+
     const el = document.getElementById(`scrap-${scrapId}`);
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.classList.add("open");
+      scrollAndPulse();
+    } else {
+      // If active filters are hiding this question, reset them and scroll after render
+      handleResetFilters();
+      setTimeout(scrollAndPulse, 60);
     }
   };
 
@@ -516,23 +543,11 @@ function ScratchPageContent() {
           {/* ── TOAST NOTIFICATION ── */}
           {feedback && (
             <div
-              style={{
-                position: "fixed",
-                bottom: "24px",
-                right: "24px",
-                background: "var(--ink)",
-                color: "var(--cream)",
-                fontFamily: "var(--mono)",
-                fontSize: "12px",
-                fontWeight: 700,
-                padding: "11px 16px",
-                borderRadius: "8px",
-                border: "1px solid var(--border-ink, var(--ink))",
-                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.24)",
-                zIndex: 99999,
-              }}
+              role="status"
+              aria-live="polite"
+              className={`scratch-toast${feedback.kind === "error" ? " is-error" : ""}`}
             >
-              {feedback}
+              {feedback.msg}
             </div>
           )}
 
@@ -594,6 +609,7 @@ function ScratchPageContent() {
                   hasActiveFilters={hasActiveFilters}
                   onResetFilters={handleResetFilters}
                   onUpdateNotes={handleUpdateNotes}
+                  onUpdateScrap={handleUpdateScrap}
                   onPromoteTil={handlePromoteTil}
                   onPromoteTodo={handlePromoteTodo}
                   onWeld={handleOpenWeldModal}
@@ -660,24 +676,10 @@ function ScratchPageContent() {
 
               <button
                 type="button"
+                className="scratch-postcard-btn"
                 onClick={() => {
                   playSound.click();
                   setIsPostcardModalOpen(true);
-                }}
-                style={{
-                  fontFamily: "var(--mono)",
-                  fontWeight: 700,
-                  fontSize: "11px",
-                  padding: "9px 16px",
-                  borderRadius: "8px",
-                  border: "1px solid color-mix(in srgb, var(--yellow) 55%, var(--border-ink, var(--ink)))",
-                  background: "color-mix(in srgb, var(--yellow) 20%, var(--card))",
-                  color: "var(--ink)",
-                  cursor: "pointer",
-                  marginBottom: "18px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "7px",
                 }}
               >
                 <Mail size={13} strokeWidth={2.2} aria-hidden="true" />

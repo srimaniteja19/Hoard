@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Pickaxe } from "lucide-react";
 import { ScrapRow } from "@/db/schema";
 import { playSound } from "@/lib/sound";
 
@@ -20,7 +21,10 @@ export const ScratchSeance: React.FC<ScratchSeanceProps> = ({ scrap, onRestore, 
   return (
     <div className="seance">
       <div className="seance__h">
-        <span>⛏ DUG UP FROM THE COMPOST</span>
+        <span>
+          <Pickaxe size={12} strokeWidth={2.2} aria-hidden="true" />
+          DUG UP FROM THE COMPOST
+        </span>
         <span>
           BURIED {daysAgo} DAY{daysAgo === 1 ? "" : "S"} AGO
         </span>
