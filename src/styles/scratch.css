@@ -6371,3 +6371,632 @@ code.md-slash-cmd:hover {
   background: color-mix(in srgb, var(--pink) 20%, var(--card));
   border-color: var(--pink);
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EDITORIAL INDEX OVERHAUL
+   Calm hairline paper cards, 2-column Stream + Tabbed Rail, zero noisy chrome
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.scratch-page-root {
+  --ei-border: color-mix(in srgb, var(--border-ink, var(--ink)) 14%, transparent);
+  --ei-border-strong: color-mix(in srgb, var(--border-ink, var(--ink)) 26%, transparent);
+  --ei-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-ink, #000) 5%, transparent),
+    0 4px 14px color-mix(in srgb, var(--shadow-ink, #000) 4%, transparent);
+  --ei-shadow-hover: 0 6px 20px color-mix(in srgb, var(--shadow-ink, #000) 9%, transparent);
+}
+
+.scratch-page-root .scratch-wrap {
+  max-width: 1220px;
+}
+
+/* ── Header & Segmented View Switcher ── */
+.scratch-page-root .top {
+  padding: 20px 0 18px;
+  border-bottom: 1px solid var(--ei-border);
+  margin-bottom: 22px;
+  gap: 18px;
+}
+
+.scratch-page-root .top h1 {
+  font-weight: 700;
+  font-size: clamp(28px, 3.6vw, 38px);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin-bottom: 6px;
+}
+
+.scratch-page-root .top .sub {
+  font-family: var(--body);
+  font-size: 13.5px;
+  letter-spacing: 0;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--ink) 62%, transparent);
+  max-width: 60ch;
+}
+
+.scratch-page-root .views {
+  background: var(--shelf);
+  border: 1px solid var(--ei-border);
+  border-radius: 11px;
+  padding: 4px;
+  gap: 3px;
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+
+.scratch-page-root .views button {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  background: transparent;
+  color: color-mix(in srgb, var(--ink) 70%, transparent);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 7px 14px;
+  box-shadow: none;
+  margin-left: 0;
+}
+
+.scratch-page-root .views button:hover:not([aria-pressed="true"]) {
+  background: color-mix(in srgb, var(--card) 60%, transparent);
+  border-color: transparent;
+  color: var(--ink);
+  transform: none;
+}
+
+.scratch-page-root .views button[aria-pressed="true"],
+.scratch-page-root .views button[data-v="pinned"][aria-pressed="true"] {
+  background: var(--card);
+  color: var(--ink);
+  border-color: var(--ei-border-strong);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--shadow-ink, #000) 8%, transparent);
+}
+
+.scratch-page-root .views button[data-v="pinned"].has-pinned-items:not([aria-pressed="true"]) {
+  background: transparent;
+  color: var(--ink);
+}
+
+/* ── The Slab (Capture Surface) ── */
+.scratch-page-root .slab {
+  background: var(--card);
+  border: 1px solid var(--ei-border-strong);
+  border-radius: 14px;
+  box-shadow: var(--ei-shadow);
+  margin-bottom: 12px;
+}
+
+.scratch-page-root .slab:focus-within {
+  border-color: color-mix(in srgb, var(--yellow) 65%, var(--border-ink, var(--ink)));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--yellow) 16%, transparent), var(--ei-shadow);
+}
+
+.scratch-page-root .slab.islog {
+  background: color-mix(in srgb, var(--orange) 7%, var(--card));
+  border-color: color-mix(in srgb, var(--orange) 45%, var(--border-ink, var(--ink)));
+}
+
+.scratch-page-root .slab__modes {
+  background: color-mix(in srgb, var(--shelf) 45%, transparent);
+  border-bottom: 1px solid var(--ei-border);
+  padding: 4px 8px;
+  gap: 4px;
+  align-items: center;
+}
+
+.scratch-page-root .slab__modes button {
+  border: none;
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  display: inline-flex;
+  align-items: center;
+  color: color-mix(in srgb, var(--ink) 68%, transparent);
+}
+
+.scratch-page-root .slab__modes button[aria-pressed="true"] {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-ink, #000) 8%, transparent);
+}
+
+.scratch-page-root .slab textarea {
+  font-family: var(--body);
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.5;
+  padding: 16px 18px 8px;
+  min-height: 80px;
+}
+
+.scratch-page-root .slab__tear {
+  display: none;
+}
+
+.scratch-page-root .slab__bar {
+  border-top: 1px solid var(--ei-border);
+  background: color-mix(in srgb, var(--shelf) 30%, transparent);
+  padding: 9px 14px;
+  gap: 8px;
+}
+
+.scratch-page-root .slab__bar .file {
+  border-radius: 8px;
+  border: none;
+  padding: 7px 14px;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  box-shadow: none;
+}
+
+.scratch-page-root .grammar {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--ink) 52%, transparent);
+  opacity: 1;
+  margin-bottom: 18px;
+}
+
+/* ── Filter Bar ── */
+.scratch-page-root .scratch-filters-root {
+  margin: 16px 0 24px;
+  gap: 10px;
+}
+
+.scratch-page-root .scratch-search-wrap {
+  border: 1px solid var(--ei-border-strong);
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.scratch-page-root .scratch-sfx-toggle,
+.scratch-page-root .scratch-ambience-toggle,
+.scratch-page-root .match-badge,
+.scratch-page-root .scratch-reset-filters-btn {
+  border: 1px solid var(--ei-border);
+  border-radius: 9px;
+  box-shadow: none;
+  padding: 8px 11px;
+  font-size: 10px;
+}
+
+/* ── 2-Column Workspace (Shelf + Tabbed Rail) ── */
+.scratch-page-root .stream {
+  grid-template-columns: minmax(0, 1.55fr) 360px;
+  gap: 28px;
+  align-items: start;
+}
+
+@media (max-width: 1040px) {
+  .scratch-page-root .stream {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+.scratch-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (min-width: 1041px) {
+  .scratch-rail {
+    position: sticky;
+    top: 18px;
+    max-height: calc(100vh - 36px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    padding-right: 4px;
+  }
+}
+
+.scratch-rail__tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: var(--shelf);
+  border: 1px solid var(--ei-border);
+  border-radius: 10px;
+}
+
+.scratch-rail__tab {
+  font-family: var(--body);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--ink) 68%, transparent);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 7px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.scratch-rail__tab:hover:not(.is-active) {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--card) 55%, transparent);
+}
+
+.scratch-rail__tab.is-active {
+  background: var(--card);
+  color: var(--ink);
+  border-color: var(--ei-border);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-ink, #000) 7%, transparent);
+}
+
+.scratch-rail__count {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  color: color-mix(in srgb, var(--ink) 75%, transparent);
+}
+
+.scratch-page-root .zone {
+  margin-bottom: 14px;
+}
+
+.scratch-page-root .zone b {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.scratch-page-root .zone i {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 52%, transparent);
+  opacity: 1;
+}
+
+.scratch-page-root .zone__bar {
+  height: 1px;
+  background: var(--ei-border);
+}
+
+/* ── Editorial Index Scrap Card ── */
+.scratch-page-root .scrap {
+  border: 1px solid var(--ei-border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: var(--ei-shadow);
+  margin-bottom: 12px;
+  transform: none !important;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.scratch-page-root .scrap::before {
+  display: none;
+}
+
+.scratch-page-root .scrap:hover {
+  transform: translateY(-1px) !important;
+  border-color: var(--ei-border-strong);
+  box-shadow: var(--ei-shadow-hover);
+}
+
+.scratch-page-root .scrap.is-pinned {
+  border-color: color-mix(in srgb, var(--yellow) 65%, var(--border-ink, var(--ink))) !important;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--yellow) 16%, transparent), var(--ei-shadow) !important;
+}
+
+.scratch-page-root .scrap__mk {
+  display: none;
+}
+
+.scratch-page-root .scrap__h-bar {
+  padding: 12px 16px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.scrap__meta-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.scrap__kind-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c) 14%, var(--card));
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
+}
+
+.scrap__kind-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c);
+  flex: none;
+}
+
+.scrap__time {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--ink) 48%, transparent);
+}
+
+.scrap__tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: color-mix(in srgb, var(--ink) 68%, transparent);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+
+.scrap__status {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--violet) 16%, var(--card));
+  color: var(--ink);
+}
+
+.scrap__status.nosearch {
+  background: color-mix(in srgb, var(--orange) 18%, var(--card));
+}
+
+.scratch-page-root .scrap__structure-kicker {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  background: transparent;
+  color: color-mix(in srgb, var(--ink) 58%, transparent);
+  border: 1px solid var(--ei-border);
+  border-radius: 5px;
+}
+
+.scratch-page-root .scrap__quick-acts {
+  opacity: 0.55;
+  gap: 4px;
+}
+
+.scratch-page-root .scrap:hover .scrap__quick-acts,
+.scratch-page-root .scrap:focus-within .scrap__quick-acts {
+  opacity: 1;
+}
+
+.scratch-page-root .scrap__quick-btn {
+  font-family: var(--body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: color-mix(in srgb, var(--ink) 72%, transparent);
+}
+
+.scratch-page-root .scrap__quick-btn:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  border-color: var(--ei-border);
+  color: var(--ink);
+  transform: none;
+}
+
+.scratch-page-root .scrap__pin-btn.is-pinned {
+  background: color-mix(in srgb, var(--yellow) 25%, var(--card));
+  border-color: color-mix(in srgb, var(--yellow) 55%, transparent);
+  color: var(--ink);
+}
+
+.scratch-page-root .scrap__b {
+  padding: 4px 18px 14px;
+}
+
+.scratch-page-root .scrap__t--short {
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.scratch-page-root .scrap__t--long {
+  font-size: 14.5px;
+  line-height: 1.62;
+}
+
+.scratch-page-root .scrap__t.is-clamped {
+  max-height: 120px;
+}
+
+.scratch-page-root .scrap__expand-toggle {
+  margin-top: 6px;
+  padding: 3px 0;
+  font-family: var(--body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--ink) 72%, transparent);
+  border: none;
+  border-radius: 4px;
+}
+
+.scratch-page-root .scrap__expand-toggle:hover {
+  background: transparent;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transform: none;
+}
+
+.scratch-page-root .scrap__note-preview {
+  margin: 0 18px 12px;
+  padding: 7px 11px;
+  background: color-mix(in srgb, var(--violet) 6%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--violet) 22%, transparent);
+  border-radius: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.scrap__note-preview-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--violet);
+  flex: none;
+}
+
+.scratch-page-root .scrap__p {
+  border-top: 1px solid var(--ei-border);
+  background: color-mix(in srgb, var(--shelf) 22%, transparent);
+}
+
+.scratch-page-root .scrap__p button {
+  font-family: var(--body);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  padding: 8px 6px;
+  background: transparent;
+  color: color-mix(in srgb, var(--ink) 70%, transparent);
+}
+
+.scratch-page-root .scrap__p button + button {
+  border-left: 1px solid var(--ei-border);
+}
+
+.scratch-page-root .scrap__p button:hover {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  color: var(--ink);
+}
+
+.scratch-page-root .scrap__p .notes-btn {
+  background: transparent;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.scratch-page-root .scrap__p .notes-btn:hover {
+  background: color-mix(in srgb, var(--violet) 12%, var(--card));
+  color: var(--ink);
+}
+
+/* ── Shelf Day Divider ── */
+.scratch-page-root .shelf-day-divider {
+  margin: 18px 0 12px;
+}
+
+.scratch-page-root .shelf-day-divider b {
+  border: 1px solid var(--ei-border);
+  background: var(--shelf);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 9.5px;
+}
+
+.scratch-page-root .shelf-day-divider span {
+  height: 1px;
+  background: var(--ei-border);
+  opacity: 1;
+}
+
+/* ── The Sheet (Log Cards) ── */
+.scratch-page-root .dayhead {
+  border: 1px solid var(--ei-border);
+  border-radius: 10px;
+  padding: 8px 13px;
+}
+
+.scratch-page-root .dayhead.today {
+  background: color-mix(in srgb, var(--yellow) 14%, var(--card));
+  border-color: color-mix(in srgb, var(--yellow) 45%, transparent);
+  color: var(--ink);
+}
+
+.scratch-page-root .log {
+  border: 1px solid var(--ei-border);
+  border-radius: 10px;
+  box-shadow: var(--ei-shadow);
+  overflow: hidden;
+}
+
+/* ── Side Panels & Tag Tree ── */
+.scratch-page-root .panel {
+  border: 1px solid var(--ei-border);
+  border-radius: 12px;
+  box-shadow: var(--ei-shadow);
+}
+
+.scratch-page-root .panel__h {
+  background: color-mix(in srgb, var(--shelf) 55%, transparent);
+  border-bottom: 1px solid var(--ei-border);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+
+.scratch-page-root .panel__f {
+  background: color-mix(in srgb, var(--shelf) 35%, transparent);
+  border-top: 1px solid var(--ei-border);
+}
+
+.scratch-page-root .tree__r i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+}
+
+/* ── Pinboard & Empty States ── */
+.scratch-page-root .pinboard-banner,
+.scratch-page-root .pinboard-hud-card,
+.scratch-page-root .pinboard-docket__sidebar,
+.scratch-page-root .pinboard-empty,
+.scratch-page-root .kind-chip,
+.scratch-page-root .copy-all-btn {
+  border: 1px solid var(--ei-border-strong);
+  border-radius: 10px;
+  box-shadow: var(--ei-shadow);
+}
+
+.scratch-page-root .pinboard-banner {
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 14px;
+}
+
+.scratch-page-root .kind-chip.active {
+  background: var(--ink);
+  color: var(--cream);
+  box-shadow: none;
+}

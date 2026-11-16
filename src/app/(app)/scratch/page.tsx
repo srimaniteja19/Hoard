@@ -29,6 +29,7 @@ function ScratchPageContent() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ msg: string; kind?: "ok" | "error" } | null>(null);
   const [viewMode, setViewMode] = useState<"stream" | "pinned" | "logbook" | "corkboard">("stream");
+  const [railTab, setRailTab] = useState<"sheet" | "insights">("sheet");
 
   // Filters state
   const [filters, setFilters] = useState<ScratchFilters>({
@@ -485,7 +486,7 @@ function ScratchPageContent() {
             <div>
               <h1>Scratch</h1>
               <div className="sub">
-                TWO ZONES. THE SHEET HOLDS WHAT HAPPENED — CLOSED ON ARRIVAL, SINKS INTO ITS DAY. THE SHELF HOLDS WHAT&apos;S OPEN — QUESTIONS, BUGS, DRAFTS — UNTIL IT PROMOTES, RESOLVES, OR COMPOSTS. NOTHING IS EVER FILED.
+                The Sheet holds what happened — closed on arrival, filed to its day. The Shelf holds what&apos;s open until it promotes, resolves, or composts.
               </div>
             </div>
             <div className="views" id="views">
@@ -583,10 +584,10 @@ function ScratchPageContent() {
               LOADING SCRATCH MEMORY...
             </div>
           ) : viewMode === "stream" ? (
-            /* ═══ STREAM VIEW: SHELF + SHEET RAIL + SIDE PANELS ═══ */
+            /* ═══ STREAM VIEW: 2-COLUMN EDITORIAL WORKSPACE (SHELF + TABBED RAIL) ═══ */
             <div className="stream" id="streamView">
               {/* THE SHELF */}
-              <div>
+              <div className="stream__main">
                 {seanceScrap && (
                   <ScratchSeance
                     scrap={seanceScrap}
@@ -597,11 +598,8 @@ function ScratchPageContent() {
                 <div className="zone">
                   <div className="zone__head">
                     <b>The Shelf</b>
-                    <i>{shelfScraps.length} OPEN</i>
+                    <i>{shelfScraps.length} open</i>
                     <span className="zone__bar" />
-                  </div>
-                  <div className="zone__rule">
-                    LEAVES ONLY BY PROMOTING, RESOLVING, OR COMPOSTING — THERE IS NO &quot;PUT AWAY&quot;.
                   </div>
                 </div>
                 <ScratchFeed
@@ -618,33 +616,62 @@ function ScratchPageContent() {
                 />
               </div>
 
-              {/* SHEET RAIL */}
-              <div className="rail">
-                <div className="zone">
-                  <div className="zone__head">
-                    <b>The Sheet</b>
-                    <i>TODAY</i>
-                    <span className="zone__bar" />
-                  </div>
+              {/* TABBED RIGHT RAIL: TODAY'S SHEET / INDEX & INSIGHTS */}
+              <div className="scratch-rail">
+                <div className="scratch-rail__tabs" role="tablist" aria-label="Workspace rail">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={railTab === "sheet"}
+                    className={`scratch-rail__tab${railTab === "sheet" ? " is-active" : ""}`}
+                    onClick={() => {
+                      playSound.click();
+                      setRailTab("sheet");
+                    }}
+                  >
+                    Today&apos;s Sheet
+                    <span className="scratch-rail__count">{sheetScraps.length}</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={railTab === "insights"}
+                    className={`scratch-rail__tab${railTab === "insights" ? " is-active" : ""}`}
+                    onClick={() => {
+                      playSound.click();
+                      setRailTab("insights");
+                    }}
+                  >
+                    Index &amp; Insights
+                    {(stats?.openQuestionItems.length ?? 0) > 0 && (
+                      <span className="scratch-rail__count">
+                        {stats?.openQuestionItems.length}
+                      </span>
+                    )}
+                  </button>
                 </div>
-                <ScratchSheet
-                  scraps={filteredSheetScraps}
-                  isRail={true}
-                  onTagClick={(tag) => handleFilterChange({ tag })}
-                />
-              </div>
 
-              {/* SIDE PANELS */}
-              <ScratchSidePanels
-                scraps={scraps}
-                stats={stats}
-                mode="stream"
-                selectedTag={filters.tag || null}
-                onSelectTag={(tag) => handleFilterChange({ tag })}
-                onSelectQuestion={handleSelectQuestion}
-                onBuryCompost={handleBuryCompost}
-                onKeepCompost={handleKeepCompost}
-              />
+                {railTab === "sheet" ? (
+                  <div className="rail">
+                    <ScratchSheet
+                      scraps={filteredSheetScraps}
+                      isRail={true}
+                      onTagClick={(tag) => handleFilterChange({ tag })}
+                    />
+                  </div>
+                ) : (
+                  <ScratchSidePanels
+                    scraps={scraps}
+                    stats={stats}
+                    mode="stream"
+                    selectedTag={filters.tag || null}
+                    onSelectTag={(tag) => handleFilterChange({ tag })}
+                    onSelectQuestion={handleSelectQuestion}
+                    onBuryCompost={handleBuryCompost}
+                    onKeepCompost={handleKeepCompost}
+                  />
+                )}
+              </div>
             </div>
           ) : viewMode === "pinned" ? (
             /* ═══ PINNED VIEW: DEDICATED PINBOARD & DOCKET ═══ */

@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { BookOpen, Copy, Check, Maximize2, FileText, Plus } from "lucide-react";
+import { BookOpen, Copy, Check, Maximize2, FileText, Plus, Pin } from "lucide-react";
 import { ScrapRow, ScrapEntities } from "@/db/schema";
+import { isHexColorTag } from "@/lib/scratch/parse";
 import { ScratchMarkdown } from "./ScratchMarkdown";
 import {
   uploadScrapImage,
@@ -469,37 +470,50 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
         } as React.CSSProperties
       }
     >
-      {/* ── CARD HEADER: PIN BUTTON + STRUCTURAL BADGE + QUICK ACTIONS ── */}
+      {/* ── CARD HEADER: KIND + META + QUIET ACTIONS ── */}
       <div className="scrap__h-bar">
-        <button
-          type="button"
-          className={`scrap__clip-pin${isPinned ? " is-pinned" : ""}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            playSound.pin(!isPinned);
-            void onTogglePin?.(scrap.id);
-          }}
-          title={isPinned ? "Unpin scrap (Remove paperclip)" : "Pin scrap (Attach paperclip)"}
-          aria-label={isPinned ? "Unpin scrap" : "Pin scrap"}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="clip-icon"
-          >
-            <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l7.88-7.88" />
-          </svg>
-        </button>
-
-        {structureKicker && (
-          <span className="scrap__structure-kicker">{structureKicker}</span>
-        )}
+        <div className="scrap__meta-left">
+          <span className="scrap__kind-pill">
+            <i className="scrap__kind-dot" />
+            {isInk ? "Ink" : scrap.kind}
+          </span>
+          {structureKicker && (
+            <span className="scrap__structure-kicker">{structureKicker}</span>
+          )}
+          <span className="scrap__time">{timeStr}</span>
+          {(scrap.tags || [])
+            .filter((t) => !isHexColorTag(t))
+            .slice(0, 3)
+            .map((t) => (
+              <span key={t} className="scrap__tag">
+                {t}
+              </span>
+            ))}
+          {((isInk && !hasTranscription) || scrap.status === "til" || scrap.status === "todo") && (
+            <span className={`scrap__status ${isInk && !hasTranscription ? "nosearch" : scrap.status}`}>
+              {isInk && !hasTranscription
+                ? "Untranscribed"
+                : scrap.statusLabel || scrap.status.toUpperCase()}
+            </span>
+          )}
+        </div>
 
         <div className="scrap__quick-acts">
+          <button
+            type="button"
+            className={`scrap__quick-btn scrap__pin-btn${isPinned ? " is-pinned" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              playSound.pin(!isPinned);
+              void onTogglePin?.(scrap.id);
+            }}
+            title={isPinned ? "Unpin scrap" : "Pin scrap"}
+            aria-label={isPinned ? "Unpin scrap" : "Pin scrap"}
+            aria-pressed={isPinned}
+          >
+            <Pin size={11} strokeWidth={2.2} aria-hidden="true" />
+            {isPinned ? "Pinned" : "Pin"}
+          </button>
           <button
             type="button"
             className="scrap__quick-btn"
@@ -508,27 +522,27 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
               playSound.pop();
               setIsReaderOpen(true);
             }}
-            title="Read full note in dialog"
+            title="Read full note"
           >
-            <BookOpen size={11} strokeWidth={2.3} aria-hidden="true" />
-            READ
+            <BookOpen size={11} strokeWidth={2.2} aria-hidden="true" />
+            Read
           </button>
           {!isInk && (
             <button
               type="button"
               className="scrap__quick-btn"
               onClick={handleCopyContent}
-              title="Copy note markdown"
+              title="Copy markdown"
             >
               {copiedContent ? (
                 <>
-                  <Check size={11} strokeWidth={2.5} aria-hidden="true" />
-                  COPIED
+                  <Check size={11} strokeWidth={2.4} aria-hidden="true" />
+                  Copied
                 </>
               ) : (
                 <>
-                  <Copy size={11} strokeWidth={2.3} aria-hidden="true" />
-                  COPY
+                  <Copy size={11} strokeWidth={2.2} aria-hidden="true" />
+                  Copy
                 </>
               )}
             </button>
@@ -543,8 +557,8 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
             }}
             title="Open in Note Studio"
           >
-            <Maximize2 size={11} strokeWidth={2.3} aria-hidden="true" />
-            STUDIO
+            <Maximize2 size={11} strokeWidth={2.2} aria-hidden="true" />
+            Studio
           </button>
         </div>
       </div>
@@ -621,36 +635,14 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
         </div>
       )}
 
-      {/* ── CARD FOOTER ── */}
-      <div className="scrap__f">
-        <span className={`k${isInk ? " ink" : scrap.color === "violet" ? " is-violet" : ""}`}>
-          {isInk ? "✎ INK" : scrap.kind}
-        </span>
-        {(scrap.tags || []).map((t) => (
-          <span key={t} className="tg">
-            {t}
-          </span>
-        ))}
-        <span className="when">{timeStr}</span>
-        {(!hasNotes || isInk) && (
-          <span className={`st ${isInk && !hasTranscription ? "nosearch" : isInk ? "pages" : scrap.status}`}>
-            {isInk
-              ? hasTranscription
-                ? "OPEN · TRANSCRIBED"
-                : "NOT SEARCHABLE — ADD A LINE"
-              : scrap.statusLabel || scrap.status.toUpperCase()}
-          </span>
-        )}
-      </div>
-
       {scrap.threadN && scrap.threadN > 0 && scrap.threadSummary ? (
         <div className="thread">
-          <b>COLLIDES ×{scrap.threadN}</b>
+          <b>Collides ×{scrap.threadN}</b>
           <span>{scrap.threadSummary}</span>
         </div>
       ) : null}
 
-      {/* ── CARD NOTE PREVIEW BADGE (IF SCRAP HAS NOTES) ── */}
+      {/* ── QUIET NOTE PREVIEW STRIP (IF SCRAP HAS NOTES) ── */}
       {hasNotes && (
         <div
           role="button"
@@ -669,21 +661,15 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
               setIsModalOpen(true);
             }
           }}
-          title="Click to open Full Note Studio (Spacious View)"
+          title="Open Note Studio"
         >
-          <div className="scrap__note-preview-h">
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-              <FileText size={11} strokeWidth={2.2} aria-hidden="true" />
-              NOTES ({wordCount} WORDS)
-            </span>
-            <span className="expand-hint" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-              STUDIO
-              <Maximize2 size={10} strokeWidth={2.3} aria-hidden="true" />
-            </span>
-          </div>
-          <div className="scrap__note-preview-t">
-            {notes.slice(0, 160)}
-          </div>
+          <span className="scrap__note-preview-label">
+            <FileText size={11} strokeWidth={2.2} aria-hidden="true" />
+            {wordCount}w note
+          </span>
+          <span className="scrap__note-preview-t">
+            {notes.slice(0, 140)}
+          </span>
         </div>
       )}
 
