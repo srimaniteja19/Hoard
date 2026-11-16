@@ -57,6 +57,8 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
         "English",
         "Spanish",
         "German",
+        "Korean",
+        "Japanese",
       ].forEach((l) => set.add(l));
     }
     items.forEach((i) => {

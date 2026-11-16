@@ -168,6 +168,32 @@ describe("Streaming Release Calendar (day / week / month / year)", () => {
           },
         },
       },
+      {
+        airdate: "2026-11-15",
+        season: 1,
+        number: 1,
+        _embedded: {
+          show: {
+            id: 7,
+            name: "Seoul Thriller",
+            language: "Korean",
+            webChannel: { name: "Netflix" },
+          },
+        },
+      },
+      {
+        airdate: "2026-11-15",
+        season: 1,
+        number: 1,
+        _embedded: {
+          show: {
+            id: 8,
+            name: "Tokyo Series",
+            language: "Japanese",
+            webChannel: { name: "Crunchyroll" },
+          },
+        },
+      },
     ];
 
     const tvParsed = parseTvMazeScheduleEntries(tvEntries, anchor);
@@ -176,10 +202,14 @@ describe("Streaming Release Calendar (day / week / month / year)", () => {
       "Telugu Hit",
       "Spanish Drama",
       "German Mystery",
+      "Seoul Thriller",
+      "Tokyo Series",
     ]);
     expect(tvParsed[1].lang).toBe("Telugu");
     expect(tvParsed[2].lang).toBe("Spanish");
     expect(tvParsed[3].lang).toBe("German");
+    expect(tvParsed[4].lang).toBe("Korean");
+    expect(tvParsed[5].lang).toBe("Japanese");
 
     const wdJson = {
       results: {

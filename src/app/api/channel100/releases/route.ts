@@ -64,7 +64,7 @@ async function fetchLiveReleases(): Promise<ReleasesCacheState> {
               wdt:P495 ?country.
         FILTER(YEAR(?pubDate) = ${currentYear})
         OPTIONAL { ?film wdt:P364 ?origLang. ?origLang rdfs:label ?lLabel. FILTER(LANG(?lLabel) = "en") }
-        FILTER(?country IN (wd:Q30, wd:Q668) || (BOUND(?origLang) && ?origLang IN (wd:Q8097, wd:Q36236, wd:Q33673, wd:Q5885, wd:Q1568, wd:Q1321, wd:Q188)))
+        FILTER(?country IN (wd:Q30, wd:Q668) || (BOUND(?origLang) && ?origLang IN (wd:Q8097, wd:Q36236, wd:Q33673, wd:Q5885, wd:Q1568, wd:Q1860, wd:Q1321, wd:Q188, wd:Q9176, wd:Q5287)))
         ?country rdfs:label ?cLabel. FILTER(LANG(?cLabel) = "en")
         OPTIONAL { ?film wdt:P345 ?imdbId. }
         OPTIONAL { ?film wdt:P57 ?dir. ?dir rdfs:label ?dirLabel. FILTER(LANG(?dirLabel) = "en") }

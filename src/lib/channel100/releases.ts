@@ -21,6 +21,7 @@ const MAJOR_PLATFORMS = new Set([
   "sun nxt",
   "paramount+",
   "peacock",
+  "crunchyroll",
   "fx",
   "amc",
   "amc+",
@@ -65,6 +66,8 @@ const INDIAN_PLATFORMS = new Set([
 const EXTRA_ALLOWED_LANGUAGES = new Set([
   "spanish",
   "german",
+  "korean",
+  "japanese",
 ]);
 
 const HOLLYWOOD_COUNTRIES = new Set([
@@ -123,6 +126,10 @@ function resolveReleaseLanguage(
           ? "🇪🇸"
           : lower === "german"
           ? "🇩🇪"
+          : lower === "korean"
+          ? "🇰🇷"
+          : lower === "japanese"
+          ? "🇯🇵"
           : INDIAN_LANGUAGES.has(lower)
           ? "🇮🇳"
           : langFlag;
