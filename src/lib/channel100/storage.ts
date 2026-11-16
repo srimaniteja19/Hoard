@@ -12,8 +12,8 @@ import { CATALOGS } from "./data";
 export const PRIMARY_LS_KEY = "hoard.ch100.v1";
 export const LEGACY_LS_KEY = "ch100.v1";
 export const VIEW_LS_KEY = "hoard.ch100.view";
-export const VGF_CACHE_LS_KEY = "hoard.ch100.vgf.v1";
-export const LIVE_CATALOGS_LS_KEY = "hoard.ch100.catalogs.v1";
+export const VGF_CACHE_LS_KEY = "hoard.ch100.vgf.v2";
+export const LIVE_CATALOGS_LS_KEY = "hoard.ch100.catalogs.v2";
 
 export interface CachedLiveCatalogs {
   tv: ChannelMediaItem[];

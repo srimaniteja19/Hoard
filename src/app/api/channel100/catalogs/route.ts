@@ -7,7 +7,10 @@ import {
   parseTvMazeShows,
   parseWikidataFilmsJson,
 } from "@/lib/channel100/liveCatalogs";
-import { SHOWS, FILMS } from "@/lib/channel100/data";
+import {
+  VERIFIED_IMDB_TV_CATALOG,
+  VERIFIED_LETTERBOXD_FILM_CATALOG,
+} from "@/lib/channel100/curatedCanons";
 import { ChannelMediaItem } from "@/lib/channel100/types";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -71,7 +74,10 @@ async function fetchLiveImdbTop250Tv(): Promise<{
     }
   }
 
-  const merged = mergeCatalogItems([imdbItems, tvMazeItems, SHOWS], 250);
+  const merged = mergeCatalogItems(
+    [imdbItems, VERIFIED_IMDB_TV_CATALOG, tvMazeItems],
+    250
+  );
   return {
     items: merged,
     source: sourcesUsed.join("+") || "baseline",
@@ -164,7 +170,7 @@ async function fetchLiveLetterboxd500Films(): Promise<{
   }
 
   const merged = mergeCatalogItems(
-    [lbItems, FILMS, imdbMovieItems, wikidataItems],
+    [lbItems, VERIFIED_LETTERBOXD_FILM_CATALOG, imdbMovieItems, wikidataItems],
     500
   );
   return {
@@ -218,10 +224,10 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error("[GET /api/channel100/catalogs]", error);
     return NextResponse.json({
-      tv: SHOWS,
-      film: FILMS,
-      tvCount: SHOWS.length,
-      filmCount: FILMS.length,
+      tv: VERIFIED_IMDB_TV_CATALOG,
+      film: VERIFIED_LETTERBOXD_FILM_CATALOG,
+      tvCount: VERIFIED_IMDB_TV_CATALOG.length,
+      filmCount: VERIFIED_LETTERBOXD_FILM_CATALOG.length,
       syncedAt: Date.now(),
       sources: { tv: "fallback", film: "fallback" },
       cached: false,

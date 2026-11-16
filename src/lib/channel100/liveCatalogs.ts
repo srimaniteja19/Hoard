@@ -1,5 +1,30 @@
 import { ChannelMediaItem } from "./types";
 import { resolveCountryMeta } from "./verygoodfilms";
+import {
+  VERIFIED_IMDB_TV_CATALOG,
+  VERIFIED_LETTERBOXD_FILM_CATALOG,
+} from "./curatedCanons";
+
+function normalizeTitleKey(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s*\((?:u\.?s\.?|u\.?k\.?|season\s*\d+|19\d{2}|20\d{2})\)\s*/g, "")
+    .replace(/^the\s+/i, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+const VERIFIED_LOOKUP: Record<string, ChannelMediaItem> = (() => {
+  const map: Record<string, ChannelMediaItem> = {};
+  for (const item of [
+    ...VERIFIED_IMDB_TV_CATALOG,
+    ...VERIFIED_LETTERBOXD_FILM_CATALOG,
+  ]) {
+    map[`${item.kind}_${normalizeTitleKey(item.title)}`] = item;
+  }
+  return map;
+})();
 
 function stripHtmlTags(raw: string): string {
   return raw
@@ -249,12 +274,14 @@ export function parseTvMazeShows(rawShows: any[], limit = 250): ChannelMediaItem
     const primaryGenre = genres[0] || "Drama";
     const subGenres = genres.slice(1, 3).join(" · ") || primaryGenre;
 
-    const mins = Number(show.averageRuntime || show.runtime) || 50;
-    const estEps = show.status === "Ended" && endYear
-      ? Math.max(8, (endYear - startYear + 1) * 10)
-      : 24;
+    const mins = Number(show.averageRuntime || show.runtime) || 45;
+    const spanYears =
+      show.status === "Ended" && endYear
+        ? Math.max(1, Math.min(5, endYear - startYear + 1))
+        : 2;
+    const estEps = spanYears * 10;
     const hours = Math.max(4, Math.round((estEps * mins) / 60));
-    const seasons = Math.max(1, Math.round(estEps / 10));
+    const seasons = spanYears;
     const imdbId = show.externals?.imdb;
 
     return {
@@ -417,6 +444,8 @@ export function parseWikidataFilmsJson(
 
 /**
  * Merge and deduplicate ChannelMediaItem lists up to target limit, re-numbering rank 1..N
+ * and preserving verified canonical metadata (IDs s1..s100 / f1..f100, exact episode counts,
+ * runtimes, years, directors, and blurbs) whenever a title matches.
  */
 export function mergeCatalogItems(
   lists: ChannelMediaItem[][],
@@ -427,15 +456,21 @@ export function mergeCatalogItems(
 
   for (const list of lists) {
     for (const item of list) {
-      const norm = item.title
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]/g, "");
+      const norm = normalizeTitleKey(item.title);
       if (!norm || seenTitles.has(norm)) continue;
       seenTitles.add(norm);
+
+      const verified = VERIFIED_LOOKUP[`${item.kind}_${norm}`];
+      const base = verified
+        ? {
+            ...item,
+            ...verified,
+            imdb: item.imdb >= 7.0 ? verified.imdb || item.imdb : verified.imdb,
+          }
+        : item;
+
       merged.push({
-        ...item,
+        ...base,
         rank: merged.length + 1,
       });
       if (merged.length >= limit) return merged;

@@ -64,7 +64,7 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             {syncedAt && cat !== "tracker" && (
               <span className="ch100-sync-stamp" suppressHydrationWarning>
                 {" "}
-                · Updated{" "}
+                · Live synced{" "}
                 {new Date(syncedAt).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -91,11 +91,11 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
         <div className="ch100-summary-utils">
           <button
             type="button"
-            className="ch100-util-btn"
+            className="ch100-util-btn ch100-util-accent"
             onClick={onSurpriseMe}
             title="Pick a random recommendation from your queue or the list"
           >
-            Random pick
+            🎲 Surprise me
           </button>
           <button
             type="button"
@@ -103,7 +103,7 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             onClick={onCopyList}
             title="Copy your lists formatted for sharing"
           >
-            Copy list
+            📋 Copy list
           </button>
           <button
             type="button"
@@ -111,7 +111,7 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             onClick={onExport}
             title="Download JSON backup"
           >
-            Export
+            💾 Export
           </button>
           <button
             type="button"
@@ -119,7 +119,7 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             onClick={() => fileInputRef.current?.click()}
             title="Import JSON backup"
           >
-            Import
+            📂 Import
           </button>
           <input
             ref={fileInputRef}
@@ -137,95 +137,94 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
         </div>
       </div>
 
-      {/* Compact Metrics & Filter Strip */}
+      {/* 4 Colorful Tactile Status Cards + Time Summary */}
       <div className="ch100-metrics-row">
         <div
-          className="ch100-stat-pills"
+          className="ch100-counts"
           role="group"
           aria-label="Filter by watch status"
         >
           <button
             type="button"
-            className={`ch100-stat-pill seen ${
-              activeStatus === "seen" ? "active" : ""
+            className={`ch100-count s ${
+              activeStatus === "seen" ? "active-filter" : ""
             }`}
             aria-pressed={activeStatus === "seen"}
             onClick={() => handleStatusClick("seen")}
+            title="Filter by Seen (click again to show all)"
           >
-            <span className="dot seen" />
             <strong suppressHydrationWarning>{stats.seen}</strong>
-            <span>Seen</span>
+            <span>✓ Seen</span>
           </button>
 
           <button
             type="button"
-            className={`ch100-stat-pill watching ${
-              activeStatus === "watching" ? "active" : ""
+            className={`ch100-count n ${
+              activeStatus === "watching" ? "active-filter" : ""
             }`}
             aria-pressed={activeStatus === "watching"}
             onClick={() => handleStatusClick("watching")}
+            title="Filter by Watching (click again to show all)"
           >
-            <span className="dot watching" />
             <strong suppressHydrationWarning>{stats.watching}</strong>
-            <span>Watching</span>
+            <span>▶ Watching</span>
           </button>
 
           <button
             type="button"
-            className={`ch100-stat-pill want ${
-              activeStatus === "want" ? "active" : ""
+            className={`ch100-count w ${
+              activeStatus === "want" ? "active-filter" : ""
             }`}
             aria-pressed={activeStatus === "want"}
             onClick={() => handleStatusClick("want")}
+            title="Filter by Want to see (click again to show all)"
           >
-            <span className="dot want" />
             <strong suppressHydrationWarning>{stats.want}</strong>
-            <span>Want</span>
+            <span>+ Want to see</span>
           </button>
 
-          {cat !== "tracker" && (
-            <button
-              type="button"
-              className={`ch100-stat-pill ${
-                activeStatus === "none" ? "active" : ""
-              }`}
-              aria-pressed={activeStatus === "none"}
-              onClick={() => handleStatusClick("none")}
-            >
-              <strong suppressHydrationWarning>{stats.untouched}</strong>
-              <span>Unseen</span>
-            </button>
-          )}
+          <button
+            type="button"
+            className={`ch100-count u ${
+              activeStatus === "none" ? "active-filter" : ""
+            }`}
+            aria-pressed={activeStatus === "none"}
+            onClick={() => handleStatusClick("none")}
+            title="Filter by Unseen (click again to show all)"
+          >
+            <strong suppressHydrationWarning>{stats.untouched}</strong>
+            <span>Unseen</span>
+          </button>
         </div>
 
-        <div className="ch100-time-summary">
-          <span>
-            <b suppressHydrationWarning>{fmtH(stats.hoursSeen)}</b> watched
-          </span>
-          <span className="sep">·</span>
-          <span>
-            <b suppressHydrationWarning>{fmtH(stats.hoursWant)}</b> queued
-          </span>
-          <span className="sep">·</span>
-          <span>
-            <b suppressHydrationWarning>{stats.percentSeen}%</b> of {items.length}{" "}
-            {catalog.noun}
-          </span>
+        {/* Progress & Time Box */}
+        <div className="ch100-progress-card">
+          <div className="ch100-time-summary">
+            <span>
+              <b suppressHydrationWarning>{fmtH(stats.hoursSeen)}</b> watched
+            </span>
+            <span className="sep">·</span>
+            <span>
+              <b suppressHydrationWarning>{fmtH(stats.hoursWant)}</b> on list
+            </span>
+            <span className="sep">·</span>
+            <span>
+              <b suppressHydrationWarning>{stats.percentSeen}%</b> of{" "}
+              {items.length} {catalog.noun}
+            </span>
+          </div>
+
+          <div
+            className="ch100-slim-progress"
+            role="img"
+            aria-label={`${stats.seen} seen, ${stats.watching} watching, ${stats.want} want, out of ${items.length}`}
+          >
+            <i className="ps" style={{ width: `${seenPct}%` }} />
+            <i className="pn" style={{ width: `${watchingPct}%` }} />
+            <i className="pw" style={{ width: `${wantPct}%` }} />
+          </div>
         </div>
       </div>
-
-      {/* Hairline Progress Bar */}
-      {items.length > 0 && (
-        <div
-          className="ch100-slim-progress"
-          role="img"
-          aria-label={`${stats.seen} seen, ${stats.watching} watching, ${stats.want} want, out of ${items.length}`}
-        >
-          <i className="ps" style={{ width: `${seenPct}%` }} />
-          <i className="pn" style={{ width: `${watchingPct}%` }} />
-          <i className="pw" style={{ width: `${wantPct}%` }} />
-        </div>
-      )}
     </section>
   );
 };

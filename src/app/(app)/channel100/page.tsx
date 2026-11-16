@@ -19,12 +19,14 @@ import {
   CustomMediaItem,
 } from "@/lib/channel100/types";
 import {
-  SHOWS,
-  FILMS,
   ALL_ITEMS,
   CATALOGS,
   customItemToChannelItem,
 } from "@/lib/channel100/data";
+import {
+  VERIFIED_IMDB_TV_CATALOG,
+  VERIFIED_LETTERBOXD_FILM_CATALOG,
+} from "@/lib/channel100/curatedCanons";
 import { INITIAL_VGF_ITEMS } from "@/lib/channel100/verygoodfilms";
 import {
   loadStore,
@@ -80,8 +82,12 @@ export default function Channel100Page() {
   const [filters, setFilters] = useState<ViewFilterState>(DEFAULT_FILTERS);
 
   // Live-synced catalogs: IMDb Top 250 TV, Letterboxd 500 Films, and Very Good Films
-  const [tvItems, setTvItems] = useState<ChannelMediaItem[]>(SHOWS);
-  const [filmItems, setFilmItems] = useState<ChannelMediaItem[]>(FILMS);
+  const [tvItems, setTvItems] = useState<ChannelMediaItem[]>(
+    VERIFIED_IMDB_TV_CATALOG
+  );
+  const [filmItems, setFilmItems] = useState<ChannelMediaItem[]>(
+    VERIFIED_LETTERBOXD_FILM_CATALOG
+  );
   const [vgfItems, setVgfItems] = useState<ChannelMediaItem[]>(INITIAL_VGF_ITEMS);
   const [syncedAt, setSyncedAt] = useState<number | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -477,7 +483,12 @@ export default function Channel100Page() {
             savedView.cat === "tracker"
           ? (savedView.cat as MediaKind)
           : "tv";
-      setFilters((prev) => ({ ...prev, ...savedView, cat: initialCat }));
+      setFilters((prev) => ({
+        ...prev,
+        ...savedView,
+        cat: initialCat,
+        layout: "grid",
+      }));
 
       const cachedLive = loadCachedLiveCatalogs();
       if (cachedLive) {

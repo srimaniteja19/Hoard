@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { ChannelMediaItem, ShowUserRecord, ShowStatus } from "@/lib/channel100/types";
-import { fmtH, fmtM, bingeDays, jwUrl, imdbUrl } from "@/lib/channel100/data";
+import { artFor, fmtH, fmtM, bingeDays, jwUrl, imdbUrl } from "@/lib/channel100/data";
 
 interface Channel100ModalProps {
   item: ChannelMediaItem | null;
@@ -43,6 +43,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
   const [noteSaveState, setNoteSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const art = useMemo(() => (item ? artFor(item) : null), [item]);
   const status = record.s || "";
 
   useEffect(() => {
@@ -130,7 +131,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
     }
   }, [isOpen]);
 
-  if (!isOpen || !item) return null;
+  if (!isOpen || !item || !art) return null;
 
   const evenings = item.hours ? bingeDays(item.hours) : 1;
 
@@ -146,55 +147,68 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
       aria-labelledby="ch100-mtitle"
     >
       <div ref={modalRef} className="ch100-modal modal">
+        {/* Colorful Illustrated Modal Banner */}
+        <div
+          className={`ch100-modal-banner ${art.pat}`}
+          style={{ backgroundColor: art.bg }}
+        >
+          <span className="ch100-rank">
+            #{String(item.rank).padStart(3, "0")}
+          </span>
+
+          <span
+            className="ch100-modal-banner-svg"
+            dangerouslySetInnerHTML={{ __html: art.svg }}
+            aria-hidden="true"
+          />
+
+          <div className="ch100-modal-top-actions">
+            {onNavigateShow && (prevLabel || nextLabel) && (
+              <div className="ch100-modal-nav">
+                <button
+                  type="button"
+                  className="ch100-modal-nav-btn"
+                  onClick={() => onNavigateShow(-1)}
+                  title="Previous title (Left Arrow)"
+                >
+                  ← {prevLabel || "Prev"}
+                </button>
+                <button
+                  type="button"
+                  className="ch100-modal-nav-btn"
+                  onClick={() => onNavigateShow(1)}
+                  title="Next title (Right Arrow)"
+                >
+                  {nextLabel || "Next"} →
+                </button>
+              </div>
+            )}
+
+            <button
+              ref={closeBtnRef}
+              type="button"
+              className="ch100-x x"
+              id="mclose"
+              onClick={onClose}
+              aria-label="Close dialog"
+              title="Close (Esc)"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
         <div className="ch100-mbody mbody">
-          {/* Top Navigation & Close Row */}
-          <div className="ch100-modal-topbar">
-            <div className="ch100-modal-meta-badges">
-              <span className="ch100-rank-pill">
-                #{String(item.rank).padStart(3, "0")}
+          <div className="ch100-modal-meta-badges">
+            {item.genre && <span className="ch100-tag genre">{item.genre}</span>}
+            {item.lang && (
+              <span className="ch100-tag lang">
+                {item.langFlag} {item.lang}
               </span>
-              {item.genre && (
-                <span className="ch100-genre-pill">{item.genre}</span>
-              )}
-              {item.imdb > 0 && !item.custom && (
-                <span className="ch100-imdb-pill">★ {item.imdb.toFixed(1)}</span>
-              )}
-            </div>
-
-            <div className="ch100-modal-top-actions">
-              {onNavigateShow && (prevLabel || nextLabel) && (
-                <div className="ch100-modal-nav">
-                  <button
-                    type="button"
-                    className="ch100-modal-nav-btn"
-                    onClick={() => onNavigateShow(-1)}
-                    title="Previous title (Left Arrow)"
-                  >
-                    ← {prevLabel || "Prev"}
-                  </button>
-                  <button
-                    type="button"
-                    className="ch100-modal-nav-btn"
-                    onClick={() => onNavigateShow(1)}
-                    title="Next title (Right Arrow)"
-                  >
-                    {nextLabel || "Next"} →
-                  </button>
-                </div>
-              )}
-
-              <button
-                ref={closeBtnRef}
-                type="button"
-                className="ch100-x x"
-                id="mclose"
-                onClick={onClose}
-                aria-label="Close dialog"
-                title="Close (Esc)"
-              >
-                ✕
-              </button>
-            </div>
+            )}
+            {item.imdb > 0 && !item.custom && (
+              <span className="ch100-art-imdb">★ {item.imdb.toFixed(1)}</span>
+            )}
           </div>
 
           <h2 id="ch100-mtitle">{item.title}</h2>
@@ -284,6 +298,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
 
                 <dt>Runtime</dt>
                 <dd>
+                  {item.seasons ? `${item.seasons} seasons · ` : ""}
                   {item.eps ? `${item.eps} episodes · ` : ""}
                   {fmtH(item.hours)}{" "}
                   <small>
@@ -358,7 +373,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
 
           {/* Star Rating */}
           <div className="ch100-rating-row">
-            <span className="ch100-lbl lbl">Rating (1–5)</span>
+            <span className="ch100-lbl lbl">Your Rating (1–5)</span>
             <div className="ch100-stars stars" role="group" aria-label="Your rating">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
@@ -423,7 +438,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
                 className="ch100-nav-btn"
                 onClick={() => onEditCustom(item.id)}
               >
-                Edit Title
+                ✏️ Edit Title
               </button>
             )}
             {item.custom && onDeleteCustom && (
@@ -450,13 +465,13 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
                   className="ch100-util-btn"
                   onClick={() => setConfirmDelete(true)}
                 >
-                  Delete
+                  🗑️ Delete
                 </button>
               )
             )}
             {item.kind === "film" && (
               <a
-                className="ch100-util-btn"
+                className="ch100-nav-btn"
                 href={`https://letterboxd.com/search/${encodeURIComponent(
                   `${item.title} ${item.year || ""}`.trim()
                 )}/`}
@@ -468,7 +483,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
             )}
             {item.kind === "vgf" && (
               <a
-                className="ch100-util-btn"
+                className="ch100-nav-btn"
                 href="https://verygoodfilms.co/"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -477,15 +492,15 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
               </a>
             )}
             <a
-              className="ch100-util-btn"
+              className="ch100-nav-btn"
               href={jwUrl(item)}
               target="_blank"
               rel="noopener noreferrer"
             >
-              JustWatch ↗
+              Where to watch ↗
             </a>
             <a
-              className="ch100-util-btn"
+              className="ch100-btn-primary"
               href={imdbUrl(item)}
               target="_blank"
               rel="noopener noreferrer"
