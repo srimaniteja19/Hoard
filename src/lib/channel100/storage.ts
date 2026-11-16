@@ -291,7 +291,7 @@ export function filterAndSortMedia(
       if (effectiveKind !== filters.customKind) return false;
     }
 
-    if (filters.releasePeriod && filters.releasePeriod !== "all") {
+    if (filters.cat === "releases" && filters.releasePeriod && filters.releasePeriod !== "all") {
       const p = item.releasePeriod || "year";
       if (filters.releasePeriod === "day" && p !== "day") return false;
       if (filters.releasePeriod === "week" && p !== "day" && p !== "week")

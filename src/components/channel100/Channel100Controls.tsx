@@ -59,8 +59,8 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
     filters.where !== "all" ||
     filters.len !== "all" ||
     (filters.lang && filters.lang !== "all") ||
-    (filters.customKind && filters.customKind !== "all") ||
-    (filters.releasePeriod && filters.releasePeriod !== "all") ||
+    (filters.cat === "tracker" && filters.customKind && filters.customKind !== "all") ||
+    (filters.cat === "releases" && filters.releasePeriod && filters.releasePeriod !== "all") ||
     filters.q.trim() !== "";
 
   function handleClearAllFilters() {
