@@ -7,6 +7,7 @@
 @import "../styles/studio.css";
 @import "../styles/til.css";
 @import "../styles/library.css";
+@import "../styles/stats.css";
 
 /* ============================================================================
    HOARD // 6 CURATED EDITORIAL THEMES
@@ -5554,13 +5555,6 @@ input[type=range].wall-zoom-slider {
   flex: 1 1 90px;
 }
 
-.kind-breakdown-row {
-  display: grid;
-  grid-template-columns: minmax(0, 100px) minmax(0, 1fr) 60px;
-  align-items: center;
-  gap: 12px;
-}
-
 .inspector-chapter-row {
   display: flex;
   flex-wrap: wrap;
@@ -5616,25 +5610,6 @@ input[type=range].wall-zoom-slider {
 
   .session-actions button {
     width: 100%;
-  }
-
-  .kind-breakdown-row {
-    grid-template-columns: 1fr auto;
-    grid-template-areas:
-      "label count"
-      "bar bar";
-  }
-
-  .kind-breakdown-label {
-    grid-area: label;
-  }
-
-  .kind-breakdown-bar {
-    grid-area: bar;
-  }
-
-  .kind-breakdown-count {
-    grid-area: count;
   }
 
   .inspector-chapter-form {
