@@ -101,7 +101,7 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               onClick={() => onSelectCat("tv")}
               onKeyDown={(e) => handleTabKeyDown(e, "tv")}
             >
-              <span>📺 IMDb Top 250 TV</span>
+              <span>📺 TV 250</span>
               <small id="tabTvN" suppressHydrationWarning>
                 {tvSeenCount}/{tvTotalCount}
               </small>
@@ -181,7 +181,7 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               onClick={() => onSelectCat("tracker")}
               onKeyDown={(e) => handleTabKeyDown(e, "tracker")}
             >
-              <span>⚡ Personal Log</span>
+              <span>⚡ Log</span>
               <small id="tabTrackerN" suppressHydrationWarning>
                 {trackerCount}
               </small>

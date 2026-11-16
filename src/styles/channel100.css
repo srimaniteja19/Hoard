@@ -391,6 +391,47 @@
   flex-wrap: wrap;
 }
 
+.ch100-menu-wrap {
+  position: relative;
+}
+
+.ch100-popover-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 210px;
+  background: var(--ch-card);
+  border: 2px solid var(--ch-line);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 var(--ch-shadow);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 60;
+}
+
+.ch100-root .ch100-menu-item {
+  border: 0;
+  background: transparent;
+  color: var(--ch-text);
+  padding: 8px 10px;
+  border-radius: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.ch100-root .ch100-menu-item:hover {
+  background: var(--ch-yellow);
+  color: #111111;
+}
+
 .ch100-metrics-row {
   display: grid;
   grid-template-columns: 1fr minmax(280px, 380px);
@@ -1102,6 +1143,44 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
+}
+
+/* Releases Day-by-Day Grouping */
+.ch100-release-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.ch100-release-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+  border-bottom: 2px solid var(--ch-line);
+}
+
+.ch100-release-group-head h3 {
+  margin: 0;
+  font-family: var(--ch-display);
+  font-size: 17px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ch100-release-group-count {
+  font-family: var(--ch-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ch-muted);
+  background: var(--ch-surface);
+  border: 1px solid var(--ch-border);
+  border-radius: 999px;
+  padding: 2px 9px;
 }
 
 /* Empty States */

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Channel100StatsData,
   ChannelMediaItem,
@@ -38,6 +38,26 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
   onSelectStatusFilter,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    window.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      window.removeEventListener("keydown", handleEsc);
+    };
+  }, [menuOpen]);
 
   const totalItems = Math.max(1, items.length || 1);
   const seenPct = Math.min(100, Math.round((stats.seen / totalItems) * 100));
@@ -97,30 +117,58 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
           >
             🎲 Surprise me
           </button>
-          <button
-            type="button"
-            className="ch100-util-btn"
-            onClick={onCopyList}
-            title="Copy your lists formatted for sharing"
-          >
-            📋 Copy list
-          </button>
-          <button
-            type="button"
-            className="ch100-util-btn"
-            onClick={onExport}
-            title="Download JSON backup"
-          >
-            💾 Export
-          </button>
-          <button
-            type="button"
-            className="ch100-util-btn"
-            onClick={() => fileInputRef.current?.click()}
-            title="Import JSON backup"
-          >
-            📂 Import
-          </button>
+
+          <div className="ch100-menu-wrap" ref={menuRef}>
+            <button
+              type="button"
+              className="ch100-util-btn"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((prev) => !prev)}
+              title="Backup, export, import, and copy lists"
+            >
+              ⋯ Backup / Share
+            </button>
+
+            {menuOpen && (
+              <div className="ch100-popover-menu" role="menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="ch100-menu-item"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onCopyList();
+                  }}
+                >
+                  📋 Copy lists to clipboard
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="ch100-menu-item"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onExport();
+                  }}
+                >
+                  💾 Export JSON backup
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="ch100-menu-item"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  📂 Import JSON backup
+                </button>
+              </div>
+            )}
+          </div>
+
           <input
             ref={fileInputRef}
             type="file"
