@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   TriageTime,
   TriageEnergy,
@@ -9,6 +9,7 @@ import {
   TRIAGE_TIME_OPTIONS,
   TRIAGE_ENERGY_OPTIONS,
   TRIAGE_CONTEXT_OPTIONS,
+  getCuratedTriage,
 } from "@/lib/channel100/triage";
 import { playSound } from "@/lib/sound";
 import { CustomMediaItem, CustomMediaKind } from "@/lib/channel100/types";
@@ -35,31 +36,61 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
   const [energy, setEnergy] = useState<TriageEnergy>("adrenaline");
   const [context, setContext] = useState<TriageContext>("solo");
 
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [prescription, setPrescription] = useState<TriagePick | null>(null);
   const [alternatives, setAlternatives] = useState<TriagePick[]>([]);
   const [activePickIndex, setActivePickIndex] = useState(0); // 0 = primary, 1 = alt 1, 2 = alt 2
   const [scanMessage, setScanMessage] = useState("TUNING BROADCAST SATELLITE...");
 
-  // Reset state when opening
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  // Reset state, auto-focus & restore focus on close
   useEffect(() => {
     if (isOpen) {
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
       setStep("time");
       setActivePickIndex(0);
       document.body.style.overflow = "hidden";
+      const t = setTimeout(() => closeBtnRef.current?.focus(), 50);
+      return () => {
+        clearTimeout(t);
+        document.body.style.overflow = "";
+      };
     } else {
       document.body.style.overflow = "";
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === "function") {
+        previousFocusRef.current.focus();
+        previousFocusRef.current = null;
+      }
     }
-    return () => {
-      document.body.style.overflow = "";
-    };
   }, [isOpen]);
 
-  // Esc key listener
+  // Esc key & Tab focus trap listener
   useEffect(() => {
+    if (!isOpen) return;
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && isOpen) {
+      if (e.key === "Escape") {
+        e.preventDefault();
         onClose();
+        return;
+      }
+      if (e.key === "Tab" && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length > 0) {
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -130,12 +161,27 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
 
       if (res.ok) {
         const data = await res.json();
-        setPrescription(data.prescription);
-        setAlternatives(data.alternatives || []);
+        if (data?.prescription) {
+          setPrescription(data.prescription);
+          setAlternatives(data.alternatives || []);
+          setActivePickIndex(0);
+        } else {
+          const fallback = getCuratedTriage(chosenTime, chosenEnergy, chosenContext);
+          setPrescription(fallback.prescription);
+          setAlternatives(fallback.alternatives);
+          setActivePickIndex(0);
+        }
+      } else {
+        const fallback = getCuratedTriage(chosenTime, chosenEnergy, chosenContext);
+        setPrescription(fallback.prescription);
+        setAlternatives(fallback.alternatives);
         setActivePickIndex(0);
       }
-    } catch (err) {
-      console.error("[TriageModal] Error fetching triage pick:", err);
+    } catch {
+      const fallback = getCuratedTriage(chosenTime, chosenEnergy, chosenContext);
+      setPrescription(fallback.prescription);
+      setAlternatives(fallback.alternatives);
+      setActivePickIndex(0);
     } finally {
       clearInterval(interval);
       // Give realistic, satisfying broadcast delay
@@ -215,7 +261,7 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
       aria-modal="true"
       aria-labelledby="triageModalTitle"
     >
-      <div className="ch100-triage-modal">
+      <div ref={modalRef} className="ch100-triage-modal">
         {/* SMPTE Broadcast Pattern Bar */}
         <div className="ch100-bars" aria-hidden="true">
           <i />
@@ -230,11 +276,6 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
         {/* Modal Broadcast Console Header */}
         <div className="ch100-triage-header">
           <div className="ch100-triage-header-info">
-            <div className="ch100-triage-tagline">
-              <span className="ch100-triage-dot" />
-              <span>CH·100 // DECISION MATRIX</span>
-              <span className="ch100-triage-freq">FREQ 100.0 MHZ</span>
-            </div>
             <h2 id="triageModalTitle" className="ch100-triage-title">
               {step === "result" ? "Triage Prescription" : "Watchlist Decision Matrix"}
             </h2>
@@ -246,6 +287,7 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
           </div>
 
           <button
+            ref={closeBtnRef}
             type="button"
             className="ch100-log-dclose"
             onClick={onClose}
@@ -262,6 +304,7 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
             <button
               type="button"
               className={`ch100-tstep-btn ${step === "time" ? "active" : "done"}`}
+              aria-current={step === "time" ? "step" : undefined}
               onClick={() => {
                 playClick();
                 setStep("time");
@@ -274,6 +317,8 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
             <button
               type="button"
               className={`ch100-tstep-btn ${step === "energy" ? "active" : step === "context" ? "done" : "idle"}`}
+              aria-current={step === "energy" ? "step" : undefined}
+              disabled={step === "time"}
               onClick={() => {
                 if (step === "context") {
                   playClick();
@@ -285,10 +330,15 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
               <span className="step-label">Mental Vibe</span>
             </button>
             <span className="ch100-tstep-arrow" aria-hidden="true">→</span>
-            <div className={`ch100-tstep-btn ${step === "context" ? "active" : "idle"}`}>
+            <button
+              type="button"
+              className={`ch100-tstep-btn ${step === "context" ? "active" : "idle"}`}
+              aria-current={step === "context" ? "step" : undefined}
+              disabled={step !== "context"}
+            >
               <span className="step-num">03</span>
               <span className="step-label">Viewing Context</span>
-            </div>
+            </button>
           </div>
         )}
 
@@ -298,7 +348,6 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
           {step === "time" && (
             <div className="ch100-triage-step-container">
               <div className="ch100-triage-prompt">
-                <span className="ch100-triage-qbadge">QUESTION 1 OF 3</span>
                 <h3>How much time do you actually have tonight?</h3>
                 <p>Pick your realistic runtime window with zero fluff.</p>
               </div>
@@ -328,7 +377,6 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
           {step === "energy" && (
             <div className="ch100-triage-step-container">
               <div className="ch100-triage-prompt">
-                <span className="ch100-triage-qbadge">QUESTION 2 OF 3</span>
                 <h3>What is your mental energy &amp; mood right now?</h3>
                 <p>Be honest about how much cognitive or emotional effort you want to invest.</p>
               </div>
@@ -369,7 +417,6 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
           {step === "context" && (
             <div className="ch100-triage-step-container">
               <div className="ch100-triage-prompt">
-                <span className="ch100-triage-qbadge">QUESTION 3 OF 3</span>
                 <h3>Who is in the room watching with you?</h3>
                 <p>Different company requires completely different pacing and accessibility.</p>
               </div>

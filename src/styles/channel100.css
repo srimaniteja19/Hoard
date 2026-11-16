@@ -4,14 +4,14 @@
    ========================================================================== */
 
 :root {
-  --ch-bg: #F4F3EE;
-  --ch-card: #FFFFFF;
-  --ch-ink: #111111;
-  --ch-text: #111111;
+  --ch-bg: var(--cream, #F4F3EE);
+  --ch-card: var(--card, #FFFFFF);
+  --ch-ink: var(--ink, #111111);
+  --ch-text: var(--ink, #111111);
   --ch-muted: #55544F;
-  --ch-line: #111111;
-  --ch-shadow: #111111;
-  --ch-field: #FFFFFF;
+  --ch-line: var(--border-ink, #111111);
+  --ch-shadow: var(--shadow-ink, #111111);
+  --ch-field: var(--paper, #FFFFFF);
   --ch-yellow: #F5C518;
   --ch-cyan: #3CC4DE;
   --ch-green: #3DBE6A;
@@ -22,7 +22,7 @@
   --ch-seen: #3DBE6A;
   --ch-want: #F5C518;
   --ch-watching: #3CC4DE;
-  --ch-display: "Bungee", "Arial Black", Impact, sans-serif;
+  --ch-display: "Bungee", "Bricolage Grotesque", "Figtree", sans-serif;
   --ch-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
   --ch-mono: "IBM Plex Mono", "Space Mono", ui-monospace, Menlo, Consolas, monospace;
   --ch-b: 3px;
@@ -34,23 +34,23 @@
 [data-theme="matte-black"] .ch100-root,
 [data-theme="obsidian"] .ch100-root,
 [data-theme="tokyo"] .ch100-root,
+[data-theme="nordic"] .ch100-root,
 [data-theme="cyberpunk"] .ch100-root,
 [data-theme="terminal"] .ch100-root,
 [data-theme="dark"] .ch100-root,
 .ch100-root[data-theme="dark"] {
-  --ch-bg: #17161B;
-  --ch-card: #222129;
-  --ch-ink: #F2EFE6;
-  --ch-text: #F2EFE6;
+  --ch-bg: var(--cream, #17161B);
+  --ch-card: var(--card, #222129);
+  --ch-ink: var(--ink, #F2EFE6);
+  --ch-text: var(--ink, #F2EFE6);
   --ch-muted: #B5B2AA;
-  --ch-line: #F2EFE6;
-  --ch-shadow: #000000;
-  --ch-field: #2C2B34;
+  --ch-line: var(--ink, #F2EFE6);
+  --ch-shadow: var(--shadow-ink, #000000);
+  --ch-field: var(--surface, #2C2B34);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="default"]):not([data-theme="light"]):not([data-theme="paper"]) .ch100-root,
-  .ch100-root {
+  :root:not([data-theme="default"]):not([data-theme="kinfolk"]):not([data-theme="matcha"]):not([data-theme="terracotta"]):not([data-theme="light"]):not([data-theme="paper"]) .ch100-root {
     --ch-bg: #17161B;
     --ch-card: #222129;
     --ch-ink: #F2EFE6;
@@ -483,7 +483,15 @@ h1 .hl,
   box-shadow: 4px 4px 0 var(--ch-shadow);
   padding: 10px 14px;
   cursor: pointer;
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  text-align: left;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, outline 0.08s ease;
+}
+
+.ch100-count.active-filter,
+.ch100-root .count.active-filter {
+  outline: 3px solid var(--ch-blue);
+  outline-offset: 2px;
+  transform: translate(-1px, -1px);
 }
 
 .ch100-count:hover,
@@ -704,6 +712,69 @@ h1 .hl,
 .ch100-cell.seen, .ch100-root .cell.seen { background: var(--ch-seen); color: #111; }
 .ch100-cell.want, .ch100-root .cell.want { background: var(--ch-want); color: #111; }
 .ch100-cell.watching, .ch100-root .cell.watching { background: var(--ch-watching); color: #111; }
+
+.ch100-cell.is-previewed {
+  outline: 2.5px solid #fff;
+  z-index: 4;
+}
+
+/* Live Channel Readout Ticker under 10x10 Test Card */
+.ch100-grid-preview {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 2px solid var(--ch-line);
+  border-radius: 6px;
+  background: var(--ch-field);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.ch100-grid-preview-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.ch100-grid-preview-rank {
+  font-family: var(--ch-mono);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--ch-ink);
+  color: var(--ch-bg);
+  flex-shrink: 0;
+}
+
+.ch100-grid-preview-title {
+  font-weight: 800;
+  color: var(--ch-text);
+}
+
+.ch100-grid-preview-meta {
+  font-family: var(--ch-mono);
+  font-size: 11.5px;
+  color: var(--ch-muted);
+}
+
+.ch100-grid-preview-btn {
+  border: 1.5px solid var(--ch-line);
+  background: var(--ch-yellow);
+  color: #111;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-family: var(--ch-mono);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 .ch100-legend,
 .ch100-root .legend {
@@ -990,7 +1061,7 @@ h1 .hl,
 .ch100-rank small,
 .ch100-root .rank small {
   font-family: var(--ch-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   margin-right: 3px;
   vertical-align: 2px;
@@ -1155,9 +1226,9 @@ h1 .hl,
 .ch100-rt span,
 .ch100-root .rt span {
   font-family: var(--ch-mono);
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   color: var(--ch-muted);
   margin-top: 2px;
 }
@@ -1416,12 +1487,26 @@ h1 .hl,
   font-weight: 600;
   border-bottom: 2px dashed color-mix(in srgb, var(--ch-line) 30%, transparent);
   padding: 2px 4px 6px;
+}
+
+.ch100-top-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  padding: 2px 4px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
+  border-radius: 4px;
   transition: transform 0.08s ease, background 0.08s ease;
 }
 
-.ch100-tops li:hover,
-.ch100-root .tops li:hover {
+.ch100-top-btn:hover {
   transform: translateX(4px);
   background: rgba(128, 128, 128, 0.08);
 }
@@ -1430,6 +1515,46 @@ h1 .hl,
 .ch100-root .tops li span:last-child {
   font-family: var(--ch-mono);
   font-size: 13px;
+}
+
+.ch100-note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ch100-note-status {
+  font-family: var(--ch-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ch-seen);
+}
+
+.ch100-empty-onboard h3 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.ch100-empty-onboard p {
+  margin: 0 auto 18px;
+  max-width: 54ch;
+  color: var(--ch-muted);
+  font-weight: 500;
+}
+
+.ch100-empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ch100-clear-btn {
+  background: var(--ch-red) !important;
+  color: #111 !important;
+  font-weight: 800;
 }
 
 /* ==========================================================================
@@ -2936,7 +3061,7 @@ h1 .hl,
 
   .ch100-rt span,
   .ch100-root .rt span {
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .ch100-acts,
@@ -3410,7 +3535,7 @@ h1 .hl,
 
 .ch100-tcard-badge {
   font-family: var(--ch-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.06em;
   padding: 2px 6px;
@@ -3713,7 +3838,7 @@ h1 .hl,
 
 .ch100-tinfo-item .lbl {
   font-family: var(--ch-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--ch-muted);
   letter-spacing: 0.04em;
@@ -3853,7 +3978,7 @@ h1 .hl,
 
 .ch100-talt-num {
   font-family: var(--ch-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   color: var(--ch-muted);
 }

@@ -85,6 +85,27 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
     ["none", "Not yet", counts.none],
   ];
 
+  const hasActiveFilters =
+    filters.status !== "all" ||
+    filters.genre !== "all" ||
+    filters.where !== "all" ||
+    filters.len !== "all" ||
+    (filters.lang && filters.lang !== "all") ||
+    (filters.customKind && filters.customKind !== "all") ||
+    filters.q.trim() !== "";
+
+  function handleClearAllFilters() {
+    onUpdateFilters({
+      status: "all",
+      genre: "all",
+      where: "all",
+      len: "all",
+      lang: "all",
+      customKind: "all",
+      q: "",
+    });
+  }
+
   return (
     <section className="ch100-controls controls" id="browse" aria-label="Filter the list">
       <div className="ch100-wrap wrap">
@@ -95,7 +116,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
             <input
               id="q"
               type="search"
-              placeholder={catalog.search}
+              placeholder={`${catalog.search} (Press / to search)`}
               aria-label="Search"
               value={filters.q}
               onChange={(e) => onUpdateFilters({ q: e.target.value })}
@@ -122,26 +143,14 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
             ))}
           </div>
 
-          {onOpenTriageModal && (
+          {hasActiveFilters && (
             <button
               type="button"
-              className="ch100-triage-cta-btn"
-              onClick={onOpenTriageModal}
-              title="Watchlist Decision Matrix: Cure decision paralysis"
+              className="ch100-chip chip ch100-clear-btn"
+              onClick={handleClearAllFilters}
+              title="Reset search and all active filters"
             >
-              <span className="ch100-triage-cta-pulse" />
-              <span>🎯 Decision Matrix</span>
-            </button>
-          )}
-
-          {onOpenLogModal && (
-            <button
-              type="button"
-              className="ch100-btn-ctl-log"
-              onClick={onOpenLogModal}
-              title="Add a show, movie, or anime to your personal tracker"
-            >
-              + Log Title
+              ✕ Clear filters
             </button>
           )}
         </div>
@@ -174,15 +183,15 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
               aria-label="Filter by medium"
               value={filters.customKind || "all"}
               onChange={(e) =>
-                onUpdateFilters({ customKind: e.target.value as any })
+                onUpdateFilters({ customKind: e.target.value })
               }
             >
               <option value="all">All media types</option>
-              <option value="series">📺 TV Series</option>
+              <option value="tv">📺 TV Series</option>
               <option value="film">🎬 Feature Film</option>
               <option value="anime">⚔️ Anime</option>
-              <option value="mini-series">🎞️ Mini-Series</option>
-              <option value="documentary">📽️ Documentary</option>
+              <option value="mini">🎞️ Mini-Series</option>
+              <option value="doc">📽️ Documentary</option>
             </select>
           )}
 

@@ -52,6 +52,7 @@ export interface ChannelMediaItem {
   season?: number;
   episode?: number;
   totalEpisodes?: number;
+  updatedAt?: number;
 }
 
 export interface ShowUserRecord {

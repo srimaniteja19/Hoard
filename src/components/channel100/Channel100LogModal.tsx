@@ -60,6 +60,7 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
   initialData = initialItem,
 }) => {
   const effectiveInitial = initialData || initialItem;
+  const isEditing = Boolean(effectiveInitial?.id);
 
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<CustomMediaKind>("tv");
@@ -69,6 +70,7 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
   const [rating, setRating] = useState<number>(0);
   const [year, setYear] = useState<string>(() => String(new Date().getFullYear()));
   const [where, setWhere] = useState("Netflix");
+  const [customWhere, setCustomWhere] = useState("");
   const [genre, setGenre] = useState("");
   const [season, setSeason] = useState<number>(1);
   const [episode, setEpisode] = useState<number>(1);
@@ -76,7 +78,9 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
   const [runtimeMins, setRuntimeMins] = useState<string>("120");
   const [notes, setNotes] = useState("");
 
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const inputTitleRef = useRef<HTMLInputElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // Sync initial item if editing or reset defaults
   useEffect(() => {
@@ -96,7 +100,17 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
       setStatus(effectiveInitial.status || "watching");
       setRating(effectiveInitial.rating || 0);
       setYear(effectiveInitial.year ? String(effectiveInitial.year) : "");
-      setWhere(effectiveInitial.where || "Netflix");
+      const initWhere = effectiveInitial.where || "Netflix";
+      const isPlatformPreset = PLATFORM_PRESETS.some(
+        (p) => p !== "Other" && p.toLowerCase() === initWhere.toLowerCase()
+      );
+      if (isPlatformPreset) {
+        setWhere(initWhere);
+        setCustomWhere("");
+      } else {
+        setWhere("Other");
+        setCustomWhere(initWhere === "Other" ? "" : initWhere);
+      }
       setGenre(effectiveInitial.genre || "");
       setSeason(effectiveInitial.season || 1);
       setEpisode(effectiveInitial.episode || 1);
@@ -116,6 +130,7 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
       setRating(0);
       setYear(String(new Date().getFullYear()));
       setWhere("Netflix");
+      setCustomWhere("");
       setGenre("");
       setSeason(1);
       setEpisode(1);
@@ -125,16 +140,40 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
     }
   }, [effectiveInitial, isOpen]);
 
-  // Focus title on open & handle Escape
+  // Focus title on open, trap Tab focus, restore focus on close & handle Escape
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === "function") {
+        previousFocusRef.current.focus();
+        previousFocusRef.current = null;
+      }
+      return;
+    }
 
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
     const timer = setTimeout(() => inputTitleRef.current?.focus(), 60);
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
+        return;
+      }
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length > 0) {
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -159,6 +198,8 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
   if (!isOpen) return null;
 
   const effectiveLang = lang === "Other" && customLang.trim() ? customLang.trim() : lang;
+  const effectiveWhere =
+    where === "Other" ? customWhere.trim() || "Personal library" : where || "Streaming";
   const flag = getLanguageFlag(effectiveLang);
 
   function handleSubmit(e: React.FormEvent) {
@@ -174,7 +215,7 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
       status,
       rating,
       year: parseInt(year, 10) || undefined,
-      where: where || "Streaming",
+      where: effectiveWhere,
       genre: genre.trim() || (kind === "anime" ? "Anime" : "Entertainment"),
       season: kind !== "film" ? season : undefined,
       episode: kind !== "film" ? episode : undefined,
@@ -208,12 +249,12 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
       aria-modal="true"
       aria-labelledby="logModalTitle"
     >
-      <div className="ch100-log-dialog">
+      <div ref={dialogRef} className="ch100-log-dialog">
         {/* Minimal Header */}
         <div className="ch100-log-dheader">
           <div>
             <h2 id="logModalTitle">
-              {effectiveInitial ? "Edit Title" : "Log What You're Watching"}
+              {isEditing ? "Edit Title" : "Log What You're Watching"}
             </h2>
             <p className="ch100-log-dsub">Track entertainment in any language</p>
           </div>
@@ -247,12 +288,13 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
 
           {/* Type / Medium */}
           <div className="ch100-dgroup">
-            <label>Type</label>
-            <div className="ch100-dpills">
+            <label id="customKindLabel">Type</label>
+            <div className="ch100-dpills" role="group" aria-labelledby="customKindLabel">
               {KIND_OPTIONS.map((k) => (
                 <button
                   key={k.id}
                   type="button"
+                  aria-pressed={kind === k.id}
                   className={`ch100-dpill ${kind === k.id ? "active" : ""}`}
                   onClick={() => setKind(k.id)}
                 >
@@ -264,12 +306,13 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
 
           {/* Language Selector */}
           <div className="ch100-dgroup">
-            <label>Language</label>
-            <div className="ch100-dpills ch100-dpills-wrap">
+            <label id="customLangLabel">Language</label>
+            <div className="ch100-dpills ch100-dpills-wrap" role="group" aria-labelledby="customLangLabel">
               {POPULAR_LANGUAGES.slice(0, 8).map((l) => (
                 <button
                   key={l.name}
                   type="button"
+                  aria-pressed={lang === l.name}
                   className={`ch100-dpill ${lang === l.name ? "active" : ""}`}
                   onClick={() => setLang(l.name)}
                 >
@@ -278,6 +321,7 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
               ))}
               <button
                 type="button"
+                aria-pressed={lang === "Other"}
                 className={`ch100-dpill ${lang === "Other" ? "active" : ""}`}
                 onClick={() => setLang("Other")}
               >
@@ -288,22 +332,24 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
             {lang === "Other" && (
               <input
                 type="text"
+                id="customLangInput"
+                aria-label="Custom language"
                 className="ch100-dinput"
                 style={{ marginTop: "6px" }}
                 placeholder="Enter language (e.g. Tamil, Turkish, Swedish...)"
                 value={customLang}
                 onChange={(e) => setCustomLang(e.target.value)}
-                autoFocus
               />
             )}
           </div>
 
           {/* Status Toggle */}
           <div className="ch100-dgroup">
-            <label>Status</label>
-            <div className="ch100-dpills ch100-dpills-grow">
+            <label id="customStatusLabel">Status</label>
+            <div className="ch100-dpills ch100-dpills-grow" role="group" aria-labelledby="customStatusLabel">
               <button
                 type="button"
+                aria-pressed={status === "watching"}
                 className={`ch100-dpill watching ${status === "watching" ? "active" : ""}`}
                 onClick={() => setStatus("watching")}
               >
@@ -311,6 +357,7 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
               </button>
               <button
                 type="button"
+                aria-pressed={status === "seen"}
                 className={`ch100-dpill seen ${status === "seen" ? "active" : ""}`}
                 onClick={() => setStatus("seen")}
               >
@@ -318,6 +365,7 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
               </button>
               <button
                 type="button"
+                aria-pressed={status === "want"}
                 className={`ch100-dpill want ${status === "want" ? "active" : ""}`}
                 onClick={() => setStatus("want")}
               >
@@ -330,10 +378,11 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
           {kind !== "film" ? (
             <div className="ch100-drow">
               <div className="ch100-dgroup">
-                <label>Season</label>
-                <div className="ch100-dstepper">
+                <label id="customSeasonLabel">Season</label>
+                <div className="ch100-dstepper" role="group" aria-labelledby="customSeasonLabel">
                   <button
                     type="button"
+                    aria-label="Previous season"
                     onClick={() => setSeason((s) => Math.max(1, s - 1))}
                   >
                     –
@@ -341,6 +390,7 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
                   <span>S{season}</span>
                   <button
                     type="button"
+                    aria-label="Next season"
                     onClick={() => setSeason((s) => s + 1)}
                   >
                     +
@@ -349,10 +399,11 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
               </div>
 
               <div className="ch100-dgroup">
-                <label>Episode</label>
-                <div className="ch100-dstepper">
+                <label id="customEpLabel">Episode</label>
+                <div className="ch100-dstepper" role="group" aria-labelledby="customEpLabel">
                   <button
                     type="button"
+                    aria-label="Previous episode"
                     onClick={() => setEpisode((e) => Math.max(1, e - 1))}
                   >
                     –
@@ -360,6 +411,7 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
                   <span>Ep {episode}</span>
                   <button
                     type="button"
+                    aria-label="Next episode"
                     onClick={() => setEpisode((e) => e + 1)}
                   >
                     +
@@ -368,8 +420,9 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
               </div>
 
               <div className="ch100-dgroup">
-                <label>Total Eps</label>
+                <label htmlFor="customTotalEps">Total Eps</label>
                 <input
+                  id="customTotalEps"
                   type="number"
                   min="1"
                   className="ch100-dinput ch100-dinput-num"
@@ -382,8 +435,9 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
           ) : (
             <div className="ch100-drow">
               <div className="ch100-dgroup">
-                <label>Runtime (Minutes)</label>
+                <label htmlFor="customRuntime">Runtime (Minutes)</label>
                 <input
+                  id="customRuntime"
                   type="number"
                   min="1"
                   className="ch100-dinput"
@@ -393,8 +447,9 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
                 />
               </div>
               <div className="ch100-dgroup">
-                <label>Release Year</label>
+                <label htmlFor="customYear">Release Year</label>
                 <input
+                  id="customYear"
                   type="number"
                   className="ch100-dinput"
                   placeholder="2025"
@@ -407,12 +462,13 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
 
           {/* Platform / Streamer */}
           <div className="ch100-dgroup">
-            <label>Platform / Where to Watch</label>
-            <div className="ch100-dpills ch100-dpills-wrap">
+            <label id="customPlatformLabel">Platform / Where to Watch</label>
+            <div className="ch100-dpills ch100-dpills-wrap" role="group" aria-labelledby="customPlatformLabel">
               {PLATFORM_PRESETS.map((p) => (
                 <button
                   key={p}
                   type="button"
+                  aria-pressed={where === p}
                   className={`ch100-dpill ${where === p ? "active" : ""}`}
                   onClick={() => setWhere(p)}
                 >
@@ -420,17 +476,30 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
                 </button>
               ))}
             </div>
+
+            {where === "Other" && (
+              <input
+                type="text"
+                id="customPlatformInput"
+                aria-label="Custom platform or service"
+                className="ch100-dinput"
+                style={{ marginTop: "6px" }}
+                placeholder="Enter platform (e.g. MUBI, Hulu, Peacock, Plex, Blu-ray...)"
+                value={customWhere}
+                onChange={(e) => setCustomWhere(e.target.value)}
+              />
+            )}
           </div>
 
           {/* 5-Star Rating */}
           <div className="ch100-dgroup">
             <div className="ch100-dgroup-head">
-              <label>Your Rating</label>
+              <label id="customRatingLabel">Your Rating</label>
               <span className="ch100-drating-label">
                 {RATING_DESCRIPTIONS[rating]}
               </span>
             </div>
-            <div className="ch100-dstars">
+            <div className="ch100-dstars" role="group" aria-labelledby="customRatingLabel">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
                   key={n}
@@ -438,6 +507,7 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
                   className={`ch100-dstar ${rating >= n ? "on" : ""}`}
                   onClick={() => setRating(rating === n ? 0 : n)}
                   aria-label={`${n} stars`}
+                  aria-pressed={rating === n}
                 >
                   ★
                 </button>
@@ -471,7 +541,7 @@ export const Channel100LogModal: React.FC<Channel100LogModalProps> = ({
           {/* Action Buttons */}
           <div className="ch100-dactions">
             <button type="submit" className="ch100-dbtn-primary">
-              ⚡ {effectiveInitial ? "Save Changes" : "Save to Tracker"}
+              ⚡ {isEditing ? "Save Changes" : "Save to Tracker"}
             </button>
             <button
               type="button"

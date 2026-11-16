@@ -164,9 +164,14 @@ export default function Channel100Page() {
     [queueRemoteSync]
   );
 
-  // Save or update a custom tracker title
+  // Save or update a custom tracker title (and cross-sync if it matches a canonical NYT 100 title)
   const handleSaveCustomItem = useCallback(
     (item: CustomMediaItem) => {
+      const normalizedTitle = item.title.trim().toLowerCase();
+      const matchedCanonical =
+        SHOWS.find((s) => s.title.toLowerCase() === normalizedTitle) ||
+        FILMS.find((f) => f.title.toLowerCase() === normalizedTitle);
+
       setStore((prev) => {
         const nextCustom = { ...(prev.custom || {}) };
         nextCustom[item.id] = item;
@@ -177,6 +182,15 @@ export default function Channel100Page() {
           r: item.rating || 0,
           n: item.notes || "",
         };
+
+        if (matchedCanonical) {
+          const prevCanon = nextShows[matchedCanonical.id] || {};
+          nextShows[matchedCanonical.id] = {
+            s: item.status || prevCanon.s || "watching",
+            r: item.rating || prevCanon.r || 0,
+            n: item.notes || prevCanon.n || "",
+          };
+        }
 
         const nextStore: Channel100Store = {
           shows: nextShows,
@@ -197,11 +211,45 @@ export default function Channel100Page() {
           }),
         }).catch(() => {});
 
+        if (matchedCanonical) {
+          fetch("/api/channel100", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "update",
+              id: matchedCanonical.id,
+              record: nextShows[matchedCanonical.id],
+            }),
+          }).catch(() => {});
+        }
+
         return nextStore;
       });
 
+      setFilters((prev) => {
+        if (prev.cat === "tracker") return prev;
+        const next: ViewFilterState = {
+          ...prev,
+          cat: "tracker",
+          status: "all",
+          genre: "all",
+          where: "all",
+          len: "all",
+          lang: "all",
+          customKind: "all",
+          sort: "recent",
+          q: "",
+        };
+        saveViewSettings({ layout: next.layout, sort: next.sort, cat: next.cat });
+        return next;
+      });
+
       playSound.promote();
-      triggerToast(`⚡ Logged: ${item.title}`);
+      triggerToast(
+        matchedCanonical
+          ? `⚡ Logged ${item.title} & synced with NYT #${matchedCanonical.rank}`
+          : `⚡ Logged: ${item.title}`
+      );
       setIsLogModalOpen(false);
       setEditingCustomItem(null);
     },
@@ -530,9 +578,22 @@ export default function Channel100Page() {
     triggerToast("💾 Downloaded Channel 100 backup JSON");
   }, [store, triggerToast]);
 
-  // Import JSON backup
+  // Import JSON backup (with overwrite confirmation when existing records exist)
   const handleImport = useCallback(
     (file: File) => {
+      const hasExisting =
+        Object.keys(store.shows || {}).length > 0 ||
+        Object.keys(store.custom || {}).length > 0;
+      if (
+        hasExisting &&
+        typeof window !== "undefined" &&
+        !window.confirm(
+          "Importing this backup JSON will replace your current Channel 100 list. Continue?"
+        )
+      ) {
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
@@ -561,7 +622,7 @@ export default function Channel100Page() {
       };
       reader.readAsText(file);
     },
-    [triggerToast]
+    [store.custom, store.shows, triggerToast]
   );
 
   // Filter changes
@@ -608,31 +669,6 @@ export default function Channel100Page() {
     setSfxEnabled(next);
   }, []);
 
-  // Modal Next/Prev Navigation
-  const handleNavigateModal = useCallback(
-    (direction: -1 | 1) => {
-      playSound.click(0.25);
-      setActiveModalId((currentId) => {
-        if (!currentId) return "s1";
-        if (filters.cat === "tracker") {
-          const idx = trackerItems.findIndex((i) => i.id === currentId);
-          if (idx === -1) return trackerItems[0]?.id || null;
-          let nextIdx = idx + direction;
-          if (nextIdx < 0) nextIdx = trackerItems.length - 1;
-          if (nextIdx >= trackerItems.length) nextIdx = 0;
-          return trackerItems[nextIdx]?.id || null;
-        }
-        const prefix = filters.cat === "tv" ? "s" : "f";
-        const currentRank = parseInt(currentId.slice(1), 10) || 1;
-        let nextRank = currentRank + direction;
-        if (nextRank < 1) nextRank = 100;
-        if (nextRank > 100) nextRank = 1;
-        return `${prefix}${nextRank}`;
-      });
-    },
-    [filters.cat, trackerItems]
-  );
-
   // Computed statistics
   const tvStats = useMemo(() => computeStats(SHOWS, store), [store]);
   const filmStats = useMemo(() => computeStats(FILMS, store), [store]);
@@ -652,6 +688,80 @@ export default function Channel100Page() {
     () => filterAndSortMedia(catalogItems, store, filters, catalog),
     [catalogItems, store, filters, catalog]
   );
+
+  // Modal Next/Prev Navigation (follows active filtered/sorted items)
+  const navList = useMemo(
+    () => (filteredItems.length > 0 ? filteredItems : catalogItems),
+    [filteredItems, catalogItems]
+  );
+
+  const handleNavigateModal = useCallback(
+    (direction: -1 | 1) => {
+      playSound.click(0.25);
+      setActiveModalId((currentId) => {
+        if (!navList.length) return currentId;
+        const idx = navList.findIndex((i) => i.id === currentId);
+        if (idx === -1) return navList[0]?.id || null;
+        const nextIdx = (idx + direction + navList.length) % navList.length;
+        return navList[nextIdx]?.id || null;
+      });
+    },
+    [navList]
+  );
+
+  const { prevItemLabel, nextItemLabel } = useMemo(() => {
+    if (!activeModalId || navList.length <= 1) {
+      return { prevItemLabel: null, nextItemLabel: null };
+    }
+    const idx = navList.findIndex((i) => i.id === activeModalId);
+    if (idx === -1) return { prevItemLabel: null, nextItemLabel: null };
+    const prev = navList[(idx - 1 + navList.length) % navList.length];
+    const next = navList[(idx + 1) % navList.length];
+    const fmtLabel = (it: ChannelMediaItem) => {
+      const pre = it.custom ? "LOG" : it.kind === "film" ? "No." : "CH";
+      return `${pre} ${String(it.rank).padStart(2, "0")}`;
+    };
+    return {
+      prevItemLabel: prev ? fmtLabel(prev) : null,
+      nextItemLabel: next ? fmtLabel(next) : null,
+    };
+  }, [activeModalId, navList]);
+
+  const handleClearFilters = useCallback(() => {
+    handleUpdateFilters({
+      status: "all",
+      genre: "all",
+      where: "all",
+      len: "all",
+      lang: "all",
+      customKind: "all",
+      q: "",
+    });
+  }, [handleUpdateFilters]);
+
+  // Global "/" shortcut to focus search when no modal is open
+  useEffect(() => {
+    function handleSlashShortcut(e: KeyboardEvent) {
+      if (e.key !== "/" || activeModalId || isLogModalOpen) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      const searchInput = document.getElementById("q") as HTMLInputElement | null;
+      if (searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+      }
+    }
+    window.addEventListener("keydown", handleSlashShortcut);
+    return () => window.removeEventListener("keydown", handleSlashShortcut);
+  }, [activeModalId, isLogModalOpen]);
 
   const activeItem: ChannelMediaItem | null = useMemo(() => {
     if (!activeModalId) return null;
@@ -730,7 +840,17 @@ export default function Channel100Page() {
           onOpenTriageModal={openTriageModal}
         />
 
-        <main>
+        <main
+          id="ch100-main-panel"
+          role="tabpanel"
+          aria-labelledby={
+            filters.cat === "tv"
+              ? "tabTv"
+              : filters.cat === "film"
+              ? "tabFilm"
+              : "tabTracker"
+          }
+        >
           {/* Hero Section & 10x10 Test Card / Custom Entertainment Radar */}
           <Channel100Hero
             catalog={catalog}
@@ -738,6 +858,7 @@ export default function Channel100Page() {
             store={store}
             stats={currentStats}
             cat={filters.cat}
+            activeStatus={filters.status}
             onOpenModal={(id) => {
               playSound.pop();
               setActiveModalId(id);
@@ -751,30 +872,37 @@ export default function Channel100Page() {
             onOpenTriageModal={openTriageModal}
           />
 
-          {/* Sticky Filter Controls */}
-          <Channel100Controls
-            items={catalogItems}
-            store={store}
-            catalog={catalog}
-            filters={filters}
-            onUpdateFilters={handleUpdateFilters}
-            resultCount={filteredItems.length}
-            cat={filters.cat}
-            onOpenLogModal={openNewLogModal}
-            onOpenTriageModal={openTriageModal}
-          />
+          {/* Sticky Filter Controls (hidden when tracker is brand-new & empty) */}
+          {!(filters.cat === "tracker" && catalogItems.length === 0) && (
+            <Channel100Controls
+              items={catalogItems}
+              store={store}
+              catalog={catalog}
+              filters={filters}
+              onUpdateFilters={handleUpdateFilters}
+              resultCount={filteredItems.length}
+              cat={filters.cat}
+              onOpenLogModal={openNewLogModal}
+              onOpenTriageModal={openTriageModal}
+            />
+          )}
 
           {/* Media Grid / List View */}
           <Channel100Grid
             items={filteredItems}
             store={store}
             layout={filters.layout}
+            cat={filters.cat}
+            totalCatalogCount={catalogItems.length}
             onOpenModal={(id) => {
               playSound.pop();
               setActiveModalId(id);
             }}
             onToggleStatus={handleToggleStatus}
             onIncrementEpisode={handleIncrementEpisode}
+            onClearFilters={handleClearFilters}
+            onOpenLogModal={openNewLogModal}
+            onOpenTriageModal={openTriageModal}
           />
 
           {/* "By the Numbers" Stats Analysis */}
@@ -798,6 +926,8 @@ export default function Channel100Page() {
           item={activeItem}
           record={activeRecord}
           isOpen={activeModalId !== null}
+          prevLabel={prevItemLabel}
+          nextLabel={nextItemLabel}
           onClose={() => setActiveModalId(null)}
           onToggleStatus={handleToggleStatus}
           onSetRating={handleSetRating}

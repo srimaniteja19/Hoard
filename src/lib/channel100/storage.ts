@@ -97,7 +97,18 @@ export function computeStats(
       hoursSeen += item.hours;
     } else if (rec.s === "watching") {
       watching++;
-      hoursWant += item.hours;
+      if (
+        item.custom &&
+        item.episode &&
+        item.totalEpisodes &&
+        item.totalEpisodes > 0
+      ) {
+        const watchedRatio = Math.min(1, Math.max(0, item.episode / item.totalEpisodes));
+        hoursSeen += item.hours * watchedRatio;
+        hoursWant += item.hours * (1 - watchedRatio);
+      } else {
+        hoursWant += item.hours;
+      }
     } else if (rec.s === "want") {
       want++;
       hoursWant += item.hours;
@@ -164,7 +175,8 @@ export function filterAndSortMedia(
     long: (a, b) => b.hours - a.hours || a.rank - b.rank,
     new: (a, b) => b.start - a.start || a.rank - b.rank,
     old: (a, b) => a.start - b.start || a.rank - b.rank,
-    recent: (a, b) => b.id.localeCompare(a.id),
+    recent: (a, b) =>
+      (b.updatedAt || 0) - (a.updatedAt || 0) || b.id.localeCompare(a.id),
     progress: (a, b) => (b.episode || 0) - (a.episode || 0) || a.rank - b.rank,
     az: (a, b) =>
       a.title

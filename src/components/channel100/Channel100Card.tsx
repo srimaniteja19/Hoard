@@ -41,10 +41,11 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
       {/* Art Block / Badge with Hover Icon Scale & Tilt */}
       <button
         type="button"
+        tabIndex={-1}
+        aria-hidden="true"
         className={`ch100-art art ${art.pat}`}
         style={{ backgroundColor: art.bg }}
         onClick={() => onOpenModal(item.id)}
-        aria-label={`Details for ${item.title}`}
       >
         <span className="ch100-rank rank">
           <small>{item.langFlag || rankPre}</small>

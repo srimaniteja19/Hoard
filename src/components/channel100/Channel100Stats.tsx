@@ -165,6 +165,10 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
     });
   }
 
+  if (cat === "tracker" && items.length === 0) {
+    return null;
+  }
+
   return (
     <section className="ch100-wrap wrap ch100-stats stats" id="stats">
       <h2 className="ch100-h2 h2" id="statsTitle">
@@ -228,18 +232,20 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
               topRated.map((s) => {
                 const rec = getMediaRecord(store, s.id);
                 return (
-                  <li
-                    key={s.id}
-                    onClick={() => onOpenModal(s.id)}
-                    style={{ cursor: "pointer" }}
-                    title="Click to view details"
-                  >
-                    <span>
-                      {s.rank}. {s.title}
-                    </span>
-                    <span style={{ color: "var(--ch-yellow)" }}>
-                      {"★".repeat(rec.r || 0)}
-                    </span>
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      className="ch100-top-btn"
+                      onClick={() => onOpenModal(s.id)}
+                      title={`View details for ${s.title}`}
+                    >
+                      <span>
+                        {s.rank}. {s.title}
+                      </span>
+                      <span style={{ color: "var(--ch-yellow)" }} aria-label={`${rec.r || 0} stars`}>
+                        {"★".repeat(rec.r || 0)}
+                      </span>
+                    </button>
                   </li>
                 );
               })
@@ -260,16 +266,18 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
           <ul className="ch100-tops tops">
             {nextUp.length > 0 ? (
               nextUp.map((s) => (
-                <li
-                  key={s.id}
-                  onClick={() => onOpenModal(s.id)}
-                  style={{ cursor: "pointer" }}
-                  title="Click to view details"
-                >
-                  <span>
-                    #{s.rank}. {s.title}
-                  </span>
-                  <span>{s.where}</span>
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    className="ch100-top-btn"
+                    onClick={() => onOpenModal(s.id)}
+                    title={`View details for ${s.title}`}
+                  >
+                    <span>
+                      #{s.rank}. {s.title}
+                    </span>
+                    <span>{s.where}</span>
+                  </button>
                 </li>
               ))
             ) : (

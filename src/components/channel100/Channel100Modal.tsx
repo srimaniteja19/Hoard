@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo, useState } from "react";
 import { ChannelMediaItem, ShowUserRecord, ShowStatus } from "@/lib/channel100/types";
 import { artFor, fmtH, fmtM, bingeDays, jwUrl, imdbUrl } from "@/lib/channel100/data";
 
@@ -8,6 +8,8 @@ interface Channel100ModalProps {
   item: ChannelMediaItem | null;
   record: ShowUserRecord;
   isOpen: boolean;
+  prevLabel?: string | null;
+  nextLabel?: string | null;
   onClose: () => void;
   onToggleStatus: (id: string, status: ShowStatus) => void;
   onSetRating: (id: string, rating: number) => void;
@@ -22,6 +24,8 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
   item,
   record,
   isOpen,
+  prevLabel,
+  nextLabel,
   onClose,
   onToggleStatus,
   onSetRating,
@@ -31,8 +35,14 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
   onDeleteCustom,
   onIncrementEpisode,
 }) => {
+  const modalRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [noteSaveState, setNoteSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const art = useMemo(() => (item ? artFor(item) : null), [item]);
 
@@ -43,36 +53,92 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
     watching: "ON NOW",
   };
 
-  // Keyboard navigation & Esc to close
+  // Reset per-item ephemeral modal states when switching items
   useEffect(() => {
-    if (!isOpen) return;
+    setConfirmDelete(false);
+    setNoteSaveState("idle");
+  }, [item?.id, isOpen]);
+
+  // Keyboard navigation, shortcuts, focus trap & Esc to close
+  useEffect(() => {
+    if (!isOpen || !item) return;
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
-      } else if (e.key === "ArrowLeft" && onNavigateShow) {
+        return;
+      }
+
+      if (e.key === "Tab" && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length > 0) {
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+        return;
+      }
+
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        target &&
+        (target.tagName === "TEXTAREA" ||
+          target.tagName === "INPUT" ||
+          target.isContentEditable);
+      if (isTyping || e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === "ArrowLeft" && onNavigateShow) {
+        e.preventDefault();
         onNavigateShow(-1);
       } else if (e.key === "ArrowRight" && onNavigateShow) {
+        e.preventDefault();
         onNavigateShow(1);
+      } else if (e.key === "s" || e.key === "S") {
+        e.preventDefault();
+        onToggleStatus(item!.id, "seen");
+      } else if (e.key === "w" || e.key === "W") {
+        e.preventDefault();
+        onToggleStatus(item!.id, "watching");
+      } else if (e.key === "q" || e.key === "Q") {
+        e.preventDefault();
+        onToggleStatus(item!.id, "want");
+      } else if (["1", "2", "3", "4", "5"].includes(e.key)) {
+        e.preventDefault();
+        const n = Number(e.key);
+        onSetRating(item!.id, (record.r || 0) === n ? 0 : n);
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, onNavigateShow]);
+  }, [isOpen, item, record.r, onClose, onNavigateShow, onToggleStatus, onSetRating]);
 
-  // Focus trap / auto-focus on open
+  // Focus trap / auto-focus on open and restore focus on close
   useEffect(() => {
     if (isOpen) {
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
       document.body.style.overflow = "hidden";
-      setTimeout(() => closeBtnRef.current?.focus(), 50);
+      const t = setTimeout(() => closeBtnRef.current?.focus(), 50);
+      return () => {
+        clearTimeout(t);
+        document.body.style.overflow = "";
+      };
     } else {
       document.body.style.overflow = "";
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === "function") {
+        previousFocusRef.current.focus();
+        previousFocusRef.current = null;
+      }
     }
-    return () => {
-      document.body.style.overflow = "";
-    };
   }, [isOpen]);
 
   // CRT TV Static Noise Burst
@@ -134,7 +200,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
       aria-modal="true"
       aria-labelledby="ch100-mtitle"
     >
-      <div className="ch100-modal modal">
+      <div ref={modalRef} className="ch100-modal modal">
         {/* Left Visual Art Column */}
         <div
           className={`ch100-art art ${art.pat}`}
@@ -177,31 +243,24 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
             ✕
           </button>
 
-          {/* Quick item navigation bar */}
-          {onNavigateShow && !item.custom && (
+          {/* Quick item navigation bar (follows active filtered/sorted list) */}
+          {onNavigateShow && (prevLabel || nextLabel) && (
             <div className="ch100-modal-nav">
               <button
                 type="button"
                 className="ch100-modal-nav-btn"
                 onClick={() => onNavigateShow(-1)}
-                title="Previous title (Left Arrow)"
+                title="Previous title in current view (Left Arrow)"
               >
-                ◀ {rankPre}{" "}
-                {item.rank === 1
-                  ? "100"
-                  : String(item.rank - 1).padStart(2, "0")}
+                ◀ {prevLabel || "Prev"}
               </button>
               <button
                 type="button"
                 className="ch100-modal-nav-btn"
                 onClick={() => onNavigateShow(1)}
-                title="Next title (Right Arrow)"
+                title="Next title in current view (Right Arrow)"
               >
-                {rankPre}{" "}
-                {item.rank === 100
-                  ? "01"
-                  : String(item.rank + 1).padStart(2, "0")}{" "}
-                ▶
+                {nextLabel || "Next"} ▶
               </button>
             </div>
           )}
@@ -354,6 +413,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
               className="ch100-act act seen"
               aria-pressed={status === "seen"}
               onClick={() => onToggleStatus(item.id, "seen")}
+              title="Shortcut: S"
             >
               <span aria-hidden="true">✓</span> Seen
             </button>
@@ -362,6 +422,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
               className="ch100-act act watching"
               aria-pressed={status === "watching"}
               onClick={() => onToggleStatus(item.id, "watching")}
+              title="Shortcut: W"
             >
               <span aria-hidden="true">▶</span> Watching
             </button>
@@ -370,13 +431,14 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
               className="ch100-act act want"
               aria-pressed={status === "want"}
               onClick={() => onToggleStatus(item.id, "want")}
+              title="Shortcut: Q"
             >
               <span aria-hidden="true">+</span> Want
             </button>
           </div>
 
           {/* User Star Rating */}
-          <div className="ch100-lbl lbl">Your Rating</div>
+          <div className="ch100-lbl lbl">Your Rating (Shortcuts: 1–5)</div>
           <div className="ch100-stars stars" role="group" aria-label="Your rating">
             {[1, 2, 3, 4, 5].map((n) => (
               <button
@@ -410,10 +472,17 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
             )}
           </div>
 
-          {/* Notes Area */}
-          <label className="ch100-lbl lbl" htmlFor="note">
-            Your Notes
-          </label>
+          {/* Notes Area with Auto-Save Status Indicator */}
+          <div className="ch100-note-header">
+            <label className="ch100-lbl lbl" htmlFor="note">
+              Your Notes
+            </label>
+            {noteSaveState !== "idle" && (
+              <span className="ch100-note-status" aria-live="polite">
+                {noteSaveState === "saving" ? "Saving…" : "✓ Saved"}
+              </span>
+            )}
+          </div>
           <textarea
             id="note"
             className="ch100-note note"
@@ -425,10 +494,18 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
                 : "Who you watched it with, favorite scene, what it reminded you of…"
             }
             value={record.n || ""}
-            onChange={(e) => onUpdateNotes(item.id, e.target.value)}
+            onChange={(e) => {
+              const nextVal = e.target.value;
+              setNoteSaveState("saving");
+              if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+              saveTimerRef.current = setTimeout(() => {
+                setNoteSaveState("saved");
+              }, 450);
+              onUpdateNotes(item.id, nextVal);
+            }}
           />
 
-          {/* Action Links */}
+          {/* Action Links & Two-Step Delete Confirmation */}
           <div className="ch100-links links">
             {item.custom && onEditCustom && (
               <button
@@ -441,14 +518,34 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
               </button>
             )}
             {item.custom && onDeleteCustom && (
-              <button
-                type="button"
-                className="ch100-btn btn r"
-                onClick={() => onDeleteCustom(item.id)}
-                title="Delete title from tracker"
-              >
-                🗑️ Delete
-              </button>
+              confirmDelete ? (
+                <>
+                  <button
+                    type="button"
+                    className="ch100-btn btn r"
+                    onClick={() => onDeleteCustom(item.id)}
+                    title="Permanently remove this title"
+                  >
+                    ⚠️ Confirm Delete
+                  </button>
+                  <button
+                    type="button"
+                    className="ch100-btn btn"
+                    onClick={() => setConfirmDelete(false)}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="ch100-btn btn r"
+                  onClick={() => setConfirmDelete(true)}
+                  title="Delete title from tracker"
+                >
+                  🗑️ Delete
+                </button>
+              )
             )}
             <a
               className="ch100-btn btn c"

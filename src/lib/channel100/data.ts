@@ -525,6 +525,7 @@ export function customItemToChannelItem(
     season: isMovie ? undefined : item.season,
     episode: isMovie ? undefined : item.episode,
     totalEpisodes: isMovie ? undefined : item.totalEpisodes,
+    updatedAt: item.updatedAt,
   };
 }
 

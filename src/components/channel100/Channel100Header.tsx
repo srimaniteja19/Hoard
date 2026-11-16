@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import { MediaKind } from "@/lib/channel100/types";
 
 interface Channel100HeaderProps {
@@ -17,6 +17,8 @@ interface Channel100HeaderProps {
   onOpenTriageModal?: () => void;
 }
 
+const TAB_ORDER: MediaKind[] = ["tv", "film", "tracker"];
+
 export const Channel100Header: React.FC<Channel100HeaderProps> = ({
   currentCat,
   onSelectCat,
@@ -30,6 +32,32 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
   onOpenLogModal,
   onOpenTriageModal,
 }) => {
+  const tabRefs = useRef<Record<MediaKind, HTMLButtonElement | null>>({
+    tv: null,
+    film: null,
+    tracker: null,
+  });
+
+  function handleTabKeyDown(e: React.KeyboardEvent, cat: MediaKind) {
+    const idx = TAB_ORDER.indexOf(cat);
+    let nextIdx = -1;
+    if (e.key === "ArrowRight") {
+      nextIdx = (idx + 1) % TAB_ORDER.length;
+    } else if (e.key === "ArrowLeft") {
+      nextIdx = (idx - 1 + TAB_ORDER.length) % TAB_ORDER.length;
+    } else if (e.key === "Home") {
+      nextIdx = 0;
+    } else if (e.key === "End") {
+      nextIdx = TAB_ORDER.length - 1;
+    }
+    if (nextIdx !== -1) {
+      e.preventDefault();
+      const nextCat = TAB_ORDER[nextIdx];
+      onSelectCat(nextCat);
+      tabRefs.current[nextCat]?.focus();
+    }
+  }
+
   return (
     <>
       {/* 7-stripe SMPTE Broadcast Color Bars */}
@@ -52,40 +80,58 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
         {/* Triple Catalog Switch: TV vs Film vs Tracker */}
         <div className="ch100-switch" role="tablist" aria-label="Choose a list">
           <button
+            ref={(el) => {
+              tabRefs.current.tv = el;
+            }}
             type="button"
             role="tab"
             id="tabTv"
             data-cat="tv"
             aria-selected={currentCat === "tv"}
+            aria-controls="ch100-main-panel"
+            tabIndex={currentCat === "tv" ? 0 : -1}
             onClick={() => onSelectCat("tv")}
+            onKeyDown={(e) => handleTabKeyDown(e, "tv")}
           >
             TV <small id="tabTvN" suppressHydrationWarning>{tvSeenCount}/100</small>
           </button>
           <button
+            ref={(el) => {
+              tabRefs.current.film = el;
+            }}
             type="button"
             role="tab"
             id="tabFilm"
             data-cat="film"
             aria-selected={currentCat === "film"}
+            aria-controls="ch100-main-panel"
+            tabIndex={currentCat === "film" ? 0 : -1}
             onClick={() => onSelectCat("film")}
+            onKeyDown={(e) => handleTabKeyDown(e, "film")}
           >
             Film <small id="tabFilmN" suppressHydrationWarning>{filmSeenCount}/100</small>
           </button>
           <button
+            ref={(el) => {
+              tabRefs.current.tracker = el;
+            }}
             type="button"
             role="tab"
             id="tabTracker"
             data-cat="tracker"
             className="ch100-tab-tracker"
             aria-selected={currentCat === "tracker"}
+            aria-controls="ch100-main-panel"
+            tabIndex={currentCat === "tracker" ? 0 : -1}
             onClick={() => onSelectCat("tracker")}
+            onKeyDown={(e) => handleTabKeyDown(e, "tracker")}
             title="What I'm watching now (any language, custom titles)"
           >
             ⚡ Tracker <small id="tabTrackerN" suppressHydrationWarning>{trackerCount}</small>
           </button>
         </div>
 
-        <nav className="ch100-nav" aria-label="TV guide navigation">
+        <nav className="ch100-nav" aria-label="TV guide controls">
           {onOpenTriageModal && (
             <button
               type="button"
@@ -108,9 +154,6 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               + Log Title
             </button>
           )}
-
-          <a href="#browse">Browse</a>
-          <a href="#stats">Stats</a>
 
           {/* CRT Scanline effect toggle */}
           <button
