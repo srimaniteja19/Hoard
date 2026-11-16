@@ -59,34 +59,41 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
 
   const urgentRenewals = subscriptionMetrics.upcomingRenewals.filter((r) => r.daysUntil <= 7);
 
+  const navigateCardProps = (
+    tab: "DAILY" | "SUBSCRIPTIONS" | "INVESTMENTS" | "DEBTS" | "CASHFLOW" | "NETWORTH"
+  ) => ({
+    role: "button" as const,
+    tabIndex: 0,
+    onClick: () => {
+      playSound.click();
+      onNavigateTab(tab);
+    },
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        playSound.click();
+        onNavigateTab(tab);
+      }
+    },
+  });
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* ── REAL-TIME MARKET TICKER TAPE ── */}
       <MarketTickerTape onOpenOracle={onOpenMarketOracle} />
 
-      {/* ── TOP KPI METRIC CARDS (NEUBRUTALIST COMMAND MATRIX) ── */}
+      {/* ── TOP KPI METRIC CARDS ── */}
       <div className="ledger-kpi-grid">
         {/* 1. Net Worth */}
         <div
-          className="ledger-kpi-card"
-          style={
-            {
-              "--kpi-accent": "#00F0FF",
-              "--kpi-icon-bg": "#E0F2FE",
-              "--kpi-icon-fg": "#0369A1",
-              cursor: "pointer",
-            } as React.CSSProperties
-          }
-          onClick={() => {
-            playSound.click();
-            onNavigateTab("NETWORTH");
-          }}
+          className="ledger-kpi-card kpi-tone-cyan"
+          {...navigateCardProps("NETWORTH")}
           title="Click to inspect Net Worth & Asset register"
         >
           <div className="kpi-top-bar">
             <div className="kpi-tag-group">
               <span className="kpi-icon-box">
-                <Landmark size={13} strokeWidth={2.5} aria-hidden="true" />
+                <Landmark size={13} strokeWidth={2.3} aria-hidden="true" />
               </span>
               <span className="kpi-sector-name">NET WORTH</span>
             </div>
@@ -101,10 +108,9 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
 
           <div className="kpi-main-readout">
             <div
-              className="ledger-kpi-value"
-              style={{
-                color: netWorth.netWorth >= 0 ? "var(--ink, #0A0A0A)" : "#DC2626",
-              }}
+              className={`ledger-kpi-value ${
+                netWorth.netWorth >= 0 ? "" : "is-negative"
+              }`}
             >
               {formatCurrency(netWorth.netWorth, 2, currency)}
             </div>
@@ -121,31 +127,16 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
         {/* 2. Safe to Spend Today */}
         {metrics.dailyMetrics && (
           <div
-            className="ledger-kpi-card"
-            style={
-              {
-                "--kpi-accent": metrics.dailyMetrics.isOverBudgetToday
-                  ? "#FF007A"
-                  : "#B8F04A",
-                "--kpi-icon-bg": metrics.dailyMetrics.isOverBudgetToday
-                  ? "#FFE5F0"
-                  : "#F4FBD0",
-                "--kpi-icon-fg": metrics.dailyMetrics.isOverBudgetToday
-                  ? "#BE123C"
-                  : "#365314",
-                cursor: "pointer",
-              } as React.CSSProperties
-            }
-            onClick={() => {
-              playSound.click();
-              onNavigateTab("DAILY");
-            }}
+            className={`ledger-kpi-card ${
+              metrics.dailyMetrics.isOverBudgetToday ? "kpi-tone-pink" : "kpi-tone-lime"
+            }`}
+            {...navigateCardProps("DAILY")}
             title="Click to open Daily Expenses speed logger"
           >
             <div className="kpi-top-bar">
               <div className="kpi-tag-group">
                 <span className="kpi-icon-box">
-                  <Receipt size={13} strokeWidth={2.5} aria-hidden="true" />
+                  <Receipt size={13} strokeWidth={2.3} aria-hidden="true" />
                 </span>
                 <span className="kpi-sector-name">SAFE TO SPEND</span>
               </div>
@@ -162,10 +153,9 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
 
             <div className="kpi-main-readout">
               <div
-                className="ledger-kpi-value"
-                style={{
-                  color: metrics.dailyMetrics.isOverBudgetToday ? "#DC2626" : "#15803D",
-                }}
+                className={`ledger-kpi-value ${
+                  metrics.dailyMetrics.isOverBudgetToday ? "is-negative" : "is-positive"
+                }`}
               >
                 ${Math.abs(metrics.dailyMetrics.safeToSpendToday).toFixed(0)}
               </div>
@@ -184,25 +174,14 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
 
         {/* 3. Monthly Recurring Burn */}
         <div
-          className="ledger-kpi-card"
-          style={
-            {
-              "--kpi-accent": "#7C4DFF",
-              "--kpi-icon-bg": "#F1EAFF",
-              "--kpi-icon-fg": "#6B21A8",
-              cursor: "pointer",
-            } as React.CSSProperties
-          }
-          onClick={() => {
-            playSound.click();
-            onNavigateTab("SUBSCRIPTIONS");
-          }}
+          className="ledger-kpi-card kpi-tone-violet"
+          {...navigateCardProps("SUBSCRIPTIONS")}
           title="Click to audit recurring subscriptions"
         >
           <div className="kpi-top-bar">
             <div className="kpi-tag-group">
               <span className="kpi-icon-box">
-                <Repeat size={13} strokeWidth={2.5} aria-hidden="true" />
+                <Repeat size={13} strokeWidth={2.3} aria-hidden="true" />
               </span>
               <span className="kpi-sector-name">RECURRING BURN</span>
             </div>
@@ -227,25 +206,14 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
 
         {/* 4. Recurring Investments / SIPs */}
         <div
-          className="ledger-kpi-card"
-          style={
-            {
-              "--kpi-accent": "#00E58A",
-              "--kpi-icon-bg": "#E5FFF4",
-              "--kpi-icon-fg": "#047857",
-              cursor: "pointer",
-            } as React.CSSProperties
-          }
-          onClick={() => {
-            playSound.click();
-            onNavigateTab("INVESTMENTS");
-          }}
+          className="ledger-kpi-card kpi-tone-lime"
+          {...navigateCardProps("INVESTMENTS")}
           title="Click to manage Recurring SIP & DCA allocations"
         >
           <div className="kpi-top-bar">
             <div className="kpi-tag-group">
               <span className="kpi-icon-box">
-                <Coins size={13} strokeWidth={2.5} aria-hidden="true" />
+                <Coins size={13} strokeWidth={2.3} aria-hidden="true" />
               </span>
               <span className="kpi-sector-name">INVESTMENTS</span>
             </div>
@@ -255,7 +223,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
           </div>
 
           <div className="kpi-main-readout">
-            <div className="ledger-kpi-value" style={{ color: "#15803D" }}>
+            <div className="ledger-kpi-value is-positive">
               {formatCurrency(investmentMetrics?.monthlyTotal || 0, 2, investmentCurrency)}
             </div>
           </div>
@@ -273,25 +241,14 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
 
         {/* 5. Total Debt Liabilities */}
         <div
-          className="ledger-kpi-card"
-          style={
-            {
-              "--kpi-accent": "#FF007A",
-              "--kpi-icon-bg": "#FFE5F0",
-              "--kpi-icon-fg": "#BE123C",
-              cursor: "pointer",
-            } as React.CSSProperties
-          }
-          onClick={() => {
-            playSound.click();
-            onNavigateTab("DEBTS");
-          }}
+          className="ledger-kpi-card kpi-tone-pink"
+          {...navigateCardProps("DEBTS")}
           title="Click to launch Debt Payoff Simulator"
         >
           <div className="kpi-top-bar">
             <div className="kpi-tag-group">
               <span className="kpi-icon-box">
-                <CreditCard size={13} strokeWidth={2.5} aria-hidden="true" />
+                <CreditCard size={13} strokeWidth={2.3} aria-hidden="true" />
               </span>
               <span className="kpi-sector-name">TOTAL DEBT</span>
             </div>
@@ -310,10 +267,9 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
 
           <div className="kpi-main-readout">
             <div
-              className="ledger-kpi-value"
-              style={{
-                color: debts.filter((d) => !d.isPaidOff).length > 0 ? "#DC2626" : "#15803D",
-              }}
+              className={`ledger-kpi-value ${
+                debts.filter((d) => !d.isPaidOff).length > 0 ? "is-negative" : "is-positive"
+              }`}
             >
               {formatCurrency(netWorth.totalLiabilities, 0, currency)}
             </div>
@@ -331,25 +287,14 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
 
         {/* 6. Liquid Runway Reserve */}
         <div
-          className="ledger-kpi-card"
-          style={
-            {
-              "--kpi-accent": "#00F0FF",
-              "--kpi-icon-bg": "#E5FDFF",
-              "--kpi-icon-fg": "#0369A1",
-              cursor: "pointer",
-            } as React.CSSProperties
-          }
-          onClick={() => {
-            playSound.click();
-            onNavigateTab("CASHFLOW");
-          }}
+          className="ledger-kpi-card kpi-tone-cyan"
+          {...navigateCardProps("CASHFLOW")}
           title="Click to inspect Cash Flow & Emergency Runway"
         >
           <div className="kpi-top-bar">
             <div className="kpi-tag-group">
               <span className="kpi-icon-box">
-                <ShieldCheck size={13} strokeWidth={2.5} aria-hidden="true" />
+                <ShieldCheck size={13} strokeWidth={2.3} aria-hidden="true" />
               </span>
               <span className="kpi-sector-name">RUNWAY RESERVE</span>
             </div>
@@ -387,27 +332,14 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
 
       {/* ── URGENT RENEWAL BANNER (IF ANY) ── */}
       {urgentRenewals.length > 0 && (
-        <div
-          style={{
-            background: "#FFF1F2",
-            border: "2px solid #E11D48",
-            boxShadow: "3px 3px 0 #E11D48",
-            padding: "16px 20px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "12px",
-            borderRadius: "3px",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <BellRing size={20} color="#E11D48" aria-hidden="true" />
+        <div className="ledger-alert-banner">
+          <div className="ledger-alert-banner__left">
+            <BellRing size={18} aria-hidden="true" />
             <div>
-              <div style={{ fontFamily: "var(--mono)", fontSize: "10.5px", fontWeight: 900, color: "#9F1239" }}>
+              <div className="ledger-alert-banner__kicker">
                 UPCOMING RENEWALS WITHIN 7 DAYS ({urgentRenewals.length})
               </div>
-              <div style={{ fontFamily: "var(--sans)", fontSize: "13px", fontWeight: 700, color: "#881337" }}>
+              <div className="ledger-alert-banner__body">
                 {urgentRenewals.map((r) => `${r.name} (${formatCurrency(r.amount, 2, currency)} in ${r.daysUntil}d)`).join(" • ")}
               </div>
             </div>

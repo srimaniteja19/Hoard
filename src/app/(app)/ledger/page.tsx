@@ -57,6 +57,7 @@ type LedgerTab = "OVERVIEW" | "DAILY" | "SUBSCRIPTIONS" | "INVESTMENTS" | "DEBTS
 function LedgerContent() {
   const [overview, setOverview] = useState<FinancialOverviewPayload | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<LedgerTab>("OVERVIEW");
 
   // Base ledger currency (USD for debts, subscriptions, assets, cash flow)
@@ -98,14 +99,22 @@ function LedgerContent() {
 
   const fetchOverview = async (silent = false) => {
     try {
-      if (!silent) setLoading(true);
+      if (!silent) {
+        setLoading(true);
+        setLoadError(null);
+      }
       const res = await fetch("/api/financial/overview");
       if (res.ok) {
         const data: FinancialOverviewPayload = await res.json();
         setOverview(data);
+        setLoadError(null);
+      } else if (!silent) {
+        setLoadError(`Could not load ledger (${res.status})`);
       }
     } catch {
-      // ignore
+      if (!silent) {
+        setLoadError("Network error while loading ledger records.");
+      }
     } finally {
       if (!silent) setLoading(false);
     }
@@ -548,11 +557,11 @@ function LedgerContent() {
       <header className="ledger-masthead">
         <div className="ledger-title-group">
           <div className="ledger-title-row">
-            <h1>THE HOARD FINANCIAL LEDGER</h1>
-            <span className="ledger-tagline-badge">PERSONAL FISCAL DESK</span>
+            <h1>Financial Ledger</h1>
+            <span className="ledger-tagline-badge">{totalRecords} entries</span>
           </div>
           <p className="ledger-subtitle">
-            Autonomous ledger for recurring commitments, aggressive debt payoff, and liquid net worth tracking.
+            Recurring commitments, debt payoff trajectory, daily cash flow, and net worth in one place.
           </p>
         </div>
 
@@ -566,7 +575,7 @@ function LedgerContent() {
             }}
           >
             <Sparkles size={13} aria-hidden="true" />
-            AI AUDITOR
+            AI Auditor
           </button>
           <button
             type="button"
@@ -594,33 +603,13 @@ function LedgerContent() {
             }}
           >
             <Plus size={13} aria-hidden="true" />
-            ADD ENTRY
+            Add entry
           </button>
         </div>
       </header>
 
-      {/* ── SEGMENTED NAVIGATION TABS (NEUBRUTALIST FLIGHT DECK) ── */}
+      {/* ── SEGMENTED NAVIGATION TABS ── */}
       <nav className="ledger-nav-deck" aria-label="Ledger Sections">
-        {/* Terminal Top Rail */}
-        <div className="ledger-deck-rail">
-          <div className="ledger-deck-rail-left">
-            <span className="deck-dot dot-red" />
-            <span className="deck-dot dot-yellow" />
-            <span className="deck-dot dot-green" />
-            <span className="deck-rail-title">FISCAL_OS // SECTOR_ROUTER</span>
-          </div>
-          <div className="ledger-deck-rail-right">
-            <span className="deck-status-pulse" />
-            <span className="deck-active-badge">
-              SECTOR: <b>{activeTab.replace("NETWORTH", "NET WORTH").replace("CASHFLOW", "CASH FLOW")}</b>
-            </span>
-            <span className="deck-count-pill">
-              <b>{totalRecords}</b> ENTRIES
-            </span>
-          </div>
-        </div>
-
-        {/* Tactile Keycap Switchboard */}
         <div className="ledger-nav-tabs" role="tablist">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -631,16 +620,15 @@ function LedgerContent() {
                 type="button"
                 role="tab"
                 aria-selected={isActive}
+                aria-keyshortcuts={tab.shortcut}
                 data-tab={tab.colorKey}
                 className={`ledger-nav-tab ${isActive ? "active" : ""} tab-${tab.colorKey}`}
                 onClick={() => {
                   playSound.click();
                   setActiveTab(tab.id);
                 }}
+                title={`${tab.label} (Press ${tab.shortcut})`}
               >
-                <span className="tab-key-num" title={`Press ${tab.shortcut} to switch`}>
-                  {tab.shortcut}
-                </span>
                 <span className="tab-icon-box">
                   <Icon size={13} aria-hidden="true" />
                 </span>
@@ -653,11 +641,6 @@ function LedgerContent() {
                     {tab.count}
                   </span>
                 )}
-                {isActive && (
-                  <span className="tab-active-pip" aria-hidden="true">
-                    ✦
-                  </span>
-                )}
               </button>
             );
           })}
@@ -666,14 +649,19 @@ function LedgerContent() {
 
       {/* ── TAB CONTENT ── */}
       {loading ? (
-        <div style={{ padding: "60px 0", textAlign: "center" }}>
-          <div style={{ fontFamily: "var(--mono)", fontSize: "14px", fontWeight: 800 }}>
-            ANALYZING FINANCIAL GRAPH & COMPILED LEDGER...
-          </div>
+        <div className="ledger-loading-state">
+          <div className="ledger-loading-label">Loading financial ledger…</div>
         </div>
       ) : !overview ? (
-        <div style={{ padding: "40px", textAlign: "center" }}>
-          Failed to load ledger records. Please refresh.
+        <div className="ledger-error-state" role="alert">
+          <p>{loadError || "Failed to load ledger records."}</p>
+          <button
+            type="button"
+            className="btn-ledger btn-ledger-primary"
+            onClick={() => void fetchOverview(false)}
+          >
+            Retry
+          </button>
         </div>
       ) : (
         <>
