@@ -56,6 +56,7 @@ export interface ChannelMediaItem {
   updatedAt?: number;
   releaseDate?: string; // YYYY-MM-DD
   releasePeriod?: Exclude<ReleasePeriod, "all">;
+  image?: string; // Poster / show artwork URL
 }
 
 export interface ShowUserRecord {

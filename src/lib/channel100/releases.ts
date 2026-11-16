@@ -274,6 +274,12 @@ export function parseTvMazeScheduleEntries(
 
     const imdbId = show.externals?.imdb;
     const year = parseInt(airdate.slice(0, 4), 10) || anchor.getFullYear();
+    const image: string | undefined =
+      show.image?.medium ||
+      show.image?.original ||
+      ep.image?.medium ||
+      ep.image?.original ||
+      undefined;
 
     results.push({
       kind: "releases",
@@ -301,6 +307,7 @@ export function parseTvMazeScheduleEntries(
       episode: epNum,
       releaseDate: airdate,
       releasePeriod: classifyReleasePeriod(airdate, anchor),
+      image,
     });
   }
 

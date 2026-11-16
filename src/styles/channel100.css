@@ -750,6 +750,76 @@
   justify-content: center;
   cursor: pointer;
   overflow: hidden;
+  transition: height 140ms ease;
+}
+
+.ch100-art.has-img {
+  height: 156px;
+  background: #111111;
+}
+
+.ch100-art-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+  display: block;
+}
+
+.ch100-art.has-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.28) 0%,
+    rgba(0, 0, 0, 0.04) 45%,
+    rgba(0, 0, 0, 0.36) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ch100-art .ch100-rank,
+.ch100-art .ch100-art-imdb,
+.ch100-art .ch100-stamp {
+  z-index: 2;
+}
+
+.ch100-modal-banner.has-img {
+  height: 176px;
+  background: #111111;
+}
+
+.ch100-modal-banner-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+  display: block;
+}
+
+.ch100-modal-banner.has-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.34) 0%,
+    rgba(0, 0, 0, 0.08) 55%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ch100-modal-banner .ch100-rank,
+.ch100-modal-banner .ch100-modal-top-actions {
+  z-index: 2;
 }
 
 /* SVG Background Patterns */

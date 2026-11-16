@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChannelMediaItem, ShowUserRecord, ShowStatus } from "@/lib/channel100/types";
 import { artFor, fmtH, fmtM, jwUrl } from "@/lib/channel100/data";
 import { formatReleaseBadge } from "@/lib/channel100/releases";
+import { fetchItemArtwork, getCachedArtwork } from "@/lib/channel100/artworkClient";
 
 interface Channel100CardProps {
   item: ChannelMediaItem;
@@ -22,6 +23,54 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
 }) => {
   const art = useMemo(() => artFor(item), [item]);
   const status = record.s || "";
+  const artRef = useRef<HTMLDivElement | null>(null);
+  const [posterUrl, setPosterUrl] = useState<string | null>(() => {
+    const cached = getCachedArtwork(item);
+    return cached ?? null;
+  });
+  const [imgFailed, setImgFailed] = useState(false);
+
+  useEffect(() => {
+    setImgFailed(false);
+    const cached = getCachedArtwork(item);
+    if (cached !== undefined) {
+      setPosterUrl(cached);
+      return;
+    }
+    setPosterUrl(null);
+
+    const el = artRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      let cancelled = false;
+      fetchItemArtwork(item).then((url) => {
+        if (!cancelled && url) setPosterUrl(url);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    let cancelled = false;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          observer.disconnect();
+          fetchItemArtwork(item).then((url) => {
+            if (!cancelled && url) setPosterUrl(url);
+          });
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(el);
+
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  }, [item]);
+
+  const showPoster = Boolean(posterUrl && !imgFailed);
 
   const stampLabel: Record<string, string> = {
     seen: "✓ SEEN",
@@ -56,12 +105,29 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
       className={`ch100-card card ${status ? `is-${status}` : ""}`}
       data-id={item.id}
     >
-      {/* Colorful Illustrated Banner / Swatch */}
+      {/* Poster / Artwork Banner */}
       <div
-        className={`ch100-art art ${art.pat}`}
-        style={{ backgroundColor: art.bg }}
+        ref={artRef}
+        className={`ch100-art art ${showPoster ? "has-img" : art.pat}`}
+        style={showPoster ? undefined : { backgroundColor: art.bg }}
         onClick={() => onOpenModal(item.id)}
       >
+        {showPoster && posterUrl ? (
+          <img
+            className="ch100-art-img"
+            src={posterUrl}
+            alt={item.title}
+            loading="lazy"
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <span
+            className="ch100-art-svg"
+            dangerouslySetInnerHTML={{ __html: art.svg }}
+            aria-hidden="true"
+          />
+        )}
+
         <span className="ch100-rank">
           #{String(item.rank).padStart(3, "0")}
         </span>
@@ -77,12 +143,6 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
             {stampLabel[status] || status}
           </span>
         )}
-
-        <span
-          className="ch100-art-svg"
-          dangerouslySetInnerHTML={{ __html: art.svg }}
-          aria-hidden="true"
-        />
       </div>
 
       {/* Card Body */}
