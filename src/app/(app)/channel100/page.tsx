@@ -37,6 +37,8 @@ import {
   saveCachedVgfCatalog,
   loadCachedLiveCatalogs,
   saveCachedLiveCatalogs,
+  loadCachedReleases,
+  saveCachedReleases,
   buildPersonalLogItems,
   normalizePersonalLogKey,
   getMediaRecord,
@@ -69,6 +71,7 @@ const DEFAULT_FILTERS: ViewFilterState = {
   len: "all",
   lang: "all",
   customKind: "all",
+  releasePeriod: "week",
   sort: "rank",
   q: "",
   layout: "grid",
@@ -91,14 +94,15 @@ export default function Channel100Page() {
     VERIFIED_LETTERBOXD_FILM_CATALOG
   );
   const [vgfItems, setVgfItems] = useState<ChannelMediaItem[]>(INITIAL_VGF_ITEMS);
+  const [releaseItems, setReleaseItems] = useState<ChannelMediaItem[]>([]);
   const [syncedAt, setSyncedAt] = useState<number | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const trackerItems = useMemo(
-    () => buildPersonalLogItems(store, [tvItems, filmItems, vgfItems]),
-    [store, tvItems, filmItems, vgfItems]
+    () => buildPersonalLogItems(store, [tvItems, filmItems, vgfItems, releaseItems]),
+    [store, tvItems, filmItems, vgfItems, releaseItems]
   );
 
   const catalog = CATALOGS[filters.cat] || CATALOGS.tv;
@@ -106,8 +110,9 @@ export default function Channel100Page() {
     if (filters.cat === "tv") return tvItems;
     if (filters.cat === "film") return filmItems;
     if (filters.cat === "vgf") return vgfItems;
+    if (filters.cat === "releases") return releaseItems;
     return trackerItems;
-  }, [filters.cat, tvItems, filmItems, vgfItems, trackerItems]);
+  }, [filters.cat, tvItems, filmItems, vgfItems, releaseItems, trackerItems]);
 
   const itemLookup = useMemo(() => {
     const map: Record<string, ChannelMediaItem> = { ...ALL_ITEMS };
@@ -120,8 +125,11 @@ export default function Channel100Page() {
     vgfItems.forEach((i) => {
       map[i.id] = i;
     });
+    releaseItems.forEach((i) => {
+      map[i.id] = i;
+    });
     return map;
-  }, [tvItems, filmItems, vgfItems]);
+  }, [tvItems, filmItems, vgfItems, releaseItems]);
 
   const triggerToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -136,15 +144,17 @@ export default function Channel100Page() {
       setIsSyncing(true);
       try {
         const qs = force ? "?force=1" : "";
-        const [catRes, vgfRes] = await Promise.allSettled([
+        const [catRes, vgfRes, relRes] = await Promise.allSettled([
           fetch(`/api/channel100/catalogs${qs}`),
           fetch(`/api/channel100/verygoodfilms${qs}`),
+          fetch(`/api/channel100/releases${qs}`),
         ]);
 
         let nextTs = Date.now();
         let tvCount = tvItems.length;
         let filmCount = filmItems.length;
         let vgfCount = vgfItems.length;
+        let relCount = releaseItems.length;
 
         if (catRes.status === "fulfilled" && catRes.value.ok) {
           const data = await catRes.value.json();
@@ -177,11 +187,23 @@ export default function Channel100Page() {
           }
         }
 
+        if (relRes.status === "fulfilled" && relRes.value.ok) {
+          const relData = await relRes.value.json();
+          if (Array.isArray(relData.items)) {
+            setReleaseItems(relData.items);
+            relCount = relData.items.length;
+            saveCachedReleases(
+              relData.items,
+              Number(relData.syncedAt) || nextTs
+            );
+          }
+        }
+
         setSyncedAt(nextTs);
         if (force) {
           playSound.promote();
           triggerToast(
-            `Synced ${tvCount} TV series, ${filmCount} Letterboxd films & ${vgfCount} Very Good Films`
+            `Synced ${tvCount} TV, ${filmCount} Letterboxd, ${vgfCount} VGF & ${relCount} Releases`
           );
         }
       } catch {
@@ -496,10 +518,15 @@ export default function Channel100Page() {
       const savedView = loadSavedView();
       const hash = (window.location.hash || "").slice(1);
       const initialCat: MediaKind =
-        hash === "film" || hash === "tv" || hash === "vgf" || hash === "tracker"
+        hash === "film" ||
+        hash === "tv" ||
+        hash === "vgf" ||
+        hash === "releases" ||
+        hash === "tracker"
           ? (hash as MediaKind)
           : savedView.cat === "film" ||
             savedView.cat === "vgf" ||
+            savedView.cat === "releases" ||
             savedView.cat === "tracker"
           ? (savedView.cat as MediaKind)
           : "tv";
@@ -523,9 +550,15 @@ export default function Channel100Page() {
         if (!cachedLive) setSyncedAt(cachedVgf.syncedAt);
       }
 
+      const cachedRel = loadCachedReleases();
+      if (cachedRel) {
+        setReleaseItems(cachedRel.items);
+      }
+
       const needsLiveRefresh =
         !cachedLive ||
         !cachedVgf ||
+        !cachedRel ||
         Date.now() - cachedLive.syncedAt > 60 * 60 * 1000;
       if (needsLiveRefresh) {
         handleSyncAllLive(false);
@@ -777,6 +810,10 @@ export default function Channel100Page() {
     () => computeStats(vgfItems, store),
     [vgfItems, store]
   );
+  const releasesStats = useMemo(
+    () => computeStats(releaseItems, store),
+    [releaseItems, store]
+  );
   const trackerStats = useMemo(
     () => computeStats(trackerItems, store),
     [trackerItems, store]
@@ -788,6 +825,8 @@ export default function Channel100Page() {
       ? filmStats
       : filters.cat === "vgf"
       ? vgfStats
+      : filters.cat === "releases"
+      ? releasesStats
       : trackerStats;
 
   const filteredItems = useMemo(
@@ -836,6 +875,7 @@ export default function Channel100Page() {
       len: "all",
       lang: "all",
       customKind: "all",
+      releasePeriod: "all",
       q: "",
     });
   }, [handleUpdateFilters]);
@@ -981,6 +1021,7 @@ export default function Channel100Page() {
           filmTotalCount={filmItems.length}
           vgfSeenCount={vgfStats.seen}
           vgfTotalCount={vgfItems.length}
+          releasesCount={releaseItems.length}
           trackerCount={trackerItems.length}
           isSyncing={isSyncing}
           onSyncLive={() => handleSyncAllLive(true)}
@@ -998,6 +1039,8 @@ export default function Channel100Page() {
               ? "tabFilm"
               : filters.cat === "vgf"
               ? "tabVgf"
+              : filters.cat === "releases"
+              ? "tabReleases"
               : "tabTracker"
           }
         >

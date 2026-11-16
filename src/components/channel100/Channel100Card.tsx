@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import { ChannelMediaItem, ShowUserRecord, ShowStatus } from "@/lib/channel100/types";
 import { artFor, fmtH, fmtM, jwUrl } from "@/lib/channel100/data";
+import { formatReleaseBadge } from "@/lib/channel100/releases";
 
 interface Channel100CardProps {
   item: ChannelMediaItem;
@@ -111,6 +112,11 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
 
         {/* Colorful Tags */}
         <div className="ch100-tags">
+          {item.releaseDate && (
+            <span className="ch100-tag release">
+              📅 {formatReleaseBadge(item.releaseDate)}
+            </span>
+          )}
           {item.where && (
             <a
               className="ch100-tag where"

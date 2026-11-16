@@ -418,8 +418,19 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
                 <dt>Rank</dt>
                 <dd>
                   #{item.rank} in{" "}
-                  {item.kind === "vgf" ? "Very Good Films" : "Letterboxd 500"}
+                  {item.kind === "vgf"
+                    ? "Very Good Films"
+                    : item.kind === "releases"
+                    ? "Streaming Release Calendar"
+                    : "Letterboxd 500"}
                 </dd>
+
+                {item.releaseDate && (
+                  <>
+                    <dt>Releases</dt>
+                    <dd>{item.releaseDate}</dd>
+                  </>
+                )}
 
                 <dt>Released</dt>
                 <dd>{item.year}</dd>

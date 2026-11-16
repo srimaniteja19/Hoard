@@ -8,6 +8,7 @@ import {
   ViewFilterState,
   ViewSort,
   MediaKind,
+  ReleasePeriod,
 } from "@/lib/channel100/types";
 
 interface Channel100ControlsProps {
@@ -59,6 +60,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
     filters.len !== "all" ||
     (filters.lang && filters.lang !== "all") ||
     (filters.customKind && filters.customKind !== "all") ||
+    (filters.releasePeriod && filters.releasePeriod !== "all") ||
     filters.q.trim() !== "";
 
   function handleClearAllFilters() {
@@ -69,9 +71,18 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
       len: "all",
       lang: "all",
       customKind: "all",
+      releasePeriod: "all",
       q: "",
     });
   }
+
+  const periodOptions: { id: ReleasePeriod; label: string }[] = [
+    { id: "day", label: "Today (Day)" },
+    { id: "week", label: "This Week" },
+    { id: "month", label: "This Month" },
+    { id: "year", label: "This Year" },
+    { id: "all", label: "All" },
+  ];
 
   return (
     <section
@@ -93,9 +104,30 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
           />
         </label>
 
+        {/* Release Timeframe Pills (Day / Week / Month / Year) */}
+        {cat === "releases" && (
+          <div
+            className="ch100-period-pills"
+            role="group"
+            aria-label="Filter releases by timeframe"
+          >
+            {periodOptions.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                className="ch100-period-pill"
+                aria-pressed={(filters.releasePeriod || "all") === opt.id}
+                onClick={() => onUpdateFilters({ releasePeriod: opt.id })}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Filter Selects */}
         <div className="ch100-selects-group">
-          {(cat === "tracker" || languages.length > 1) && (
+          {(cat === "tracker" || cat === "releases" || languages.length > 1) && (
             <select
               className="ch100-sel sel"
               id="lang"
@@ -112,7 +144,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
             </select>
           )}
 
-          {cat === "tracker" && (
+          {(cat === "tracker" || cat === "releases") && (
             <select
               className="ch100-sel sel"
               id="customKind"
@@ -125,9 +157,13 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
               <option value="all">All media types</option>
               <option value="tv">📺 TV Series</option>
               <option value="film">🎬 Feature Film</option>
-              <option value="anime">⚔️ Anime</option>
-              <option value="mini">🎞️ Mini-Series</option>
-              <option value="doc">📽️ Documentary</option>
+              {cat === "tracker" && (
+                <>
+                  <option value="anime">⚔️ Anime</option>
+                  <option value="mini">🎞️ Mini-Series</option>
+                  <option value="doc">📽️ Documentary</option>
+                </>
+              )}
             </select>
           )}
 

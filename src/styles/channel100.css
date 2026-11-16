@@ -229,6 +229,11 @@
   color: #FFFFFF;
 }
 
+.ch100-root .ch100-switch button[data-cat="releases"][aria-selected="true"] {
+  background: var(--ch-blue);
+  color: #FFFFFF;
+}
+
 .ch100-root .ch100-switch button[data-cat="tracker"][aria-selected="true"] {
   background: var(--ch-green);
   color: #111111;
@@ -863,6 +868,40 @@
 .ch100-tag.lang {
   background: color-mix(in srgb, var(--ch-yellow) 22%, var(--ch-card));
   color: var(--ch-text);
+}
+
+.ch100-tag.release {
+  background: var(--ch-blue);
+  color: #FFFFFF;
+  border-color: #111111;
+}
+
+.ch100-period-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--ch-surface);
+  border: 1.5px solid var(--ch-line);
+  border-radius: 6px;
+  padding: 2px;
+  box-shadow: 2px 2px 0 var(--ch-shadow);
+}
+
+.ch100-root .ch100-period-pill {
+  border: 0;
+  background: transparent;
+  color: var(--ch-muted);
+  border-radius: 4px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ch100-root .ch100-period-pill[aria-pressed="true"] {
+  background: var(--ch-blue);
+  color: #FFFFFF;
 }
 
 .ch100-root .ch100-sub-btn {

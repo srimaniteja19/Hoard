@@ -16,6 +16,45 @@ export const LEGACY_LS_KEY = "ch100.v1";
 export const VIEW_LS_KEY = "hoard.ch100.view";
 export const VGF_CACHE_LS_KEY = "hoard.ch100.vgf.v2";
 export const LIVE_CATALOGS_LS_KEY = "hoard.ch100.catalogs.v2";
+export const RELEASES_CACHE_LS_KEY = "hoard.ch100.releases.v1";
+
+export interface CachedReleases {
+  items: ChannelMediaItem[];
+  syncedAt: number;
+}
+
+export function loadCachedReleases(): CachedReleases | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(RELEASES_CACHE_LS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.items)) {
+      return {
+        items: parsed.items,
+        syncedAt: Number(parsed.syncedAt) || 0,
+      };
+    }
+  } catch {
+    // Ignore malformed cache
+  }
+  return null;
+}
+
+export function saveCachedReleases(
+  items: ChannelMediaItem[],
+  syncedAt: number
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      RELEASES_CACHE_LS_KEY,
+      JSON.stringify({ items, syncedAt })
+    );
+  } catch {
+    // Ignore quota errors
+  }
+}
 
 export interface CachedLiveCatalogs {
   tv: ChannelMediaItem[];
@@ -252,6 +291,20 @@ export function filterAndSortMedia(
       if (effectiveKind !== filters.customKind) return false;
     }
 
+    if (filters.releasePeriod && filters.releasePeriod !== "all") {
+      const p = item.releasePeriod || "year";
+      if (filters.releasePeriod === "day" && p !== "day") return false;
+      if (filters.releasePeriod === "week" && p !== "day" && p !== "week")
+        return false;
+      if (
+        filters.releasePeriod === "month" &&
+        p !== "day" &&
+        p !== "week" &&
+        p !== "month"
+      )
+        return false;
+    }
+
     if (filters.len && filters.len !== "all") {
       const band = catalog.band(item);
       if (band !== filters.len) return false;
@@ -430,6 +483,7 @@ export function importBackup(
             k.startsWith("film_") ||
             k.startsWith("lb_") ||
             k.startsWith("vgf_") ||
+            k.startsWith("rel_") ||
             k.startsWith("c_")) &&
           v &&
           typeof v === "object"

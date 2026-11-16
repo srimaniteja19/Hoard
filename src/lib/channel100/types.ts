@@ -1,6 +1,7 @@
 export type ShowStatus = "seen" | "watching" | "want" | "";
-export type MediaKind = "tv" | "film" | "vgf" | "tracker";
+export type MediaKind = "tv" | "film" | "vgf" | "releases" | "tracker";
 export type CustomMediaKind = "tv" | "film" | "anime" | "mini" | "doc";
+export type ReleasePeriod = "all" | "day" | "week" | "month" | "year";
 
 export interface CustomMediaItem {
   id: string; // "c_..."
@@ -53,6 +54,8 @@ export interface ChannelMediaItem {
   episode?: number;
   totalEpisodes?: number;
   updatedAt?: number;
+  releaseDate?: string; // YYYY-MM-DD
+  releasePeriod?: Exclude<ReleasePeriod, "all">;
 }
 
 export interface ShowUserRecord {
@@ -92,6 +95,7 @@ export interface ViewFilterState {
   len: string;
   lang?: string; // Filter by any language
   customKind?: string; // Filter by custom media kind
+  releasePeriod?: ReleasePeriod; // Filter releases by day / week / month / year
   sort: ViewSort;
   q: string;
   layout: ViewLayout;
