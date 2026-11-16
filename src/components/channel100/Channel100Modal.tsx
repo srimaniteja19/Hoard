@@ -137,7 +137,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
 
   return (
     <div
-      className="ch100-overlay overlay"
+      className="ch100-overlay"
       id="overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -146,7 +146,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
       aria-modal="true"
       aria-labelledby="ch100-mtitle"
     >
-      <div ref={modalRef} className="ch100-modal modal">
+      <div ref={modalRef} className="ch100-modal">
         {/* Colorful Illustrated Modal Banner */}
         <div
           className={`ch100-modal-banner ${art.pat}`}
@@ -187,7 +187,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
             <button
               ref={closeBtnRef}
               type="button"
-              className="ch100-x x"
+              className="ch100-x"
               id="mclose"
               onClick={onClose}
               aria-label="Close dialog"
@@ -198,7 +198,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
           </div>
         </div>
 
-        <div className="ch100-mbody mbody">
+        <div className="ch100-mbody">
           <div className="ch100-modal-meta-badges">
             {item.genre && <span className="ch100-tag genre">{item.genre}</span>}
             {item.lang && (
@@ -212,10 +212,10 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
           </div>
 
           <h2 id="ch100-mtitle">{item.title}</h2>
-          <p className="ch100-blurb blurb">{item.blurb}</p>
+          <p className="ch100-blurb">{item.blurb}</p>
 
           {/* Structured Metadata Grid */}
-          <dl className="ch100-facts facts">
+          <dl className="ch100-facts">
             {item.custom ? (
               <>
                 <dt>Language</dt>
@@ -298,8 +298,12 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
 
                 <dt>Runtime</dt>
                 <dd>
-                  {item.seasons ? `${item.seasons} seasons · ` : ""}
-                  {item.eps ? `${item.eps} episodes · ` : ""}
+                  {item.seasons
+                    ? `${item.seasons} ${item.seasons === 1 ? "season" : "seasons"} · `
+                    : ""}
+                  {item.eps
+                    ? `${item.eps} ${item.eps === 1 ? "episode" : "episodes"} · `
+                    : ""}
                   {fmtH(item.hours)}{" "}
                   <small>
                     ({evenings} {evenings === 1 ? "evening" : "evenings"} at 2h/night)
@@ -341,10 +345,10 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
           </dl>
 
           {/* Status Controls */}
-          <div className="ch100-acts acts">
+          <div className="ch100-acts">
             <button
               type="button"
-              className="ch100-act act seen"
+              className="ch100-act seen"
               aria-pressed={status === "seen"}
               onClick={() => onToggleStatus(item.id, "seen")}
               title="Shortcut: S"
@@ -353,7 +357,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
             </button>
             <button
               type="button"
-              className="ch100-act act watching"
+              className="ch100-act watching"
               aria-pressed={status === "watching"}
               onClick={() => onToggleStatus(item.id, "watching")}
               title="Shortcut: W"
@@ -362,7 +366,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
             </button>
             <button
               type="button"
-              className="ch100-act act want"
+              className="ch100-act want"
               aria-pressed={status === "want"}
               onClick={() => onToggleStatus(item.id, "want")}
               title="Shortcut: Q"
@@ -373,13 +377,13 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
 
           {/* Star Rating */}
           <div className="ch100-rating-row">
-            <span className="ch100-lbl lbl">Your Rating (1–5)</span>
-            <div className="ch100-stars stars" role="group" aria-label="Your rating">
+            <span className="ch100-lbl">Your Rating (1–5)</span>
+            <div className="ch100-stars" role="group" aria-label="Your rating">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
                   key={n}
                   type="button"
-                  className={`ch100-star-btn star ${
+                  className={`ch100-star-btn ${
                     (record.r || 0) >= n ? "on" : ""
                   }`}
                   onClick={() =>
@@ -405,7 +409,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
 
           {/* Notes Area */}
           <div className="ch100-note-header">
-            <label className="ch100-lbl lbl" htmlFor="note">
+            <label className="ch100-lbl" htmlFor="note">
               Notes
             </label>
             {noteSaveState !== "idle" && (
@@ -416,7 +420,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
           </div>
           <textarea
             id="note"
-            className="ch100-note note"
+            className="ch100-note"
             placeholder="Reflections, favorite episode or scene, where you left off…"
             value={record.n || ""}
             onChange={(e) => {
@@ -431,7 +435,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
           />
 
           {/* External Links & Custom Actions */}
-          <div className="ch100-links links">
+          <div className="ch100-links">
             {item.custom && onEditCustom && (
               <button
                 type="button"

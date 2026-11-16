@@ -1368,24 +1368,30 @@
 
 .ch100-facts {
   margin: 0;
-  padding: 12px 0;
-  border-block: 1.5px dashed var(--ch-border);
+  padding: 12px 14px;
+  background: var(--ch-surface);
+  border: 1.5px solid var(--ch-border);
+  border-radius: 8px;
   display: grid;
-  grid-template-columns: 96px 1fr;
-  gap: 6px 12px;
+  grid-template-columns: 88px 1fr;
+  gap: 8px 14px;
   font-size: 13px;
+  align-items: baseline;
 }
 
 .ch100-facts dt {
   font-family: var(--ch-mono);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--ch-muted);
 }
 
 .ch100-facts dd {
   margin: 0;
   font-weight: 600;
+  color: var(--ch-text);
 }
 
 .ch100-facts dd small {
