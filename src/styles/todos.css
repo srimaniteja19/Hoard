@@ -3,17 +3,17 @@
    ══════════════════════════════════════════════════════════════════ */
 
 :root {
-  --todo-ink: #0A0A0A;
-  --todo-paper: #F2EFE8;
-  --todo-card: #FFFFFF;
-  --todo-shelf: #E8E4DA;
-  --todo-yellow: #FCE94F;
-  --todo-pink: #FF2D8A;
-  --todo-cyan: #7FE9F7;
-  --todo-lime: #B8F04A;
-  --todo-violet: #7B5CF0;
-  --todo-orange: #FF8A3D;
-  --todo-b: 3px;
+  --todo-ink: var(--ink, #181512);
+  --todo-paper: var(--paper, #FAF6EE);
+  --todo-card: var(--card, #FCF9F3);
+  --todo-shelf: var(--shelf, #E6DEC8);
+  --todo-yellow: var(--yellow, #F7C968);
+  --todo-pink: var(--pink, #E0533C);
+  --todo-cyan: var(--cyan, #4895B8);
+  --todo-lime: var(--lime, #72A868);
+  --todo-violet: var(--violet, #786FA6);
+  --todo-orange: var(--orange, #E07A38);
+  --todo-b: 1.5px;
 }
 
 .todos-wrap {
@@ -2230,3 +2230,498 @@
   opacity: 0.6;
 }
 
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EDITORIAL INDEX OVERHAUL — TODOS WORKBENCH
+   Theme-safe hairlines, soft elevation, zero hard-offset boxes
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.todos-wrap {
+  --td-border: color-mix(in srgb, var(--border-ink, var(--ink)) 14%, transparent);
+  --td-border-strong: color-mix(in srgb, var(--border-ink, var(--ink)) 26%, transparent);
+  --td-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-ink, #000) 5%, transparent),
+    0 4px 14px color-mix(in srgb, var(--shadow-ink, #000) 4%, transparent);
+  --td-shadow-hover: 0 6px 20px color-mix(in srgb, var(--shadow-ink, #000) 9%, transparent);
+  max-width: 1260px;
+  color: var(--ink);
+  caret-color: var(--yellow);
+}
+
+.todos-wrap ::selection {
+  background: color-mix(in srgb, var(--yellow) 45%, transparent);
+  color: var(--ink);
+}
+
+.todos-wrap :is(button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 2px;
+}
+
+/* ── Top Tabs ── */
+.todos-wrap .todos-tabs {
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0 16px;
+  border-bottom: 1px solid var(--td-border);
+  margin-bottom: 20px;
+}
+
+.todos-wrap .todos-tabs button {
+  font-family: var(--body);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  background: transparent;
+  color: color-mix(in srgb, var(--ink) 68%, transparent);
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 8px 14px;
+  margin-right: 0;
+  box-shadow: none;
+  transform: none;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.todos-wrap .todos-tabs button sup {
+  font-size: 10px;
+  margin-left: 5px;
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+
+.todos-wrap .todos-tabs button:hover:not([aria-pressed="true"]) {
+  background: color-mix(in srgb, var(--shelf) 70%, transparent);
+  color: var(--ink);
+}
+
+.todos-wrap .todos-tabs button[aria-pressed="true"] {
+  background: var(--card);
+  color: var(--ink);
+  border-color: var(--td-border-strong);
+  transform: none;
+  box-shadow: var(--td-shadow);
+}
+
+.todos-wrap .todos-tabs .meta {
+  padding-bottom: 0;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--ink) 52%, transparent);
+  opacity: 1;
+}
+
+/* ── Capture Bar ── */
+.todos-wrap .cap {
+  border: 1px solid var(--td-border-strong);
+  border-radius: 13px;
+  box-shadow: var(--td-shadow);
+  background: var(--card);
+  overflow: hidden;
+  margin-bottom: 12px;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.todos-wrap .cap:focus-within {
+  border-color: color-mix(in srgb, var(--yellow) 65%, var(--border-ink, var(--ink)));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--yellow) 16%, transparent), var(--td-shadow);
+}
+
+.todos-wrap .cap .tag {
+  background: color-mix(in srgb, var(--yellow) 22%, var(--shelf));
+  color: var(--ink);
+  border-right: 1px solid var(--td-border);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  padding: 0 16px;
+}
+
+.todos-wrap .cap input {
+  font-size: 15.5px;
+  padding: 13px 16px;
+  color: var(--ink);
+}
+
+.todos-wrap .cap input::placeholder {
+  color: color-mix(in srgb, var(--ink) 42%, transparent);
+}
+
+.todos-wrap .cap button.submit-btn {
+  background: var(--ink);
+  color: var(--cream);
+  border-left: 1px solid var(--td-border);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  padding: 0 18px;
+}
+
+.todos-wrap .cap button.submit-btn:hover {
+  background: color-mix(in srgb, var(--ink) 86%, var(--yellow));
+  color: var(--cream);
+}
+
+.todos-wrap .todo-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--yellow) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--yellow) 40%, transparent);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink);
+}
+
+/* ── Filters ── */
+.todos-wrap .filters {
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.todos-wrap .filters button {
+  font-family: var(--body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: capitalize;
+  border: 1px solid var(--td-border);
+  border-radius: 999px;
+  padding: 5px 13px;
+  background: var(--card);
+  color: color-mix(in srgb, var(--ink) 74%, transparent);
+}
+
+.todos-wrap .filters button:hover:not([aria-pressed="true"]) {
+  background: color-mix(in srgb, var(--shelf) 75%, var(--card));
+  color: var(--ink);
+}
+
+.todos-wrap .filters button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--cream);
+  border-color: var(--ink);
+}
+
+.todos-wrap .filters .fit {
+  border: 1px solid var(--td-border);
+  border-radius: 9px;
+  background: var(--card);
+  padding: 5px 11px;
+  font-family: var(--body);
+  font-size: 12px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--ink) 74%, transparent);
+}
+
+.todos-wrap .filters .fit select {
+  font-family: var(--body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ── Grid & Sticky Calendar Rail ── */
+.todos-wrap .todos-grid {
+  grid-template-columns: 310px minmax(0, 1fr);
+  gap: 26px;
+}
+
+@media (min-width: 1081px) {
+  .todos-wrap .cal {
+    position: sticky;
+    top: 18px;
+  }
+}
+
+@media (max-width: 1080px) {
+  .todos-wrap .todos-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Calendar ── */
+.todos-wrap .cal {
+  border: 1px solid var(--td-border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: var(--td-shadow);
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+.todos-wrap .cal__h {
+  background: color-mix(in srgb, var(--shelf) 55%, transparent);
+  border-bottom: 1px solid var(--td-border);
+  padding: 10px 12px;
+}
+
+.todos-wrap .cal__h b {
+  color: var(--ink);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.todos-wrap .cal__h button {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--td-border-strong);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.todos-wrap .cal__h button:hover {
+  background: color-mix(in srgb, var(--yellow) 24%, var(--card));
+}
+
+.todos-wrap .cal__dow {
+  border-bottom: 1px solid var(--td-border);
+}
+
+.todos-wrap .cal__dow span {
+  border-right-color: var(--td-border);
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.todos-wrap .cal__cells button,
+.todos-wrap .cal__cell {
+  border-color: var(--td-border);
+}
+
+/* ── Today Heading Card & Week Strip ── */
+.todos-wrap .today-head-card {
+  border: 1px solid var(--td-border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: var(--td-shadow);
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+
+.todos-wrap .today-head-card h1 {
+  font-family: var(--display);
+  font-size: clamp(22px, 2.8vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin: 0 0 4px;
+}
+
+.todos-wrap .today-head-card .sub {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--ink) 58%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.todos-wrap .btn-speed-run {
+  border: 1px solid var(--td-border-strong);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--yellow) 18%, var(--card));
+  color: var(--ink);
+  box-shadow: none;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.todos-wrap .btn-speed-run:hover {
+  background: color-mix(in srgb, var(--yellow) 30%, var(--card));
+}
+
+.todos-wrap .week {
+  border: 1px solid var(--td-border);
+  border-radius: 12px;
+  box-shadow: var(--td-shadow);
+  overflow: hidden;
+}
+
+.todos-wrap .weeknote {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--ink) 52%, transparent);
+  opacity: 1;
+}
+
+/* ── Section Banners ── */
+.todos-wrap .ban {
+  border: none;
+  border-bottom: 1px solid var(--td-border);
+  background: transparent;
+  box-shadow: none;
+  padding: 10px 0 8px;
+  margin: 18px 0 12px;
+}
+
+.todos-wrap .ban b {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.todos-wrap .ban span {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--ink) 52%, transparent);
+  opacity: 1;
+}
+
+.todos-wrap .btn-file-all {
+  border: 1px solid var(--td-border-strong);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--lime) 22%, var(--card));
+  color: var(--ink);
+  box-shadow: none;
+  padding: 5px 11px;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ── Todo Slips & Ritual / Pass Cards ── */
+.todos-wrap .todo-slip,
+.todos-wrap .pass,
+.todos-wrap .todo-ritual {
+  border: 1px solid var(--td-border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: var(--td-shadow);
+  overflow: hidden;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.todos-wrap .todo-slip:hover,
+.todos-wrap .pass:hover,
+.todos-wrap .todo-ritual:hover {
+  border-color: var(--td-border-strong);
+  box-shadow: var(--td-shadow-hover);
+  transform: none;
+}
+
+.todos-wrap .todo-slip {
+  grid-template-columns: 5px minmax(0, 1fr);
+  margin-bottom: 10px;
+}
+
+.todos-wrap .todo-slip-spine {
+  border-right: none;
+  background-image: none;
+  background-color: var(--cyan);
+}
+
+.todos-wrap .todo-slip.is-deep .todo-slip-spine { background-color: var(--violet); }
+.todos-wrap .todo-slip.is-errand .todo-slip-spine { background-color: var(--yellow); }
+.todos-wrap .todo-slip.is-overdue .todo-slip-spine { background-color: var(--pink); }
+.todos-wrap .todo-slip.is-stale:not(.is-overdue) .todo-slip-spine { background-color: var(--orange); }
+.todos-wrap .todo-slip.is-done .todo-slip-spine { background-color: var(--lime); }
+
+.todos-wrap .todo-slip-rail {
+  border-top: 1px solid var(--td-border);
+  background: color-mix(in srgb, var(--shelf) 24%, transparent);
+}
+
+.todos-wrap .todo-slip-rail label,
+.todos-wrap .todo-slip-rail button {
+  border-color: var(--td-border);
+  color: color-mix(in srgb, var(--ink) 74%, transparent);
+}
+
+.todos-wrap .todo-slip-rail button:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  color: var(--ink);
+}
+
+.todos-wrap .todo-slip-mins {
+  border: 1px solid var(--td-border);
+  border-radius: 8px;
+  box-shadow: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.todos-wrap .todo-check {
+  border: 1.5px solid var(--td-border-strong);
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.todos-wrap .todo-check.is-on {
+  background: var(--lime);
+  border-color: var(--lime);
+}
+
+/* ── Archive Section ── */
+.todos-wrap .todo-archive > button {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 7px 13px;
+  border-radius: 8px;
+  border: 1px solid var(--td-border-strong);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.todos-wrap .todo-archive-body {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--td-border);
+  border-radius: 12px;
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.todos-wrap .todo-archive-body input[type="search"] {
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--td-border-strong);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 13.5px;
+  outline: none;
+}
+
+.todos-wrap .todo-archive-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--td-border);
+  font-size: 13.5px;
+}
+
+.todos-wrap .todo-archive-row button {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--td-border-strong);
+  background: var(--shelf);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* ── Playbook Shelf, Editor, Ledger & Speed Run HUD ── */
+.todos-wrap .play,
+.todos-wrap .editor,
+.todos-wrap .learn,
+.todos-wrap .ledger,
+.todos-wrap .hud__box {
+  border: 1px solid var(--td-border-strong);
+  border-radius: 12px;
+  box-shadow: var(--td-shadow);
+}

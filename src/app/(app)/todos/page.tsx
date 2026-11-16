@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { Zap, Check } from "lucide-react";
 import { parseTodo, ParsedTodo, Energy } from "@/lib/todos/parse";
 import { Todo } from "@/lib/todos/types";
 import { computeSeriesStats } from "@/lib/todos/sections";
@@ -443,7 +444,7 @@ function TodosPageContent() {
             </form>
 
             {preview ? (
-              <p className="todo-preview" style={{ marginBottom: "16px", opacity: 0.8 }}>
+              <p className="todo-preview">
                 {preview.estimatedMinutes}m · {preview.energy.toLowerCase()}
                 {preview.dueOffsetDays === 0
                   ? " · today"
@@ -541,7 +542,10 @@ function TodosPageContent() {
                       }}
                       title="Arcade keyboard triage (Press T)"
                     >
-                      <span>⚡ SPEED RUN</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                        <Zap size={12} strokeWidth={2.3} aria-hidden="true" />
+                        SPEED RUN
+                      </span>
                       <kbd>T</kbd>
                     </button>
                   </div>
@@ -577,8 +581,10 @@ function TodosPageContent() {
                           className="btn-file-all"
                           onClick={handleCompleteAllRituals}
                           title="File all open rituals for today"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
                         >
-                          ✓ FILE ALL RITUALS ({openRituals.length})
+                          <Check size={12} strokeWidth={2.5} aria-hidden="true" />
+                          FILE ALL RITUALS ({openRituals.length})
                         </button>
                       )}
                     </div>
