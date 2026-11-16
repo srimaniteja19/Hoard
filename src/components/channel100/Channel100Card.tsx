@@ -131,8 +131,15 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
           )}
         </div>
 
-        {/* Concise Synopsis */}
-        <p className="ch100-sub">{item.blurb || item.sub}</p>
+        {/* Concise Synopsis (clickable to open full details & cast) */}
+        <button
+          type="button"
+          className="ch100-sub-btn"
+          onClick={() => onOpenModal(item.id)}
+          title="Click for full description, cast, and details"
+        >
+          <span className="ch100-sub">{item.blurb || item.sub}</span>
+        </button>
 
         {/* Bottom Bar: Runtime & Segmented Status Controls */}
         <div className="ch100-card-footer">

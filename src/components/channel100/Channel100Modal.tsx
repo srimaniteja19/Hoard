@@ -4,6 +4,16 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import { ChannelMediaItem, ShowUserRecord, ShowStatus } from "@/lib/channel100/types";
 import { artFor, fmtH, fmtM, bingeDays, jwUrl, imdbUrl } from "@/lib/channel100/data";
 
+interface EnrichedMediaDetails {
+  fullDescription: string | null;
+  cast: string[];
+  creatorOrDirector: string | null;
+  country: string | null;
+  source: string;
+}
+
+const CLIENT_DETAILS_CACHE = new Map<string, EnrichedMediaDetails>();
+
 interface Channel100ModalProps {
   item: ChannelMediaItem | null;
   record: ShowUserRecord;
@@ -41,6 +51,8 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [noteSaveState, setNoteSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [enriched, setEnriched] = useState<EnrichedMediaDetails | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const art = useMemo(() => (item ? artFor(item) : null), [item]);
@@ -50,6 +62,56 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
     setConfirmDelete(false);
     setNoteSaveState("idle");
   }, [item?.id, isOpen]);
+
+  // Fetch full description, lead cast, and creator/director details when modal opens
+  useEffect(() => {
+    if (!isOpen || !item) {
+      setEnriched(null);
+      setLoadingDetails(false);
+      return;
+    }
+
+    const cached = CLIENT_DETAILS_CACHE.get(item.id);
+    if (cached) {
+      setEnriched(cached);
+      setLoadingDetails(false);
+      return;
+    }
+
+    let cancelled = false;
+    setEnriched(null);
+    setLoadingDetails(true);
+
+    const imdbMatch = item.id.match(/^(?:tv|film)_(tt\d+)$/);
+    const params = new URLSearchParams({
+      title: item.title,
+      kind: item.kind === "tv" || item.customKind === "tv" ? "tv" : "film",
+    });
+    if (item.year || item.start) {
+      params.set("year", String(item.year || item.start));
+    }
+    if (imdbMatch?.[1]) {
+      params.set("imdbId", imdbMatch[1]);
+    }
+
+    fetch(`/api/channel100/details?${params.toString()}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: EnrichedMediaDetails | null) => {
+        if (cancelled || !data) return;
+        CLIENT_DETAILS_CACHE.set(item.id, data);
+        setEnriched(data);
+      })
+      .catch(() => {
+        // Gracefully keep base item.blurb
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDetails(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, item]);
 
   useEffect(() => {
     if (!isOpen || !item) return;
@@ -212,7 +274,34 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
           </div>
 
           <h2 id="ch100-mtitle">{item.title}</h2>
-          <p className="ch100-blurb">{item.blurb}</p>
+
+          <div className="ch100-blurb-wrap">
+            <p className="ch100-blurb">
+              {enriched?.fullDescription &&
+              enriched.fullDescription.length > (item.blurb?.length || 0)
+                ? enriched.fullDescription
+                : item.blurb}
+            </p>
+            {loadingDetails && (
+              <span className="ch100-details-loading">
+                Loading full synopsis &amp; cast…
+              </span>
+            )}
+          </div>
+
+          {/* Lead Actors / Cast */}
+          {enriched?.cast && enriched.cast.length > 0 && (
+            <div className="ch100-cast-block">
+              <span className="ch100-lbl">Lead Cast</span>
+              <div className="ch100-cast-list">
+                {enriched.cast.map((actor) => (
+                  <span key={actor} className="ch100-cast-pill">
+                    {actor}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Structured Metadata Grid */}
           <dl className="ch100-facts">
@@ -293,6 +382,20 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
                   </>
                 )}
 
+                {enriched?.creatorOrDirector && (
+                  <>
+                    <dt>Creator</dt>
+                    <dd>{enriched.creatorOrDirector}</dd>
+                  </>
+                )}
+
+                {enriched?.country && (
+                  <>
+                    <dt>Country</dt>
+                    <dd>{enriched.country}</dd>
+                  </>
+                )}
+
                 <dt>Where</dt>
                 <dd>{item.where}</dd>
 
@@ -321,10 +424,17 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
                 <dt>Released</dt>
                 <dd>{item.year}</dd>
 
-                {item.director && (
+                {(item.director || enriched?.creatorOrDirector) && (
                   <>
                     <dt>Director</dt>
-                    <dd>{item.director}</dd>
+                    <dd>{item.director || enriched?.creatorOrDirector}</dd>
+                  </>
+                )}
+
+                {enriched?.country && (
+                  <>
+                    <dt>Country</dt>
+                    <dd>{enriched.country}</dd>
                   </>
                 )}
 

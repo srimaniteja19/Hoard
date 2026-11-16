@@ -8,6 +8,7 @@ import {
   MediaKind,
 } from "@/lib/channel100/types";
 import { getMediaRecord } from "@/lib/channel100/storage";
+import { getLanguageFlag } from "@/lib/channel100/data";
 
 interface Channel100StatsProps {
   items: ChannelMediaItem[];
@@ -146,7 +147,11 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
         ? groupItems(
             items,
             store,
-            (i) => (i.lang ? `${i.langFlag || "🌐"} ${i.lang}` : "English")
+            (i) => {
+              const lang = (i.lang || "English").trim();
+              const flag = getLanguageFlag(lang);
+              return flag && flag !== "🌐" ? `${flag} ${lang}` : lang;
+            }
           ).slice(0, 8)
         : [],
     [items, store, cat]
@@ -176,18 +181,18 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
     return groups.map((g) => {
       const pct = g.total ? Math.round((g.seen / g.total) * 100) : 0;
       return (
-        <div key={g.label} className="ch100-brow brow">
-          <span className="lab" title={g.label}>
+        <div key={g.label} className="ch100-brow">
+          <span className="ch100-brow-lab" title={g.label}>
             {g.label}
           </span>
           <span
-            className="ch100-btrack btrack"
+            className="ch100-btrack"
             role="img"
             aria-label={`${g.seen} of ${g.total} seen`}
           >
             <i className="s" style={{ width: `${pct}%` }} />
           </span>
-          <span className="num">
+          <span className="ch100-brow-num">
             {g.seen}/{g.total}
           </span>
         </div>
@@ -200,46 +205,50 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
   }
 
   return (
-    <section className="ch100-wrap wrap ch100-stats stats" id="stats">
+    <section className="ch100-wrap ch100-stats" id="stats">
       <details className="ch100-stats-details">
         <summary className="ch100-stats-summary">
-          <span>Breakdown by rank tier, era, genre, and queue</span>
-          <span className="ch100-stats-toggle-hint">Toggle analytics</span>
+          <div className="ch100-stats-summary-title">
+            <span className="ch100-stats-dot" aria-hidden="true" />
+            <span>Analytics &amp; Breakdown</span>
+            <small>Rank tier · Era · Genre · Queue</small>
+          </div>
+          <span className="ch100-stats-toggle-hint">Toggle breakdown ▾</span>
         </summary>
 
-        <div className="ch100-panels panels" id="panels">
+        <div className="ch100-panels" id="panels">
           {cat !== "tracker" && (
-            <div className="ch100-panel panel">
+            <div className="ch100-panel">
               <h3>By rank tier</h3>
               {renderBarRows(tierGroups)}
             </div>
           )}
 
           {(cat === "film" || cat === "vgf" || cat === "tracker") && (
-            <div className="ch100-panel panel">
+            <div className="ch100-panel">
               <h3>By language</h3>
               {renderBarRows(langGroups)}
             </div>
           )}
 
-          <div className="ch100-panel panel">
+          <div className="ch100-panel">
             <h3>{cat === "tv" ? "By total time" : "By runtime"}</h3>
             {renderBarRows(lengthGroups)}
           </div>
 
-          <div className="ch100-panel panel">
+          <div className="ch100-panel">
             <h3>By era</h3>
             {renderBarRows(decadeGroups)}
           </div>
 
-          <div className="ch100-panel panel">
+          <div className="ch100-panel">
             <h3>By genre</h3>
             {renderBarRows(genreGroups)}
           </div>
 
-          <div className="ch100-panel panel">
+          <div className="ch100-panel">
             <h3>Your top rated</h3>
-            <ul className="ch100-tops tops">
+            <ul className="ch100-tops">
               {topRated.length > 0 ? (
                 topRated.map((s) => {
                   const rec = getMediaRecord(store, s.id);
@@ -253,7 +262,7 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
                         <span>
                           #{s.rank} {s.title}
                         </span>
-                        <span aria-label={`${rec.r || 0} stars`}>
+                        <span className="ch100-top-stars" aria-label={`${rec.r || 0} stars`}>
                           {"★".repeat(rec.r || 0)}
                         </span>
                       </button>
@@ -261,16 +270,16 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
                   );
                 })
               ) : (
-                <li>
-                  <span>Rate a {catalog.one} to see your favorites here.</span>
+                <li className="ch100-tops-empty">
+                  Rate a {catalog.one} to see your favorites here.
                 </li>
               )}
             </ul>
           </div>
 
-          <div className="ch100-panel panel">
+          <div className="ch100-panel">
             <h3>Next up in queue</h3>
-            <ul className="ch100-tops tops">
+            <ul className="ch100-tops">
               {nextUp.length > 0 ? (
                 nextUp.map((s) => (
                   <li key={s.id}>
@@ -287,8 +296,8 @@ export const Channel100Stats: React.FC<Channel100StatsProps> = ({
                   </li>
                 ))
               ) : (
-                <li>
-                  <span>Mark {catalog.noun} as Want or Watching.</span>
+                <li className="ch100-tops-empty">
+                  Mark {catalog.noun} as Want or Watching.
                 </li>
               )}
             </ul>

@@ -865,6 +865,19 @@
   color: var(--ch-text);
 }
 
+.ch100-root .ch100-sub-btn {
+  all: unset;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: opacity 0.12s ease;
+}
+
+.ch100-root .ch100-sub-btn:hover {
+  opacity: 0.78;
+}
+
 .ch100-sub {
   margin: 0;
   font-size: 13px;
@@ -1090,7 +1103,8 @@
 }
 
 .ch100-stats-details {
-  border: 1.5px solid var(--ch-line);
+  width: 100%;
+  border: 2px solid var(--ch-line);
   border-radius: 10px;
   background: var(--ch-card);
   box-shadow: 3px 3px 0 var(--ch-shadow);
@@ -1098,61 +1112,98 @@
 }
 
 .ch100-stats-summary {
-  padding: 13px 18px;
+  padding: 14px 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13.5px;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 14px;
   font-weight: 700;
   user-select: none;
   list-style: none;
+  background: var(--ch-card);
 }
 
 .ch100-stats-summary::-webkit-details-marker {
   display: none;
 }
 
+.ch100-stats-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ch100-stats-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ch-yellow);
+  border: 1.5px solid #111111;
+  flex-shrink: 0;
+}
+
+.ch100-stats-summary-title small {
+  font-family: var(--ch-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ch-muted);
+}
+
 .ch100-stats-toggle-hint {
   font-family: var(--ch-mono);
   font-size: 11.5px;
-  font-weight: 600;
-  color: var(--ch-muted);
+  font-weight: 700;
+  color: #111111;
+  background: var(--ch-yellow);
+  border: 1.5px solid #111111;
+  border-radius: 5px;
+  padding: 3px 9px;
 }
 
 .ch100-panels {
-  padding: 16px 18px;
+  padding: 18px;
   border-top: 1.5px solid var(--ch-border);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+  width: 100%;
 }
 
 .ch100-panel {
+  border: 1.5px solid var(--ch-border);
+  border-radius: 8px;
+  background: var(--ch-surface);
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
 }
 
 .ch100-panel h3 {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   font-family: var(--ch-mono);
   font-size: 11.5px;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--ch-muted);
+  color: var(--ch-text);
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--ch-border);
 }
 
 .ch100-brow {
   display: grid;
-  grid-template-columns: 110px 1fr 48px;
+  grid-template-columns: 115px 1fr 48px;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 12.5px;
 }
 
-.ch100-brow .lab {
+.ch100-brow-lab {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1161,7 +1212,7 @@
 
 .ch100-btrack {
   height: 8px;
-  background: var(--ch-surface);
+  background: var(--ch-card);
   border: 1px solid var(--ch-border);
   border-radius: 999px;
   overflow: hidden;
@@ -1174,7 +1225,7 @@
   background: var(--ch-seen);
 }
 
-.ch100-brow .num {
+.ch100-brow-num {
   font-family: var(--ch-mono);
   font-size: 11.5px;
   color: var(--ch-muted);
@@ -1189,6 +1240,17 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.ch100-tops-empty {
+  font-size: 12.5px;
+  color: var(--ch-muted);
+  padding: 4px 0;
+}
+
+.ch100-top-stars {
+  color: #D99B00 !important;
+  letter-spacing: 1px;
 }
 
 .ch100-root .ch100-top-btn {
@@ -1359,11 +1421,45 @@
   margin: 0;
 }
 
+.ch100-blurb-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .ch100-blurb {
   margin: 0;
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 1.58;
   color: var(--ch-muted);
+}
+
+.ch100-details-loading {
+  font-family: var(--ch-mono);
+  font-size: 11px;
+  color: var(--ch-watching);
+}
+
+.ch100-cast-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ch100-cast-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ch100-cast-pill {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 5px;
+  background: var(--ch-surface);
+  border: 1px solid var(--ch-border);
+  color: var(--ch-text);
 }
 
 .ch100-facts {
