@@ -409,8 +409,9 @@ export default function NotebooksPage() {
     } else {
       const appTheme = document.documentElement.dataset.theme;
       if (appTheme === "matcha") setPaperTheme("matcha");
-      else if (appTheme === "matte_black" || appTheme === "tokyo") setPaperTheme("ink");
-      else if (appTheme === "cyberpunk" || appTheme === "nordic") setPaperTheme("midnight");
+      else if (appTheme === "obsidian" || appTheme === "matte_black") setPaperTheme("ink");
+      else if (appTheme === "tokyo" || appTheme === "cyberpunk" || appTheme === "nordic") setPaperTheme("midnight");
+      else setPaperTheme("cream");
     }
 
     // Check URL parameters first, then localStorage

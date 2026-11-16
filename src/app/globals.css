@@ -9,26 +9,40 @@
 @import "../styles/til.css";
 @import "../styles/library.css";
 
-:root, [data-theme="default"] {
-  --cream: #F4F0EA;
+/* ============================================================================
+   HOARD // 5 CURATED EDITORIAL THEMES
+   1. Kinfolk Paper (`default` / `kinfolk`) — Warm Editorial Linen & Espresso Ink
+   2. Kyoto Matcha (`matcha`)              — Botanical Washi, Celadon & Hinoki
+   3. Atelier Terracotta (`terracotta`)    — Parisian Risograph, Blush Clay & Umber
+   4. Nocturne Espresso (`obsidian`)       — Warm Walnut Study, Parchment & Brass
+   5. Nordic Fjord (`tokyo` / `nordic`)    — Abyssal Slate, Glacier Mist & Aurora
+   ============================================================================ */
+
+/* 1. Kinfolk Paper (Default Light — Warm Linen & Espresso Carbon) */
+:root,
+[data-theme="default"],
+[data-theme="kinfolk"] {
+  --cream: #F3EDE2;
   --disp: "Bodoni Moda", Didot, Georgia, serif;
   --text: "Newsreader", Georgia, serif;
-  --paper: #FFFDF8;
-  --surface: #FFFDF8;
-  --card: #FFFDF7;
-  --shelf: #E7E2D8;
-  --fg: #000000;
-  --ink: #0A0A0A;
-  --cover-ink: #0A0A0A;
-  --cover-mix: 82%;
-  --yel: #FFE600;
-  --yellow: #FFE94A;
-  --pink: #FF007A;
-  --cyan: #00F0FF;
-  --lime: #B6FF3C;
-  --orange: #FF6B00;
-  --violet: #7C4DFF;
-  --mint: #00E58A;
+  --paper: #FAF6EE;
+  --surface: #FAF6EE;
+  --card: #FCF9F3;
+  --shelf: #E6DEC8;
+  --fg: #181512;
+  --ink: #181512;
+  --border-ink: #181512;
+  --shadow-ink: #181512;
+  --cover-ink: #181512;
+  --cover-mix: 68%;
+  --yel: #F4B942;
+  --yellow: #F7C968;
+  --pink: #E0533C;
+  --cyan: #4895B8;
+  --lime: #72A868;
+  --orange: #E07A38;
+  --violet: #786FA6;
+  --mint: #43A089;
   --mono: "Space Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
   --grot: "Figtree", system-ui, sans-serif;
   --body: "Figtree", system-ui, sans-serif;
@@ -36,122 +50,127 @@
   --hand: "Caveat", cursive, sans-serif;
   --label: "Space Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
   --serif: "Newsreader", Georgia, serif;
-  --bd: 3px solid #000000;
-  --b: 3px;
-  --sh: 6px 6px 0 #000000;
-  --sh-lg: 8px 8px 0 #000000;
-  --sh-sm: 3px 3px 0 #000000;
+  --bd: 2px solid #181512;
+  --b: 2px;
+  --sh: 4px 4px 0 #181512;
+  --sh-lg: 6px 6px 0 #181512;
+  --sh-sm: 2px 2px 0 #181512;
 }
 
-[data-theme="matte_black"],
-[data-theme="matte-black"],
-[data-theme="obsidian"] {
-  --cream: #0A0A0A;
-  --paper: #0D0D0D;
-  --surface: #141414;
-  --card: #161616;
-  --shelf: #1A1A1A;
-  --fg: #F4F4F5;
-  --ink: #F4F4F5;
-  --cover-ink: #F4F4F5;
-  --cover-mix: 25%;
-  --yel: #FACC15;
-  --yellow: #FDE047;
-  --pink: #F43F5E;
-  --cyan: #38BDF8;
-  --lime: #A3E635;
-  --orange: #FB923C;
-  --violet: #C084FC;
-  --mint: #34D399;
-  --bd: 2.5px solid #27272A;
-  --b: 2.5px;
-  --sh: 5px 5px 0 #000000;
-  --sh-lg: 8px 8px 0 #000000;
-  --sh-sm: 2.5px 2.5px 0 #000000;
-}
-
-[data-theme="cyberpunk"] {
-  --cream: #0D0E15;
-  --paper: #161925;
-  --surface: #161925;
-  --fg: #F0F4FC;
-  --ink: #F0F4FC;
-  --cover-ink: #F0F4FC;
-  --cover-mix: 30%;
-  --yel: #FFE600;
-  --pink: #FF007A;
-  --cyan: #00F0FF;
-  --lime: #B6FF3C;
-  --orange: #FF7700;
-  --violet: #A060FF;
-  --mint: #00FF9D;
-  --bd: 3px solid #00F0FF;
-  --sh: 5px 5px 0 #00F0FF;
-  --sh-lg: 8px 8px 0 #00F0FF;
-  --sh-sm: 3px 3px 0 #00F0FF;
-}
-
-[data-theme="nordic"] {
-  --cream: #EBF0F5;
-  --paper: #F8FAFC;
-  --surface: #F8FAFC;
-  --fg: #1A202C;
-  --ink: #1A202C;
-  --cover-ink: #1A202C;
-  --cover-mix: 75%;
-  --yel: #ED8936;
-  --pink: #E53E3E;
-  --cyan: #319795;
-  --lime: #48BB78;
-  --orange: #DD6B20;
-  --violet: #667EEA;
-  --mint: #38B2AC;
-  --bd: 3px solid #2D3748;
-  --sh: 5px 5px 0 #2D3748;
-  --sh-lg: 8px 8px 0 #2D3748;
-  --sh-sm: 3px 3px 0 #2D3748;
-}
-
-[data-theme="tokyo"] {
-  --cream: #1A1B26;
-  --paper: #24283B;
-  --surface: #24283B;
-  --fg: #C0CAF5;
-  --ink: #C0CAF5;
-  --cover-ink: #C0CAF5;
-  --cover-mix: 30%;
-  --yel: #E0AF68;
-  --pink: #F7768E;
-  --cyan: #7DCFFF;
-  --lime: #9ECE6A;
-  --orange: #FF9E64;
-  --violet: #BB9AF7;
-  --mint: #73DACA;
-  --bd: 3px solid #7AA2F7;
-  --sh: 5px 5px 0 #7AA2F7;
-  --sh-lg: 8px 8px 0 #7AA2F7;
-  --sh-sm: 3px 3px 0 #7AA2F7;
-}
-
+/* 2. Kyoto Matcha (Light — Botanical Washi, Celadon & Deep Pine) */
 [data-theme="matcha"] {
-  --cream: #EFECE6;
-  --paper: #F9F7F1;
-  --surface: #F9F7F1;
-  --fg: #2C3531;
-  --ink: #2C3531;
-  --cover-ink: #2C3531;
-  --cover-mix: 75%;
-  --yel: #E7C66B;
-  --pink: #D9822B;
-  --cyan: #8E9A82;
-  --lime: #A3B18A;
-  --orange: #C86D51;
-  --violet: #7E8D85;
-  --mint: #52796F;
-  --bd: 3px solid #116466;
-  --sh: 5px 5px 0 #116466;
-  --sh-lg: 8px 8px 0 #116466;
-  --sh-sm: 3px 3px 0 #116466;
+  --cream: #E9EFE6;
+  --paper: #F5F8F2;
+  --surface: #F5F8F2;
+  --card: #F9FBF7;
+  --shelf: #DAE3D5;
+  --fg: #16231B;
+  --ink: #16231B;
+  --border-ink: #1D2E24;
+  --shadow-ink: #16231B;
+  --cover-ink: #16231B;
+  --cover-mix: 65%;
+  --yel: #EBC154;
+  --yellow: #F2CE6E;
+  --pink: #D95D39;
+  --cyan: #529691;
+  --lime: #78A866;
+  --orange: #D97F3E;
+  --violet: #7C73A8;
+  --mint: #4A997C;
+  --bd: 2px solid #1D2E24;
+  --b: 2px;
+  --sh: 4px 4px 0 #16231B;
+  --sh-lg: 6px 6px 0 #16231B;
+  --sh-sm: 2px 2px 0 #16231B;
+}
+
+/* 3. Atelier Terracotta (Light — Parisian Risograph, Sandstone Blush & Umber) */
+[data-theme="terracotta"] {
+  --cream: #F4EAE4;
+  --paper: #FCF7F4;
+  --surface: #FCF7F4;
+  --card: #FFFDFB;
+  --shelf: #E8D9D0;
+  --fg: #241715;
+  --ink: #241715;
+  --border-ink: #2E1E1B;
+  --shadow-ink: #241715;
+  --cover-ink: #241715;
+  --cover-mix: 66%;
+  --yel: #F2B84B;
+  --yellow: #F7C86E;
+  --pink: #D64550;
+  --cyan: #458D97;
+  --lime: #7E9F5B;
+  --orange: #DF6841;
+  --violet: #8A5A83;
+  --mint: #499684;
+  --bd: 2px solid #2E1E1B;
+  --b: 2px;
+  --sh: 4px 4px 0 #241715;
+  --sh-lg: 6px 6px 0 #241715;
+  --sh-sm: 2px 2px 0 #241715;
+}
+
+/* 4. Nocturne Espresso (Dark — Warm Walnut Study, Parchment & Brass) */
+[data-theme="obsidian"],
+[data-theme="matte_black"],
+[data-theme="matte-black"] {
+  --cream: #13110F;
+  --paper: #1C1916;
+  --surface: #1E1B17;
+  --card: #211D1A;
+  --shelf: #26211D;
+  --fg: #EFE9DF;
+  --ink: #EFE9DF;
+  --border-ink: #3D362F;
+  --shadow-ink: #070605;
+  --cover-ink: #EFE9DF;
+  --cover-mix: 34%;
+  --yel: #F0B429;
+  --yellow: #F5C44E;
+  --pink: #F06449;
+  --cyan: #4EA8B4;
+  --lime: #8CB369;
+  --orange: #F28F3B;
+  --violet: #9D8DF1;
+  --mint: #52B788;
+  --bd: 2px solid #3D362F;
+  --b: 2px;
+  --sh: 4px 4px 0 #070605;
+  --sh-lg: 6px 6px 0 #070605;
+  --sh-sm: 2px 2px 0 #070605;
+}
+
+/* 5. Nordic Fjord (Dark — Deep Abyssal Slate, Glacier Mist & Aurora) */
+[data-theme="tokyo"],
+[data-theme="nordic"],
+[data-theme="cyberpunk"] {
+  --cream: #0E131B;
+  --paper: #151D28;
+  --surface: #18212E;
+  --card: #1A2432;
+  --shelf: #202C3D;
+  --fg: #E8EEF5;
+  --ink: #E8EEF5;
+  --border-ink: #304156;
+  --shadow-ink: #05080C;
+  --cover-ink: #E8EEF5;
+  --cover-mix: 34%;
+  --yel: #F5B841;
+  --yellow: #F8C968;
+  --pink: #F2647D;
+  --cyan: #48BFE3;
+  --lime: #72C478;
+  --orange: #F78C40;
+  --violet: #9B87F5;
+  --mint: #4AD6A7;
+  --bd: 2px solid #304156;
+  --b: 2px;
+  --sh: 4px 4px 0 #05080C;
+  --sh-lg: 6px 6px 0 #05080C;
+  --sh-sm: 2px 2px 0 #05080C;
 }
 
 /* ---------- kind color tokens & cover baseline ---------- */
@@ -453,7 +472,7 @@ button, input, textarea {
 
 .tg.on {
   background: var(--ink);
-  color: var(--yel);
+  color: var(--paper);
 }
 
 /* ---------------- main ---------------- */
@@ -1628,13 +1647,13 @@ input[type=range]::-moz-range-thumb {
 
 .flbl {
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: .14em;
+  letter-spacing: .12em;
   margin-bottom: 6px;
   display: inline-block;
   background: var(--ink);
-  color: var(--yel);
+  color: var(--paper);
   padding: 2px 6px;
 }
 

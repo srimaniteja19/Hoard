@@ -1,27 +1,66 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { Palette, Check, ChevronDown } from "lucide-react";
 
-export type ThemeId = "default" | "matte_black" | "cyberpunk" | "nordic" | "tokyo" | "matcha";
+export type ThemeId = "default" | "matcha" | "terracotta" | "obsidian" | "tokyo";
 
 export interface ThemeOption {
   id: ThemeId;
   name: string;
-  badge: string;
-  color: string; // Preview dot color
-  accent: string;
+  subtitle: string;
+  badge: "LIGHT" | "DARK";
+  swatches: [string, string, string]; // [Canvas, Ink/Border, Accent]
 }
 
 export const THEMES: ThemeOption[] = [
-  { id: "default",     name: "Neo Brutalist", badge: "LIGHT",    color: "#FFE600", accent: "#FF007A" },
-  { id: "matte_black", name: "Matte Black",   badge: "MATTE",    color: "#0A0A0A", accent: "#FDE047" },
-  { id: "cyberpunk",   name: "Cyberpunk",     badge: "DARK",     color: "#00F0FF", accent: "#FF007A" },
-  { id: "nordic",      name: "Nordic Fog",    badge: "SLATE",    color: "#319795", accent: "#667EEA" },
-  { id: "tokyo",       name: "Tokyo Night",   badge: "MIDNIGHT", color: "#7AA2F7", accent: "#F7768E" },
-  { id: "matcha",      name: "Matcha Latte",  badge: "WARM",     color: "#A3B18A", accent: "#D9822B" },
+  {
+    id: "default",
+    name: "Kinfolk Paper",
+    subtitle: "Warm linen & espresso carbon",
+    badge: "LIGHT",
+    swatches: ["#F3EDE2", "#181512", "#F4B942"],
+  },
+  {
+    id: "matcha",
+    name: "Kyoto Matcha",
+    subtitle: "Celadon washi & deep pine",
+    badge: "LIGHT",
+    swatches: ["#E9EFE6", "#16231B", "#78A866"],
+  },
+  {
+    id: "terracotta",
+    name: "Atelier Clay",
+    subtitle: "Sandstone blush & sienna",
+    badge: "LIGHT",
+    swatches: ["#F4EAE4", "#241715", "#DF6841"],
+  },
+  {
+    id: "obsidian",
+    name: "Nocturne Espresso",
+    subtitle: "Warm walnut & brass study",
+    badge: "DARK",
+    swatches: ["#13110F", "#EFE9DF", "#F0B429"],
+  },
+  {
+    id: "tokyo",
+    name: "Nordic Fjord",
+    subtitle: "Abyssal slate & aurora cyan",
+    badge: "DARK",
+    swatches: ["#0E131B", "#E8EEF5", "#48BFE3"],
+  },
 ];
 
 const THEME_STORAGE_KEY = "hoard_theme_v1";
+
+function normalizeLegacyTheme(raw: string | null): ThemeId {
+  if (!raw) return "default";
+  if (raw === "matcha") return "matcha";
+  if (raw === "terracotta") return "terracotta";
+  if (raw === "obsidian" || raw === "matte_black" || raw === "matte-black") return "obsidian";
+  if (raw === "tokyo" || raw === "nordic" || raw === "cyberpunk") return "tokyo";
+  return "default";
+}
 
 export function applyTheme(themeId: ThemeId) {
   if (typeof document !== "undefined") {
@@ -37,21 +76,36 @@ export function applyTheme(themeId: ThemeId) {
 export const ThemePicker: React.FC = () => {
   const [currentTheme, setCurrentTheme] = useState<ThemeId>("default");
   const [isOpen, setIsOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(THEME_STORAGE_KEY) as ThemeId | null;
-      if (saved && THEMES.some((t) => t.id === saved)) {
-        // Must run post-mount: localStorage is unavailable during SSR, so this
-        // can't be a lazy useState initializer without a hydration mismatch.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setCurrentTheme(saved);
-        applyTheme(saved);
-      }
+      const saved = normalizeLegacyTheme(localStorage.getItem(THEME_STORAGE_KEY));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCurrentTheme(saved);
+      applyTheme(saved);
     } catch {
       // ignore
     }
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    window.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
 
   const handleSelect = (id: ThemeId) => {
     setCurrentTheme(id);
@@ -62,12 +116,16 @@ export const ThemePicker: React.FC = () => {
   const activeThemeMeta = THEMES.find((t) => t.id === currentTheme) || THEMES[0];
 
   return (
-    <div style={{ position: "relative", flexShrink: 0 }}>
+    <div ref={wrapRef} style={{ position: "relative", flexShrink: 0 }}>
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-label={`Theme: ${activeThemeMeta.name}`}
         style={{
           fontFamily: "var(--mono)",
-          fontSize: "10.5px",
+          fontSize: "11px",
           fontWeight: 800,
           border: "var(--bd)",
           background: "var(--paper)",
@@ -76,89 +134,157 @@ export const ThemePicker: React.FC = () => {
           boxSizing: "border-box",
           padding: "0 10px",
           cursor: "pointer",
-          display: "flex",
+          display: "inline-flex",
           alignItems: "center",
-          gap: "6px",
+          gap: "7px",
           boxShadow: "var(--sh-sm)",
           whiteSpace: "nowrap",
         }}
       >
-        <span
-          style={{
-            width: "8px",
-            height: "8px",
-            borderRadius: "50%",
-            background: activeThemeMeta.color,
-            border: "1px solid var(--ink)",
-          }}
-        />
-        <span className="theme-picker-prefix">THEME: </span>
-        <span>{activeThemeMeta.badge}</span>
-        <span style={{ fontSize: "8px" }}>{isOpen ? "▲" : "▼"}</span>
+        {/* 3-dot mini palette preview */}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}>
+          {activeThemeMeta.swatches.map((hex, idx) => (
+            <span
+              key={idx}
+              style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: hex,
+                border: "1px solid var(--border-ink, var(--ink))",
+              }}
+            />
+          ))}
+        </span>
+        <span className="theme-picker-prefix">{activeThemeMeta.name.toUpperCase()}</span>
+        <ChevronDown size={12} style={{ opacity: 0.7 }} />
       </button>
 
       {isOpen && (
         <div
+          role="listbox"
+          aria-label="Choose interface theme"
           style={{
             position: "absolute",
-            top: "calc(100% + 4px)",
+            top: "calc(100% + 6px)",
             right: 0,
             zIndex: 999,
             background: "var(--paper)",
             border: "var(--bd)",
             boxShadow: "var(--sh)",
-            width: "190px",
+            width: "256px",
             display: "flex",
             flexDirection: "column",
-            gap: "2px",
-            padding: "4px",
+            gap: "4px",
+            padding: "8px",
           }}
         >
-          {THEMES.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => handleSelect(t.id)}
-              style={{
-                fontFamily: "var(--mono)",
-                fontSize: "10px",
-                fontWeight: 800,
-                border: "none",
-                background: currentTheme === t.id ? "var(--ink)" : "transparent",
-                color: currentTheme === t.id ? "var(--cream)" : "var(--ink)",
-                padding: "6px 8px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                textAlign: "left",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: t.color,
-                    border: "1px solid var(--ink)",
-                  }}
-                />
-                {t.name}
-              </div>
-              <span
+          <div
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: "11px",
+              fontWeight: 800,
+              letterSpacing: "0.08em",
+              opacity: 0.68,
+              padding: "2px 6px 4px",
+              borderBottom: "1px solid color-mix(in oklab, var(--ink) 16%, transparent)",
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+            }}
+          >
+            <Palette size={12} /> 5 EDITORIAL THEMES
+          </div>
+
+          {THEMES.map((t) => {
+            const isSelected = currentTheme === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => handleSelect(t.id)}
                 style={{
-                  fontSize: "8px",
-                  opacity: 0.8,
-                  background: t.accent,
-                  color: "#000",
-                  padding: "1px 4px",
-                  border: "1px solid var(--ink)",
+                  fontFamily: "var(--mono)",
+                  border: isSelected
+                    ? "1.5px solid var(--border-ink, var(--ink))"
+                    : "1.5px solid transparent",
+                  background: isSelected
+                    ? "color-mix(in oklab, var(--yel) 22%, var(--cream))"
+                    : "transparent",
+                  color: "var(--ink)",
+                  padding: "7px 8px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "8px",
+                  textAlign: "left",
                 }}
               >
-                {t.badge}
-              </span>
-            </button>
-          ))}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                  {/* 3-color swatch pill */}
+                  <span
+                    style={{
+                      display: "inline-grid",
+                      gridTemplateColumns: "1fr 1fr 1fr",
+                      width: "27px",
+                      height: "16px",
+                      border: "1.5px solid var(--border-ink, var(--ink))",
+                      overflow: "hidden",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span style={{ background: t.swatches[0] }} />
+                    <span style={{ background: t.swatches[1] }} />
+                    <span style={{ background: t.swatches[2] }} />
+                  </span>
+
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: "11.5px",
+                        fontWeight: 800,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "5px",
+                      }}
+                    >
+                      <span>{t.name}</span>
+                      {isSelected && <Check size={11} strokeWidth={3} />}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        fontFamily: "var(--grot)",
+                        opacity: 0.68,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {t.subtitle}
+                    </div>
+                  </div>
+                </div>
+
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    background: t.badge === "DARK" ? "var(--ink)" : "var(--cream)",
+                    color: t.badge === "DARK" ? "var(--paper)" : "var(--ink)",
+                    padding: "1px 5px",
+                    border: "1px solid var(--border-ink, var(--ink))",
+                    flexShrink: 0,
+                  }}
+                >
+                  {t.badge}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

@@ -35,8 +35,8 @@
 
 /* ─── Left Workbench Sidebar Rail ────────────────────────────────────────── */
 .app-container .side {
-  border-right: 2px solid var(--ink);
-  background: color-mix(in oklab, var(--shelf, #E7E2D8) 28%, var(--cream));
+  border-right: 2px solid var(--border-ink, var(--ink));
+  background: color-mix(in oklab, var(--shelf, #E7E2D8) 38%, var(--cream));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -54,10 +54,10 @@
 
 .app-container .side-save-btn {
   flex: 1;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--border-ink, var(--ink));
   background: var(--ink);
   color: var(--paper);
-  box-shadow: 2px 2px 0 color-mix(in oklab, var(--ink) 30%, transparent);
+  box-shadow: 2px 2px 0 var(--shadow-ink, var(--ink));
   padding: 8px 11px;
   font-family: var(--mono);
   font-weight: 800;
@@ -74,12 +74,12 @@
   background: var(--yel);
   color: #000;
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--shadow-ink, var(--ink));
 }
 
 .app-container .side-save-btn:active {
   transform: translate(1px, 1px);
-  box-shadow: 0 0 0 var(--ink);
+  box-shadow: 0 0 0 var(--shadow-ink, var(--ink));
 }
 
 .app-container .side-save-btn kbd {
@@ -91,10 +91,10 @@
 }
 
 .app-container .side-session-btn {
-  border: 2px solid var(--ink);
+  border: 2px solid var(--border-ink, var(--ink));
   background: var(--paper);
   color: var(--ink);
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--shadow-ink, var(--ink));
   height: 34px;
   padding: 0 9px;
   font-family: var(--mono);
@@ -205,14 +205,14 @@
 }
 
 .app-container .ci:focus-visible {
-  border-color: var(--ink);
-  box-shadow: 2px 2px 0 var(--ink);
+  border-color: var(--border-ink, var(--ink));
+  box-shadow: 2px 2px 0 var(--shadow-ink, var(--ink));
 }
 
 .app-container .ci.on {
   background: var(--paper);
-  border-color: var(--ink);
-  box-shadow: 2px 2px 0 var(--ink);
+  border-color: var(--border-ink, var(--ink));
+  box-shadow: 2px 2px 0 var(--shadow-ink, var(--ink));
   font-weight: 800;
 }
 
@@ -224,13 +224,13 @@
   bottom: -1.5px;
   width: 4px;
   background: var(--yel);
-  border-right: 1.5px solid var(--ink);
+  border-right: 1.5px solid var(--border-ink, var(--ink));
 }
 
 .app-container .ci .ic {
   width: 20px;
   height: 20px;
-  border: 1.5px solid var(--ink);
+  border: 1.5px solid var(--border-ink, var(--ink));
   background: var(--paper);
   flex: 0 0 auto;
   display: grid;
@@ -330,9 +330,9 @@
 
 .app-container .tg.on {
   background: var(--ink);
-  color: var(--yel);
-  border-color: var(--ink);
-  box-shadow: 1.5px 1.5px 0 var(--ink);
+  color: var(--paper);
+  border-color: var(--border-ink, var(--ink));
+  box-shadow: 1.5px 1.5px 0 var(--shadow-ink, var(--ink));
 }
 
 .app-container .tg.on .tg-count {
@@ -389,7 +389,7 @@
 }
 
 .app-container .lib-workbench-header {
-  border-bottom: 2px solid var(--ink);
+  border-bottom: 2px solid var(--border-ink, var(--ink));
   background: var(--paper);
   padding: 10px 18px;
   display: flex;
@@ -409,7 +409,7 @@
 .app-container .lib-rail-toggle {
   width: 34px;
   height: 34px;
-  border: 1.5px solid var(--ink);
+  border: 1.5px solid var(--border-ink, var(--ink));
   background: var(--cream);
   color: var(--ink);
   display: grid;
@@ -423,7 +423,7 @@
 .app-container .lib-rail-toggle:focus-visible {
   background: var(--yel);
   color: #000;
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--shadow-ink, var(--ink));
   outline: none;
 }
 
@@ -432,9 +432,9 @@
   flex: 1;
   min-width: 220px;
   min-height: 36px;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--border-ink, var(--ink));
   background: var(--cream);
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--shadow-ink, var(--ink));
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -445,7 +445,7 @@
 
 .app-container .lib-omnibox:focus-within {
   background: var(--paper);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--shadow-ink, var(--ink));
 }
 
 .app-container .lib-omnibox-icon {
@@ -464,9 +464,9 @@
   font-size: 11px;
   font-weight: 800;
   background: var(--ink);
-  color: var(--yel);
+  color: var(--paper);
   padding: 2px 7px;
-  border: 1.5px solid var(--ink);
+  border: 1.5px solid var(--border-ink, var(--ink));
   cursor: pointer;
   white-space: nowrap;
   line-height: 1.2;
@@ -523,10 +523,10 @@
   appearance: none;
   -webkit-appearance: none;
   height: 36px;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--border-ink, var(--ink));
   background: var(--paper);
   color: var(--ink);
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--shadow-ink, var(--ink));
   padding: 0 28px 0 10px;
   font-family: var(--mono);
   font-size: 11px;
@@ -552,14 +552,14 @@
 .app-container .lib-view-seg {
   display: inline-flex;
   height: 36px;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--border-ink, var(--ink));
   background: var(--paper);
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--shadow-ink, var(--ink));
 }
 
 .app-container .lib-view-btn {
   border: 0;
-  border-right: 1.5px solid var(--ink);
+  border-right: 1.5px solid var(--border-ink, var(--ink));
   background: transparent;
   color: var(--ink);
   padding: 0 10px;
@@ -584,7 +584,7 @@
 
 .app-container .lib-view-btn.on {
   background: var(--ink);
-  color: var(--yel);
+  color: var(--paper);
 }
 
 /* ─── Second Row: Facet & Kind Strip + Active Scope Title ────────────────── */
@@ -635,10 +635,10 @@
 }
 
 .app-container .lib-kind-pill.on {
-  border-color: var(--ink);
+  border-color: var(--border-ink, var(--ink));
   background: var(--ink);
-  color: var(--yel);
-  box-shadow: 2px 2px 0 var(--ink);
+  color: var(--paper);
+  box-shadow: 2px 2px 0 var(--shadow-ink, var(--ink));
   font-weight: 800;
 }
 
@@ -726,9 +726,9 @@
 
 /* ─── Redesigned BookmarkCard: Tactile Frame, Editorial Interior ─────────── */
 .app-container .card {
-  border: 2px solid var(--ink);
+  border: 2px solid var(--border-ink, var(--ink));
   background: var(--paper);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--shadow-ink, var(--ink));
   cursor: pointer;
   transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.14s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.12s ease;
   position: relative;
@@ -739,18 +739,18 @@
 .app-container .card:hover,
 .app-container .card:focus-visible {
   transform: translate(-2px, -2px);
-  box-shadow: 5px 5px 0 var(--ink);
+  box-shadow: 5px 5px 0 var(--shadow-ink, var(--ink));
   outline: none;
 }
 
 .app-container .card.sel {
   background: color-mix(in oklab, var(--yel) 22%, var(--paper));
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--border-ink, var(--ink));
 }
 
 /* Cover Area — Slimmer, Uniform in Grid, Uncluttered */
 .app-container .card .cover {
-  border-bottom: 2px solid var(--ink);
+  border-bottom: 2px solid var(--border-ink, var(--ink));
   height: 92px;
   position: relative;
   overflow: hidden;
@@ -758,7 +758,7 @@
   align-items: flex-end;
   padding: 8px 10px;
   --kc: var(--kind-color, var(--cyan));
-  background: color-mix(in oklab, var(--kc) 55%, var(--surface));
+  background: color-mix(in oklab, var(--kc) var(--cover-mix, 55%), var(--surface));
 }
 
 .app-container .card .cover.tall {
@@ -1038,9 +1038,9 @@
   grid-template-columns: 46px minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
-  border: 1.5px solid var(--ink);
+  border: 1.5px solid var(--border-ink, var(--ink));
   background: var(--paper);
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--shadow-ink, var(--ink));
   padding: 10px 14px 10px 0;
   margin-bottom: 0;
   cursor: pointer;
@@ -1050,7 +1050,7 @@
 .app-container .list .row:hover,
 .app-container .list .row:focus-visible {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--shadow-ink, var(--ink));
   outline: none;
 }
 
@@ -1062,7 +1062,7 @@
   align-self: stretch;
   margin: -10px 0;
   border: 0;
-  border-right: 1.5px solid var(--ink);
+  border-right: 1.5px solid var(--border-ink, var(--ink));
   background: transparent;
   color: var(--ink);
   display: grid;
@@ -1118,8 +1118,8 @@
 
 /* Headlines Compact Table (6 Columns) */
 .app-container .heads {
-  border: 2px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--ink);
+  border: 2px solid var(--border-ink, var(--ink));
+  box-shadow: 3px 3px 0 var(--shadow-ink, var(--ink));
   background: var(--paper);
 }
 
@@ -1220,8 +1220,8 @@
 
 .app-container .vault-toolbar {
   background: var(--paper);
-  border: 2px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--ink);
+  border: 2px solid var(--border-ink, var(--ink));
+  box-shadow: 3px 3px 0 var(--shadow-ink, var(--ink));
   padding: 12px 16px;
   display: flex;
   align-items: center;
@@ -1242,7 +1242,7 @@
   font-size: 11px;
   font-weight: 800;
   padding: 6px 11px;
-  border: 1.5px solid var(--ink);
+  border: 1.5px solid var(--border-ink, var(--ink));
   background: var(--cream);
   color: var(--ink);
   cursor: pointer;
@@ -1258,8 +1258,8 @@
 
 .app-container .vault-tab.on {
   background: var(--ink);
-  color: var(--yel);
-  box-shadow: 2px 2px 0 var(--ink);
+  color: var(--paper);
+  box-shadow: 2px 2px 0 var(--shadow-ink, var(--ink));
 }
 
 .app-container .vault-tab-count {
@@ -1313,8 +1313,8 @@
 
 .app-container .vault-card {
   background: var(--paper);
-  border: 2px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--ink);
+  border: 2px solid var(--border-ink, var(--ink));
+  box-shadow: 3px 3px 0 var(--shadow-ink, var(--ink));
   display: flex;
   flex-direction: column;
   position: relative;
@@ -1323,14 +1323,14 @@
 
 .app-container .vault-card.active {
   outline: 2px solid var(--yel);
-  box-shadow: 4px 4px 0 var(--ink);
+  box-shadow: 4px 4px 0 var(--shadow-ink, var(--ink));
 }
 
 .app-container .vault-card-cover {
   height: 88px;
   position: relative;
   overflow: hidden;
-  border-bottom: 1.5px solid var(--ink);
+  border-bottom: 1.5px solid var(--border-ink, var(--ink));
 }
 
 .app-container .vault-card-body {
