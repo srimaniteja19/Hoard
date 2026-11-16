@@ -12,13 +12,18 @@ import {
   getCuratedTriage,
 } from "@/lib/channel100/triage";
 import { playSound } from "@/lib/sound";
-import { CustomMediaItem, CustomMediaKind } from "@/lib/channel100/types";
+import { CustomMediaItem, CustomMediaKind, ShowStatus } from "@/lib/channel100/types";
 
 interface Channel100TriageModalProps {
   isOpen: boolean;
   onClose: () => void;
   watchlistTitles?: string[];
+  seenTitles?: string[];
   onLogPrescription?: (item: Partial<CustomMediaItem>) => void;
+  onQuickMarkPrescription?: (
+    item: Partial<CustomMediaItem>,
+    status: ShowStatus
+  ) => void;
   sfxEnabled?: boolean;
 }
 
@@ -28,7 +33,9 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
   isOpen,
   onClose,
   watchlistTitles = [],
+  seenTitles = [],
   onLogPrescription,
+  onQuickMarkPrescription,
   sfxEnabled = true,
 }) => {
   const [step, setStep] = useState<TriageStep>("time");
@@ -39,6 +46,9 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
   const [, setLoading] = useState(false);
   const [prescription, setPrescription] = useState<TriagePick | null>(null);
   const [alternatives, setAlternatives] = useState<TriagePick[]>([]);
+  const [triageSource, setTriageSource] = useState<"ai" | "curated">("ai");
+  const [excludedTitles, setExcludedTitles] = useState<string[]>([]);
+  const [quickMarkedStatus, setQuickMarkedStatus] = useState<ShowStatus>("");
   const [activePickIndex, setActivePickIndex] = useState(0); // 0 = primary, 1 = alt 1, 2 = alt 2
   const [scanMessage, setScanMessage] = useState("TUNING BROADCAST SATELLITE...");
 
@@ -52,6 +62,8 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
       previousFocusRef.current = document.activeElement as HTMLElement | null;
       setStep("time");
       setActivePickIndex(0);
+      setExcludedTitles([]);
+      setQuickMarkedStatus("");
       document.body.style.overflow = "hidden";
       const t = setTimeout(() => closeBtnRef.current?.focus(), 50);
       return () => {
@@ -129,9 +141,15 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
     }
   };
 
-  async function runTriage(chosenTime: TriageTime, chosenEnergy: TriageEnergy, chosenContext: TriageContext) {
+  async function runTriage(
+    chosenTime: TriageTime,
+    chosenEnergy: TriageEnergy,
+    chosenContext: TriageContext,
+    nextExcluded: string[] = excludedTitles
+  ) {
     setStep("scanning");
     setLoading(true);
+    setQuickMarkedStatus("");
     playPop();
 
     const messages = [
@@ -156,6 +174,8 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
           energy: chosenEnergy,
           context: chosenContext,
           watchlistTitles,
+          seenTitles,
+          excludeTitles: nextExcluded,
         }),
       });
 
@@ -164,23 +184,27 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
         if (data?.prescription) {
           setPrescription(data.prescription);
           setAlternatives(data.alternatives || []);
+          setTriageSource(data.source === "curated" ? "curated" : "ai");
           setActivePickIndex(0);
         } else {
           const fallback = getCuratedTriage(chosenTime, chosenEnergy, chosenContext);
           setPrescription(fallback.prescription);
           setAlternatives(fallback.alternatives);
+          setTriageSource("curated");
           setActivePickIndex(0);
         }
       } else {
         const fallback = getCuratedTriage(chosenTime, chosenEnergy, chosenContext);
         setPrescription(fallback.prescription);
         setAlternatives(fallback.alternatives);
+        setTriageSource("curated");
         setActivePickIndex(0);
       }
     } catch {
       const fallback = getCuratedTriage(chosenTime, chosenEnergy, chosenContext);
       setPrescription(fallback.prescription);
       setAlternatives(fallback.alternatives);
+      setTriageSource("curated");
       setActivePickIndex(0);
     } finally {
       clearInterval(interval);
@@ -225,30 +249,51 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
       ? prescription
       : alternatives[activePickIndex - 1] || prescription;
 
-  function handleLogCurrentPick() {
-    if (!currentPick || !onLogPrescription) return;
+  function buildPartialCustomItem(pick: TriagePick): Partial<CustomMediaItem> {
     const mappedKind: CustomMediaKind =
-      currentPick.kind === "film"
+      pick.kind === "film"
         ? "film"
-        : currentPick.kind === "anime"
+        : pick.kind === "anime"
         ? "anime"
-        : currentPick.kind === "mini-series"
+        : pick.kind === "mini-series"
         ? "mini"
-        : currentPick.kind === "documentary"
+        : pick.kind === "documentary"
         ? "doc"
         : "tv";
 
-    onLogPrescription({
-      title: currentPick.title,
-      year: currentPick.year,
+    return {
+      title: pick.title,
+      year: pick.year,
       kind: mappedKind,
-      lang: currentPick.lang,
-      langFlag: currentPick.langFlag,
-      genre: currentPick.genre,
-      where: currentPick.where,
-      notes: `${currentPick.tagline} — Triage prescription for ${time} / ${energy} / ${context}.`,
-    });
+      lang: pick.lang,
+      langFlag: pick.langFlag,
+      genre: pick.genre,
+      where: pick.where,
+      notes: `${pick.tagline} — Triage prescription for ${time} / ${energy} / ${context}.`,
+    };
+  }
+
+  function handleLogCurrentPick() {
+    if (!currentPick || !onLogPrescription) return;
+    onLogPrescription(buildPartialCustomItem(currentPick));
     onClose();
+  }
+
+  function handleQuickMark(targetStatus: ShowStatus) {
+    if (!currentPick || !onQuickMarkPrescription) return;
+    playPromote();
+    setQuickMarkedStatus(targetStatus);
+    onQuickMarkPrescription(buildPartialCustomItem(currentPick), targetStatus);
+  }
+
+  function handleReroll() {
+    const shownNow = [
+      prescription?.title,
+      ...alternatives.map((a) => a.title),
+    ].filter((t): t is string => Boolean(t));
+    const nextExcluded = Array.from(new Set([...excludedTitles, ...shownNow]));
+    setExcludedTitles(nextExcluded);
+    runTriage(time, energy, context, nextExcluded);
   }
 
   return (
@@ -489,6 +534,9 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
                 <div className="ch100-tresult-top">
                   <div className="ch100-tresult-badges">
                     <span className="ch100-tresult-rx">🎯 THE PRESCRIPTION</span>
+                    <span className="ch100-tresult-source">
+                      {triageSource === "ai" ? "✨ AI Pick" : "📚 Curated"}
+                    </span>
                     {currentPick.matchedFromWatchlist && (
                       <span className="ch100-tresult-match">⚡ FROM YOUR BACKLOG</span>
                     )}
@@ -551,16 +599,54 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
 
                 {/* Primary Action Button Bar */}
                 <div className="ch100-tresult-actions">
+                  {onQuickMarkPrescription && (
+                    <>
+                      <button
+                        type="button"
+                        className={`ch100-tbtn-quick ${
+                          quickMarkedStatus === "watching" ? "active" : ""
+                        }`}
+                        onClick={() => handleQuickMark("watching")}
+                        title="Save immediately as Watching"
+                      >
+                        {quickMarkedStatus === "watching"
+                          ? "✓ Marked Watching"
+                          : "▶ Watch Tonight"}
+                      </button>
+                      <button
+                        type="button"
+                        className={`ch100-tbtn-quick want ${
+                          quickMarkedStatus === "want" ? "active" : ""
+                        }`}
+                        onClick={() => handleQuickMark("want")}
+                        title="Save immediately to Want list"
+                      >
+                        {quickMarkedStatus === "want"
+                          ? "✓ Added to Want"
+                          : "+ Want"}
+                      </button>
+                    </>
+                  )}
+
                   {onLogPrescription && (
                     <button
                       type="button"
                       className="ch100-tbtn-log"
                       onClick={handleLogCurrentPick}
-                      title="Add this title straight into your personal Channel 100 tracker"
+                      title="Open full form to customize season, episode, or notes"
                     >
-                      ⚡ + Log to Personal Tracker
+                      ✏️ Edit &amp; Log
                     </button>
                   )}
+
+                  <button
+                    type="button"
+                    className="ch100-tbtn-restart"
+                    onClick={handleReroll}
+                    title="Get 3 fresh picks with the same Time, Vibe, and Context"
+                  >
+                    ↻ 3 New Picks
+                  </button>
 
                   <button
                     type="button"
@@ -568,7 +654,7 @@ export const Channel100TriageModal: React.FC<Channel100TriageModalProps> = ({
                     onClick={handleReset}
                     title="Change diagnostic answers"
                   >
-                    🔄 Recalibrate Filter
+                    ↺ Change Answers
                   </button>
                 </div>
               </div>

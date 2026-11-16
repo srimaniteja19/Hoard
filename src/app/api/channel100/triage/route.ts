@@ -40,6 +40,8 @@ export async function POST(req: NextRequest) {
   let energy: TriageEnergy = "adrenaline";
   let context: TriageContext = "solo";
   let watchlistTitles: string[] = [];
+  let seenTitles: string[] = [];
+  let excludeTitles: string[] = [];
 
   try {
     const body = await req.json();
@@ -49,9 +51,17 @@ export async function POST(req: NextRequest) {
     if (Array.isArray(body.watchlistTitles)) {
       watchlistTitles = body.watchlistTitles.map(String).slice(0, 30);
     }
+    if (Array.isArray(body.seenTitles)) {
+      seenTitles = body.seenTitles.map(String).slice(0, 80);
+    }
+    if (Array.isArray(body.excludeTitles)) {
+      excludeTitles = body.excludeTitles.map(String).slice(0, 30);
+    }
   } catch {
     // Proceed with defaults
   }
+
+  const allExcluded = Array.from(new Set([...seenTitles, ...excludeTitles]));
 
   // Attempt AI Generation via Gemini / Gateway
   try {
@@ -63,6 +73,7 @@ The user suffers from severe decision paralysis and needs the SINGLE BEST PRESCR
 3. Viewing Context: ${context} (${context === "solo" ? "solo deep dive, headphones, subtitles welcomed, total immersion" : context === "duo" ? "date night / watching with partner, engrossing conversation starter" : "friends / crowd pleaser, high energy, communal thrills or laughs"})
 
 ${watchlistTitles.length > 0 ? `The user currently has these titles on their backlog or personal tracker: ${watchlistTitles.join(", ")}. If any of these matches their criteria exceptionally well, prioritize it and set matchedFromWatchlist: true.` : ""}
+${allExcluded.length > 0 ? `DO NOT recommend any of these titles (already seen or previously shown): ${allExcluded.join(", ")}.` : ""}
 
 RULES:
 - Select from the wide, rich universe of WORLD CINEMA and GLOBAL TELEVISION (English, Korean, Japanese, French, Indian, Nordic, Spanish, German, Italian, etc.).
@@ -88,8 +99,14 @@ RULES:
     console.warn("[POST /api/channel100/triage] AI Gateway error, falling back to curated engine:", error);
   }
 
-  // Graceful Curated Worldwide Fallback
-  const fallback = getCuratedTriage(time, energy, context);
+  // Graceful Curated Worldwide Fallback (excluding already seen or rerolled titles)
+  const excludeLower = new Set(allExcluded.map((t) => t.toLowerCase()));
+  const { CURATED_TRIAGE_DATABASE } = await import("@/lib/channel100/triage");
+  const excludeIds = CURATED_TRIAGE_DATABASE.filter((entry) =>
+    excludeLower.has(entry.pick.title.toLowerCase())
+  ).map((entry) => entry.pick.id);
+
+  const fallback = getCuratedTriage(time, energy, context, excludeIds);
   
   // Check if any backlog title matches
   if (watchlistTitles.length > 0) {

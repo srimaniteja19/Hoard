@@ -1998,6 +1998,35 @@
   flex-wrap: wrap;
 }
 
+.ch100-root .ch100-tbtn-quick {
+  border: 1.5px solid #111111;
+  background: var(--ch-watching);
+  color: #111111;
+  border-radius: 6px;
+  box-shadow: 2px 2px 0 #111111;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ch100-root .ch100-tbtn-quick.want {
+  background: var(--ch-yellow);
+}
+
+.ch100-root .ch100-tbtn-quick.active {
+  background: var(--ch-seen);
+}
+
+.ch100-tresult-source {
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: var(--ch-surface);
+  border: 1px solid var(--ch-border);
+  font-weight: 700;
+  color: var(--ch-text);
+}
+
 .ch100-root .ch100-tbtn-log {
   border: 1.5px solid #111111;
   background: var(--ch-yellow);

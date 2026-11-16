@@ -893,35 +893,72 @@ export default function Channel100Page() {
     setIsLogModalOpen(true);
   }, []);
 
-  const userWatchlistTitles = useMemo(() => {
-    const list: string[] = [];
+  const { userWatchlistTitles, userSeenTitles } = useMemo(() => {
+    const watchlist: string[] = [];
+    const seen: string[] = [];
     const customList = Object.values(store.custom || {});
     customList.forEach((it) => {
       if (it.status === "want" || it.status === "watching") {
-        list.push(it.title);
+        watchlist.push(it.title);
+      } else if (it.status === "seen") {
+        seen.push(it.title);
       }
     });
     const showsRecord = store.shows || {};
-    tvItems.forEach((s) => {
-      const rec = showsRecord[s.id];
-      if (rec?.s === "want" || rec?.s === "watching") {
-        list.push(s.title);
-      }
-    });
-    filmItems.forEach((f) => {
-      const rec = showsRecord[f.id];
-      if (rec?.s === "want" || rec?.s === "watching") {
-        list.push(f.title);
-      }
-    });
-    vgfItems.forEach((v) => {
-      const rec = showsRecord[v.id];
-      if (rec?.s === "want" || rec?.s === "watching") {
-        list.push(v.title);
-      }
-    });
-    return list;
+    const checkList = (arr: ChannelMediaItem[]) => {
+      arr.forEach((item) => {
+        const rec = showsRecord[item.id];
+        if (rec?.s === "want" || rec?.s === "watching") {
+          watchlist.push(item.title);
+        } else if (rec?.s === "seen") {
+          seen.push(item.title);
+        }
+      });
+    };
+    checkList(tvItems);
+    checkList(filmItems);
+    checkList(vgfItems);
+    return { userWatchlistTitles: watchlist, userSeenTitles: seen };
   }, [store.custom, store.shows, tvItems, filmItems, vgfItems]);
+
+  const handleQuickMarkPrescription = useCallback(
+    (partial: Partial<CustomMediaItem>, status: ShowStatus) => {
+      const title = (partial.title || "").trim();
+      if (!title) return;
+      const normKey = normalizePersonalLogKey(title);
+      const matchedCanonical =
+        tvItems.find((s) => normalizePersonalLogKey(s.title) === normKey) ||
+        filmItems.find((f) => normalizePersonalLogKey(f.title) === normKey) ||
+        vgfItems.find((v) => normalizePersonalLogKey(v.title) === normKey);
+
+      if (matchedCanonical) {
+        updateMediaRecord(matchedCanonical.id, { s: status });
+        triggerToast(
+          status === "watching"
+            ? `▶ Watching: ${matchedCanonical.title}`
+            : `+ Added to Want: ${matchedCanonical.title}`
+        );
+        return;
+      }
+
+      const newItem: CustomMediaItem = {
+        id: `c_${Date.now()}`,
+        title,
+        kind: partial.kind || "film",
+        lang: partial.lang || "English",
+        langFlag: partial.langFlag,
+        status,
+        rating: 0,
+        year: partial.year,
+        where: partial.where || "Streaming",
+        genre: partial.genre || "Entertainment",
+        notes: partial.notes || "",
+        updatedAt: Date.now(),
+      };
+      handleSaveCustomItem(newItem);
+    },
+    [tvItems, filmItems, vgfItems, updateMediaRecord, handleSaveCustomItem, triggerToast]
+  );
 
   return (
     <AppPage variant="flush">
@@ -1051,7 +1088,9 @@ export default function Channel100Page() {
           isOpen={isTriageModalOpen}
           onClose={() => setIsTriageModalOpen(false)}
           watchlistTitles={userWatchlistTitles}
+          seenTitles={userSeenTitles}
           onLogPrescription={handleLogPrescription}
+          onQuickMarkPrescription={handleQuickMarkPrescription}
         />
 
         <Channel100Toast message={toastMessage} />
