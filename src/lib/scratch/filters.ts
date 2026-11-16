@@ -1,4 +1,5 @@
 import { ScrapRow, ScrapKind } from "@/db/schema";
+import { extractTagsFromText, isHexColorTag } from "./parse";
 import { getLocalTodayIso } from "./parse";
 
 export type StatusFilter = "all" | "has_notes" | "images" | "raw" | "promoted" | "pinned";
@@ -42,9 +43,10 @@ export function extractAllTags(scraps: ScrapRow[]): TagCount[] {
   const counts = new Map<string, number>();
 
   for (const s of scraps) {
-    const combined = `${s.content} ${s.notes || ""}`;
-    const matches = combined.match(/#[a-zA-Z][\w-]*/g) || [];
-    const uniqueInScrap = new Set(matches.map((t) => t.toLowerCase()));
+    const uniqueInScrap = new Set([
+      ...(s.tags || []).map((t) => t.toLowerCase()).filter((t) => !isHexColorTag(t)),
+      ...extractTagsFromText(`${s.content} ${s.notes || ""}`),
+    ]);
 
     for (const tag of uniqueInScrap) {
       counts.set(tag, (counts.get(tag) || 0) + 1);

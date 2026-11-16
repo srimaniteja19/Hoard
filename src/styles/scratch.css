@@ -613,9 +613,13 @@
   border-radius: var(--scratch-radius);
   background: var(--card);
   box-shadow: var(--scratch-shadow);
-  margin-bottom: 18px;
+  margin-bottom: 14px;
   transform: rotate(var(--tilt, 0deg));
   transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.scrap.scrap--long {
+  transform: none;
 }
 
 .scrap:hover {
@@ -837,41 +841,36 @@
 }
 
 .scrap__t.is-clamped {
-  max-height: 165px;
+  max-height: 112px;
   overflow: hidden;
   position: relative;
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent 100%);
 }
 
 .scrap__expand-toggle {
   margin-top: 8px;
-  padding: 6px 12px;
+  padding: 5px 11px;
   font-family: var(--mono);
   font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   background: var(--shelf);
   color: var(--ink);
-  border: 1.5px solid var(--ink);
-  box-shadow: 2px 2px 0 var(--ink);
+  border: 1px solid color-mix(in srgb, var(--border-ink, var(--ink)) 40%, transparent);
+  border-radius: 6px;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  transition: all 0.12s ease;
-  width: 100%;
+  gap: 5px;
+  align-self: flex-start;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
 }
 
 .scrap__expand-toggle:hover {
-  background: var(--yellow);
+  background: color-mix(in srgb, var(--yellow) 26%, var(--card));
+  border-color: color-mix(in srgb, var(--yellow) 65%, var(--border-ink, var(--ink)));
   transform: translateY(-1px);
-  box-shadow: 3px 3px 0 var(--ink);
-}
-
-.scrap__expand-toggle:active {
-  transform: translateY(1px);
-  box-shadow: 1px 1px 0 var(--ink);
 }
 
 .scrap__t .q {
@@ -970,35 +969,42 @@
 
 .scrap__p {
   display: flex;
-  border-top: var(--b) solid var(--ink);
+  border-top: 1px solid color-mix(in srgb, var(--border-ink, var(--ink)) 22%, transparent);
+  border-bottom-left-radius: calc(var(--scratch-radius) - 2px);
+  border-bottom-right-radius: calc(var(--scratch-radius) - 2px);
+  overflow: hidden;
 }
 
 .scrap__p button {
   flex: 1;
   font-family: var(--mono);
   font-weight: 700;
-  font-size: 10px;
-  letter-spacing: 0.1em;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
   background: var(--card);
   color: var(--ink);
   border: none;
-  padding: 9px 4px;
+  padding: 7px 4px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.1s, color 0.1s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 
 .scrap__p button + button {
-  border-left: 2px solid var(--ink);
+  border-left: 1px solid color-mix(in srgb, var(--border-ink, var(--ink)) 20%, transparent);
 }
 
 .scrap__p button:hover {
-  background: var(--yellow);
+  background: color-mix(in srgb, var(--yellow) 24%, var(--card));
 }
 
 .scrap__p .notes-btn {
   background: var(--ink);
-  color: var(--yellow);
+  color: var(--cream);
 }
 
 .scrap__p .notes-btn:hover {
@@ -1008,17 +1014,18 @@
 
 /* ── CARD NOTE PREVIEW BADGE ── */
 .scrap__note-preview {
-  margin: 0 14px 12px 37px;
-  padding: 8px 12px;
-  background: rgba(123, 92, 240, 0.08);
-  border: 2px dashed var(--violet);
+  margin: 0 14px 10px 37px;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--violet) 8%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--violet) 32%, transparent);
+  border-radius: 7px;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
 
 .scrap__note-preview:hover {
-  background: rgba(123, 92, 240, 0.16);
-  border-style: solid;
+  background: color-mix(in srgb, var(--violet) 15%, var(--card));
+  border-color: var(--violet);
 }
 
 .scrap__note-preview-h {
@@ -1036,18 +1043,19 @@
 .scrap__note-preview-h .expand-hint {
   background: var(--violet);
   color: #fff;
-  padding: 1px 5px;
+  padding: 1px 6px;
+  border-radius: 4px;
   letter-spacing: 0.08em;
 }
 
 .scrap__note-preview-t {
   font-family: var(--body);
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.35;
-  color: rgba(10, 10, 10, 0.8);
+  color: color-mix(in srgb, var(--ink) 78%, transparent);
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
 }
 
@@ -1949,12 +1957,16 @@
 }
 
 .md-card-content .md-figure {
-  margin: 6px 0 10px;
-  box-shadow: 3px 3px 0 var(--ink);
+  margin: 6px 0 8px;
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border-ink, var(--ink)) 25%, transparent);
 }
 
 .md-card-content .md-figure img {
-  max-height: 280px;
+  max-height: 165px;
+  width: 100%;
+  object-fit: cover;
 }
 
 .md-card-content p {
@@ -4324,6 +4336,18 @@ code.md-slash-cmd:hover {
   gap: 24px;
   align-items: start;
 }
+@media (min-width: 1261px) {
+  .stream .rail,
+  .stream .side {
+    position: sticky;
+    top: 18px;
+    max-height: calc(100vh - 36px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    padding-right: 4px;
+  }
+}
 @media (max-width: 1260px) {
   .stream {
     grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
@@ -4736,9 +4760,9 @@ code.md-slash-cmd:hover {
   margin-bottom: 11px;
 }
 .dayhead.today {
-  background: var(--ink);
-  color: var(--cream);
-  border-color: var(--ink);
+  background: color-mix(in srgb, var(--yellow) 22%, var(--card));
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--yellow) 65%, var(--border-ink, var(--ink)));
 }
 .dayhead b {
   font-family: var(--mono);
@@ -4958,23 +4982,28 @@ code.md-slash-cmd:hover {
 
 /* ══ TAG TREE ══ */
 .tree {
-  padding: 10px 0;
+  padding: 8px 0;
+  max-height: 280px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 .tree__r {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 6px 14px;
+  padding: 5px 14px;
   cursor: pointer;
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  transition: background 0.1s;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+  transition: background 0.1s ease;
 }
 .tree__r:hover,
 .tree__r.active {
-  background: var(--yellow);
+  background: color-mix(in srgb, var(--yellow) 24%, var(--card));
 }
 .tree__r.kid {
   padding-left: 32px;

@@ -1,6 +1,33 @@
 import { ScrapKind, ScrapEntities } from "@/db/schema";
 import { parseLogEntry, LOG_VERBS } from "./logParser";
 
+export function isHexColorTag(tag: string): boolean {
+  return /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(tag);
+}
+
+/**
+ * Extracts #tags from prose while ignoring code blocks, ink/SVG blocks, URLs, and hex color codes.
+ */
+export function extractTagsFromText(text: string): string[] {
+  if (!text) return [];
+  const cleaned = text
+    .replace(/:::ink[\s\S]*?:::/gi, " ")
+    .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ");
+
+  const tags: string[] = [];
+  const re = /(?:^|[\s(])(#[a-zA-Z][\w-]*)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(cleaned)) !== null) {
+    const tag = m[1].toLowerCase();
+    if (!isHexColorTag(tag)) {
+      tags.push(tag);
+    }
+  }
+  return Array.from(new Set(tags));
+}
+
 export const STOP_WORDS = new Set(
   (
     "the a an and or but of to in on at is are was were be been it its this that these those " +
@@ -142,7 +169,7 @@ export function parseSlabText(input: string, referenceDate = new Date()): Parsed
     color = "cyan";
   }
 
-  const tags = (raw.match(/#[a-zA-Z][\w-]*/g) || []).map((t) => t.toLowerCase());
+  const tags = extractTagsFromText(raw);
 
   const chips: ParseChip[] = [
     { type: "dest", label: "→ THE SHELF" },

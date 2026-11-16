@@ -578,7 +578,8 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
                 }}
                 title="Open full note in reader dialog (Esc to close)"
               >
-                <span>⤢ SHOW FULL NOTE ({contentWordCount} WORDS · {contentLineCount} LINES)</span>
+                <BookOpen size={11} strokeWidth={2.3} aria-hidden="true" />
+                <span>READ FULL NOTE · {contentWordCount}w</span>
               </button>
             )}
           </div>
@@ -631,13 +632,15 @@ export const ScratchCard: React.FC<ScratchCardProps> = ({
           </span>
         ))}
         <span className="when">{timeStr}</span>
-        <span className={`st ${isInk && !hasTranscription ? "nosearch" : isInk ? "pages" : scrap.status}`}>
-          {isInk
-            ? hasTranscription
-              ? "OPEN · TRANSCRIBED"
-              : "NOT SEARCHABLE — ADD A LINE"
-            : scrap.statusLabel || scrap.status.toUpperCase()}
-        </span>
+        {(!hasNotes || isInk) && (
+          <span className={`st ${isInk && !hasTranscription ? "nosearch" : isInk ? "pages" : scrap.status}`}>
+            {isInk
+              ? hasTranscription
+                ? "OPEN · TRANSCRIBED"
+                : "NOT SEARCHABLE — ADD A LINE"
+              : scrap.statusLabel || scrap.status.toUpperCase()}
+          </span>
+        )}
       </div>
 
       {scrap.threadN && scrap.threadN > 0 && scrap.threadSummary ? (

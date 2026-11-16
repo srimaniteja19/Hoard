@@ -1,4 +1,5 @@
 import { ScrapRow } from "@/db/schema";
+import { extractTagsFromText, isHexColorTag } from "./parse";
 
 export interface TallyItem {
   key: string;
@@ -341,8 +342,8 @@ export function buildTagTree(scraps: ScrapRow[]): TagTreeNode[] {
 
   for (const s of scraps) {
     const tags = Array.from(new Set([
-      ...(s.tags || []),
-      ...((s.content + " " + (s.notes || "")).match(/#[a-zA-Z][\w-]*/g) || []).map((t) => t.toLowerCase()),
+      ...(s.tags || []).map((t) => t.toLowerCase()).filter((t) => !isHexColorTag(t)),
+      ...extractTagsFromText(`${s.content} ${s.notes || ""}`),
     ]));
 
     for (const t of tags) {
