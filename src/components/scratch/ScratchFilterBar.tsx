@@ -1,6 +1,14 @@
 "use client";
 
 import React, { useRef, useEffect, useMemo, useState } from "react";
+import {
+  Search,
+  X,
+  Volume2,
+  VolumeX,
+  Sparkles,
+  RotateCcw,
+} from "lucide-react";
 import { ScrapRow, ScrapKind, scrapKindValues } from "@/db/schema";
 import { ScratchFilters, StatusFilter, extractAllTags } from "@/lib/scratch/filters";
 import { playSound, sound, ambience } from "@/lib/sound";
@@ -117,9 +125,9 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
 
   const statusOptions: Array<{ id: StatusFilter; label: string }> = [
     { id: "all", label: "ALL STATUS" },
-    { id: "pinned", label: "📎 PINNED" },
+    { id: "pinned", label: "PINNED" },
     { id: "has_notes", label: "HAS NOTES" },
-    { id: "images", label: "📷 IMAGES" },
+    { id: "images", label: "IMAGES" },
     { id: "raw", label: "RAW" },
     { id: "promoted", label: "PROMOTED" },
   ];
@@ -129,7 +137,9 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
       {/* ── ROW 1: SEARCH & QUICK COUNTER ── */}
       <div className="scratch-search-row">
         <div className="scratch-search-wrap">
-          <span className="scratch-search-icon">🔍</span>
+          <span className="scratch-search-icon" aria-hidden="true">
+            <Search size={14} strokeWidth={2.2} />
+          </span>
           <input
             ref={searchInputRef}
             type="text"
@@ -147,8 +157,9 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
                 onFilterChange({ query: "" });
               }}
               title="Clear search"
+              aria-label="Clear search"
             >
-              ✕
+              <X size={13} strokeWidth={2.4} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -160,7 +171,12 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
             onClick={handleToggleSfx}
             title={sfxEnabled ? "Mute interactive click sound effects" : "Enable interactive sound effects"}
           >
-            {sfxEnabled ? "🔊 SOUND ON" : "🔇 SOUND OFF"}
+            {sfxEnabled ? (
+              <Volume2 size={13} strokeWidth={2.2} aria-hidden="true" />
+            ) : (
+              <VolumeX size={13} strokeWidth={2.2} aria-hidden="true" />
+            )}
+            {sfxEnabled ? "SOUND ON" : "SOUND OFF"}
           </button>
 
           <button
@@ -173,7 +189,8 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
                 : "Turn on a quiet ambient paper-rustle & pen-scratch soundscape"
             }
           >
-            {ambienceEnabled ? "🕯️ DESK ON" : "🕯️ DESK OFF"}
+            <Sparkles size={13} strokeWidth={2.2} aria-hidden="true" />
+            {ambienceEnabled ? "DESK ON" : "DESK OFF"}
           </button>
 
           <span className="match-badge">
@@ -188,7 +205,8 @@ export const ScratchFilterBar: React.FC<ScratchFilterBarProps> = ({
                 onResetFilters();
               }}
             >
-              RESET ALL ✕
+              <RotateCcw size={12} strokeWidth={2.3} aria-hidden="true" />
+              RESET ALL
             </button>
           )}
         </div>

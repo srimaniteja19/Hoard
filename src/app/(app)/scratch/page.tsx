@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import { Pin, LayoutGrid, Mail } from "lucide-react";
 import { AppPage } from "@/components/chrome/AppPage";
 import { AppLoading } from "@/components/chrome/AppLoading";
 import { ScratchSlab } from "@/components/scratch/ScratchSlab";
@@ -483,7 +484,8 @@ function ScratchPageContent() {
                 className={pinnedCount > 0 ? "has-pinned-items" : ""}
                 title="Dedicated Pinned Notes Pinboard"
               >
-                📎 PINNED {pinnedCount > 0 ? `(${pinnedCount})` : ""}
+                <Pin size={12} strokeWidth={2.3} aria-hidden="true" />
+                PINNED {pinnedCount > 0 ? `(${pinnedCount})` : ""}
               </button>
               <button
                 type="button"
@@ -505,7 +507,8 @@ function ScratchPageContent() {
                   setViewMode("corkboard");
                 }}
               >
-                📌 CORKBOARD
+                <LayoutGrid size={12} strokeWidth={2.3} aria-hidden="true" />
+                CORKBOARD
               </button>
             </div>
           </div>
@@ -518,13 +521,14 @@ function ScratchPageContent() {
                 bottom: "24px",
                 right: "24px",
                 background: "var(--ink)",
-                color: "var(--yellow)",
+                color: "var(--cream)",
                 fontFamily: "var(--mono)",
                 fontSize: "12px",
-                fontWeight: 800,
-                padding: "12px 18px",
-                border: "var(--b) solid var(--pink)",
-                boxShadow: "4px 4px 0 var(--pink)",
+                fontWeight: 700,
+                padding: "11px 16px",
+                borderRadius: "8px",
+                border: "1px solid var(--border-ink, var(--ink))",
+                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.24)",
                 zIndex: 99999,
               }}
             >
@@ -662,17 +666,22 @@ function ScratchPageContent() {
                 }}
                 style={{
                   fontFamily: "var(--mono)",
-                  fontWeight: 800,
+                  fontWeight: 700,
                   fontSize: "11px",
-                  padding: "10px 18px",
-                  border: "var(--b) solid var(--ink)",
-                  background: "var(--yellow)",
+                  padding: "9px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid color-mix(in srgb, var(--yellow) 55%, var(--border-ink, var(--ink)))",
+                  background: "color-mix(in srgb, var(--yellow) 20%, var(--card))",
                   color: "var(--ink)",
                   cursor: "pointer",
                   marginBottom: "18px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "7px",
                 }}
               >
-                📮 THIS WEEK&apos;S POSTCARD
+                <Mail size={13} strokeWidth={2.2} aria-hidden="true" />
+                THIS WEEK&apos;S POSTCARD
               </button>
 
               <div className="lb">

@@ -6,7 +6,7 @@
   --display: "Bricolage Grotesque", "Space Grotesk", sans-serif;
   --body: "Space Grotesk", system-ui, sans-serif;
   --mono: "Space Mono", ui-monospace, monospace;
-  --b: 3px;
+  --b: 1.5px;
   width: 100%;
   color: var(--ink);
   font-family: var(--body);
@@ -26,9 +26,9 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 24px;
   align-items: end;
-  padding: 24px 0 18px;
-  border-bottom: var(--b) solid var(--ink);
-  margin-bottom: 22px;
+  padding: 20px 0 16px;
+  border-bottom: 1px solid var(--border-ink, var(--ink));
+  margin-bottom: 20px;
 }
 
 @media (max-width: 860px) {
@@ -66,61 +66,69 @@
 }
 
 .scratch-mini b {
-  background: var(--ink);
-  color: var(--yellow);
-  padding: 2px 7px;
-  margin-left: 4px;
+  background: color-mix(in srgb, var(--yellow) 22%, var(--card));
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--yellow) 45%, var(--border-ink, var(--ink)));
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-left: 5px;
 }
 
 .scratch-mini .warn b {
-  background: var(--pink);
-  color: #fff;
+  background: color-mix(in srgb, var(--pink) 22%, var(--card));
+  color: var(--pink);
+  border-color: color-mix(in srgb, var(--pink) 50%, var(--border-ink, var(--ink)));
 }
 
 /* ── THE SLAB ── */
 .slab {
-  border: var(--b) solid var(--ink);
-  background: var(--yellow);
-  box-shadow: 8px 8px 0 var(--ink);
-  margin-bottom: 12px;
+  border: 1.5px solid color-mix(in srgb, var(--yellow) 42%, var(--border-ink, var(--ink)));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--yellow) 16%, var(--card));
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+  margin-bottom: 16px;
   position: relative;
-  transition: background 0.18s;
+  overflow: hidden;
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .slab.islog {
-  background: var(--orange);
+  background: color-mix(in srgb, var(--orange) 16%, var(--card));
+  border-color: color-mix(in srgb, var(--orange) 45%, var(--border-ink, var(--ink)));
 }
 
 .slab.isink {
   background: var(--card);
+  border-color: var(--border-ink, var(--ink));
 }
 
 .slab__modes {
   display: flex;
-  border-bottom: var(--b) solid var(--ink);
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  background: color-mix(in srgb, var(--card) 55%, transparent);
 }
 
 .slab__modes button {
   font-family: var(--mono);
   font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   background: transparent;
   color: var(--ink);
   border: none;
-  border-right: var(--b) solid var(--ink);
-  padding: 9px 16px;
+  border-right: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  padding: 10px 16px;
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 
 .slab__modes button[aria-pressed="true"] {
   background: var(--ink);
-  color: var(--yellow);
+  color: var(--cream);
 }
 
 .slab__modes button:hover:not([aria-pressed="true"]) {
-  background: rgba(10, 10, 10, 0.09);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
 }
 
 .slab__modes .sp {
@@ -162,7 +170,7 @@
 }
 
 .slab textarea::placeholder {
-  color: rgba(10, 10, 10, 0.36);
+  color: color-mix(in srgb, var(--ink) 42%, transparent);
   font-weight: 400;
 }
 
@@ -279,7 +287,7 @@
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  background-image: repeating-linear-gradient(transparent 0 33px, rgba(10, 10, 10, 0.14) 33px 34px);
+  background-image: repeating-linear-gradient(transparent 0 33px, color-mix(in srgb, var(--ink) 12%, transparent) 33px 34px);
 }
 
 .strip canvas {
@@ -298,7 +306,7 @@
   top: 26px;
   font-family: var(--hand, "Caveat", cursive);
   font-size: 27px;
-  color: rgba(10, 10, 10, 0.22);
+  color: color-mix(in srgb, var(--ink) 28%, transparent);
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
@@ -321,16 +329,17 @@
   gap: 9px;
   flex-wrap: wrap;
   padding: 11px 16px;
-  border-top: var(--b) solid var(--ink);
-  background: var(--card);
+  border-top: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  background: color-mix(in srgb, var(--card) 85%, transparent);
 }
 
 .pchip {
   font-family: var(--mono);
   font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  border: 2px solid var(--ink);
+  letter-spacing: 0.08em;
+  border: 1px solid var(--border-ink, var(--ink));
+  border-radius: 6px;
   padding: 3px 8px;
   background: var(--card);
   color: var(--ink);
@@ -338,52 +347,61 @@
 
 .pchip.dest {
   background: var(--ink);
-  color: var(--yellow);
+  color: var(--cream);
+  border-color: var(--ink);
 }
 
 .pchip.dest.sheet {
-  background: var(--orange);
+  background: color-mix(in srgb, var(--orange) 22%, var(--card));
   color: var(--ink);
+  border-color: color-mix(in srgb, var(--orange) 55%, var(--border-ink, var(--ink)));
 }
 
 .pchip.kind {
   background: var(--violet);
   color: #fff;
+  border-color: transparent;
 }
 
 .pchip.tag {
-  background: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 22%, var(--card));
   color: var(--ink);
+  border-color: color-mix(in srgb, var(--cyan) 55%, var(--border-ink, var(--ink)));
 }
 
 .pchip.meas {
-  background: var(--lime);
-  color: #000;
+  background: color-mix(in srgb, var(--lime) 24%, var(--card));
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--lime) 55%, var(--border-ink, var(--ink)));
 }
 
 .pchip.who {
   background: var(--pink);
   color: #fff;
+  border-color: transparent;
 }
 
 .pchip.when {
-  background: var(--yellow);
+  background: color-mix(in srgb, var(--yellow) 24%, var(--card));
   color: var(--ink);
+  border-color: color-mix(in srgb, var(--yellow) 55%, var(--border-ink, var(--ink)));
 }
 
 .pchip.warn {
   background: var(--pink);
   color: #fff;
+  border-color: transparent;
 }
 
 .pchip.act {
-  background: var(--lime);
-  color: #000;
+  background: color-mix(in srgb, var(--lime) 24%, var(--card));
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--lime) 55%, var(--border-ink, var(--ink)));
 }
 
 .pchip.ghost {
   border-style: dashed;
-  opacity: 0.55;
+  opacity: 0.65;
   background: transparent;
 }
 
@@ -392,46 +410,52 @@
 }
 
 .slab__bar .cap2 {
-  border: 2px solid var(--ink);
+  border: 1px solid var(--border-ink, var(--ink));
+  border-radius: 7px;
   background: var(--card);
   outline: none;
   font-family: var(--body);
   font-size: 14px;
-  padding: 5px 9px;
+  padding: 6px 10px;
   min-width: 200px;
   flex: 1 1 200px;
   color: var(--ink);
 }
 
 .slab__bar .cap2::placeholder {
-  color: rgba(10, 10, 10, 0.38);
+  color: color-mix(in srgb, var(--ink) 42%, transparent);
 }
 
 .slab__bar .file {
   font-family: var(--mono);
   font-weight: 700;
-  font-size: 11.5px;
-  letter-spacing: 0.14em;
+  font-size: 11px;
+  letter-spacing: 0.12em;
   background: var(--ink);
-  color: var(--yellow);
-  border: none;
+  color: var(--cream);
+  border: 1px solid var(--ink);
+  border-radius: 7px;
   padding: 9px 16px;
   cursor: pointer;
-  transition: background 0.1s, color 0.1s;
+  transition: background 0.12s ease, color 0.12s ease, transform 0.12s ease;
 }
 
 .slab__bar .file:hover {
   background: var(--pink);
+  border-color: var(--pink);
   color: #fff;
+  transform: translateY(-1px);
 }
 
 /* ── collisions ── */
 .hit {
-  border: var(--b) solid var(--ink);
-  background: var(--violet);
-  color: #fff;
-  box-shadow: 6px 6px 0 var(--ink);
-  margin-bottom: 26px;
+  border: 1px solid color-mix(in srgb, var(--violet) 55%, var(--border-ink, var(--ink)));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--violet) 16%, var(--card));
+  color: var(--ink);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  margin-bottom: 24px;
+  overflow: hidden;
   display: none;
   animation: hitFadeIn 0.15s ease-out;
 }
@@ -3498,22 +3522,25 @@ code.md-slash-cmd:hover {
   flex: 1;
   display: flex;
   align-items: center;
-  background: #0A0A0A;
-  border: var(--b) solid var(--ink);
-  box-shadow: 5px 5px 0 var(--ink);
-  padding: 0 16px;
-  gap: 12px;
-  transition: box-shadow 0.12s ease, border-color 0.12s ease;
+  background: var(--card);
+  border: 1.5px solid var(--border-ink, var(--ink));
+  border-radius: 9px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 0 14px;
+  gap: 10px;
+  transition: box-shadow 0.14s ease, border-color 0.14s ease;
 }
 
 .scratch-search-wrap:focus-within {
-  box-shadow: 6px 6px 0 var(--yellow);
-  border-color: var(--ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--yellow) 26%, transparent);
+  border-color: var(--yellow);
 }
 
 .scratch-search-icon {
-  font-size: 14px;
-  opacity: 0.85;
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink);
+  opacity: 0.6;
 }
 
 .scratch-search-input {
@@ -3521,122 +3548,120 @@ code.md-slash-cmd:hover {
   background: transparent;
   border: none;
   outline: none;
-  color: #FFFDF7;
+  color: var(--ink);
   font-family: var(--mono);
-  font-size: 13.5px;
-  padding: 13px 0;
-  caret-color: var(--lime);
+  font-size: 13px;
+  padding: 11px 0;
+  caret-color: var(--yellow);
 }
 
 .scratch-search-input::placeholder {
-  color: #8C887B;
+  color: color-mix(in srgb, var(--ink) 45%, transparent);
 }
 
 .scratch-search-clear {
-  background: var(--pink);
-  color: #fff;
-  border: 1.5px solid #fff;
-  font-family: var(--mono);
-  font-size: 10.5px;
-  font-weight: 800;
-  padding: 3px 7px;
+  background: color-mix(in srgb, var(--pink) 20%, var(--card));
+  color: var(--pink);
+  border: 1px solid color-mix(in srgb, var(--pink) 50%, var(--border-ink, var(--ink)));
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
   cursor: pointer;
-  transition: opacity 0.1s;
+  transition: opacity 0.12s ease, background 0.12s ease;
 }
 
 .scratch-search-clear:hover {
-  opacity: 0.85;
+  background: var(--pink);
+  color: #fff;
 }
 
 .scratch-search-status {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
-.scratch-sfx-toggle {
+.scratch-sfx-toggle,
+.scratch-ambience-toggle {
   font-family: var(--mono);
   font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  padding: 12px 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 10px 12px;
   background: var(--card);
-  border: var(--b) solid var(--ink);
-  box-shadow: 4px 4px 0 var(--ink);
+  border: 1px solid var(--border-ink, var(--ink));
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   cursor: pointer;
   white-space: nowrap;
   color: var(--ink);
-  transition: all 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
 
 .scratch-sfx-toggle:hover {
-  background: var(--yellow);
-  transform: translate(-1px, -1px);
-  box-shadow: 5px 5px 0 var(--ink);
+  background: color-mix(in srgb, var(--yellow) 18%, var(--card));
+  border-color: color-mix(in srgb, var(--yellow) 55%, var(--border-ink, var(--ink)));
+  transform: translateY(-1px);
 }
 
 .scratch-sfx-toggle.off {
   background: var(--shelf);
-  opacity: 0.7;
-}
-
-.scratch-ambience-toggle {
-  font-family: var(--mono);
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  padding: 12px 14px;
-  background: var(--card);
-  border: var(--b) solid var(--ink);
-  box-shadow: 4px 4px 0 var(--ink);
-  cursor: pointer;
-  white-space: nowrap;
-  color: var(--ink);
-  transition: all 0.1s ease;
+  opacity: 0.72;
 }
 
 .scratch-ambience-toggle:hover {
-  background: var(--lime);
-  transform: translate(-1px, -1px);
-  box-shadow: 5px 5px 0 var(--ink);
+  background: color-mix(in srgb, var(--lime) 18%, var(--card));
+  border-color: color-mix(in srgb, var(--lime) 55%, var(--border-ink, var(--ink)));
+  transform: translateY(-1px);
 }
 
 .scratch-ambience-toggle.off {
   background: var(--shelf);
-  opacity: 0.7;
+  opacity: 0.72;
 }
 
 .match-badge {
   font-family: var(--mono);
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   background: var(--card);
-  border: var(--b) solid var(--ink);
-  box-shadow: 4px 4px 0 var(--ink);
-  padding: 12px 16px;
+  border: 1px solid var(--border-ink, var(--ink));
+  border-radius: 8px;
+  padding: 10px 14px;
   white-space: nowrap;
   color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }
 
 .scratch-reset-filters-btn {
   font-family: var(--mono);
   font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  background: var(--pink);
-  color: #fff;
-  border: var(--b) solid var(--ink);
-  box-shadow: 4px 4px 0 var(--ink);
-  padding: 12px 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: color-mix(in srgb, var(--pink) 16%, var(--card));
+  color: var(--pink);
+  border: 1px solid color-mix(in srgb, var(--pink) 50%, var(--border-ink, var(--ink)));
+  border-radius: 8px;
+  padding: 10px 12px;
   cursor: pointer;
   white-space: nowrap;
-  transition: transform 0.1s, box-shadow 0.1s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: transform 0.12s ease, background 0.12s ease, color 0.12s ease;
 }
 
 .scratch-reset-filters-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 5px 5px 0 var(--ink);
+  background: var(--pink);
+  color: #fff;
+  transform: translateY(-1px);
 }
 
 /* ── Row 2: Category Tabs ── */
