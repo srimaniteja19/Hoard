@@ -4991,6 +4991,11 @@
    Theme-safe hairlines, soft elevation, crisp tabular numbers across 6 themes
    ═══════════════════════════════════════════════════════════════════════════ */
 
+.ledger-scroll-view {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .ledger-container {
   --lg-border: color-mix(in srgb, var(--border-ink, var(--ink)) 14%, transparent);
   --lg-border-strong: color-mix(in srgb, var(--border-ink, var(--ink)) 26%, transparent);
@@ -4998,6 +5003,7 @@
     0 4px 14px color-mix(in srgb, var(--shadow-ink, #000) 4%, transparent);
   --lg-shadow-hover: 0 6px 20px color-mix(in srgb, var(--shadow-ink, #000) 9%, transparent);
   max-width: 1360px;
+  min-width: 0;
   color: var(--ink);
   caret-color: var(--yellow);
 }
@@ -5110,14 +5116,21 @@
   box-shadow: none;
   padding: 4px;
   margin-bottom: 22px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .ledger-container .ledger-nav-tabs {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
   gap: 4px;
   padding: 0;
   background: transparent;
+  overflow: visible;
 }
 
 .ledger-container .ledger-nav-tab {
@@ -5126,6 +5139,8 @@
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
+  width: auto;
+  flex: 0 0 auto;
   padding: 7px 13px;
   border-radius: 8px;
   border: 1px solid transparent;
@@ -5134,6 +5149,7 @@
   box-shadow: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
 }

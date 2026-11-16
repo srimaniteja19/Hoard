@@ -78,7 +78,7 @@ export const LedgerOverview: React.FC<LedgerOverviewProps> = ({
   });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", minWidth: 0, width: "100%" }}>
       {/* ── REAL-TIME MARKET TICKER TAPE ── */}
       <MarketTickerTape onOpenOracle={onOpenMarketOracle} />
 

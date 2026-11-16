@@ -171,15 +171,18 @@ export const MarketTickerTape: React.FC<MarketTickerTapeProps> = ({
         onOpenOracle();
       }}
       style={{
-        background: "#080808",
-        color: "#FFFFFF",
-        border: "2px solid #222222",
-        boxShadow: "4px 4px 0 #000000",
-        borderRadius: "4px",
+        background: "#121110",
+        color: "#F5F2EB",
+        border: "1px solid color-mix(in srgb, var(--border-ink, #222222) 28%, transparent)",
+        borderRadius: "10px",
         padding: "8px 14px",
         display: "flex",
         alignItems: "center",
         gap: "14px",
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
         overflow: "hidden",
         cursor: "pointer",
         position: "relative",
@@ -227,7 +230,8 @@ export const MarketTickerTape: React.FC<MarketTickerTapeProps> = ({
           scrollbarWidth: "none",
           msOverflowStyle: "none",
           whiteSpace: "nowrap",
-          flex: 1,
+          flex: "1 1 0%",
+          minWidth: 0,
           fontFamily: "var(--mono)",
           fontSize: "11px",
         }}
