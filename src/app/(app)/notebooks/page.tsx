@@ -409,7 +409,7 @@ export default function NotebooksPage() {
     } else {
       const appTheme = document.documentElement.dataset.theme;
       if (appTheme === "matcha") setPaperTheme("matcha");
-      else if (appTheme === "obsidian" || appTheme === "matte_black") setPaperTheme("ink");
+      else if (appTheme === "obsidian" || appTheme === "matte_black" || appTheme === "matte-black") setPaperTheme("ink");
       else if (appTheme === "tokyo" || appTheme === "cyberpunk" || appTheme === "nordic") setPaperTheme("midnight");
       else setPaperTheme("cream");
     }
