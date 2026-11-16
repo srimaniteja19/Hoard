@@ -142,10 +142,44 @@ describe("Streaming Release Calendar (day / week / month / year)", () => {
           },
         },
       },
+      {
+        airdate: "2026-11-15",
+        season: 1,
+        number: 1,
+        _embedded: {
+          show: {
+            id: 5,
+            name: "Spanish Drama",
+            language: "Spanish",
+            webChannel: { name: "Netflix" },
+          },
+        },
+      },
+      {
+        airdate: "2026-11-15",
+        season: 1,
+        number: 1,
+        _embedded: {
+          show: {
+            id: 6,
+            name: "German Mystery",
+            language: "German",
+            webChannel: { name: "Netflix" },
+          },
+        },
+      },
     ];
 
     const tvParsed = parseTvMazeScheduleEntries(tvEntries, anchor);
-    expect(tvParsed.map((i) => i.title)).toEqual(["US Thriller", "Telugu Hit"]);
+    expect(tvParsed.map((i) => i.title)).toEqual([
+      "US Thriller",
+      "Telugu Hit",
+      "Spanish Drama",
+      "German Mystery",
+    ]);
+    expect(tvParsed[1].lang).toBe("Telugu");
+    expect(tvParsed[2].lang).toBe("Spanish");
+    expect(tvParsed[3].lang).toBe("German");
 
     const wdJson = {
       results: {
@@ -154,16 +188,19 @@ describe("Streaming Release Calendar (day / week / month / year)", () => {
             filmLabel: { value: "Hollywood Blockbuster" },
             pubDate: { value: "2026-11-20T00:00:00Z" },
             countryLabel: { value: "United States of America" },
+            langLabel: { value: "English" },
           },
           {
-            filmLabel: { value: "Indian Feature" },
+            filmLabel: { value: "Malayalam Cinema" },
             pubDate: { value: "2026-11-21T00:00:00Z" },
             countryLabel: { value: "India" },
+            langLabel: { value: "Malayalam" },
           },
           {
             filmLabel: { value: "French Indie" },
             pubDate: { value: "2026-11-22T00:00:00Z" },
             countryLabel: { value: "France" },
+            langLabel: { value: "French" },
           },
         ],
       },
@@ -172,8 +209,9 @@ describe("Streaming Release Calendar (day / week / month / year)", () => {
     const wdParsed = parseWikidataReleaseFilms(wdJson, anchor);
     expect(wdParsed.map((i) => i.title)).toEqual([
       "Hollywood Blockbuster",
-      "Indian Feature",
+      "Malayalam Cinema",
     ]);
+    expect(wdParsed[1].lang).toBe("Malayalam");
   });
 });
 

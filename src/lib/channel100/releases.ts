@@ -62,6 +62,11 @@ const INDIAN_PLATFORMS = new Set([
   "sun nxt",
 ]);
 
+const EXTRA_ALLOWED_LANGUAGES = new Set([
+  "spanish",
+  "german",
+]);
+
 const HOLLYWOOD_COUNTRIES = new Set([
   "",
   "us",
@@ -84,11 +89,47 @@ export function isHollywoodOrIndianRelease(
     c === "in" ||
     INDIAN_LANGUAGES.has(l) ||
     INDIAN_PLATFORMS.has(p);
-  if (isIndian) return true;
+  if (isIndian) {
+    // When country is India and language is specified, still allow all Indian languages + English
+    return l === "" || l === "english" || INDIAN_LANGUAGES.has(l) || EXTRA_ALLOWED_LANGUAGES.has(l);
+  }
+
+  if (EXTRA_ALLOWED_LANGUAGES.has(l)) return true;
 
   const isHollywood =
     HOLLYWOOD_COUNTRIES.has(c) && (l === "" || l === "english");
   return isHollywood;
+}
+
+function resolveReleaseLanguage(
+  countryName: string,
+  rawLanguage?: string
+): { lang: string; langFlag: string } {
+  const { lang: countryLang, langFlag } = resolveCountryMeta(
+    countryName,
+    rawLanguage
+  );
+  const trimmed = (rawLanguage || "").trim();
+  if (trimmed) {
+    const lower = trimmed.toLowerCase();
+    if (
+      INDIAN_LANGUAGES.has(lower) ||
+      EXTRA_ALLOWED_LANGUAGES.has(lower) ||
+      lower === "english"
+    ) {
+      const normalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+      const flag =
+        lower === "spanish"
+          ? "🇪🇸"
+          : lower === "german"
+          ? "🇩🇪"
+          : INDIAN_LANGUAGES.has(lower)
+          ? "🇮🇳"
+          : langFlag;
+      return { lang: normalized, langFlag: flag };
+    }
+  }
+  return { lang: countryLang, langFlag };
 }
 
 function stripHtml(raw: string): string {
@@ -213,7 +254,7 @@ export function parseTvMazeScheduleEntries(
     seenShowDate.add(dedupeKey);
 
     const countryName = rawCountryName || rawLanguage || "USA";
-    const { lang, langFlag } = resolveCountryMeta(countryName, rawLanguage);
+    const { lang, langFlag } = resolveReleaseLanguage(countryName, rawLanguage);
     const genres: string[] = Array.isArray(show.genres) ? show.genres : [];
     const primaryGenre = genres[0] || "Series";
     const mins = Number(ep.runtime || show.averageRuntime || show.runtime) || 45;
@@ -283,9 +324,10 @@ export function parseWikidataReleaseFilms(
 
     const director = row.directorLabel?.value || "Feature Release";
     const country = row.countryLabel?.value || "USA";
-    if (!isHollywoodOrIndianRelease(country)) continue;
+    const originalLang = row.langLabel?.value || "";
+    if (!isHollywoodOrIndianRelease(country, originalLang)) continue;
     const genre = row.genreLabel?.value || "Feature Film";
-    const { lang, langFlag } = resolveCountryMeta(country);
+    const { lang, langFlag } = resolveReleaseLanguage(country, originalLang);
     const year = parseInt(releaseDate.slice(0, 4), 10) || anchor.getFullYear();
     const imdbId = row.imdbId?.value;
     const mins = Math.max(70, Math.min(240, Math.round(Number(row.duration?.value) || 112)));

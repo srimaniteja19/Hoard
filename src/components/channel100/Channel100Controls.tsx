@@ -47,11 +47,23 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
 
   const languages = useMemo(() => {
     const set = new Set<string>();
+    if (filters.cat === "releases") {
+      [
+        "Telugu",
+        "Malayalam",
+        "Kannada",
+        "Tamil",
+        "Hindi",
+        "English",
+        "Spanish",
+        "German",
+      ].forEach((l) => set.add(l));
+    }
     items.forEach((i) => {
       if (i.lang) set.add(i.lang);
     });
     return Array.from(set).sort();
-  }, [items]);
+  }, [items, filters.cat]);
 
   const hasActiveFilters =
     filters.status !== "all" ||

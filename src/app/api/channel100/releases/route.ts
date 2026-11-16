@@ -27,11 +27,11 @@ async function fetchLiveReleases(): Promise<ReleasesCacheState> {
   const sources: string[] = [];
   const collected: ChannelMediaItem[] = [];
 
-  // 1. TVMaze Web Streaming Schedule for the week + US & India schedules for today
+  // 1. TVMaze Web Streaming Schedule + India weekly schedule + US today schedule
   const tvMazeUrls = [
     ...weekDates.map((d) => `https://api.tvmaze.com/schedule/web?date=${d}`),
+    ...weekDates.map((d) => `https://api.tvmaze.com/schedule?country=IN&date=${d}`),
     `https://api.tvmaze.com/schedule?country=US&date=${todayStr}`,
-    `https://api.tvmaze.com/schedule?country=IN&date=${todayStr}`,
   ];
 
   const tvResults = await Promise.allSettled(
@@ -55,15 +55,16 @@ async function fetchLiveReleases(): Promise<ReleasesCacheState> {
     collected.push(...parseTvMazeScheduleEntries(rawScheduleEntries, now));
   }
 
-  // 2. Wikidata SPARQL for Hollywood (US) & Indian Feature Film releases this year
+  // 2. Wikidata SPARQL for Hollywood (US), Indian (Telugu/Malayalam/Kannada/Tamil/Hindi), Spanish & German Feature Films
   try {
     const sparql = `
-      SELECT ?film ?filmLabel ?pubDate ?imdbId (SAMPLE(?dirLabel) AS ?directorLabel) (SAMPLE(?cLabel) AS ?countryLabel) (SAMPLE(?gLabel) AS ?genreLabel) (SAMPLE(?dur) AS ?duration) WHERE {
+      SELECT ?film ?filmLabel ?pubDate ?imdbId (SAMPLE(?dirLabel) AS ?directorLabel) (SAMPLE(?cLabel) AS ?countryLabel) (SAMPLE(?lLabel) AS ?langLabel) (SAMPLE(?gLabel) AS ?genreLabel) (SAMPLE(?dur) AS ?duration) WHERE {
         ?film wdt:P31 wd:Q11424;
               wdt:P577 ?pubDate;
               wdt:P495 ?country.
         FILTER(YEAR(?pubDate) = ${currentYear})
-        FILTER(?country IN (wd:Q30, wd:Q668))
+        OPTIONAL { ?film wdt:P364 ?origLang. ?origLang rdfs:label ?lLabel. FILTER(LANG(?lLabel) = "en") }
+        FILTER(?country IN (wd:Q30, wd:Q668) || (BOUND(?origLang) && ?origLang IN (wd:Q8097, wd:Q36236, wd:Q33673, wd:Q5885, wd:Q1568, wd:Q1321, wd:Q188)))
         ?country rdfs:label ?cLabel. FILTER(LANG(?cLabel) = "en")
         OPTIONAL { ?film wdt:P345 ?imdbId. }
         OPTIONAL { ?film wdt:P57 ?dir. ?dir rdfs:label ?dirLabel. FILTER(LANG(?dirLabel) = "en") }
@@ -73,7 +74,7 @@ async function fetchLiveReleases(): Promise<ReleasesCacheState> {
       }
       GROUP BY ?film ?filmLabel ?pubDate ?imdbId
       ORDER BY DESC(?pubDate)
-      LIMIT 80
+      LIMIT 120
     `.trim();
 
     const wdUrl = `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(
