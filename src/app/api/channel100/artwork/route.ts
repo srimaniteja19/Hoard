@@ -34,11 +34,28 @@ async function fetchImdbSuggestionImage(
   try {
     const q = cleanTitle(title);
     if (!q) return null;
-    const url = `https://v3.sg.media-imdb.com/suggestion/x/${encodeURIComponent(q)}.json`;
-    const res = await fetchWithSsrfGuard(url);
-    if (!res.ok || !res.text.trim().startsWith("{")) return null;
-    const json = JSON.parse(res.text);
-    const items: any[] = Array.isArray(json?.d) ? json.d : [];
+    const normQ = normalizeText(q);
+    const firstChar = normQ.charAt(0);
+    const bucket = firstChar && /[a-z0-9]/.test(firstChar) ? firstChar : "x";
+    const slug = normQ.replace(/\s+/g, "_").slice(0, 40) || encodeURIComponent(q);
+
+    const urls = [
+      `https://v3.sg.media-imdb.com/suggestion/${bucket}/${encodeURIComponent(slug)}.json`,
+      `https://v3.sg.media-imdb.com/suggestion/x/${encodeURIComponent(q)}.json`,
+    ];
+
+    let items: any[] = [];
+    for (const url of urls) {
+      const res = await fetchWithSsrfGuard(url);
+      if (!res.ok || !res.text.trim().startsWith("{")) continue;
+      const json = JSON.parse(res.text);
+      const parsed: any[] = Array.isArray(json?.d) ? json.d : [];
+      if (parsed.length > 0) {
+        items = parsed;
+        break;
+      }
+    }
+
     const withImage = items.filter(
       (item) =>
         typeof item?.i?.imageUrl === "string" &&
@@ -48,7 +65,6 @@ async function fetchImdbSuggestionImage(
     );
     if (!withImage.length) return null;
 
-    const normQ = normalizeText(q);
     const targetYear = year ? parseInt(year, 10) : null;
     const isTv = kind === "tv";
 
@@ -217,7 +233,7 @@ export async function GET(req: Request) {
           headers: {
             "Cache-Control": cached.image
               ? "public, max-age=86400"
-              : "public, max-age=300",
+              : "no-store",
           },
         }
       );
@@ -244,9 +260,7 @@ export async function GET(req: Request) {
     { image },
     {
       headers: {
-        "Cache-Control": image
-          ? "public, max-age=86400"
-          : "public, max-age=300",
+        "Cache-Control": image ? "public, max-age=86400" : "no-store",
       },
     }
   );

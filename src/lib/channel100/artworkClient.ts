@@ -1,7 +1,8 @@
 import { ChannelMediaItem } from "./types";
 
-const ARTWORK_LS_KEY = "hoard.ch100.artwork.v2";
-const LEGACY_ARTWORK_LS_KEY = "hoard.ch100.artwork.v1";
+const ARTWORK_LS_KEY = "hoard.ch100.artwork.v3";
+const LEGACY_ARTWORK_LS_KEYS = ["hoard.ch100.artwork.v1", "hoard.ch100.artwork.v2"];
+const ARTWORK_API_VERSION = "2";
 const MAX_CACHED_ENTRIES = 600;
 const MAX_CONCURRENT = 6;
 
@@ -16,8 +17,8 @@ function ensureLsLoaded() {
   if (lsLoaded || typeof window === "undefined") return;
   lsLoaded = true;
   try {
-    // Clean up legacy v1 cache that persisted null misses
-    localStorage.removeItem(LEGACY_ARTWORK_LS_KEY);
+    // Clean up legacy caches
+    LEGACY_ARTWORK_LS_KEYS.forEach((k) => localStorage.removeItem(k));
     const raw = localStorage.getItem(ARTWORK_LS_KEY);
     if (!raw) return;
     const parsed = JSON.parse(raw) as Record<string, string | null>;
@@ -104,17 +105,17 @@ export async function fetchItemArtwork(item: ChannelMediaItem): Promise<string |
       const qs = new URLSearchParams({
         title: item.title,
         kind: effectiveKind,
+        v: ARTWORK_API_VERSION,
         ...(yr ? { year: String(yr) } : {}),
       });
       const res = await fetch(`/api/channel100/artwork?${qs.toString()}`);
       if (!res.ok) {
-        memoryCache.set(key, null);
         return null;
       }
       const data = await res.json();
       const img = typeof data?.image === "string" && data.image.startsWith("http") ? data.image : null;
-      memoryCache.set(key, img);
       if (img) {
+        memoryCache.set(key, img);
         persistLs();
       }
       return img;

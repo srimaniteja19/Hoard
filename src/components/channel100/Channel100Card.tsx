@@ -117,13 +117,24 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
         onClick={() => onOpenModal(item.id)}
       >
         {showPoster && posterUrl ? (
-          <img
-            className="ch100-art-img"
-            src={posterUrl}
-            alt={item.title}
-            loading="lazy"
-            onError={() => setImgFailed(true)}
-          />
+          <>
+            <img
+              className="ch100-art-bg"
+              src={posterUrl}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+            />
+            <img
+              className="ch100-art-img"
+              src={posterUrl}
+              alt={item.title}
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={() => setImgFailed(true)}
+            />
+          </>
         ) : (
           <span
             className="ch100-art-svg"

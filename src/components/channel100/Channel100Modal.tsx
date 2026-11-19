@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { ChannelMediaItem, ShowUserRecord, ShowStatus } from "@/lib/channel100/types";
 import { artFor, fmtH, fmtM, bingeDays, jwUrl, imdbUrl } from "@/lib/channel100/data";
-import { fetchItemArtwork, getCachedArtwork } from "@/lib/channel100/artworkClient";
 
 interface EnrichedMediaDetails {
   fullDescription: string | null;
@@ -54,26 +53,6 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
   const [noteSaveState, setNoteSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [enriched, setEnriched] = useState<EnrichedMediaDetails | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [posterUrl, setPosterUrl] = useState<string | null>(null);
-  const [imgFailed, setImgFailed] = useState(false);
-
-  useEffect(() => {
-    if (!isOpen || !item) return;
-    setImgFailed(false);
-    const cached = getCachedArtwork(item);
-    if (cached !== undefined) {
-      setPosterUrl(cached);
-      return;
-    }
-    setPosterUrl(null);
-    let cancelled = false;
-    fetchItemArtwork(item).then((url) => {
-      if (!cancelled && url) setPosterUrl(url);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, item]);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const art = useMemo(() => (item ? artFor(item) : null), [item]);
@@ -230,18 +209,28 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
       aria-labelledby="ch100-mtitle"
     >
       <div ref={modalRef} className="ch100-modal">
-        {/* Poster / Artwork Modal Banner */}
+        {/* Colorful Illustrated Modal Banner */}
         <div
-          className={`ch100-modal-banner ${posterUrl && !imgFailed ? "has-img" : art.pat}`}
-          style={posterUrl && !imgFailed ? undefined : { backgroundColor: art.bg }}
+          className={`ch100-modal-banner ${art.pat}`}
+          style={{ backgroundColor: art.bg }}
         >
           {posterUrl && !imgFailed ? (
-            <img
-              className="ch100-modal-banner-img"
-              src={posterUrl}
-              alt={item.title}
-              onError={() => setImgFailed(true)}
-            />
+            <>
+              <img
+                className="ch100-modal-banner-bg"
+                src={posterUrl}
+                alt=""
+                aria-hidden="true"
+                referrerPolicy="no-referrer"
+              />
+              <img
+                className="ch100-modal-banner-img"
+                src={posterUrl}
+                alt={item.title}
+                referrerPolicy="no-referrer"
+                onError={() => setImgFailed(true)}
+              />
+            </>
           ) : (
             <span
               className="ch100-modal-banner-svg"
@@ -253,6 +242,12 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
           <span className="ch100-rank">
             #{String(item.rank).padStart(3, "0")}
           </span>
+
+          <span
+            className="ch100-modal-banner-svg"
+            dangerouslySetInnerHTML={{ __html: art.svg }}
+            aria-hidden="true"
+          />
 
           <div className="ch100-modal-top-actions">
             {onNavigateShow && (prevLabel || nextLabel) && (
@@ -308,7 +303,7 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
           <div className="ch100-blurb-wrap">
             <p className="ch100-blurb">
               {enriched?.fullDescription &&
-              enriched.fullDescription.length > (item.blurb?.length || 0)
+                enriched.fullDescription.length > (item.blurb?.length || 0)
                 ? enriched.fullDescription
                 : item.blurb}
             </p>
@@ -448,11 +443,12 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
                 <dt>Rank</dt>
                 <dd>
                   #{item.rank} in{" "}
+                  {item.kind === "vgf" ? "Very Good Films" : "Letterboxd 500"}
                   {item.kind === "vgf"
                     ? "Very Good Films"
                     : item.kind === "releases"
-                    ? "Streaming Release Calendar"
-                    : "Letterboxd 500"}
+                      ? "Streaming Release Calendar"
+                      : "Letterboxd 500"}
                 </dd>
 
                 {item.releaseDate && (
@@ -534,9 +530,8 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
                 <button
                   key={n}
                   type="button"
-                  className={`ch100-star-btn ${
-                    (record.r || 0) >= n ? "on" : ""
-                  }`}
+                  className={`ch100-star-btn ${(record.r || 0) >= n ? "on" : ""
+                    }`}
                   onClick={() =>
                     onSetRating(item.id, (record.r || 0) === n ? 0 : n)
                   }
