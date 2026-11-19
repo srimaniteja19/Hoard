@@ -224,14 +224,14 @@
   transition: background 0.12s ease, color 0.12s ease;
 }
 
-.ch100-root .ch100-switch button > span {
+.ch100-root .ch100-switch button>span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   line-height: 1.2;
 }
 
-.ch100-root .ch100-switch button > span svg {
+.ch100-root .ch100-switch button>span svg {
   flex-shrink: 0;
 }
 
@@ -1679,6 +1679,43 @@
   align-items: center;
   justify-content: center;
   padding: 12px 16px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.ch100-modal-banner.has-img {
+  height: 196px;
+  background: #141312;
+  padding: 0;
+}
+
+.ch100-modal-banner-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+  display: block;
+}
+
+.ch100-modal-banner.has-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.34) 0%,
+    rgba(0, 0, 0, 0.08) 50%,
+    rgba(0, 0, 0, 0.44) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ch100-modal-banner .ch100-rank,
+.ch100-modal-banner .ch100-modal-top-actions {
+  z-index: 2;
 }
 
 .ch100-modal-banner-svg svg.ic {
