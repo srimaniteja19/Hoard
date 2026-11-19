@@ -345,7 +345,7 @@ export default function Channel100Page() {
             record: nextShows[targetId],
             customMeta: savedItem,
           }),
-        }).catch(() => {});
+        }).catch(() => { });
 
         if (matchedCanonical) {
           fetch("/api/channel100", {
@@ -356,7 +356,7 @@ export default function Channel100Page() {
               id: matchedCanonical.id,
               record: nextShows[matchedCanonical.id],
             }),
-          }).catch(() => {});
+          }).catch(() => { });
         }
 
         return nextStore;
@@ -415,7 +415,7 @@ export default function Channel100Page() {
             action: "delete",
             id,
           }),
-        }).catch(() => {});
+        }).catch(() => { });
 
         return nextStore;
       });
@@ -470,17 +470,16 @@ export default function Channel100Page() {
             record: nextShows[id],
             customMeta: currentCustom,
           }),
-        }).catch(() => {});
+        }).catch(() => { });
 
         playSound.fileIt();
         triggerToast(
           nextStatus === "seen"
             ? `Completed ${currentCustom.title} (${nextEp}/${currentCustom.totalEpisodes})`
-            : `${currentCustom.title}: Ep ${nextEp}${
-                currentCustom.totalEpisodes
-                  ? ` of ${currentCustom.totalEpisodes}`
-                  : ""
-              }`
+            : `${currentCustom.title}: Ep ${nextEp}${currentCustom.totalEpisodes
+              ? ` of ${currentCustom.totalEpisodes}`
+              : ""
+            }`
         );
 
         return nextStore;
@@ -519,17 +518,17 @@ export default function Channel100Page() {
       const hash = (window.location.hash || "").slice(1);
       const initialCat: MediaKind =
         hash === "film" ||
-        hash === "tv" ||
-        hash === "vgf" ||
-        hash === "releases" ||
-        hash === "tracker"
+          hash === "tv" ||
+          hash === "vgf" ||
+          hash === "releases" ||
+          hash === "tracker"
           ? (hash as MediaKind)
           : savedView.cat === "film" ||
             savedView.cat === "vgf" ||
             savedView.cat === "releases" ||
             savedView.cat === "tracker"
-          ? (savedView.cat as MediaKind)
-          : "tv";
+            ? (savedView.cat as MediaKind)
+            : "tv";
       setFilters((prev) => ({
         ...prev,
         ...savedView,
@@ -769,7 +768,7 @@ export default function Channel100Page() {
               shows: reloaded.shows,
               custom: reloaded.custom,
             }),
-          }).catch(() => {});
+          }).catch(() => { });
         } else {
           playSound.bury();
           triggerToast(`Import failed: ${res.error || "Malformed file"}`);
@@ -822,12 +821,12 @@ export default function Channel100Page() {
     filters.cat === "tv"
       ? tvStats
       : filters.cat === "film"
-      ? filmStats
-      : filters.cat === "vgf"
-      ? vgfStats
-      : filters.cat === "releases"
-      ? releasesStats
-      : trackerStats;
+        ? filmStats
+        : filters.cat === "vgf"
+          ? vgfStats
+          : filters.cat === "releases"
+            ? releasesStats
+            : trackerStats;
 
   const filteredItems = useMemo(
     () => filterAndSortMedia(catalogItems, store, filters, catalog),
@@ -1036,12 +1035,12 @@ export default function Channel100Page() {
             filters.cat === "tv"
               ? "tabTv"
               : filters.cat === "film"
-              ? "tabFilm"
-              : filters.cat === "vgf"
-              ? "tabVgf"
-              : filters.cat === "releases"
-              ? "tabReleases"
-              : "tabTracker"
+                ? "tabFilm"
+                : filters.cat === "vgf"
+                  ? "tabVgf"
+                  : filters.cat === "releases"
+                    ? "tabReleases"
+                    : "tabTracker"
           }
         >
           <Channel100Hero

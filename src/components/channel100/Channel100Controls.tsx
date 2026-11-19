@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { RotateCcw, LayoutGrid, List } from "lucide-react";
+import { RotateCcw, LayoutGrid, List, Search } from "lucide-react";
 import {
   Channel100Store,
   ChannelMediaItem,
@@ -48,25 +48,11 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
 
   const languages = useMemo(() => {
     const set = new Set<string>();
-    if (filters.cat === "releases") {
-      [
-        "Telugu",
-        "Malayalam",
-        "Kannada",
-        "Tamil",
-        "Hindi",
-        "English",
-        "Spanish",
-        "German",
-        "Korean",
-        "Japanese",
-      ].forEach((l) => set.add(l));
-    }
     items.forEach((i) => {
       if (i.lang) set.add(i.lang);
     });
     return Array.from(set).sort();
-  }, [items, filters.cat]);
+  }, [items]);
 
   const hasActiveFilters =
     filters.status !== "all" ||
@@ -74,8 +60,8 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
     filters.where !== "all" ||
     filters.len !== "all" ||
     (filters.lang && filters.lang !== "all") ||
-    (filters.cat === "tracker" && filters.customKind && filters.customKind !== "all") ||
-    (filters.cat === "releases" && filters.releasePeriod && filters.releasePeriod !== "all") ||
+    (filters.customKind && filters.customKind !== "all") ||
+    (filters.releasePeriod && filters.releasePeriod !== "all") ||
     filters.q.trim() !== "";
 
   function handleClearAllFilters() {
@@ -108,15 +94,20 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
       <div className="ch100-wrap wrap ch100-ctl-bar">
         {/* Search Input */}
         <label className="ch100-search search">
-          <span aria-hidden="true">⌕</span>
+          <Search className="ch100-search-icon" size={14} strokeWidth={2.2} aria-hidden="true" />
           <input
             id="q"
             type="search"
-            placeholder={`${catalog.search} (Press /)`}
+            placeholder={catalog.search}
             aria-label="Search"
             value={filters.q}
             onChange={(e) => onUpdateFilters({ q: e.target.value })}
           />
+          {!filters.q && (
+            <kbd className="ch100-kbd" aria-hidden="true">
+              /
+            </kbd>
+          )}
         </label>
 
         {/* Release Timeframe Pills (Day / Week / Month / Year) */}
@@ -144,7 +135,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
         <div className="ch100-selects-group">
           {(cat === "tracker" || cat === "releases" || languages.length > 1) && (
             <select
-              className="ch100-sel sel"
+              className={`ch100-sel sel ${filters.lang && filters.lang !== "all" ? "is-active" : ""}`}
               id="lang"
               aria-label="Filter by language"
               value={filters.lang || "all"}
@@ -161,7 +152,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
 
           {(cat === "tracker" || cat === "releases") && (
             <select
-              className="ch100-sel sel"
+              className={`ch100-sel sel ${filters.customKind && filters.customKind !== "all" ? "is-active" : ""}`}
               id="customKind"
               aria-label="Filter by medium"
               value={filters.customKind || "all"}
@@ -170,20 +161,20 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
               }
             >
               <option value="all">All media types</option>
-              <option value="tv">📺 TV Series</option>
-              <option value="film">🎬 Feature Film</option>
+              <option value="tv">TV Series</option>
+              <option value="film">Feature Film</option>
               {cat === "tracker" && (
                 <>
-                  <option value="anime">⚔️ Anime</option>
-                  <option value="mini">🎞️ Mini-Series</option>
-                  <option value="doc">📽️ Documentary</option>
+                  <option value="anime">Anime</option>
+                  <option value="mini">Mini-Series</option>
+                  <option value="doc">Documentary</option>
                 </>
               )}
             </select>
           )}
 
           <select
-            className="ch100-sel sel"
+            className={`ch100-sel sel ${filters.genre !== "all" ? "is-active" : ""}`}
             id="genre"
             aria-label="Filter by genre"
             value={filters.genre}
@@ -199,7 +190,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
 
           {streamers.length > 1 && (
             <select
-              className="ch100-sel sel"
+              className={`ch100-sel sel ${filters.where !== "all" ? "is-active" : ""}`}
               id="where"
               aria-label="Filter by platform"
               value={filters.where}
@@ -215,7 +206,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
           )}
 
           <select
-            className="ch100-sel sel"
+            className={`ch100-sel sel ${filters.len !== "all" ? "is-active" : ""}`}
             id="len"
             aria-label="Filter by runtime"
             value={filters.len}
@@ -268,8 +259,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
               onClick={handleClearAllFilters}
               title="Reset search and all active filters"
             >
-              <RotateCcw size={12} strokeWidth={2.3} aria-hidden="true" />
-              Reset
+              ✕ Reset filters
             </button>
           )}
         </div>
@@ -290,10 +280,9 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
               id="vGrid"
               aria-pressed={filters.layout === "grid"}
               onClick={() => onUpdateFilters({ layout: "grid" })}
-              title="Poster cards view"
+              title="Colorful cards view"
             >
-              <LayoutGrid size={13} strokeWidth={2.2} aria-hidden="true" />
-              Cards
+              ⊞ Cards
             </button>
             <button
               type="button"
@@ -302,8 +291,7 @@ export const Channel100Controls: React.FC<Channel100ControlsProps> = ({
               onClick={() => onUpdateFilters({ layout: "list" })}
               title="Compact index rows"
             >
-              <List size={13} strokeWidth={2.2} aria-hidden="true" />
-              Index
+              ☰ Index
             </button>
           </div>
         </div>

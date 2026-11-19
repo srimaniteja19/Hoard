@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Calendar, Check, Play, Plus, Star } from "lucide-react";
 import { ChannelMediaItem, ShowUserRecord, ShowStatus } from "@/lib/channel100/types";
 import { artFor, fmtH, fmtM, jwUrl } from "@/lib/channel100/data";
 import { formatReleaseBadge } from "@/lib/channel100/releases";
@@ -71,11 +72,14 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
   }, [item]);
 
   const showPoster = Boolean(posterUrl && !imgFailed);
+  const showLangTag = Boolean(
+    item.lang && item.lang.trim().toLowerCase() !== "english"
+  );
 
-  const stampLabel: Record<string, string> = {
-    seen: "✓ SEEN",
-    want: "+ WANT",
-    watching: "▶ ON NOW",
+  const statusMeta: Record<string, { label: string }> = {
+    seen: { label: "Seen" },
+    want: { label: "Want to watch" },
+    watching: { label: "Watching now" },
   };
 
   const metaPrimary = item.custom
@@ -102,7 +106,7 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
 
   return (
     <article
-      className={`ch100-card card ${status ? `is-${status}` : ""}`}
+      className={`ch100-card ${status ? `is-${status}` : ""}`}
       data-id={item.id}
     >
       {/* Poster / Artwork Banner */}
@@ -134,13 +138,20 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
 
         {item.imdb > 0 && !item.custom && (
           <span className="ch100-art-imdb" title="Aggregate rating">
-            ★ {item.imdb.toFixed(1)}
+            <Star size={10} fill="currentColor" strokeWidth={2} aria-hidden="true" />
+            {item.imdb.toFixed(1)}
           </span>
         )}
 
         {status && (
-          <span className={`ch100-stamp ${status}`}>
-            {stampLabel[status] || status}
+          <span
+            className={`ch100-stamp ${status}`}
+            title={statusMeta[status]?.label || status}
+            aria-label={statusMeta[status]?.label || status}
+          >
+            {status === "seen" && <Check size={12} strokeWidth={3} aria-hidden="true" />}
+            {status === "watching" && <Play size={10} fill="currentColor" strokeWidth={2} aria-hidden="true" />}
+            {status === "want" && <Plus size={12} strokeWidth={3} aria-hidden="true" />}
           </span>
         )}
       </div>
@@ -170,11 +181,12 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
           <div className="ch100-meta">{metaPrimary}</div>
         </div>
 
-        {/* Colorful Tags */}
+        {/* Refined Single-Line Tags */}
         <div className="ch100-tags">
           {item.releaseDate && (
             <span className="ch100-tag release">
-              📅 {formatReleaseBadge(item.releaseDate)}
+              <Calendar size={10} strokeWidth={2.4} aria-hidden="true" />
+              {formatReleaseBadge(item.releaseDate)}
             </span>
           )}
           {item.where && (
@@ -184,13 +196,14 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              title="Where to watch"
+              title={`Watch on ${item.where}`}
             >
-              ▶ {item.where}
+              <Play size={9} fill="currentColor" strokeWidth={2} aria-hidden="true" />
+              <span>{item.where}</span>
             </a>
           )}
           {item.genre && <span className="ch100-tag genre">{item.genre}</span>}
-          {item.lang && (
+          {showLangTag && (
             <span className="ch100-tag lang">
               {item.langFlag} {item.lang}
             </span>
@@ -238,7 +251,8 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
               onClick={() => onToggleStatus(item.id, "seen")}
               title="Mark as seen"
             >
-              ✓ Seen
+              <Check size={11} strokeWidth={2.7} aria-hidden="true" />
+              Seen
             </button>
             <button
               type="button"
@@ -247,7 +261,8 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
               onClick={() => onToggleStatus(item.id, "watching")}
               title="Mark as watching"
             >
-              ▶ Watching
+              <Play size={9.5} fill={status === "watching" ? "currentColor" : "none"} strokeWidth={2.5} aria-hidden="true" />
+              Watching
             </button>
             <button
               type="button"
@@ -256,7 +271,8 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
               onClick={() => onToggleStatus(item.id, "want")}
               title="Mark as want to watch"
             >
-              + Want
+              <Plus size={11} strokeWidth={2.7} aria-hidden="true" />
+              Want
             </button>
           </div>
         </div>

@@ -89,19 +89,25 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
     <section className="ch100-wrap ch100-summary-bar">
       <div className="ch100-summary-top">
         <div className="ch100-summary-titles">
-          <h2 className="ch100-summary-h2">{catalog.h1}</h2>
-          <p className="ch100-summary-lede">
-            {catalog.lede}
+          <div className="ch100-summary-title-row">
+            <h2 className="ch100-summary-h2">{catalog.h1}</h2>
             {syncedAt && cat !== "tracker" && (
-              <span className="ch100-sync-stamp" suppressHydrationWarning>
-                {" "}
-                · Live synced{" "}
+              <span
+                className="ch100-live-pill"
+                title="Live synced with chart updates"
+                suppressHydrationWarning
+              >
+                <span className="ch100-live-dot" aria-hidden="true" />
+                Live ·{" "}
                 {new Date(syncedAt).toLocaleTimeString([], {
-                  hour: "2-digit",
+                  hour: "numeric",
                   minute: "2-digit",
                 })}
               </span>
             )}
+          </div>
+          <p className="ch100-summary-lede">
+            {catalog.lede}
             {cat === "vgf" && (
               <>
                 {" "}
@@ -217,8 +223,7 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             onClick={() => handleStatusClick("seen")}
             title="Filter by Seen (click again to show all)"
           >
-            <span className="ch100-count-dot" aria-hidden="true" />
-            <Check size={12} strokeWidth={2.5} aria-hidden="true" />
+            <Check className="ch100-count-icon" size={13} strokeWidth={2.6} aria-hidden="true" />
             <span>Seen</span>
             <strong suppressHydrationWarning>{stats.seen}</strong>
           </button>
@@ -232,8 +237,7 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             onClick={() => handleStatusClick("watching")}
             title="Filter by Watching (click again to show all)"
           >
-            <span className="ch100-count-dot" aria-hidden="true" />
-            <Play size={11} strokeWidth={2.5} aria-hidden="true" />
+            <Play className="ch100-count-icon" size={11} strokeWidth={2.6} aria-hidden="true" />
             <span>Watching</span>
             <strong suppressHydrationWarning>{stats.watching}</strong>
           </button>
@@ -247,8 +251,7 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             onClick={() => handleStatusClick("want")}
             title="Filter by Want to see (click again to show all)"
           >
-            <span className="ch100-count-dot" aria-hidden="true" />
-            <Plus size={12} strokeWidth={2.5} aria-hidden="true" />
+            <Plus className="ch100-count-icon" size={13} strokeWidth={2.6} aria-hidden="true" />
             <span>Want</span>
             <strong suppressHydrationWarning>{stats.want}</strong>
           </button>
@@ -262,8 +265,7 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             onClick={() => handleStatusClick("none")}
             title="Filter by Unseen (click again to show all)"
           >
-            <span className="ch100-count-dot" aria-hidden="true" />
-            <CircleDashed size={12} strokeWidth={2.2} aria-hidden="true" />
+            <CircleDashed className="ch100-count-icon" size={12} strokeWidth={2.2} aria-hidden="true" />
             <span>Unseen</span>
             <strong suppressHydrationWarning>{stats.untouched}</strong>
           </button>
@@ -291,9 +293,9 @@ export const Channel100Hero: React.FC<Channel100HeroProps> = ({
             role="img"
             aria-label={`${stats.seen} seen, ${stats.watching} watching, ${stats.want} want, out of ${items.length}`}
           >
-            <i className="ps" style={{ width: `${seenPct}%` }} />
-            <i className="pn" style={{ width: `${watchingPct}%` }} />
-            <i className="pw" style={{ width: `${wantPct}%` }} />
+            {seenPct > 0 && <i className="ps" style={{ width: `${seenPct}%` }} />}
+            {watchingPct > 0 && <i className="pn" style={{ width: `${watchingPct}%` }} />}
+            {wantPct > 0 && <i className="pw" style={{ width: `${wantPct}%` }} />}
           </div>
         </div>
       </div>
