@@ -224,6 +224,17 @@
   transition: background 0.12s ease, color 0.12s ease;
 }
 
+.ch100-root .ch100-switch button > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.2;
+}
+
+.ch100-root .ch100-switch button > span svg {
+  flex-shrink: 0;
+}
+
 .ch100-root .ch100-switch button:hover {
   color: var(--ch-text);
   background: var(--ch-surface);
@@ -419,10 +430,13 @@
 }
 
 @keyframes ch100Pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
+
   50% {
     opacity: 0.65;
     transform: scale(0.88);
@@ -510,10 +524,21 @@
   flex-shrink: 0;
 }
 
-.ch100-root .ch100-count.s .ch100-count-icon { color: var(--ch-seen); }
-.ch100-root .ch100-count.n .ch100-count-icon { color: var(--ch-watching); }
-.ch100-root .ch100-count.w .ch100-count-icon { color: #D49B00; }
-.ch100-root .ch100-count.u .ch100-count-icon { color: var(--ch-muted); }
+.ch100-root .ch100-count.s .ch100-count-icon {
+  color: var(--ch-seen);
+}
+
+.ch100-root .ch100-count.n .ch100-count-icon {
+  color: var(--ch-watching);
+}
+
+.ch100-root .ch100-count.w .ch100-count-icon {
+  color: #D49B00;
+}
+
+.ch100-root .ch100-count.u .ch100-count-icon {
+  color: var(--ch-muted);
+}
 
 .ch100-root .ch100-count.s.active-filter {
   background: color-mix(in srgb, var(--ch-seen) 16%, var(--ch-card));
@@ -878,10 +903,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .ch100-root .ch100-card,
   .ch100-art-img {
     transition: none;
   }
+
   .ch100-root .ch100-card:hover,
   .ch100-root .ch100-card:hover .ch100-art-img {
     transform: none;
@@ -892,12 +919,10 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.24) 0%,
-    rgba(0, 0, 0, 0.02) 42%,
-    rgba(0, 0, 0, 0.44) 100%
-  );
+  background: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.24) 0%,
+      rgba(0, 0, 0, 0.02) 42%,
+      rgba(0, 0, 0, 0.44) 100%);
   pointer-events: none;
   z-index: 1;
 }
