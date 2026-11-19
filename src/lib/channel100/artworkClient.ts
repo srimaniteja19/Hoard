@@ -1,6 +1,7 @@
 import { ChannelMediaItem } from "./types";
 
-const ARTWORK_LS_KEY = "hoard.ch100.artwork.v1";
+const ARTWORK_LS_KEY = "hoard.ch100.artwork.v2";
+const LEGACY_ARTWORK_LS_KEY = "hoard.ch100.artwork.v1";
 const MAX_CACHED_ENTRIES = 600;
 const MAX_CONCURRENT = 6;
 
@@ -15,12 +16,16 @@ function ensureLsLoaded() {
   if (lsLoaded || typeof window === "undefined") return;
   lsLoaded = true;
   try {
+    // Clean up legacy v1 cache that persisted null misses
+    localStorage.removeItem(LEGACY_ARTWORK_LS_KEY);
     const raw = localStorage.getItem(ARTWORK_LS_KEY);
     if (!raw) return;
     const parsed = JSON.parse(raw) as Record<string, string | null>;
     if (parsed && typeof parsed === "object") {
       Object.entries(parsed).forEach(([k, v]) => {
-        memoryCache.set(k, v);
+        if (typeof v === "string" && v.startsWith("http")) {
+          memoryCache.set(k, v);
+        }
       });
     }
   } catch {
@@ -31,8 +36,11 @@ function ensureLsLoaded() {
 function persistLs() {
   if (typeof window === "undefined") return;
   try {
-    const entries = Array.from(memoryCache.entries()).slice(-MAX_CACHED_ENTRIES);
-    localStorage.setItem(ARTWORK_LS_KEY, JSON.stringify(Object.fromEntries(entries)));
+    // Only persist confirmed image URLs; never persist null misses
+    const validEntries = Array.from(memoryCache.entries())
+      .filter(([, v]) => typeof v === "string" && v.startsWith("http"))
+      .slice(-MAX_CACHED_ENTRIES);
+    localStorage.setItem(ARTWORK_LS_KEY, JSON.stringify(Object.fromEntries(validEntries)));
   } catch {
     // ignore quota errors
   }
@@ -104,9 +112,11 @@ export async function fetchItemArtwork(item: ChannelMediaItem): Promise<string |
         return null;
       }
       const data = await res.json();
-      const img = typeof data?.image === "string" ? data.image : null;
+      const img = typeof data?.image === "string" && data.image.startsWith("http") ? data.image : null;
       memoryCache.set(key, img);
-      persistLs();
+      if (img) {
+        persistLs();
+      }
       return img;
     } catch {
       return null;

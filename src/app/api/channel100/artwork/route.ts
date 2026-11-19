@@ -2,10 +2,88 @@ import { NextResponse } from "next/server";
 import { fetchWithSsrfGuard } from "@/lib/security/ssrfGuard";
 
 const ARTWORK_CACHE = new Map<string, { image: string | null; ts: number }>();
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours for hits
+const MISS_TTL_MS = 5 * 60 * 1000; // 5 minutes for misses
 
 function cleanTitle(raw: string): string {
   return raw.replace(/\s*\([^)]*\)\s*/g, "").trim();
+}
+
+function normalizeText(raw: string): string {
+  return raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function optimizeImdbImageUrl(rawUrl: string): string {
+  // Resize huge raw IMDb/Amazon posters to 600px wide for fast card loading
+  if (rawUrl.includes("media-amazon.com/images/") && rawUrl.includes("._V1_")) {
+    return rawUrl.replace(/\._V1_.*?\.(jpg|jpeg|png|webp)$/i, "._V1_UX600_.$1");
+  }
+  return rawUrl;
+}
+
+async function fetchImdbSuggestionImage(
+  title: string,
+  kind: string,
+  year?: string | null
+): Promise<string | null> {
+  try {
+    const q = cleanTitle(title);
+    if (!q) return null;
+    const url = `https://v3.sg.media-imdb.com/suggestion/x/${encodeURIComponent(q)}.json`;
+    const res = await fetchWithSsrfGuard(url);
+    if (!res.ok || !res.text.trim().startsWith("{")) return null;
+    const json = JSON.parse(res.text);
+    const items: any[] = Array.isArray(json?.d) ? json.d : [];
+    const withImage = items.filter(
+      (item) =>
+        typeof item?.i?.imageUrl === "string" &&
+        item.i.imageUrl.startsWith("http") &&
+        typeof item?.id === "string" &&
+        item.id.startsWith("tt")
+    );
+    if (!withImage.length) return null;
+
+    const normQ = normalizeText(q);
+    const targetYear = year ? parseInt(year, 10) : null;
+    const isTv = kind === "tv";
+
+    let bestItem: any = null;
+    let bestScore = -1;
+
+    for (const item of withImage) {
+      let score = 0;
+      const itemTitle = normalizeText(String(item.l || ""));
+      if (itemTitle === normQ) score += 50;
+      else if (itemTitle.includes(normQ) || normQ.includes(itemTitle)) score += 25;
+
+      const qid = String(item.qid || "").toLowerCase();
+      if (isTv && (qid === "tvseries" || qid === "tvminiseries")) score += 20;
+      if (!isTv && (qid === "movie" || qid === "tvmovie" || qid === "short")) score += 20;
+
+      if (targetYear && typeof item.y === "number") {
+        const diff = Math.abs(item.y - targetYear);
+        if (diff === 0) score += 35;
+        else if (diff === 1) score += 20;
+        else if (diff <= 3) score += 5;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestItem = item;
+      }
+    }
+
+    const chosen = bestScore >= 20 ? bestItem : withImage[0];
+    const imgUrl = chosen?.i?.imageUrl;
+    return typeof imgUrl === "string" ? optimizeImdbImageUrl(imgUrl) : null;
+  } catch {
+    return null;
+  }
 }
 
 async function fetchTvMazeImage(title: string): Promise<string | null> {
@@ -66,16 +144,18 @@ async function fetchWikipediaImage(
 ): Promise<string | null> {
   try {
     const q = cleanTitle(title);
+    const mediaWord = kind === "tv" ? "TV series" : "film";
     const candidates = [
+      year ? `${q} (${year} ${mediaWord})` : null,
+      `${q} (${mediaWord})`,
       q,
-      year ? `${q} (${year} ${kind === "tv" ? "TV series" : "film"})` : null,
-      `${q} (${kind === "tv" ? "TV series" : "film"})`,
     ].filter((c): c is string => Boolean(c));
 
+    // 1. Exact title lookups with pilicense=any (includes fair-use movie/TV posters)
     for (const candidate of candidates) {
       const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(
         candidate
-      )}&prop=pageimages&format=json&pithumbsize=600&redirects=1`;
+      )}&prop=pageimages&pilicense=any&format=json&pithumbsize=600&redirects=1`;
       const res = await fetchWithSsrfGuard(url);
       if (!res.ok || !res.text.trim().startsWith("{")) continue;
       const json = JSON.parse(res.text);
@@ -87,6 +167,29 @@ async function fetchWikipediaImage(
         return thumb;
       }
     }
+
+    // 2. Fallback: Wikipedia search generator (catches alternate titles / film series pages)
+    const searchQuery = [q, year || "", mediaWord].filter(Boolean).join(" ");
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(
+      searchQuery
+    )}&gsrlimit=4&prop=pageimages&pilicense=any&format=json&pithumbsize=600`;
+    const searchRes = await fetchWithSsrfGuard(searchUrl);
+    if (searchRes.ok && searchRes.text.trim().startsWith("{")) {
+      const json = JSON.parse(searchRes.text);
+      const pagesObj = json?.query?.pages;
+      if (pagesObj && typeof pagesObj === "object") {
+        const sortedPages = Object.values(pagesObj as Record<string, any>).sort(
+          (a, b) => (a?.index ?? 99) - (b?.index ?? 99)
+        );
+        for (const page of sortedPages) {
+          const thumb = page?.thumbnail?.source;
+          if (typeof thumb === "string" && thumb.startsWith("http")) {
+            return thumb;
+          }
+        }
+      }
+    }
+
     return null;
   } catch {
     return null;
@@ -105,29 +208,46 @@ export async function GET(req: Request) {
 
   const cacheKey = `${kind}_${title.toLowerCase()}_${year || ""}`;
   const cached = ARTWORK_CACHE.get(cacheKey);
-  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
-    return NextResponse.json(
-      { image: cached.image },
-      { headers: { "Cache-Control": "public, max-age=86400" } }
-    );
+  if (cached) {
+    const ttl = cached.image ? CACHE_TTL_MS : MISS_TTL_MS;
+    if (Date.now() - cached.ts < ttl) {
+      return NextResponse.json(
+        { image: cached.image },
+        {
+          headers: {
+            "Cache-Control": cached.image
+              ? "public, max-age=86400"
+              : "public, max-age=300",
+          },
+        }
+      );
+    }
   }
 
   let image: string | null = null;
   if (kind === "tv") {
     image =
+      (await fetchImdbSuggestionImage(title, kind, year)) ||
       (await fetchTvMazeImage(title)) ||
-      (await fetchItunesImage(title, kind, year)) ||
-      (await fetchWikipediaImage(title, kind, year));
+      (await fetchWikipediaImage(title, kind, year)) ||
+      (await fetchItunesImage(title, kind, year));
   } else {
     image =
-      (await fetchItunesImage(title, kind, year)) ||
-      (await fetchWikipediaImage(title, kind, year));
+      (await fetchImdbSuggestionImage(title, kind, year)) ||
+      (await fetchWikipediaImage(title, kind, year)) ||
+      (await fetchItunesImage(title, kind, year));
   }
 
   ARTWORK_CACHE.set(cacheKey, { image, ts: Date.now() });
 
   return NextResponse.json(
     { image },
-    { headers: { "Cache-Control": "public, max-age=86400" } }
+    {
+      headers: {
+        "Cache-Control": image
+          ? "public, max-age=86400"
+          : "public, max-age=300",
+      },
+    }
   );
 }
