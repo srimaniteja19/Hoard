@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Calendar, Check, Play, Plus, Star } from "lucide-react";
+import { Calendar, Check, Crown, Play, Plus, Star } from "lucide-react";
 import { ChannelMediaItem, ShowUserRecord, ShowStatus } from "@/lib/channel100/types";
 import { artFor, fmtH, fmtM, jwUrl } from "@/lib/channel100/data";
 import { formatReleaseBadge } from "@/lib/channel100/releases";
@@ -10,16 +10,20 @@ import { fetchItemArtwork, getCachedArtwork } from "@/lib/channel100/artworkClie
 interface Channel100CardProps {
   item: ChannelMediaItem;
   record: ShowUserRecord;
+  isFavorite?: boolean;
   onOpenModal: (id: string) => void;
   onToggleStatus: (id: string, status: ShowStatus) => void;
+  onToggleFavorite?: (item: ChannelMediaItem) => void;
   onIncrementEpisode?: (id: string) => void;
 }
 
 export const Channel100Card: React.FC<Channel100CardProps> = ({
   item,
   record,
+  isFavorite = false,
   onOpenModal,
   onToggleStatus,
+  onToggleFavorite,
   onIncrementEpisode,
 }) => {
   const art = useMemo(() => artFor(item), [item]);
@@ -152,6 +156,30 @@ export const Channel100Card: React.FC<Channel100CardProps> = ({
             <Star size={10} fill="currentColor" strokeWidth={2} aria-hidden="true" />
             {item.imdb.toFixed(1)}
           </span>
+        )}
+
+        {onToggleFavorite && (
+          <button
+            type="button"
+            className={`ch100-card-fav-btn ${isFavorite ? "is-fav" : ""}`}
+            aria-pressed={isFavorite}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite(item);
+            }}
+            title={
+              isFavorite
+                ? "Remove from All-Time Favorites"
+                : "Induct into All-Time Favorites"
+            }
+            aria-label={
+              isFavorite
+                ? `Remove ${item.title} from All-Time Favorites`
+                : `Add ${item.title} to All-Time Favorites`
+            }
+          >
+            <Crown size={12} strokeWidth={2.4} aria-hidden="true" />
+          </button>
         )}
 
         {status && (

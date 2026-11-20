@@ -660,6 +660,24 @@ export const CATALOGS: Record<MediaKind, CatalogConfig> = {
       ["long", "25 h+"],
     ],
   },
+  favorites: {
+    items: [],
+    noun: "all-timers",
+    one: "all-timer",
+    eyebrow: "All-Time Hall of Fame",
+    h1: "All-Time Canon",
+    lede: "Your permanent pantheon of desert-island movies and television—ranked, annotated, and ready to share in one click.",
+    set: "All-Time Canon",
+    rankPre: "NO.",
+    icon: "★",
+    search: "Search your all-time movies & shows…",
+    band: (i) => (i.hours < 3 ? "short" : i.hours < 20 ? "medium" : "long"),
+    bands: [
+      ["short", "Feature film"],
+      ["medium", "Mini / Short run"],
+      ["long", "Multi-season"],
+    ],
+  },
 };
 
 const cleanTitle = (t: string) => t.replace(/\s*\(.*?\)/, "");

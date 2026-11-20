@@ -18,8 +18,10 @@ interface Channel100GridProps {
   layout: ViewLayout;
   cat?: MediaKind;
   totalCatalogCount?: number;
+  isItemFavorite?: (item: ChannelMediaItem) => boolean;
   onOpenModal: (id: string) => void;
   onToggleStatus: (id: string, status: ShowStatus) => void;
+  onToggleFavorite?: (item: ChannelMediaItem) => void;
   onIncrementEpisode?: (id: string) => void;
   onClearFilters?: () => void;
   onOpenLogModal?: () => void;
@@ -34,8 +36,10 @@ export const Channel100Grid: React.FC<Channel100GridProps> = ({
   layout,
   cat = "tv",
   totalCatalogCount = items.length,
+  isItemFavorite,
   onOpenModal,
   onToggleStatus,
+  onToggleFavorite,
   onIncrementEpisode,
   onClearFilters,
   onOpenLogModal,
@@ -191,8 +195,10 @@ export const Channel100Grid: React.FC<Channel100GridProps> = ({
                           key={item.id}
                           item={item}
                           record={record}
+                          isFavorite={isItemFavorite ? isItemFavorite(item) : false}
                           onOpenModal={onOpenModal}
                           onToggleStatus={onToggleStatus}
+                          onToggleFavorite={onToggleFavorite}
                           onIncrementEpisode={onIncrementEpisode}
                         />
                       );
@@ -212,8 +218,10 @@ export const Channel100Grid: React.FC<Channel100GridProps> = ({
                     key={item.id}
                     item={item}
                     record={record}
+                    isFavorite={isItemFavorite ? isItemFavorite(item) : false}
                     onOpenModal={onOpenModal}
                     onToggleStatus={onToggleStatus}
+                    onToggleFavorite={onToggleFavorite}
                     onIncrementEpisode={onIncrementEpisode}
                   />
                 );

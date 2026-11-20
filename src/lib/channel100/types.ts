@@ -1,7 +1,50 @@
 export type ShowStatus = "seen" | "watching" | "want" | "";
-export type MediaKind = "tv" | "film" | "vgf" | "releases" | "tracker";
+export type MediaKind = "tv" | "film" | "vgf" | "tracker";
+export type MediaKind = "tv" | "film" | "vgf" | "releases" | "tracker" | "favorites";
 export type CustomMediaKind = "tv" | "film" | "anime" | "mini" | "doc";
 export type ReleasePeriod = "all" | "day" | "week" | "month" | "year";
+export type FavoriteMediaType = "movie" | "show";
+
+export type FavoriteVibe =
+  | "Life-Changing"
+  | "Pure Cinema"
+  | "Mind-Bender"
+  | "Comfort Rewatch"
+  | "Masterclass"
+  | "Late Night"
+  | "Tearjerker"
+  | "Hidden Gem";
+
+export interface FavoriteItem {
+  id: string; // canonical media id or "fav_..."
+  title: string;
+  mediaType: FavoriteMediaType;
+  year?: number | string;
+  creator?: string; // director or network/creator
+  genre?: string;
+  lang?: string;
+  where?: string;
+  pitch?: string; // Personal "why you have to watch this" pitch
+  quote?: string; // Optional favorite quote or scene note
+  vibe?: FavoriteVibe | string;
+  rating?: number; // 1-5 personal rating (default 5)
+  hours?: number; // Estimated runtime hours
+  image?: string; // Cached poster URL
+  addedAt: number;
+}
+
+export interface FavoritesCuratorProfile {
+  displayName: string; // e.g., "My All-Time Canon"
+  tagline: string; // e.g., "If you ever ask me what to watch, start here."
+  isPublic: boolean;
+}
+
+export interface FavoritesVault {
+  items: FavoriteItem[];
+  profile: FavoritesCuratorProfile;
+  shareId?: string | null;
+  updatedAt: number;
+}
 
 export interface CustomMediaItem {
   id: string; // "c_..."
@@ -56,7 +99,6 @@ export interface ChannelMediaItem {
   updatedAt?: number;
   releaseDate?: string; // YYYY-MM-DD
   releasePeriod?: Exclude<ReleasePeriod, "all">;
-  image?: string; // Poster / show artwork URL
 }
 
 export interface ShowUserRecord {
@@ -69,6 +111,7 @@ export interface ShowUserRecord {
 export interface Channel100Store {
   shows: Record<string, ShowUserRecord>; // keys are "s1".."s100", "f1".."f100", "c_..."
   custom?: Record<string, CustomMediaItem>; // custom logged entertainment
+  favoritesVault?: FavoritesVault;
   updated: number;
 }
 

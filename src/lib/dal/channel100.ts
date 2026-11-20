@@ -6,7 +6,13 @@ import {
   ShowStatus,
   ShowUserRecord,
   CustomMediaItem,
+  FavoritesVault,
 } from "@/lib/channel100/types";
+import {
+  FAVORITES_MEDIA_ID,
+  createDefaultFavoritesVault,
+  DEFAULT_FAVORITES_PROFILE,
+} from "@/lib/channel100/favorites";
 
 /**
  * Fetch all Channel 100 entries for the authenticated user and format as Channel100Store.
@@ -22,6 +28,10 @@ export async function getUserChannel100Store(userId: string): Promise<Channel100
   let latestUpdated = 0;
 
   for (const row of rows) {
+    if (row.mediaId === FAVORITES_MEDIA_ID) {
+      continue;
+    }
+
     const updatedAt = row.updatedAt ? new Date(row.updatedAt).getTime() : 0;
     if (updatedAt > latestUpdated) {
       latestUpdated = updatedAt;
@@ -287,4 +297,111 @@ export async function syncChannel100Store(
     custom: mergedCustom,
     updated: Date.now(),
   };
+}
+
+function parseFavoritesVaultRow(row: typeof channel100Entries.$inferSelect): FavoritesVault {
+  const updatedAt = row.updatedAt ? new Date(row.updatedAt).getTime() : Date.now();
+  if (!row.notes) {
+    return {
+      ...createDefaultFavoritesVault(),
+      shareId: row.id,
+      updatedAt,
+    };
+  }
+  try {
+    const parsed = JSON.parse(row.notes);
+    return {
+      items: Array.isArray(parsed.items) ? parsed.items : [],
+      profile: {
+        displayName:
+          typeof parsed.profile?.displayName === "string" && parsed.profile.displayName.trim()
+            ? parsed.profile.displayName
+            : DEFAULT_FAVORITES_PROFILE.displayName,
+        tagline:
+          typeof parsed.profile?.tagline === "string"
+            ? parsed.profile.tagline
+            : DEFAULT_FAVORITES_PROFILE.tagline,
+        isPublic: parsed.profile?.isPublic !== false,
+      },
+      shareId: row.id,
+      updatedAt: Number(parsed.updatedAt) || updatedAt,
+    };
+  } catch {
+    return {
+      ...createDefaultFavoritesVault(),
+      shareId: row.id,
+      updatedAt,
+    };
+  }
+}
+
+export async function getUserFavoritesVault(userId: string): Promise<FavoritesVault | null> {
+  const [row] = await db
+    .select()
+    .from(channel100Entries)
+    .where(
+      and(
+        eq(channel100Entries.userId, userId),
+        eq(channel100Entries.mediaId, FAVORITES_MEDIA_ID)
+      )
+    );
+  if (!row) return null;
+  return parseFavoritesVaultRow(row);
+}
+
+export async function saveUserFavoritesVault(
+  userId: string,
+  vault: FavoritesVault
+): Promise<FavoritesVault> {
+  const now = new Date();
+  const payload = JSON.stringify({
+    items: vault.items || [],
+    profile: {
+      displayName: vault.profile?.displayName || DEFAULT_FAVORITES_PROFILE.displayName,
+      tagline: vault.profile?.tagline ?? DEFAULT_FAVORITES_PROFILE.tagline,
+      isPublic: vault.profile?.isPublic !== false,
+    },
+    updatedAt: vault.updatedAt || now.getTime(),
+  });
+
+  const [saved] = await db
+    .insert(channel100Entries)
+    .values({
+      userId,
+      mediaId: FAVORITES_MEDIA_ID,
+      status: "fav",
+      rating: Math.min(999, vault.items?.length || 0),
+      notes: payload,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [channel100Entries.userId, channel100Entries.mediaId],
+      set: {
+        status: "fav",
+        rating: Math.min(999, vault.items?.length || 0),
+        notes: payload,
+        updatedAt: now,
+      },
+    })
+    .returning();
+
+  return parseFavoritesVaultRow(saved);
+}
+
+export async function getPublicFavoritesVaultById(
+  shareId: string
+): Promise<FavoritesVault | null> {
+  const [row] = await db
+    .select()
+    .from(channel100Entries)
+    .where(
+      and(
+        eq(channel100Entries.id, shareId),
+        eq(channel100Entries.mediaId, FAVORITES_MEDIA_ID)
+      )
+    );
+  if (!row) return null;
+  const vault = parseFavoritesVaultRow(row);
+  if (!vault.profile.isPublic) return null;
+  return vault;
 }

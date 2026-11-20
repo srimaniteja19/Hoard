@@ -17,7 +17,17 @@ import {
   StatusFilter,
   ShowUserRecord,
   CustomMediaItem,
+  FavoriteItem,
+  FavoritesCuratorProfile,
+  FavoritesVault,
 } from "@/lib/channel100/types";
+import {
+  channelItemToFavorite,
+  createDefaultFavoritesVault,
+  isItemInFavorites,
+  normalizeFavoriteKey,
+  ShareFilterScope,
+} from "@/lib/channel100/favorites";
 import {
   ALL_ITEMS,
   CATALOGS,
@@ -60,6 +70,9 @@ import { Channel100Modal } from "@/components/channel100/Channel100Modal";
 import { Channel100Toast } from "@/components/channel100/Channel100Toast";
 import { Channel100LogModal } from "@/components/channel100/Channel100LogModal";
 import { Channel100TriageModal } from "@/components/channel100/Channel100TriageModal";
+import { Channel100FavoritesView } from "@/components/channel100/Channel100FavoritesView";
+import { Channel100AddFavoriteModal } from "@/components/channel100/Channel100AddFavoriteModal";
+import { Channel100ShareFavoritesModal } from "@/components/channel100/Channel100ShareFavoritesModal";
 
 const DEFAULT_STORE: Channel100Store = { shows: {}, custom: {}, updated: 0 };
 
@@ -85,6 +98,13 @@ export default function Channel100Page() {
     useState<CustomMediaItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [filters, setFilters] = useState<ViewFilterState>(DEFAULT_FILTERS);
+  const [favoritesVault, setFavoritesVault] = useState<FavoritesVault>(
+    createDefaultFavoritesVault
+  );
+  const [isAddFavModalOpen, setIsAddFavModalOpen] = useState(false);
+  const [isShareFavModalOpen, setIsShareFavModalOpen] = useState(false);
+  const [shareFavScope, setShareFavScope] = useState<ShareFilterScope>("all");
+  const favSyncTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Live-synced catalogs: IMDb Top 250 TV, Letterboxd 500 Films, and Very Good Films
   const [tvItems, setTvItems] = useState<ChannelMediaItem[]>(
@@ -513,6 +533,9 @@ export default function Channel100Page() {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setStore(localStore);
       }
+      if (localStore?.favoritesVault) {
+        setFavoritesVault(localStore.favoritesVault);
+      }
 
       const savedView = loadSavedView();
       const hash = (window.location.hash || "").slice(1);
@@ -521,12 +544,14 @@ export default function Channel100Page() {
           hash === "tv" ||
           hash === "vgf" ||
           hash === "releases" ||
-          hash === "tracker"
+          hash === "tracker" ||
+          hash === "favorites"
           ? (hash as MediaKind)
           : savedView.cat === "film" ||
             savedView.cat === "vgf" ||
             savedView.cat === "releases" ||
-            savedView.cat === "tracker"
+            savedView.cat === "tracker" ||
+            savedView.cat === "favorites"
             ? (savedView.cat as MediaKind)
             : "tv";
       setFilters((prev) => ({
@@ -610,6 +635,50 @@ export default function Channel100Page() {
     }
 
     initDatabaseSync();
+
+    async function initFavoritesSync() {
+      try {
+        const res = await fetch("/api/channel100/favorites");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.authenticated || isCancelled) return;
+        const localVault = loadStore().favoritesVault;
+        const serverVault = data.vault as FavoritesVault | null;
+
+        if (
+          serverVault &&
+          (!localVault || serverVault.updatedAt >= (localVault.updatedAt || 0))
+        ) {
+          setFavoritesVault(serverVault);
+          setStore((prev) => {
+            const next = { ...prev, favoritesVault: serverVault };
+            saveStore(next);
+            return next;
+          });
+        } else if (localVault && localVault.items.length > 0) {
+          const pushRes = await fetch("/api/channel100/favorites", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ vault: localVault }),
+          });
+          if (pushRes.ok) {
+            const pushed = await pushRes.json();
+            if (pushed.vault && !isCancelled) {
+              setFavoritesVault(pushed.vault);
+              setStore((prev) => {
+                const next = { ...prev, favoritesVault: pushed.vault };
+                saveStore(next);
+                return next;
+              });
+            }
+          }
+        }
+      } catch {
+        // Preserve local favorites silently
+      }
+    }
+
+    initFavoritesSync();
     return () => {
       isCancelled = true;
     };
@@ -917,6 +986,191 @@ export default function Channel100Page() {
 
   const [isTriageModalOpen, setIsTriageModalOpen] = useState(false);
 
+  const persistFavoritesVault = useCallback((nextVault: FavoritesVault) => {
+    setFavoritesVault(nextVault);
+    setStore((prev) => {
+      const nextStore: Channel100Store = {
+        ...prev,
+        favoritesVault: nextVault,
+      };
+      saveStore(nextStore);
+      return nextStore;
+    });
+
+    if (favSyncTimerRef.current) clearTimeout(favSyncTimerRef.current);
+    favSyncTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/channel100/favorites", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ vault: nextVault }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.vault?.shareId && data.vault.shareId !== nextVault.shareId) {
+            setFavoritesVault((cur) => ({
+              ...cur,
+              shareId: data.vault.shareId,
+            }));
+          }
+        }
+      } catch {
+        // Local storage preserves changes
+      }
+    }, 350);
+  }, []);
+
+  const handleAddFavorite = useCallback(
+    (fav: FavoriteItem) => {
+      const key = normalizeFavoriteKey(fav.title);
+      const exists = favoritesVault.items.some(
+        (f) => f.id === fav.id || (key && normalizeFavoriteKey(f.title) === key)
+      );
+      if (exists) {
+        triggerToast(`${fav.title} is already in your All-Time Canon`);
+        return;
+      }
+      const nextVault: FavoritesVault = {
+        ...favoritesVault,
+        items: [...favoritesVault.items, fav],
+        updatedAt: Date.now(),
+      };
+      persistFavoritesVault(nextVault);
+      playSound.promote();
+      triggerToast(`Inducted into All-Time Canon: ${fav.title}`);
+    },
+    [favoritesVault, persistFavoritesVault, triggerToast]
+  );
+
+  const handleToggleFavorite = useCallback(
+    (item: ChannelMediaItem) => {
+      const key = normalizeFavoriteKey(item.title);
+      const existing = favoritesVault.items.find(
+        (f) => f.id === item.id || (key && normalizeFavoriteKey(f.title) === key)
+      );
+      if (existing) {
+        const nextVault: FavoritesVault = {
+          ...favoritesVault,
+          items: favoritesVault.items.filter((f) => f.id !== existing.id),
+          updatedAt: Date.now(),
+        };
+        persistFavoritesVault(nextVault);
+        playSound.pop();
+        triggerToast(`Removed from All-Time Canon: ${item.title}`);
+      } else {
+        handleAddFavorite(channelItemToFavorite(item));
+      }
+    },
+    [favoritesVault, persistFavoritesVault, handleAddFavorite, triggerToast]
+  );
+
+  const handleUpdateFavoriteItem = useCallback(
+    (id: string, patch: Partial<FavoriteItem>) => {
+      const nextVault: FavoritesVault = {
+        ...favoritesVault,
+        items: favoritesVault.items.map((f) =>
+          f.id === id ? { ...f, ...patch } : f
+        ),
+        updatedAt: Date.now(),
+      };
+      persistFavoritesVault(nextVault);
+      playSound.fileIt();
+      triggerToast("Updated canon note");
+    },
+    [favoritesVault, persistFavoritesVault, triggerToast]
+  );
+
+  const handleRemoveFavoriteItem = useCallback(
+    (id: string) => {
+      const target = favoritesVault.items.find((f) => f.id === id);
+      const nextVault: FavoritesVault = {
+        ...favoritesVault,
+        items: favoritesVault.items.filter((f) => f.id !== id),
+        updatedAt: Date.now(),
+      };
+      persistFavoritesVault(nextVault);
+      playSound.bury();
+      if (target) triggerToast(`Removed ${target.title} from All-Time Canon`);
+    },
+    [favoritesVault, persistFavoritesVault, triggerToast]
+  );
+
+  const handleReorderFavoriteItem = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (fromIndex === toIndex) return;
+      const items = [...favoritesVault.items];
+      const [moved] = items.splice(fromIndex, 1);
+      if (!moved) return;
+      items.splice(toIndex, 0, moved);
+      const nextVault: FavoritesVault = {
+        ...favoritesVault,
+        items,
+        updatedAt: Date.now(),
+      };
+      persistFavoritesVault(nextVault);
+      playSound.click(0.35);
+    },
+    [favoritesVault, persistFavoritesVault]
+  );
+
+  const handleUpdateFavoritesProfile = useCallback(
+    (profile: FavoritesCuratorProfile) => {
+      const nextVault: FavoritesVault = {
+        ...favoritesVault,
+        profile,
+        updatedAt: Date.now(),
+      };
+      persistFavoritesVault(nextVault);
+      playSound.promote();
+      triggerToast("Updated All-Time Canon marquee");
+    },
+    [favoritesVault, persistFavoritesVault, triggerToast]
+  );
+
+  const handleEnsureShareId = useCallback(async (): Promise<string | null> => {
+    try {
+      const res = await fetch("/api/channel100/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vault: favoritesVault }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data?.vault?.shareId) {
+        const updated = { ...favoritesVault, shareId: data.vault.shareId };
+        setFavoritesVault(updated);
+        setStore((prev) => {
+          const next = { ...prev, favoritesVault: updated };
+          saveStore(next);
+          return next;
+        });
+        return data.vault.shareId as string;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, [favoritesVault]);
+
+  const allCatalogPool = useMemo(
+    () => [...trackerItems, ...filmItems, ...tvItems, ...vgfItems],
+    [trackerItems, filmItems, tvItems, vgfItems]
+  );
+
+  const favoriteSuggestions = useMemo(() => {
+    const rated = allCatalogPool.filter((item) => {
+      const rec = getMediaRecord(store, item.id);
+      return (rec.r || 0) >= 4 || rec.s === "seen";
+    });
+    const pool = rated.length >= 6 ? rated : [...filmItems.slice(0, 8), ...tvItems.slice(0, 8)];
+    return pool.filter((item) => !isItemInFavorites(favoritesVault, item.id, item.title));
+  }, [allCatalogPool, store, filmItems, tvItems, favoritesVault]);
+
+  const checkIsItemFavorite = useCallback(
+    (item: ChannelMediaItem) => isItemInFavorites(favoritesVault, item.id, item.title),
+    [favoritesVault]
+  );
+
   const openNewLogModal = useCallback(() => {
     setEditingCustomItem(null);
     setIsLogModalOpen(true);
@@ -1022,6 +1276,7 @@ export default function Channel100Page() {
           vgfTotalCount={vgfItems.length}
           releasesCount={releaseItems.length}
           trackerCount={trackerItems.length}
+          favoritesCount={favoritesVault.items.length}
           isSyncing={isSyncing}
           onSyncLive={() => handleSyncAllLive(true)}
           onOpenLogModal={openNewLogModal}
@@ -1040,62 +1295,91 @@ export default function Channel100Page() {
                   ? "tabVgf"
                   : filters.cat === "releases"
                     ? "tabReleases"
-                    : "tabTracker"
+                    : filters.cat === "favorites"
+                      ? "tabFavorites"
+                      : "tabTracker"
           }
         >
-          <Channel100Hero
-            catalog={catalog}
-            items={catalogItems}
-            stats={currentStats}
-            cat={filters.cat}
-            activeStatus={filters.status}
-            syncedAt={syncedAt}
-            onSurpriseMe={handleSurpriseMe}
-            onCopyList={handleCopyList}
-            onExport={handleExport}
-            onImport={handleImport}
-            onSelectStatusFilter={handleSelectStatusFilter}
-          />
-
-          {!(filters.cat === "tracker" && catalogItems.length === 0) && (
-            <Channel100Controls
-              items={catalogItems}
-              store={store}
-              catalog={catalog}
-              filters={filters}
-              onUpdateFilters={handleUpdateFilters}
-              resultCount={filteredItems.length}
-              cat={filters.cat}
+          {filters.cat === "favorites" ? (
+            <Channel100FavoritesView
+              vault={favoritesVault}
+              suggestions={favoriteSuggestions}
+              onOpenAddModal={() => setIsAddFavModalOpen(true)}
+              onOpenShareModal={(scope = "all") => {
+                setShareFavScope(scope);
+                setIsShareFavModalOpen(true);
+              }}
+              onUpdateProfile={handleUpdateFavoritesProfile}
+              onUpdateItem={handleUpdateFavoriteItem}
+              onRemoveItem={handleRemoveFavoriteItem}
+              onReorderItem={handleReorderFavoriteItem}
+              onQuickInduct={(item) => handleAddFavorite(channelItemToFavorite(item))}
+              onOpenMediaModal={(fav) => {
+                if (itemLookup[fav.id]) {
+                  playSound.pop();
+                  setActiveModalId(fav.id);
+                }
+              }}
             />
+          ) : (
+            <>
+              <Channel100Hero
+                catalog={catalog}
+                items={catalogItems}
+                stats={currentStats}
+                cat={filters.cat}
+                activeStatus={filters.status}
+                syncedAt={syncedAt}
+                onSurpriseMe={handleSurpriseMe}
+                onCopyList={handleCopyList}
+                onExport={handleExport}
+                onImport={handleImport}
+                onSelectStatusFilter={handleSelectStatusFilter}
+              />
+
+              {!(filters.cat === "tracker" && catalogItems.length === 0) && (
+                <Channel100Controls
+                  items={catalogItems}
+                  store={store}
+                  catalog={catalog}
+                  filters={filters}
+                  onUpdateFilters={handleUpdateFilters}
+                  resultCount={filteredItems.length}
+                  cat={filters.cat}
+                />
+              )}
+
+              <Channel100Grid
+                items={filteredItems}
+                store={store}
+                layout={filters.layout}
+                cat={filters.cat}
+                totalCatalogCount={catalogItems.length}
+                isItemFavorite={checkIsItemFavorite}
+                onOpenModal={(id) => {
+                  playSound.pop();
+                  setActiveModalId(id);
+                }}
+                onToggleStatus={handleToggleStatus}
+                onToggleFavorite={handleToggleFavorite}
+                onIncrementEpisode={handleIncrementEpisode}
+                onClearFilters={handleClearFilters}
+                onOpenLogModal={openNewLogModal}
+                onOpenTriageModal={openTriageModal}
+              />
+
+              <Channel100Stats
+                items={catalogItems}
+                store={store}
+                cat={filters.cat}
+                catalog={catalog}
+                onOpenModal={(id) => {
+                  playSound.pop();
+                  setActiveModalId(id);
+                }}
+              />
+            </>
           )}
-
-          <Channel100Grid
-            items={filteredItems}
-            store={store}
-            layout={filters.layout}
-            cat={filters.cat}
-            totalCatalogCount={catalogItems.length}
-            onOpenModal={(id) => {
-              playSound.pop();
-              setActiveModalId(id);
-            }}
-            onToggleStatus={handleToggleStatus}
-            onIncrementEpisode={handleIncrementEpisode}
-            onClearFilters={handleClearFilters}
-            onOpenLogModal={openNewLogModal}
-            onOpenTriageModal={openTriageModal}
-          />
-
-          <Channel100Stats
-            items={catalogItems}
-            store={store}
-            cat={filters.cat}
-            catalog={catalog}
-            onOpenModal={(id) => {
-              playSound.pop();
-              setActiveModalId(id);
-            }}
-          />
         </main>
 
         <Channel100Footer />
@@ -1104,16 +1388,41 @@ export default function Channel100Page() {
           item={activeItem}
           record={activeRecord}
           isOpen={activeModalId !== null}
+          isFavorite={activeItem ? checkIsItemFavorite(activeItem) : false}
           prevLabel={prevItemLabel}
           nextLabel={nextItemLabel}
           onClose={() => setActiveModalId(null)}
           onToggleStatus={handleToggleStatus}
+          onToggleFavorite={handleToggleFavorite}
           onSetRating={handleSetRating}
           onUpdateNotes={handleUpdateNotes}
           onNavigateShow={handleNavigateModal}
           onEditCustom={handleEditCustom}
           onDeleteCustom={handleDeleteCustomItem}
           onIncrementEpisode={handleIncrementEpisode}
+        />
+
+        <Channel100AddFavoriteModal
+          isOpen={isAddFavModalOpen}
+          onClose={() => setIsAddFavModalOpen(false)}
+          vault={favoritesVault}
+          catalogPool={allCatalogPool}
+          onAddFavorite={handleAddFavorite}
+        />
+
+        <Channel100ShareFavoritesModal
+          isOpen={isShareFavModalOpen}
+          initialScope={shareFavScope}
+          vault={favoritesVault}
+          onClose={() => setIsShareFavModalOpen(false)}
+          onTogglePublic={(isPublic) =>
+            handleUpdateFavoritesProfile({
+              ...favoritesVault.profile,
+              isPublic,
+            })
+          }
+          onEnsureShareId={handleEnsureShareId}
+          onToast={triggerToast}
         />
 
         <Channel100LogModal

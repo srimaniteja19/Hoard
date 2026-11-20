@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo } from "react";
+import { Crown } from "lucide-react";
 import { ChannelMediaItem, ShowUserRecord, ShowStatus } from "@/lib/channel100/types";
 import { artFor, fmtH, fmtM, bingeDays, jwUrl, imdbUrl } from "@/lib/channel100/data";
+import { fetchItemArtwork, getCachedArtwork } from "@/lib/channel100/artworkClient";
 
 interface EnrichedMediaDetails {
   fullDescription: string | null;
@@ -18,10 +20,12 @@ interface Channel100ModalProps {
   item: ChannelMediaItem | null;
   record: ShowUserRecord;
   isOpen: boolean;
+  isFavorite?: boolean;
   prevLabel?: string | null;
   nextLabel?: string | null;
   onClose: () => void;
   onToggleStatus: (id: string, status: ShowStatus) => void;
+  onToggleFavorite?: (item: ChannelMediaItem) => void;
   onSetRating: (id: string, rating: number) => void;
   onUpdateNotes: (id: string, notes: string) => void;
   onNavigateShow?: (direction: -1 | 1) => void;
@@ -34,10 +38,12 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
   item,
   record,
   isOpen,
+  isFavorite = false,
   prevLabel,
   nextLabel,
   onClose,
   onToggleStatus,
+  onToggleFavorite,
   onSetRating,
   onUpdateNotes,
   onNavigateShow,
@@ -53,6 +59,8 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
   const [noteSaveState, setNoteSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [enriched, setEnriched] = useState<EnrichedMediaDetails | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [posterUrl, setPosterUrl] = useState<string | null>(null);
+  const [imgFailed, setImgFailed] = useState(false);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const art = useMemo(() => (item ? artFor(item) : null), [item]);
@@ -61,7 +69,25 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
   useEffect(() => {
     setConfirmDelete(false);
     setNoteSaveState("idle");
-  }, [item?.id, isOpen]);
+    setImgFailed(false);
+    if (!item) {
+      setPosterUrl(null);
+      return;
+    }
+    const cached = getCachedArtwork(item);
+    if (cached !== undefined) {
+      setPosterUrl(cached);
+      return;
+    }
+    setPosterUrl(null);
+    let cancelled = false;
+    fetchItemArtwork(item).then((url) => {
+      if (!cancelled && url) setPosterUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [item, isOpen]);
 
   // Fetch full description, lead cast, and creator/director details when modal opens
   useEffect(() => {
@@ -520,6 +546,18 @@ export const Channel100Modal: React.FC<Channel100ModalProps> = ({
             >
               + Want
             </button>
+            {onToggleFavorite && (
+              <button
+                type="button"
+                className={`ch100-act ch100-act-fav ${isFavorite ? "is-fav" : ""}`}
+                aria-pressed={isFavorite}
+                onClick={() => onToggleFavorite(item)}
+                title="Induct into All-Time Favorites"
+              >
+                <Crown size={12} strokeWidth={2.4} aria-hidden="true" />
+                {isFavorite ? "All-Timer" : "All-Time"}
+              </button>
+            )}
           </div>
 
           {/* Star Rating */}

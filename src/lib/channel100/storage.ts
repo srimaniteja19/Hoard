@@ -158,6 +158,7 @@ export function loadStore(): Channel100Store {
         return {
           shows: parsed.shows,
           custom: parsed.custom || {},
+          favoritesVault: parsed.favoritesVault || undefined,
           updated: parsed.updated || Date.now(),
         };
       }
@@ -506,6 +507,7 @@ export function importBackup(
       const newStore: Channel100Store = {
         shows: validShows,
         custom: Object.keys(validCustom).length ? validCustom : undefined,
+        favoritesVault: parsed.favoritesVault || undefined,
         updated: Date.now(),
       };
       saveStore(newStore);
