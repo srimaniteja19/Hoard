@@ -32,7 +32,6 @@ interface Channel100HeaderProps {
   onOpenTriageModal?: () => void;
 }
 
-const TAB_ORDER: MediaKind[] = ["tv", "film", "vgf", "tracker"];
 const TAB_ORDER: MediaKind[] = [
   "tv",
   "film",

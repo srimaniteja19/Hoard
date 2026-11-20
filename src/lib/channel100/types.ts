@@ -1,5 +1,4 @@
 export type ShowStatus = "seen" | "watching" | "want" | "";
-export type MediaKind = "tv" | "film" | "vgf" | "tracker";
 export type MediaKind = "tv" | "film" | "vgf" | "releases" | "tracker" | "favorites";
 export type CustomMediaKind = "tv" | "film" | "anime" | "mini" | "doc";
 export type ReleasePeriod = "all" | "day" | "week" | "month" | "year";
@@ -99,6 +98,7 @@ export interface ChannelMediaItem {
   updatedAt?: number;
   releaseDate?: string; // YYYY-MM-DD
   releasePeriod?: Exclude<ReleasePeriod, "all">;
+  image?: string; // Poster / show artwork URL
 }
 
 export interface ShowUserRecord {
