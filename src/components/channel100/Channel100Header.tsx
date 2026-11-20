@@ -102,7 +102,7 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
 
       <header className="ch100-wrap ch100-top" id="top">
         <div className="ch100-brand-group">
-          <a className="ch100-logo" href="#top">
+          <a className="ch100-logo" href="#top" aria-label="Channel 100 Home">
             <b>CH·100</b>
           </a>
 
@@ -116,13 +116,17 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               role="tab"
               id="tabTv"
               data-cat="tv"
+              title="IMDb Top 250 TV Series"
               aria-selected={currentCat === "tv"}
               aria-controls="ch100-main-panel"
               tabIndex={currentCat === "tv" ? 0 : -1}
               onClick={() => onSelectCat("tv")}
               onKeyDown={(e) => handleTabKeyDown(e, "tv")}
             >
-              <span>📺 IMDb Top 250 TV</span>
+              <span>
+                <Tv size={13} strokeWidth={2.2} aria-hidden="true" />
+                TV 250
+              </span>
               <small id="tabTvN" suppressHydrationWarning>
                 {tvSeenCount}/{tvTotalCount}
               </small>
@@ -136,13 +140,17 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               role="tab"
               id="tabFilm"
               data-cat="film"
+              title="Letterboxd Top 500 Narrative Features"
               aria-selected={currentCat === "film"}
               aria-controls="ch100-main-panel"
               tabIndex={currentCat === "film" ? 0 : -1}
               onClick={() => onSelectCat("film")}
               onKeyDown={(e) => handleTabKeyDown(e, "film")}
             >
-              <span>🎬 Letterboxd 500</span>
+              <span>
+                <Film size={13} strokeWidth={2.2} aria-hidden="true" />
+                Films 500
+              </span>
               <small id="tabFilmN" suppressHydrationWarning>
                 {filmSeenCount}/{filmTotalCount}
               </small>
@@ -156,13 +164,17 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               role="tab"
               id="tabVgf"
               data-cat="vgf"
+              title="Very Good Films (verygoodfilms.co)"
               aria-selected={currentCat === "vgf"}
               aria-controls="ch100-main-panel"
               tabIndex={currentCat === "vgf" ? 0 : -1}
               onClick={() => onSelectCat("vgf")}
               onKeyDown={(e) => handleTabKeyDown(e, "vgf")}
             >
-              <span>🎞️ Very Good Films</span>
+              <span>
+                <Sparkles size={13} strokeWidth={2.2} aria-hidden="true" />
+                VGF
+              </span>
               <small id="tabVgfN" suppressHydrationWarning>
                 {vgfSeenCount}/{vgfTotalCount}
               </small>
@@ -176,13 +188,17 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               role="tab"
               id="tabReleases"
               data-cat="releases"
+              title="Streaming & Theatrical Release Calendar"
               aria-selected={currentCat === "releases"}
               aria-controls="ch100-main-panel"
               tabIndex={currentCat === "releases" ? 0 : -1}
               onClick={() => onSelectCat("releases")}
               onKeyDown={(e) => handleTabKeyDown(e, "releases")}
             >
-              <span>📅 Releases</span>
+              <span>
+                <CalendarDays size={13} strokeWidth={2.2} aria-hidden="true" />
+                Releases
+              </span>
               <small id="tabReleasesN" suppressHydrationWarning>
                 {releasesCount}
               </small>
@@ -196,13 +212,17 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               role="tab"
               id="tabTracker"
               data-cat="tracker"
+              title="Personal Watch Log"
               aria-selected={currentCat === "tracker"}
               aria-controls="ch100-main-panel"
               tabIndex={currentCat === "tracker" ? 0 : -1}
               onClick={() => onSelectCat("tracker")}
               onKeyDown={(e) => handleTabKeyDown(e, "tracker")}
             >
-              <span>⚡ Personal Log</span>
+              <span>
+                <BookmarkCheck size={13} strokeWidth={2.2} aria-hidden="true" />
+                Log
+              </span>
               <small id="tabTrackerN" suppressHydrationWarning>
                 {trackerCount}
               </small>
@@ -216,6 +236,7 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               role="tab"
               id="tabFavorites"
               data-cat="favorites"
+              title="All-Time Favorite Movies & Shows"
               aria-selected={currentCat === "favorites"}
               aria-controls="ch100-main-panel"
               tabIndex={currentCat === "favorites" ? 0 : -1}
@@ -223,7 +244,7 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               onKeyDown={(e) => handleTabKeyDown(e, "favorites")}
             >
               <span>
-                <Crown size={14} strokeWidth={2.2} aria-hidden="true" />
+                <Crown size={13} strokeWidth={2.2} aria-hidden="true" />
                 All-Time
               </span>
               <small id="tabFavoritesN" suppressHydrationWarning>
@@ -243,7 +264,13 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               disabled={isSyncing}
               title="Sync latest rankings and entries from live sources"
             >
-              {isSyncing ? "⏳ Syncing…" : "↻ Sync Live"}
+              <RefreshCw
+                size={13}
+                strokeWidth={2.2}
+                className={isSyncing ? "ch100-spin" : undefined}
+                aria-hidden="true"
+              />
+              <span>{isSyncing ? "Syncing…" : "Sync"}</span>
             </button>
           )}
 
@@ -254,8 +281,8 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               onClick={onOpenTriageModal}
               title="Decision Matrix: Find what to watch tonight"
             >
-              <span className="ch100-pulse-dot" />
-              🎯 Decision Matrix
+              <SlidersHorizontal size={13} strokeWidth={2.2} aria-hidden="true" />
+              <span>Decision Matrix</span>
             </button>
           )}
 
@@ -266,7 +293,8 @@ export const Channel100Header: React.FC<Channel100HeaderProps> = ({
               onClick={onOpenLogModal}
               title="Log a series, film, anime, or documentary"
             >
-              + Log Title
+              <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
+              <span>Log Title</span>
             </button>
           )}
         </nav>
