@@ -14,6 +14,13 @@ export type FavoriteVibe =
   | "Tearjerker"
   | "Hidden Gem";
 
+export interface FavoriteReview {
+  author: string;
+  rating?: string; // e.g. "4/5", "★★★★½"
+  text: string;
+  source: "letterboxd" | "critic" | "tmdb";
+}
+
 export interface FavoriteItem {
   id: string; // canonical media id or "fav_..."
   title: string;
@@ -29,6 +36,10 @@ export interface FavoriteItem {
   rating?: number; // 1-5 personal rating (default 5)
   hours?: number; // Estimated runtime hours
   image?: string; // Cached poster URL
+  imdbId?: string;
+  letterboxdUrl?: string;
+  synopsis?: string;
+  reviews?: FavoriteReview[];
   addedAt: number;
 }
 

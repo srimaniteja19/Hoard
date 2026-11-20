@@ -5,11 +5,15 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
+  ChevronDown,
+  ChevronUp,
   Crown,
+  ExternalLink,
   Film,
   GalleryHorizontalEnd,
   LayoutGrid,
   List,
+  MessageSquareQuote,
   Pencil,
   Plus,
   Share2,
@@ -138,6 +142,7 @@ export const Channel100FavoritesView: React.FC<Channel100FavoritesViewProps> = (
   const [draftTagline, setDraftTagline] = useState(vault.profile.tagline);
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [expandedReviewsId, setExpandedReviewsId] = useState<string | null>(null);
   const [draftPitch, setDraftPitch] = useState("");
   const [draftVibe, setDraftVibe] = useState("");
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -756,6 +761,63 @@ export const Channel100FavoritesView: React.FC<Channel100FavoritesViewProps> = (
                               + Add your &ldquo;why you must watch this&rdquo; pitch
                             </button>
                           )}
+
+                          {item.reviews && item.reviews.length > 0 && (
+                            <div className="ch100-fav-reviews-block">
+                              <button
+                                type="button"
+                                className="ch100-fav-reviews-toggle"
+                                onClick={() =>
+                                  setExpandedReviewsId((cur) =>
+                                    cur === item.id ? null : item.id
+                                  )
+                                }
+                              >
+                                <MessageSquareQuote
+                                  size={13}
+                                  strokeWidth={2.2}
+                                  aria-hidden="true"
+                                />
+                                <span>
+                                  Top Reviews ({item.reviews.length})
+                                </span>
+                                {expandedReviewsId === item.id ? (
+                                  <ChevronUp size={13} aria-hidden="true" />
+                                ) : (
+                                  <ChevronDown size={13} aria-hidden="true" />
+                                )}
+                              </button>
+
+                              {expandedReviewsId === item.id && (
+                                <div className="ch100-fav-reviews-list">
+                                  {item.reviews.map((rev, rIdx) => (
+                                    <div key={rIdx} className="ch100-fav-review-card">
+                                      <div className="ch100-fav-review-top">
+                                        <strong>{rev.author}</strong>
+                                        {rev.rating && (
+                                          <span className="ch100-rev-score">
+                                            {rev.rating}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p>&ldquo;{rev.text}&rdquo;</p>
+                                    </div>
+                                  ))}
+                                  {item.letterboxdUrl && (
+                                    <a
+                                      href={item.letterboxdUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="ch100-lookup-lb-link"
+                                    >
+                                      Read more on Letterboxd
+                                      <ExternalLink size={11} aria-hidden="true" />
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </>
                       )}
 
@@ -924,6 +986,45 @@ export const Channel100FavoritesView: React.FC<Channel100FavoritesViewProps> = (
                             &ldquo;{item.pitch}&rdquo;
                           </p>
                         ) : null}
+
+                        {!isEditing && item.reviews && item.reviews.length > 0 && (
+                          <div className="ch100-fav-reviews-block compact">
+                            <button
+                              type="button"
+                              className="ch100-fav-reviews-toggle"
+                              onClick={() =>
+                                setExpandedReviewsId((cur) =>
+                                  cur === item.id ? null : item.id
+                                )
+                              }
+                            >
+                              <MessageSquareQuote size={12} strokeWidth={2.2} aria-hidden="true" />
+                              <span>{item.reviews.length} Reviews</span>
+                              {expandedReviewsId === item.id ? (
+                                <ChevronUp size={12} aria-hidden="true" />
+                              ) : (
+                                <ChevronDown size={12} aria-hidden="true" />
+                              )}
+                            </button>
+                            {expandedReviewsId === item.id && (
+                              <div className="ch100-fav-reviews-list">
+                                {item.reviews.map((rev, rIdx) => (
+                                  <div key={rIdx} className="ch100-fav-review-card">
+                                    <div className="ch100-fav-review-top">
+                                      <strong>{rev.author}</strong>
+                                      {rev.rating && (
+                                        <span className="ch100-rev-score">
+                                          {rev.rating}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p>&ldquo;{rev.text}&rdquo;</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         <div className="ch100-fav-card-foot compact">
                           <div className="ch100-fav-row-controls">

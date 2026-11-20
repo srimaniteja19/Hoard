@@ -4,12 +4,15 @@ import React, { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Check,
+  ChevronDown,
+  ChevronUp,
   Copy,
   Crown,
   ExternalLink,
   Film,
   GalleryHorizontalEnd,
   LayoutGrid,
+  MessageSquareQuote,
   Tv,
 } from "lucide-react";
 import { FavoriteItem, FavoritesVault } from "@/lib/channel100/types";
@@ -102,6 +105,7 @@ export default function PublicFavoritesSharePage({
   const [error, setError] = useState<string | null>(null);
   const [scope, setScope] = useState<ShareFilterScope>("all");
   const [viewMode, setViewMode] = useState<"gallery" | "reel">("gallery");
+  const [expandedReviewsId, setExpandedReviewsId] = useState<string | null>(null);
   const [copied, setCopied] = useState<"link" | "list" | null>(null);
 
   useEffect(() => {
@@ -466,11 +470,56 @@ export default function PublicFavoritesSharePage({
                           &ldquo;{item.pitch}&rdquo;
                         </blockquote>
                       )}
+                      {item.reviews && item.reviews.length > 0 && (
+                        <div className="ch100-fav-reviews-block">
+                          <button
+                            type="button"
+                            className="ch100-fav-reviews-toggle"
+                            onClick={() =>
+                              setExpandedReviewsId((cur) =>
+                                cur === item.id ? null : item.id
+                              )
+                            }
+                          >
+                            <MessageSquareQuote size={13} strokeWidth={2.2} aria-hidden="true" />
+                            <span>Top Reviews ({item.reviews.length})</span>
+                            {expandedReviewsId === item.id ? (
+                              <ChevronUp size={13} aria-hidden="true" />
+                            ) : (
+                              <ChevronDown size={13} aria-hidden="true" />
+                            )}
+                          </button>
+                          {expandedReviewsId === item.id && (
+                            <div className="ch100-fav-reviews-list">
+                              {item.reviews.map((rev, rIdx) => (
+                                <div key={rIdx} className="ch100-fav-review-card">
+                                  <div className="ch100-fav-review-top">
+                                    <strong>{rev.author}</strong>
+                                    {rev.rating && (
+                                      <span className="ch100-rev-score">{rev.rating}</span>
+                                    )}
+                                  </div>
+                                  <p>&ldquo;{rev.text}&rdquo;</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <div className="ch100-fav-card-foot">
                         <span className="ch100-fav-genre-meta">
                           {[item.genre, item.where].filter(Boolean).join(" · ")}
                         </span>
                         <div className="ch100-public-ext-links">
+                          {item.letterboxdUrl && (
+                            <a
+                              href={item.letterboxdUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Letterboxd <ExternalLink size={11} aria-hidden="true" />
+                            </a>
+                          )}
                           <a
                             href={jwUrl(channelItem)}
                             target="_blank"
